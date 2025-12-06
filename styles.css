@@ -16,11 +16,11 @@
   --color-white: #FFFFFF;
   --color-hellgrau: #F2F2F2;
   --color-silber: #C8C8C8;
-  
+
   /* Typografie */
   --font-heading: 'Montserrat', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
-  
+
   /* Spacing System */
   --spacing-xs: 8px;
   --spacing-sm: 16px;
@@ -28,14 +28,14 @@
   --spacing-lg: 40px;
   --spacing-xl: 64px;
   --spacing-xxl: 96px;
-  
+
   /* Border & Shadows */
   --border-radius-sm: 4px;
   --border-radius-md: 6px;
   --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.1);
   --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.18);
   --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.25);
-  
+
   /* Grid */
   --grid-columns: 12;
   --grid-gap: 24px;
@@ -65,7 +65,12 @@ body {
 }
 
 /* === TYPOGRAPHY === */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-heading);
   font-weight: 700;
   line-height: 1.2;
@@ -112,18 +117,53 @@ a {
   gap: var(--grid-gap);
 }
 
-.col-1 { grid-column: span 1; }
-.col-2 { grid-column: span 2; }
-.col-3 { grid-column: span 3; }
-.col-4 { grid-column: span 4; }
-.col-5 { grid-column: span 5; }
-.col-6 { grid-column: span 6; }
-.col-7 { grid-column: span 7; }
-.col-8 { grid-column: span 8; }
-.col-9 { grid-column: span 9; }
-.col-10 { grid-column: span 10; }
-.col-11 { grid-column: span 11; }
-.col-12 { grid-column: span 12; }
+.col-1 {
+  grid-column: span 1;
+}
+
+.col-2 {
+  grid-column: span 2;
+}
+
+.col-3 {
+  grid-column: span 3;
+}
+
+.col-4 {
+  grid-column: span 4;
+}
+
+.col-5 {
+  grid-column: span 5;
+}
+
+.col-6 {
+  grid-column: span 6;
+}
+
+.col-7 {
+  grid-column: span 7;
+}
+
+.col-8 {
+  grid-column: span 8;
+}
+
+.col-9 {
+  grid-column: span 9;
+}
+
+.col-10 {
+  grid-column: span 10;
+}
+
+.col-11 {
+  grid-column: span 11;
+}
+
+.col-12 {
+  grid-column: span 12;
+}
 
 /* === NAVIGATION (STICKY HEADER) === */
 header {
@@ -459,7 +499,64 @@ section {
   font-size: 32px;
 }
 
+/* === GASTRO HERO SECTION === */
+.gastro-hero {
+  position: relative;
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: url('images/gastro-hero.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+}
+
+/* Dunkles Overlay für bessere Textlesbarkeit */
+.gastro-hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(10, 108, 116, 0.4) 100%);
+  z-index: 1;
+}
+
+/* Content Container */
+.gastro-hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: var(--color-white);
+  max-width: 800px;
+  padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.gastro-hero h1 {
+  color: var(--color-white);
+  font-size: 56px;
+  margin-bottom: var(--spacing-md);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.gastro-hero-subtitle {
+  font-size: 24px;
+  font-weight: 300;
+  color: var(--color-hellgrau);
+  margin-bottom: var(--spacing-lg);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.gastro-hero .btn {
+  margin-top: var(--spacing-sm);
+}
+
 /* === GASTRO SECTION === */
+
 #gastro .container {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -705,15 +802,37 @@ footer a:hover {
   text-align: center;
 }
 
-.mb-sm { margin-bottom: var(--spacing-sm); }
-.mb-md { margin-bottom: var(--spacing-md); }
-.mb-lg { margin-bottom: var(--spacing-lg); }
-.mb-xl { margin-bottom: var(--spacing-xl); }
+.mb-sm {
+  margin-bottom: var(--spacing-sm);
+}
 
-.mt-sm { margin-top: var(--spacing-sm); }
-.mt-md { margin-top: var(--spacing-md); }
-.mt-lg { margin-top: var(--spacing-lg); }
-.mt-xl { margin-top: var(--spacing-xl); }
+.mb-md {
+  margin-bottom: var(--spacing-md);
+}
+
+.mb-lg {
+  margin-bottom: var(--spacing-lg);
+}
+
+.mb-xl {
+  margin-bottom: var(--spacing-xl);
+}
+
+.mt-sm {
+  margin-top: var(--spacing-sm);
+}
+
+.mt-md {
+  margin-top: var(--spacing-md);
+}
+
+.mt-lg {
+  margin-top: var(--spacing-lg);
+}
+
+.mt-xl {
+  margin-top: var(--spacing-xl);
+}
 
 /* ===================================
    RESPONSIVE DESIGN
@@ -721,37 +840,47 @@ footer a:hover {
 
 /* === TABLET (768px - 1199px) === */
 @media (max-width: 1199px) {
-  h1 { font-size: 42px; }
-  h2 { font-size: 32px; }
-  h3 { font-size: 24px; }
-  
-  section { padding: var(--spacing-xl) 0; }
-  
+  h1 {
+    font-size: 42px;
+  }
+
+  h2 {
+    font-size: 32px;
+  }
+
+  h3 {
+    font-size: 24px;
+  }
+
+  section {
+    padding: var(--spacing-xl) 0;
+  }
+
   #hero .container {
     grid-template-columns: 1fr;
     gap: var(--spacing-lg);
   }
-  
+
   #produkt .grid {
     grid-template-columns: 1fr;
   }
-  
+
   #einsatzbereiche .grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   #gastro .container {
     grid-template-columns: 1fr;
   }
-  
+
   #technik .container {
     grid-template-columns: 1fr;
   }
-  
+
   #anwendung .grid {
     grid-template-columns: 1fr;
   }
-  
+
   #shop .sets-grid {
     grid-template-columns: 1fr;
   }
@@ -762,22 +891,32 @@ footer a:hover {
   body {
     font-size: 16px;
   }
-  
-  h1 { font-size: 36px; }
-  h2 { font-size: 28px; }
-  h3 { font-size: 22px; }
-  
-  section { padding: var(--spacing-lg) 0; }
-  
+
+  h1 {
+    font-size: 36px;
+  }
+
+  h2 {
+    font-size: 28px;
+  }
+
+  h3 {
+    font-size: 22px;
+  }
+
+  section {
+    padding: var(--spacing-lg) 0;
+  }
+
   .container {
     padding: 0 var(--spacing-sm);
   }
-  
+
   /* Mobile Navigation */
   nav {
     padding: var(--spacing-sm);
   }
-  
+
   .nav-links {
     position: fixed;
     top: 60px;
@@ -792,58 +931,71 @@ footer a:hover {
     transition: left 0.3s ease;
     gap: 0;
   }
-  
+
   .nav-links.active {
     left: 0;
   }
-  
+
   .nav-links li {
     width: 100%;
     border-bottom: 1px solid var(--color-hellgrau);
   }
-  
+
   .nav-links a {
     display: block;
     padding: var(--spacing-sm) 0;
     width: 100%;
   }
-  
+
   .burger-menu {
     display: flex;
   }
-  
+
   /* Hero Mobile */
   #hero {
     min-height: auto;
     padding: var(--spacing-lg) 0;
   }
-  
+
   #hero .container {
     grid-template-columns: 1fr;
   }
-  
+
   #hero .subheadline {
     font-size: 18px;
   }
-  
+
   .hero-buttons {
     flex-direction: column;
   }
-  
+
   .hero-buttons .btn {
     width: 100%;
   }
-  
+
   /* Cards Mobile */
   #einsatzbereiche .grid {
     grid-template-columns: 1fr;
   }
-  
+
   .shopping-bar {
     flex-direction: column;
   }
-  
+
   .shopping-bar .btn {
     width: 100%;
+  }
+
+  /* Gastro Hero Mobile */
+  .gastro-hero {
+    min-height: 50vh;
+  }
+
+  .gastro-hero h1 {
+    font-size: 36px;
+  }
+
+  .gastro-hero-subtitle {
+    font-size: 18px;
   }
 }
