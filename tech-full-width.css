@@ -1,0 +1,25 @@
+/* TECH SECTION - MAXIMALE BILDNUTZUNG */
+
+#technik .tech-image-container {
+    padding: 8px !important;
+    background: linear-gradient(135deg, rgba(10, 108, 116, 0.08) 0%, rgba(255, 255, 255, 0.1) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(200, 200, 200, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+#technik .tech-image-container img {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 500px !important;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.12));
+}
