@@ -1653,3 +1653,102 @@ footer a:hover {
     grid-template-columns: 40% 60% !important;
     gap: var(--spacing-xl) !important;
 }
+/* === FINALE TECH SECTION LÖSUNG === */
+/* Einfach, sauber, innerhalb des normalen Containers */
+
+#technik .tech-content {
+    display: grid;
+    grid-template-columns: 40% 60%;
+    gap: 48px;
+    align-items: start;
+}
+
+#technik .tech-images {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+#technik .tech-image-container {
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(10, 108, 116, 0.08) 0%, rgba(255, 255, 255, 0.1) 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(200, 200, 200, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    min-height: 350px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+#technik .tech-image-container:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+#technik .tech-image-container img {
+    max-width: 100%;
+    max-height: 400px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.12));
+}
+
+#technik .tech-text {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+}
+
+#technik .tech-block h3 {
+    color: var(--color-white);
+    border-bottom: 2px solid var(--color-petrol-deep);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+}
+
+#technik .tech-block ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+#technik .tech-block ul li {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-hellgrau);
+}
+
+#technik .tech-block ul li strong {
+    color: var(--color-petrol-deep);
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* Responsive */
+@media (max-width: 1199px) {
+    #technik .tech-content {
+        grid-template-columns: 1fr;
+    }
+
+    #technik .tech-images {
+        flex-direction: row;
+    }
+
+    #technik .tech-text {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767px) {
+    #technik .tech-images {
+        flex-direction: column;
+    }
+
+    #technik .tech-text {
+        grid-template-columns: 1fr;
+    }
+}
