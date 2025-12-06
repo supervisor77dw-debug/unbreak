@@ -209,6 +209,7 @@ nav {
   font-weight: 500;
   padding: var(--spacing-xs) var(--spacing-sm);
   transition: color 0.3s ease;
+  white-space: nowrap;
 }
 
 .nav-links a:hover {
