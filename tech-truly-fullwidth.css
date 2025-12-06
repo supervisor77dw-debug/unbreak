@@ -1,0 +1,14 @@
+/* TECH SECTION - WIRKLICH VOLLE BREITE */
+
+#technik .container {
+    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+#technik .tech-content {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding-left: var(--spacing-lg) !important;
+    padding-right: var(--spacing-lg) !important;
+}
