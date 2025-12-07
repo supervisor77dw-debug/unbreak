@@ -1,0 +1,190 @@
+/* =========================================
+   TEXT READABILITY & MOBILE OPTIMIZATIONS
+   ========================================= */
+
+/* 1. Mobile Only Navigation Links */
+.mobile-only {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .mobile-only {
+        display: block !important;
+    }
+}
+
+/* 2. Text Contrast & Background Layers */
+/* Automatische Layer für Text auf Bildern (Hero & Einsatzbereiche) */
+.hero-content,
+.gastro-hero-left,
+.gastro-hero-right {
+    background: rgba(0, 0, 0, 0.6);
+    /* Semi-transparent dark layer */
+    padding: 24px 30px;
+    /* Safe padding */
+    border-radius: 12px;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: #FFFFFF;
+    /* High contrast text */
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Ensure headings in these containers are white */
+.hero-content h1,
+.hero-content p,
+.hero-content li,
+.gastro-hero-left h1,
+.gastro-hero-left p,
+.gastro-hero-right h3,
+.gastro-hero-right li {
+    color: #FFFFFF !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    /* Additional readability */
+}
+
+/* Specific fix for hero buttons container to be visible */
+.hero-buttons {
+    position: relative;
+    z-index: 10;
+}
+
+/* === FIX FÜR EINSATZBEREICHE KACHELN === */
+.bereich-card {
+    background: rgba(15, 15, 15, 0.75) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #FFFFFF !important;
+    padding: 30px 25px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.bereich-card:hover {
+    background: rgba(10, 10, 10, 0.85) !important;
+    transform: translateY(-5px);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6) !important;
+}
+
+.bereich-card h3 {
+    color: #FFFFFF !important;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8) !important;
+    margin-top: 15px !important;
+    font-weight: 700 !important;
+}
+
+.bereich-card p {
+    color: #f2f2f2 !important;
+    /* Helles Grau/Weiß */
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+    font-weight: 500 !important;
+    line-height: 1.6 !important;
+}
+
+.bereich-icon {
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* === SHOP BILDER OPTIMIERUNG (Z1, Z2, Z3) === */
+.set-card img {
+    display: block;
+    width: 100%;
+    height: 300px;
+    /* Einheitliche Höhe für alle Sets */
+    object-fit: cover;
+    /* Perfekter Bildausschnitt ohne Verzerrung */
+    object-position: center;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.set-card:hover img {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+}
+
+/* === LOGO OPTIMIZATION === */
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.nav-logo {
+    height: 48px;
+    /* Desktop Standard */
+    width: auto;
+    display: block;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.nav-logo:hover {
+    transform: scale(1.05);
+}
+
+/* 3. Safe Zones & Spacing */
+.container {
+    padding-left: 22px;
+    padding-right: 22px;
+}
+
+/* 4. Mobile Text Size Optimization */
+@media (max-width: 768px) {
+
+    body,
+    p,
+    li {
+        font-size: 17px !important;
+        line-height: 1.6;
+    }
+
+    h1 {
+        font-size: 32px !important;
+    }
+
+    h2 {
+        font-size: 26px !important;
+    }
+
+    h3 {
+        font-size: 22px !important;
+    }
+
+    .hero-content,
+    .gastro-hero-left,
+    .gastro-hero-right {
+        width: 100%;
+        margin: 0 auto 20px auto;
+        padding: 20px;
+    }
+
+    .product-text,
+    .legal-container {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    .tech-images,
+    .tech-text {
+        grid-template-columns: 1fr;
+    }
+
+    /* Mobile Override Shop Images */
+    .set-card img {
+        height: 240px;
+        /* Kompakter auf Mobile */
+        margin-bottom: 20px;
+    }
+
+    /* Mobile Logo Override */
+    .nav-logo {
+        height: 65px;
+        /* Gewünscht: sichtbar größer auf Mobile */
+        max-height: 80px;
+    }
+}

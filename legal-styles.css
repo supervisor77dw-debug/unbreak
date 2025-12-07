@@ -1,0 +1,120 @@
+/* =========================================
+   LEGAL PAGES STYLES (Impressum, Datenschutz, AGB)
+   ========================================= */
+
+.legal-content {
+    padding: 120px 0 80px;
+    background-color: #0d0d0d;
+    /* Dunkler Hintergrund für die gesamte Section */
+    color: #FFFFFF;
+    /* Reines Weiß für maximalen Kontrast */
+}
+
+.legal-container {
+    max-width: 800px;
+    margin: 0 auto;
+    /* Dunkler Container-Hintergrund, leicht abgehoben */
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.legal-content h1 {
+    color: #FFFFFF;
+    margin-bottom: 40px;
+    font-size: 2.5rem;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    /* Sicherstellen Sans-Serif */
+}
+
+.legal-content h2 {
+    color: #FFFFFF;
+    /* Weiß statt Petrol für maximale Lesbarkeit im "Lesemodus" */
+    font-size: 1.5rem;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 10px;
+    font-family: 'Inter', sans-serif;
+}
+
+.legal-content h3 {
+    color: #f0f0f0;
+    font-size: 1.2rem;
+    margin-top: 25px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.legal-content p,
+.legal-content li {
+    color: #e0e0e0;
+    /* Sehr helles Grau, fast Weiß */
+    line-height: 1.6;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    /* Leicht vergrößert für Lesbarkeit (min 16-18px) */
+    font-family: 'Inter', sans-serif;
+}
+
+.legal-content ul {
+    padding-left: 25px;
+    margin-bottom: 20px;
+    list-style-type: disc;
+}
+
+.legal-content li {
+    margin-bottom: 8px;
+}
+
+.legal-content a {
+    color: #4db8ff;
+    /* Helles Blau für Links auf dunklem Grund, guter Kontrast */
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+    transition: color 0.3s ease;
+}
+
+.legal-content a:hover {
+    color: #FFFFFF;
+    text-decoration: none;
+}
+
+.legal-back-btn-container {
+    margin-top: 60px;
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* Mobile Optimierung */
+@media (max-width: 768px) {
+    .legal-content {
+        padding: 100px 0 60px;
+    }
+
+    .legal-container {
+        padding: 22px;
+        /* Padding min 16-22px */
+        margin: 0 15px;
+    }
+
+    .legal-content h1 {
+        font-size: 2rem;
+    }
+
+    .legal-content p,
+    .legal-content li {
+        font-size: 1.05rem;
+        /* Mobile Textgröße optimiert (16-17px) */
+    }
+}
