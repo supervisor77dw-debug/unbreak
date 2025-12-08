@@ -218,6 +218,17 @@
     padding-right: 22px;
 }
 
+/* === GASTRO HERO UPDATE (Dynamic Fix) === */
+#gastro-hero,
+.gastro-hero {
+    background-image: url('images/gastro-hero-new.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    position: relative;
+    /* Ensure it works */
+}
+
 /* 4. Mobile Text Size Optimization */
 @media (max-width: 768px) {
 
