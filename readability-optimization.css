@@ -13,22 +13,114 @@
     }
 }
 
+/* === CINEMATIC HERO ANIMATION (DESKTOP) === */
+#hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    background-color: #000;
+}
+
+.hero-bg-anim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('images/hero-cinematic.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    z-index: 1;
+
+    /* Animation Defaults */
+    opacity: 0;
+    transform: scale(1.08);
+    -webkit-transform: scale(1.08);
+    /* Safari fallback */
+
+    animation: cinemaEnter 3.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    -webkit-animation: cinemaEnter 3.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes cinemaEnter {
+    0% {
+        opacity: 0;
+        transform: scale(1.08);
+    }
+
+    15% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1.0);
+    }
+}
+
+@-webkit-keyframes cinemaEnter {
+    0% {
+        opacity: 0;
+        -webkit-transform: scale(1.08);
+    }
+
+    15% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 1;
+        -webkit-transform: scale(1.0);
+    }
+}
+
+#hero .container {
+    position: relative;
+    z-index: 5;
+    width: 100%;
+}
+
 /* 2. Text Contrast & Background Layers */
-/* Automatische Layer für Text auf Bildern (Hero & Einsatzbereiche) */
 .hero-content,
 .gastro-hero-left,
 .gastro-hero-right {
-    background: rgba(0, 0, 0, 0.6);
-    /* Semi-transparent dark layer */
-    padding: 24px 30px;
-    /* Safe padding */
+    background: rgba(0, 0, 0, 0.45);
+    padding: 30px;
     border-radius: 12px;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     color: #FFFFFF;
-    /* High contrast text */
     margin-bottom: 20px;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Hero Content Entrance */
+.hero-content {
+    opacity: 0;
+    transform: translateY(30px);
+    -webkit-transform: translateY(30px);
+
+    animation: contentSlideUp 1.0s ease-out 0.8s forwards;
+    -webkit-animation: contentSlideUp 1.0s ease-out 0.8s forwards;
+
+    max-width: 650px;
+}
+
+@keyframes contentSlideUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@-webkit-keyframes contentSlideUp {
+    to {
+        opacity: 1;
+        -webkit-transform: translateY(0);
+    }
 }
 
 /* Ensure headings in these containers are white */
@@ -41,10 +133,8 @@
 .gastro-hero-right li {
     color: #FFFFFF !important;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-    /* Additional readability */
 }
 
-/* Specific fix for hero buttons container to be visible */
 .hero-buttons {
     position: relative;
     z-index: 10;
@@ -77,7 +167,6 @@
 
 .bereich-card p {
     color: #f2f2f2 !important;
-    /* Helles Grau/Weiß */
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
     font-weight: 500 !important;
     line-height: 1.6 !important;
@@ -87,14 +176,12 @@
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
-/* === SHOP BILDER OPTIMIERUNG (Z1, Z2, Z3) === */
+/* === SHOP BILDER OPTIMIERUNG === */
 .set-card img {
     display: block;
     width: 100%;
     height: 300px;
-    /* Einheitliche Höhe für alle Sets */
     object-fit: cover;
-    /* Perfekter Bildausschnitt ohne Verzerrung */
     object-position: center;
     border-radius: 8px;
     margin-bottom: 15px;
@@ -116,7 +203,6 @@
 
 .nav-logo {
     height: 48px;
-    /* Desktop Standard */
     width: auto;
     display: block;
     object-fit: contain;
@@ -127,7 +213,6 @@
     transform: scale(1.05);
 }
 
-/* 3. Safe Zones & Spacing */
 .container {
     padding-left: 22px;
     padding-right: 22px;
@@ -160,7 +245,7 @@
     .gastro-hero-right {
         width: 100%;
         margin: 0 auto 20px auto;
-        padding: 20px;
+        padding: 24px 20px;
     }
 
     .product-text,
@@ -174,17 +259,37 @@
         grid-template-columns: 1fr;
     }
 
-    /* Mobile Override Shop Images */
+    /* === MOBILE VISIBILITY FIX === */
+    /* Force simple background on parent, effectively bypassing the animation container issues */
+    #hero {
+        background: url('images/hero-cinematic.jpg') no-repeat center center scroll !important;
+        background-size: cover !important;
+        min-height: 100vh !important;
+        /* Standard vh for reliability */
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Hide the complex animation container on mobile */
+    .hero-bg-anim {
+        display: none !important;
+    }
+
+    /* Force content visible immediately */
+    .hero-content {
+        opacity: 1 !important;
+        transform: none !important;
+        animation: none !important;
+    }
+
+
     .set-card img {
         height: 240px;
-        /* Kompakter auf Mobile */
         margin-bottom: 20px;
     }
 
-    /* Mobile Logo Override */
     .nav-logo {
         height: 65px;
-        /* Gewünscht: sichtbar größer auf Mobile */
         max-height: 80px;
     }
 }
