@@ -304,3 +304,29 @@
         max-height: 80px;
     }
 }
+
+/* Made in Germany Badge */
+.badge-mig {
+    position: absolute;
+    top: -25px;
+    right: -15px;
+    width: 70px;
+    height: auto;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 100;
+    pointer-events: auto;
+}
+
+@media (min-width: 768px) {
+    .badge-mig {
+        width: 140px;
+        top: -50px;
+        right: -40px;
+    }
+}
+
+.badge-mig:hover {
+    transform: scale(1.1) rotate(3deg);
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.3));
+}
