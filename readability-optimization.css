@@ -202,11 +202,12 @@
 }
 
 .nav-logo {
-    height: 48px;
+    height: 80px;
     width: auto;
     display: block;
     object-fit: contain;
     transition: transform 0.3s ease;
+    filter: brightness(0) saturate(100%) invert(41%) sepia(65%) saturate(712%) hue-rotate(140deg) brightness(93%) contrast(94%);
 }
 
 .nav-logo:hover {
@@ -300,8 +301,8 @@
     }
 
     .nav-logo {
-        height: 65px;
-        max-height: 80px;
+        height: 100px;
+        max-height: 100px;
     }
 }
 
