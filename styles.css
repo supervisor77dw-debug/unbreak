@@ -426,10 +426,14 @@ section {
 #hero .container {
   position: relative;
   z-index: 3;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-xl);
+  display: flex;
+  justify-content: center;
   align-items: center;
+  text-align: center;
+}
+
+#hero .hero-content {
+  max-width: 900px;
 }
 
 #hero h1 {
@@ -447,6 +451,8 @@ section {
 #hero ul {
   list-style: none;
   margin-bottom: var(--spacing-lg);
+  text-align: left;
+  display: inline-block;
 }
 
 #hero ul li {
@@ -454,6 +460,7 @@ section {
   padding-left: 32px;
   position: relative;
   font-size: 18px;
+  text-align: left;
 }
 
 #hero ul li::before {
@@ -469,6 +476,7 @@ section {
   display: flex;
   gap: var(--spacing-sm);
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .hero-image {
@@ -1038,8 +1046,9 @@ footer a:hover {
     padding: var(--spacing-lg) 0;
   }
 
-  #hero .container {
-    grid-template-columns: 1fr;
+  #hero .hero-content {
+    max-width: 100%;
+    padding: 0 var(--spacing-sm);
   }
 
   #hero .subheadline {
