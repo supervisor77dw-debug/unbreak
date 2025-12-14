@@ -432,8 +432,21 @@ section {
   text-align: center;
 }
 
+/* Hero Content Fade-In Animation */
+@keyframes heroContentFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 #hero .hero-content {
   max-width: 900px;
+  animation: heroContentFadeIn 1.2s ease-out 0.8s both;
 }
 
 #hero h1 {
@@ -1049,6 +1062,8 @@ footer a:hover {
   #hero .hero-content {
     max-width: 100%;
     padding: 0 var(--spacing-sm);
+    /* Animation auch auf Mobile */
+    animation: heroContentFadeIn 1.2s ease-out 0.8s both;
   }
 
   #hero .subheadline {
