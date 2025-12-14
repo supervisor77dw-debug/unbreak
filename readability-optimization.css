@@ -287,11 +287,9 @@
         display: none !important;
     }
 
-    /* Force content visible immediately */
+    /* Hero-Content Animation bleibt aktiv für Zeitversatz zum Video */
     .hero-content {
-        opacity: 1 !important;
-        transform: none !important;
-        animation: none !important;
+        /* Animation wird in styles.css definiert: heroContentFadeIn 1.2s ease-out 0.8s both */
     }
 
 
