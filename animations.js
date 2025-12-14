@@ -353,7 +353,15 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('✨ All WOW-effects loaded successfully!');
 
     // Trigger initial reveal for elements already in viewport
-    window.dispatchEvent(new Event('scroll'));
+    // Doppelter Trigger für bessere Kompatibilität auf Legal-Pages
+    setTimeout(() => {
+        window.dispatchEvent(new Event('scroll'));
+    }, 100);
+    
+    // Zweiter Trigger nach vollständigem Page-Load
+    setTimeout(() => {
+        window.dispatchEvent(new Event('scroll'));
+    }, 300);
 });
 
 // Optional: Stagger Animation Helper
