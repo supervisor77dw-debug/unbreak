@@ -134,6 +134,8 @@
     }
 }
 
+/* Hero Background Animation - deaktiviert für Video-Background */
+/* 
 #hero {
     background: linear-gradient(135deg,
             var(--color-graphit) 0%,
@@ -143,6 +145,7 @@
     background-size: 200% 200%;
     animation: gradient-shift 15s ease infinite;
 }
+*/
 
 /* === PARALLAX EFFECTS === */
 .parallax {
@@ -398,11 +401,6 @@ section::before {
     .float-slow {
         animation: none;
         /* Deaktiviere Floating auf Mobile für Performance */
-    }
-
-    #hero {
-        animation-duration: 20s;
-        /* Langsamere Animation auf Mobile */
     }
 }
 

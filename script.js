@@ -100,6 +100,77 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ===================================
+    // RESPONSIVE VIDEO BACKGROUND LOADER
+    // ===================================
+    const heroVideo = document.querySelector('.hero-video');
+    
+    if (heroVideo) {
+        // Funktion: Lade optimale Video-Version basierend auf Bildschirmbreite
+        function loadOptimalVideo() {
+            const screenWidth = window.innerWidth;
+            const videoSources = heroVideo.querySelectorAll('source');
+            
+            // Desktop: 1920px Version | Mobile: 1280px Version
+            videoSources.forEach(source => {
+                const mediaQuery = source.getAttribute('media');
+                
+                if (mediaQuery) {
+                    // Desktop-Video nur bei großen Bildschirmen laden
+                    if (screenWidth >= 1024 && mediaQuery.includes('min-width: 1024px')) {
+                        source.removeAttribute('media');
+                    }
+                } else if (screenWidth < 1024) {
+                    // Mobile-Version aktiv, wenn kein media-Attribut
+                    // (Fallback ist bereits korrekt konfiguriert)
+                }
+            });
+            
+            // Video neu laden nach Source-Änderung
+            heroVideo.load();
+        }
+        
+        // Initiales Laden
+        loadOptimalVideo();
+        
+        // Bei Resize neu evaluieren (debounced für Performance)
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                loadOptimalVideo();
+            }, 250);
+        });
+        
+        // Video Error Handling - Fallback auf Gradient-Background
+        heroVideo.addEventListener('error', () => {
+            console.warn('Video konnte nicht geladen werden. Fallback auf Gradient-Background.');
+            const videoContainer = document.querySelector('.hero-video-container');
+            if (videoContainer) {
+                videoContainer.style.display = 'none';
+            }
+        });
+        
+        // Performance: Video pausieren wenn nicht sichtbar
+        const observerOptions = {
+            threshold: 0.1
+        };
+        
+        const videoObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    heroVideo.play().catch(err => {
+                        console.log('Autoplay verhindert:', err);
+                    });
+                } else {
+                    heroVideo.pause();
+                }
+            });
+        }, observerOptions);
+        
+        videoObserver.observe(heroVideo);
+    }
+
+    // ===================================
     // CONSOLE INFO (Development Helper)
     // ===================================
     console.log('%c🚀 UNBREAK ONE Landing Page geladen!', 'color: #0A6C74; font-size: 16px; font-weight: bold;');

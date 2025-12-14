@@ -81,8 +81,28 @@
        HERO SECTION
        =================================== -->
   <section id="hero">
-    <!-- Cinematic Background Container -->
-    <div class="hero-bg-anim"></div>
+    <!-- Video Background -->
+    <div class="hero-video-container">
+      <video 
+        class="hero-video" 
+        autoplay 
+        loop 
+        muted 
+        playsinline
+        poster="images/Yacht_Hero.jpg">
+        <!-- Desktop Version (1920x1080) -->
+        <source 
+          src="images/background-1920.mp4" 
+          type="video/mp4" 
+          media="(min-width: 1024px)">
+        <!-- Mobile Version (1280x720) -->
+        <source 
+          src="images/background-1280.mp4" 
+          type="video/mp4">
+      </video>
+      <!-- Dark Overlay für bessere Lesbarkeit -->
+      <div class="hero-video-overlay"></div>
+    </div>
 
     <div class="container">
       <div class="hero-content">

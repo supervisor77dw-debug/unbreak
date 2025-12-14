@@ -337,16 +337,95 @@ section {
 }
 
 /* === HERO SECTION === */
+/* === HERO SECTION WITH VIDEO BACKGROUND === */
+
+/* 
+  VIDEO-HINTERGRUND IMPLEMENTATION
+  ================================
+  
+  Struktur:
+  - #hero: Haupt-Container mit Flexbox-Layout
+  - .hero-video-container: Absolute positionierter Video-Container (Fullscreen)
+  - .hero-video: Video-Element mit object-fit: cover
+  - .hero-video-overlay: Dunkler Gradient-Overlay für Lesbarkeit
+  - .container: Content-Layer über Video (z-index: 3)
+  
+  Responsive Strategie:
+  - Desktop (≥1024px): background-1920.mp4 (1920×1080)
+  - Mobile (<1024px): background-1280.mp4 (1280×720)
+  - Automatische Auswahl via HTML media-Attribut + JavaScript
+  
+  Performance:
+  - object-fit: cover = Video füllt gesamten Bereich ohne Verzerrung
+  - will-change: transform = GPU-Beschleunigung
+  - IntersectionObserver pausiert Video außerhalb des Viewports
+  - Fallback: Linear-Gradient Background bei Ladefehlern
+  
+  Layer-Hierarchie (z-index):
+  1. Video-Container (z-index: 1)
+  2. Dark Overlay (z-index: 2)
+  3. Text & Content (z-index: 3)
+*/
+
 #hero {
-  background: linear-gradient(135deg, var(--color-graphit) 0%, var(--color-petrol-dark) 100%);
+  position: relative;
   color: var(--color-white);
   min-height: 90vh;
   display: flex;
   align-items: center;
   padding: var(--spacing-xl) 0;
+  overflow: hidden;
+  /* Fallback Background */
+  background: linear-gradient(135deg, var(--color-graphit) 0%, var(--color-petrol-dark) 100%);
 }
 
+/* Video Container - Fullscreen Background */
+.hero-video-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* Video Element - Cover gesamten Bereich */
+.hero-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  transform: translate(-50%, -50%);
+  object-fit: cover;
+  /* Performance-Optimierung */
+  will-change: transform;
+}
+
+/* Dark Overlay - Verbessert Textlesbarkeit */
+.hero-video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 2;
+  /* Sanfter Gradient für natürlichen Look */
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+}
+
+/* Content Layer - Über Video und Overlay */
 #hero .container {
+  position: relative;
+  z-index: 3;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-xl);
@@ -967,6 +1046,12 @@ footer a:hover {
     font-size: 18px;
   }
 
+  /* Video auf Mobile optimieren */
+  .hero-video {
+    /* Mobile: Nutze 1280px Version automatisch */
+    object-fit: cover;
+  }
+
   .hero-buttons {
     flex-direction: column;
   }
@@ -1318,7 +1403,7 @@ footer a:hover {
     text-align: center;
   }
 }
-  /* Mobile: Bildgr��e anpassen f�r Konsistenz */
+  /* Mobile: Bildgr��e anpassen f�r Konsistenz */
   .product-image img {
     height: 300px;
   }
