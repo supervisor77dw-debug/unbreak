@@ -12,6 +12,11 @@
     <link rel="stylesheet" href="animations.css">
     <link rel="stylesheet" href="legal-styles.css">
     <link rel="stylesheet" href="readability-optimization.css">
+    <link rel="stylesheet" href="i18n.css">
+
+    <!-- i18n System -->
+    <script src="i18n.js"></script>
+    <script src="language-switch.js" defer></script>
 </head>
 
 <body>
@@ -33,9 +38,9 @@
             </div>
 
             <ul class="nav-links" id="navLinks">
-                <li><a href="index.html">Zurück zur Startseite</a></li>
-                <li><a href="datenschutz.html">Datenschutz</a></li>
-                <li><a href="agb.html">AGB</a></li>
+                <li><a href="index.html" data-i18n="nav.home">Zurück zur Startseite</a></li>
+                <li><a href="datenschutz.html" data-i18n="nav.privacy">Datenschutz</a></li>
+                <li><a href="agb.html" data-i18n="nav.terms">AGB</a></li>
             </ul>
         </nav>
     </header>
@@ -66,16 +71,15 @@
                     Web: <a href="https://www.ricksclub.de" target="_blank" rel="noopener">https://www.ricksclub.de</a>
                 </p>
 
-                <h2>Handelsregister</h2>
+                <h2 data-i18n="legal.impressum.registerTitle">Handelsregister</h2>
                 <p>
-                    Registergericht: Amtsgericht Kiel<br>
-                    Handelsregisternummer (HRB): 16712 KI
+                    <span data-i18n="legal.impressum.registerCourt">Registergericht: Amtsgericht Kiel</span><br>
+                    <span data-i18n="legal.impressum.registerNumber">Handelsregisternummer (HRB): 16712 KI</span>
                 </p>
 
-                <h2>Umsatzsteuer-ID</h2>
+                <h2 data-i18n="legal.impressum.vatTitle">Umsatzsteuer-ID</h2>
                 <p>
-                    Umsatzsteuer-ID gemäß § 27a UStG:<br>
-                    DE305470855
+                    <span data-i18n="legal.impressum.vatNumber">Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: DE 134657478</span>
                 </p>
 
                 <h2>Steuernummer</h2>
@@ -116,7 +120,7 @@
                 </p>
 
                 <div class="legal-back-btn-container">
-                    <a href="index.html" class="btn btn-primary btn-magnetic">Zurück zur Startseite</a>
+                    <a href="index.html" class="btn btn-primary btn-magnetic" data-i18n="legal.backToHome">Zurück zur Startseite</a>
                 </div>
             </div>
         </div>

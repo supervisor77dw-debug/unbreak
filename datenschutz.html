@@ -12,6 +12,11 @@
     <link rel="stylesheet" href="animations.css">
     <link rel="stylesheet" href="legal-styles.css">
     <link rel="stylesheet" href="readability-optimization.css">
+    <link rel="stylesheet" href="i18n.css">
+
+    <!-- i18n System -->
+    <script src="i18n.js"></script>
+    <script src="language-switch.js" defer></script>
 </head>
 
 <body>
@@ -33,9 +38,9 @@
             </div>
 
             <ul class="nav-links" id="navLinks">
-                <li><a href="index.html">Zurück zur Startseite</a></li>
-                <li><a href="impressum.html">Impressum</a></li>
-                <li><a href="agb.html">AGB</a></li>
+                <li><a href="index.html" data-i18n="nav.home">Zurück zur Startseite</a></li>
+                <li><a href="impressum.html" data-i18n="nav.impressum">Impressum</a></li>
+                <li><a href="agb.html" data-i18n="nav.terms">AGB</a></li>
             </ul>
         </nav>
     </header>
@@ -43,41 +48,38 @@
     <section class="legal-content">
         <div class="container">
             <div class="legal-container">
-                <h1>Datenschutzerklärung</h1>
+                <h1 data-i18n="legal.privacy.title">Datenschutzerklärung</h1>
 
-                <h2>1. Verantwortlicher</h2>
+                <h2 data-i18n="legal.privacy.responsibleTitle">1. Verantwortlicher</h2>
                 <p>
-                    Verantwortlich für die Datenverarbeitung:<br>
-                    <strong>Ricks Gastro & Event GmbH</strong><br>
-                    Grasweg 48<br>
-                    24118 Kiel<br>
+                    <span data-i18n="legal.privacy.responsibleText">Verantwortlich für die Datenverarbeitung:</span><br>
+                    <strong data-i18n="legal.privacy.company">Ricks Gastro & Event GmbH</strong><br>
+                    <span data-i18n-html="legal.privacy.address">Grasweg 48<br>24118 Kiel</span><br>
                     E-Mail: <a href="mailto:info@unbreak-one.de">info@unbreak-one.de</a>
                 </p>
 
-                <h2>2. Hosting</h2>
-                <p>Unsere Website wird technisch betrieben von:</p>
+                <h2 data-i18n="legal.privacy.hostingTitle">2. Hosting</h2>
+                <p data-i18n="legal.privacy.hostingText">Unsere Website wird technisch betrieben von:</p>
                 <p>
-                    <strong>crossmedia1 – Thomas Ferenz</strong><br>
-                    Kuhlacker 18<br>
-                    24145 Kiel<br>
-                    Deutschland<br>
-                    Tel.: 0431 536 81 18<br>
+                    <strong data-i18n="legal.privacy.hostingCompany">crossmedia1 – Thomas Ferenz</strong><br>
+                    <span data-i18n-html="legal.privacy.hostingAddress">Kuhlacker 18<br>24145 Kiel<br>Deutschland</span><br>
+                    <span data-i18n="legal.privacy.hostingPhone">Tel.: 0431 536 81 18</span><br>
                     E-Mail: <a href="mailto:info@crossmedia1.de">info@crossmedia1.de</a>
                 </p>
-                <p>Mit dem Hostinganbieter besteht – sofern erforderlich – ein Vertrag zur Auftragsverarbeitung nach
+                <p data-i18n="legal.privacy.hostingContract">Mit dem Hostinganbieter besteht – sofern erforderlich – ein Vertrag zur Auftragsverarbeitung nach
                     Art. 28 DSGVO.</p>
 
-                <h2>3. Server-Logfiles</h2>
-                <p>Folgende Daten werden automatisch bei Zugriff auf die Website erhoben:</p>
+                <h2 data-i18n="legal.privacy.logfilesTitle">3. Server-Logfiles</h2>
+                <p data-i18n="legal.privacy.logfilesText">Folgende Daten werden automatisch bei Zugriff auf die Website erhoben:</p>
                 <ul>
-                    <li>Browsertyp und Version</li>
-                    <li>Betriebssystem</li>
-                    <li>Referrer-URL</li>
-                    <li>Hostname des zugreifenden Rechners</li>
-                    <li>Uhrzeit der Serveranfrage</li>
-                    <li>IP-Adresse (gekürzt oder anonymisiert)</li>
+                    <li data-i18n="legal.privacy.logfilesBrowser">Browsertyp und Version</li>
+                    <li data-i18n="legal.privacy.logfilesOS">Betriebssystem</li>
+                    <li data-i18n="legal.privacy.logfilesReferrer">Referrer-URL</li>
+                    <li data-i18n="legal.privacy.logfilesHostname">Hostname des zugreifenden Rechners</li>
+                    <li data-i18n="legal.privacy.logfilesTime">Uhrzeit der Serveranfrage</li>
+                    <li data-i18n="legal.privacy.logfilesIP">IP-Adresse (gekürzt oder anonymisiert)</li>
                 </ul>
-                <p>Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Betrieb & Sicherheit der
+                <p data-i18n="legal.privacy.logfilesLegal">Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Betrieb & Sicherheit der
                     Website).</p>
 
                 <h2>4. Kontaktaufnahme</h2>
@@ -89,8 +91,8 @@
                     <li>Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Kommunikation)</li>
                 </ul>
 
-                <h2>5. Cookies</h2>
-                <p>Unsere Website verwendet ausschließlich technisch notwendige Cookies.<br>
+                <h2 data-i18n="legal.privacy.cookiesTitle">5. Cookies</h2>
+                <p data-i18n="legal.privacy.cookiesText">Unsere Website verwendet ausschließlich technisch notwendige Cookies.<br>
                     Es werden keine Tracking- oder Marketing-Cookies eingesetzt, sofern nicht später ergänzt.</p>
 
                 <h2>6. Reservierungen & Buchungen</h2>
@@ -119,8 +121,8 @@
                 </p>
                 <p>Die Datenverarbeitung erfolgt nach den Datenschutzrichtlinien der jeweiligen Anbieter.</p>
 
-                <h2>9. Rechte der Nutzer</h2>
-                <p>Sie haben folgende Rechte:</p>
+                <h2 data-i18n="legal.privacy.rightsTitle">9. Rechte der Nutzer</h2>
+                <p data-i18n="legal.privacy.rightsText">Sie haben folgende Rechte:</p>
                 <ul>
                     <li>Auskunft (Art. 15 DSGVO)</li>
                     <li>Berichtigung (Art. 16 DSGVO)</li>
@@ -143,7 +145,7 @@
                 <p>Wir setzen moderne technische und organisatorische Maßnahmen ein, um Ihre Daten zu schützen.</p>
 
                 <div class="legal-back-btn-container">
-                    <a href="index.html" class="btn btn-primary btn-magnetic">Zurück zur Startseite</a>
+                    <a href="index.html" class="btn btn-primary btn-magnetic" data-i18n="legal.backToHome">Zurück zur Startseite</a>
                 </div>
             </div>
         </div>

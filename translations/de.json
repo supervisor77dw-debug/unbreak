@@ -1,0 +1,227 @@
+{
+  "meta": {
+    "title": "UNBREAK ONE – Magnetische Halter für Gläser & Flaschen | Premium Qualität",
+    "description": "UNBREAK ONE bietet magnetische Halter für Gläser und Flaschen – perfekt für Boot, Camper, Gastronomie und Zuhause. Premium-Materialien, sicher und elegant.",
+    "ogTitle": "UNBREAK ONE – Magnetische Halter für Gläser & Flaschen",
+    "ogDescription": "Premium magnetische Halter für Gläser und Flaschen. Entwickelt für Boot, Camper, Gastronomie und mehr.",
+    "twitterTitle": "UNBREAK ONE – Magnetische Halter",
+    "twitterDescription": "Premium magnetische Halter für Gläser und Flaschen."
+  },
+  "nav": {
+    "home": "Start",
+    "product": "Produkt",
+    "useCases": "Einsatzbereiche",
+    "gastroEdition": "Gastro Edition",
+    "tech": "Technik",
+    "shop": "Shop",
+    "contact": "Kontakt",
+    "buyNow": "Jetzt kaufen",
+    "impressum": "Impressum",
+    "privacy": "Datenschutz",
+    "terms": "AGB"
+  },
+  "hero": {
+    "title": "UNBREAK ONE",
+    "subtitle": "Magnetische Halter für Gläser & Flaschen – sicher, elegant, überall.",
+    "badgeAlt": "Made in Germany - Premium Quality",
+    "feature1": "Stabil auf Boot, Camper, Terrasse, Flugzeug, Zug, Serviceroboter & in der Gastronomie",
+    "feature2": "Premium-Materialien – entwickelt für echte Nutzung",
+    "feature3": "Modular kombinierbar für Gläser & Flaschen",
+    "ctaPrimary": "Jetzt kaufen",
+    "ctaSecondary": "Mehr erfahren"
+  },
+  "product": {
+    "sectionTitle": "Das System hinter UNBREAK ONE",
+    "sectionSubtitle": "Unsere magnetischen Halter kombinieren innovative Technik mit elegantem Design. Ob Weinglas, Glas oder Flasche – UNBREAK ONE sorgt für sicheren Halt, egal wo.",
+    "wineGlass": {
+      "title": "🍷 Weinglashalter",
+      "description": "Entwickelt für alle gängigen Weingläser – vom Bordeaux bis zum Champagnerglas.",
+      "feature1": "Hält Gläser sicher auch bei Bewegung",
+      "feature2": "Elegantes Design für jeden Anlass",
+      "feature3": "Platz sparend und flexibel einsetzbar",
+      "feature4": "Magnetisch oder mit Nano-Gel Untersetzer montierbar",
+      "imageAlt": "UNBREAK ONE Weinglashalter mit Weinglas auf Schiff - Magnetischer Halter für Weingläser"
+    },
+    "bottle": {
+      "title": "🍾 Flaschen- & Getränkehalter",
+      "description": "Für Weinflaschen, Bierflaschen, Wasserflaschen, Gläser und mehr – vielseitig und robust.",
+      "feature1": "Universell passend für gängige Flaschengrößen und Gläser",
+      "feature2": "Premium-Halt auch auf schwankenden Oberflächen",
+      "feature3": "Perfekt für Boot, Camper, Outdoor, Zug & Flugzeug",
+      "feature4": "Kombinierbar mit Glashaltern",
+      "imageAlt": "UNBREAK ONE Flaschenhalter mit Flasche auf Schiff - Magnetischer Halter für Flaschen"
+    }
+  },
+  "useCases": {
+    "sectionTitle": "Ein System – viele Einsatzbereiche",
+    "sectionSubtitle": "UNBREAK ONE passt sich Ihrem Leben an – ob auf dem Wasser, unterwegs oder Zuhause.",
+    "boat": {
+      "title": "Boot & Yacht",
+      "description": "Sicherheit auch bei Wellengang. Perfekt für entspannte Stunden auf dem Wasser.",
+      "imageAlt": "UNBREAK ONE auf Boot und Yacht - Sichere Glashalterung auf dem Wasser"
+    },
+    "camper": {
+      "title": "Camper & Wohnmobil",
+      "description": "Kein Umkippen während der Fahrt. Genießen Sie Ihre Getränke auch unterwegs.",
+      "imageAlt": "UNBREAK ONE im Camper und Wohnmobil - Magnetische Halter für unterwegs"
+    },
+    "gastro": {
+      "title": "Gastronomie",
+      "description": "Weniger Bruch, mehr Eleganz. Premium-Wirkung für Restaurants und Bars.",
+      "imageAlt": "UNBREAK ONE in der Gastronomie - Professionelle Halterung für Restaurants"
+    },
+    "home": {
+      "title": "Zuhause / Terrasse",
+      "description": "Eleganz & Funktion. Ideal für Balkone, Garten oder Wohnzimmer.",
+      "imageAlt": "UNBREAK ONE Zuhause und auf der Terrasse - Sichere Glashalter für jeden Anlass"
+    }
+  },
+  "gastroHero": {
+    "title": "UNBREAK ONE Gastro-Edition",
+    "subtitle": "Professioneller Halter für Fine Dining und Bars",
+    "ctaPrimary": "Mehr erfahren",
+    "benefitsTitle": "Vorteile für die Gastronomie",
+    "benefit1": "Weniger Glasbruch und Verschüttungen",
+    "benefit2": "Professionelle Präsentation am Tisch",
+    "benefit3": "Hygienisch und leicht zu reinigen",
+    "benefit4": "Premium-Wirkung für anspruchsvolle Gäste",
+    "benefit5": "Spezielle Gastro-Sets mit Mengenrabatt",
+    "ctaSecondary": "Infos für Gastronomie"
+  },
+  "tech": {
+    "sectionTitle": "Technik, die hält. Werte, die bleiben.",
+    "featuresTitle": "Technische Features",
+    "feature1Title": "Starke Magnete:",
+    "feature1Text": "Hochwertige Neodym-Magnete sorgen für sicheren Halt auf allen metallischen Oberflächen.",
+    "feature2Title": "Nano-Gel-Technologie:",
+    "feature2Text": "Alternative Montage ohne metallischen Untergrund. Unsere Nano-Gel-Untersetzer haften zuverlässig auf glatten Oberflächen wie Glas, Holz oder Kunststoff – ideal überall dort, wo Magnete nicht eingesetzt werden können.",
+    "feature3Title": "Maximale Stabilität:",
+    "feature3Text": "Getestet auf Boot, in Fahrzeugen und unter extremen Bedingungen.",
+    "feature4Title": "Temperaturbeständig:",
+    "feature4Text": "Von 0°C bis +50°C – für jede Situation gewappnet.",
+    "sustainabilityTitle": "Nachhaltigkeit",
+    "sustainability1Title": "Recycelte Materialien:",
+    "sustainability1Text": "Unsere Halter bestehen zu einem großen Teil aus recycelten Kunststoffen.",
+    "sustainability2Title": "CO₂-neutral produziert:",
+    "sustainability2Text": "Wir kompensieren alle CO₂-Emissionen in der Produktion und im Versand.",
+    "sustainability3Title": "Langlebigkeit:",
+    "sustainability3Text": "Entwickelt für jahrelange Nutzung – gegen die Wegwerfkultur.",
+    "sustainability4Title": "Reparierbar & modular:",
+    "sustainability4Text": "Einzelteile können nachbestellt und ausgetauscht werden.",
+    "image1Alt": "UNBREAK ONE Weinglashalter mit Weinglas auf Schiff",
+    "image2Alt": "UNBREAK ONE Flaschenhalter mit Flasche auf Schiff"
+  },
+  "howTo": {
+    "sectionTitle": "In drei Schritten zum sicheren Halt",
+    "sectionSubtitle": "UNBREAK ONE ist kinderleicht zu montieren und zu nutzen – ohne Schrauben, ohne Bohren.",
+    "step1Title": "Platzieren",
+    "step1Text": "Magnetisch auf Metalloberflächen oder mit Nano-Gel auf glatten Flächen – einfach anbringen mit Nano-Gel Untersetzern.",
+    "step1ImageAlt": "UNBREAK ONE Montage Schritt 1 - Halter platzieren",
+    "step2Title": "Einsetzen",
+    "step2Text": "Glas oder Flasche in den Halter setzen. Der Halter passt sich automatisch an.",
+    "step2ImageAlt": "UNBREAK ONE Montage Schritt 2 - Glas oder Flasche einsetzen",
+    "step3Title": "Genießen",
+    "step3Text": "Stabil & sicher – egal ob auf dem Wasser, im Camper oder Zuhause.",
+    "step3ImageAlt": "UNBREAK ONE Montage Schritt 3 - Genießen und entspannen"
+  },
+  "shop": {
+    "sectionTitle": "Wähle dein UNBREAK ONE Set",
+    "sectionSubtitle": "Von der kleinen Haushaltslösung bis zum professionellen Gastro-Bundle – wir haben das passende Set für dich.",
+    "basicTitle": "Basic Set",
+    "basicDescription": "Perfekt für den Einstieg: 2 Weinglashalter + 1 Flaschenhalter. Ideal für Zuhause oder die Terrasse.",
+    "basicImageAlt": "UNBREAK ONE Basic Set - Starter Set für Zuhause",
+    "basicCta": "In den Shop",
+    "premiumTitle": "Premium Set",
+    "premiumDescription": "Für Boot & Camper: 4 Weinglashalter + 2 Flaschenhalter + Nano-Gel-Pads. Alles, was du brauchst.",
+    "premiumImageAlt": "UNBREAK ONE Premium Set - Komplettset für Boot und Camper",
+    "premiumCta": "In den Shop",
+    "gastroTitle": "Gastro Bundle",
+    "gastroDescription": "Für Restaurants & Bars: 10 Weinglashalter + 6 Flaschenhalter. Perfekt für professionelle Ansprüche.",
+    "gastroImageAlt": "UNBREAK ONE Gastro Bundle - Professionelles Set für Restaurants",
+    "gastroCta": "In den Shop",
+    "buyWineGlass": "Weinglashalter kaufen",
+    "buyBottle": "Flaschenhalter kaufen",
+    "buyGastroSets": "Gastro Sets"
+  },
+  "contact": {
+    "title": "Kontakt",
+    "text1": "Haben Sie Fragen zu UNBREAK ONE oder möchten Sie ein individuelles Angebot für Ihr Restaurant oder Hotel?",
+    "text2": "Wir freuen uns auf Ihre Nachricht!",
+    "emailLabel": "E-Mail:",
+    "instagramAria": "Instagram",
+    "tiktokAria": "TikTok",
+    "youtubeAria": "YouTube"
+  },
+  "footer": {
+    "impressum": "Impressum",
+    "privacy": "Datenschutz",
+    "terms": "AGB"
+  },
+  "legal": {
+    "backToHome": "Zurück zur Startseite",
+    "impressum": {
+      "title": "Impressum",
+      "company": "Rick's Gastro & Event GmbH",
+      "address": "Holtenauer Straße 279<br>24106 Kiel<br>Deutschland",
+      "managingDirectors": "Vertreten durch die Geschäftsführer:",
+      "director1": "Nina Wilkens (Kauffrau)",
+      "director2": "Dirk Wilkens (Wirtschafts-Ing.)",
+      "contactTitle": "Kontakt",
+      "phone": "Telefon: 0431 / 90880982",
+      "fax": "Fax: 0431 / 90880984",
+      "email": "E-Mail:",
+      "web": "Web:",
+      "registerTitle": "Handelsregister",
+      "registerCourt": "Registergericht: Amtsgericht Kiel",
+      "registerNumber": "Handelsregisternummer (HRB): 16712 KI",
+      "vatTitle": "Umsatzsteuer-ID",
+      "vatNumber": "Umsatzsteuer-Identifikationsnummer gemäß §27a Umsatzsteuergesetz: DE 134657478",
+      "responsibleTitle": "Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV",
+      "responsiblePerson": "Dirk Wilkens<br>Holtenauer Straße 279<br>24106 Kiel",
+      "disclaimerTitle": "Haftungsausschluss",
+      "disclaimerContent": "Die Inhalte unserer Seiten wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen."
+    },
+    "privacy": {
+      "title": "Datenschutzerklärung",
+      "responsibleTitle": "1. Verantwortlicher",
+      "responsibleText": "Verantwortlich für die Datenverarbeitung:",
+      "company": "Ricks Gastro & Event GmbH",
+      "address": "Grasweg 48<br>24118 Kiel",
+      "hostingTitle": "2. Hosting",
+      "hostingText": "Unsere Website wird technisch betrieben von:",
+      "hostingCompany": "crossmedia1 – Thomas Ferenz",
+      "hostingAddress": "Kuhlacker 18<br>24145 Kiel<br>Deutschland",
+      "hostingPhone": "Tel.: 0431 536 81 18",
+      "hostingContract": "Mit dem Hostinganbieter besteht – sofern erforderlich – ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO.",
+      "logfilesTitle": "3. Server-Logfiles",
+      "logfilesText": "Folgende Daten werden automatisch bei Zugriff auf die Website erhoben:",
+      "logfilesBrowser": "Browsertyp und Version",
+      "logfilesOS": "Betriebssystem",
+      "logfilesReferrer": "Referrer-URL",
+      "logfilesHostname": "Hostname des zugreifenden Rechners",
+      "logfilesTime": "Uhrzeit der Serveranfrage",
+      "logfilesIP": "IP-Adresse",
+      "logfilesLegal": "Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der technischen Bereitstellung der Website).",
+      "cookiesTitle": "4. Cookies",
+      "cookiesText": "Derzeit verwenden wir nur technisch notwendige Cookies (z. B. für die Sprachauswahl). Diese werden nicht zu Tracking-Zwecken genutzt.",
+      "rightsTitle": "5. Ihre Rechte",
+      "rightsText": "Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Kontakt: info@unbreak-one.de"
+    },
+    "terms": {
+      "title": "Allgemeine Geschäftsbedingungen (AGB)",
+      "subtitle": "der Rick's Gastro & Event GmbH",
+      "section1Title": "§1 Bestellung und Lieferung",
+      "section1Text": "Die Lieferzeit beträgt ca. 2–4 Wochen nach Auftragsbestätigung. Individuelle Anfertigungen können eine längere Lieferzeit in Anspruch nehmen.",
+      "section2Title": "§2 Zahlung",
+      "section2Text": "Die Zahlung erfolgt per Vorkasse. Nach Auftragsbestätigung erhalten Sie unsere Bankverbindung. Die Ware wird nach Zahlungseingang versendet.",
+      "section3Title": "§3 Widerrufsrecht",
+      "section3Text": "Verbraucher haben das Recht, binnen 14 Tagen ohne Angabe von Gründen diesen Vertrag zu widerrufen. Die Widerrufsfrist beträgt 14 Tage ab dem Tag, an dem Sie die Waren in Besitz genommen haben. Um Ihr Widerrufsrecht auszuüben, müssen Sie uns (Ricks Gastro & Event GmbH, Grasweg 48, 24118 Kiel, E-Mail: widerruf@unbreak-one.de) mittels einer eindeutigen Erklärung über Ihren Entschluss, diesen Vertrag zu widerrufen, informieren. Bei individuell angefertigten Produkten (z. B. mit personalisierten Motiven) ist ein Widerruf ausgeschlossen.",
+      "section4Title": "§4 Gewährleistung",
+      "section4Text": "Für gewerbliche Kunden (B2B) beträgt die Gewährleistungsfrist 6 Monate ab Erhalt der Ware. Für Verbraucher (B2C) gelten die gesetzlichen Gewährleistungsrechte von 2 Jahren ab Erhalt der Ware.",
+      "section5Title": "§5 Datenschutz",
+      "section5Text": "Verantwortlich für die Datenverarbeitung: Ricks Gastro & Event GmbH, Grasweg 48, 24118 Kiel, E-Mail: info@unbreak-one.de. Ihre personenbezogenen Daten werden ausschließlich zur Auftragsabwicklung und Kundenbetreuung verwendet und nicht an Dritte weitergegeben. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung). Sie haben das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung Ihrer Daten sowie ein Widerspruchsrecht. Ihre Daten werden für die Dauer der Geschäftsbeziehung sowie gemäß gesetzlicher Aufbewahrungsfristen gespeichert.",
+      "section6Title": "§6 Schlussbestimmungen",
+      "section6Text": "Es gilt deutsches Recht. Gerichtsstand – soweit gesetzlich zulässig – ist Kiel."
+    }
+  }
+}

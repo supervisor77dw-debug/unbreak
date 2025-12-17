@@ -33,6 +33,11 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="animations.css">
   <link rel="stylesheet" href="readability-optimization.css?v=2">
+  <link rel="stylesheet" href="i18n.css">
+  
+  <!-- i18n System (must load before other scripts) -->
+  <script src="i18n.js"></script>
+  <script src="language-switch.js" defer></script>
 </head>
 
 <body>
@@ -59,20 +64,20 @@
 
       <!-- Navigation Links -->
       <ul class="nav-links" id="navLinks">
-        <li><a href="#hero">Start</a></li>
-        <li><a href="#produkt">Produkt</a></li>
-        <li><a href="#einsatzbereiche">Einsatzbereiche</a></li>
-        <li><a href="#gastro-hero">Gastro Edition</a></li>
-        <li><a href="#technik">Technik</a></li>
-        <li><a href="#shop">Shop</a></li>
-        <li><a href="#kontakt">Kontakt</a></li>
+        <li><a href="#hero" data-i18n="nav.home">Start</a></li>
+        <li><a href="#produkt" data-i18n="nav.product">Produkt</a></li>
+        <li><a href="#einsatzbereiche" data-i18n="nav.useCases">Einsatzbereiche</a></li>
+        <li><a href="#gastro-hero" data-i18n="nav.gastroEdition">Gastro Edition</a></li>
+        <li><a href="#technik" data-i18n="nav.tech">Technik</a></li>
+        <li><a href="#shop" data-i18n="nav.shop">Shop</a></li>
+        <li><a href="#kontakt" data-i18n="nav.contact">Kontakt</a></li>
 
         <!-- Mobile Only Legal Links -->
-        <li class="mobile-only"><a href="impressum.html">Impressum</a></li>
-        <li class="mobile-only"><a href="datenschutz.html">Datenschutz</a></li>
-        <li class="mobile-only"><a href="agb.html">AGB</a></li>
+        <li class="mobile-only"><a href="impressum.html" data-i18n="nav.impressum">Impressum</a></li>
+        <li class="mobile-only"><a href="datenschutz.html" data-i18n="nav.privacy">Datenschutz</a></li>
+        <li class="mobile-only"><a href="agb.html" data-i18n="nav.terms">AGB</a></li>
 
-        <li><a href="https://shop.unbreak-one.com" target="_blank" class="btn btn-nav">Jetzt kaufen</a></li>
+        <li><a href="https://shop.unbreak-one.com" target="_blank" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
       </ul>
     </nav>
   </header>
@@ -105,22 +110,22 @@
 
     <div class="container">
       <div class="hero-content">
-        <img src="images/badge-made-in-germany.png" class="badge-mig" alt="Made in Germany - Premium Quality">
-        <h1>UNBREAK ONE</h1>
-        <p class="subheadline">Magnetische Halter für Gläser &
+        <img src="images/badge-made-in-germany.png" class="badge-mig" alt="Made in Germany - Premium Quality" data-i18n-alt="hero.badgeAlt">
+        <h1 data-i18n="hero.title">UNBREAK ONE</h1>
+        <p class="subheadline" data-i18n="hero.subtitle">Magnetische Halter für Gläser &
           Flaschen – sicher, elegant, überall.</p>
 
         <ul>
-          <li>Stabil auf Boot, Camper, Terrasse, Flugzeug, Zug, Serviceroboter & in der Gastronomie</li>
-          <li>Premium-Materialien – entwickelt für echte Nutzung</li>
-          <li>Modular kombinierbar für Gläser & Flaschen</li>
+          <li data-i18n="hero.feature1">Stabil auf Boot, Camper, Terrasse, Flugzeug, Zug, Serviceroboter & in der Gastronomie</li>
+          <li data-i18n="hero.feature2">Premium-Materialien – entwickelt für echte Nutzung</li>
+          <li data-i18n="hero.feature3">Modular kombinierbar für Gläser & Flaschen</li>
         </ul>
 
         <div class="hero-buttons">
           <!-- TODO: Shopify-Produktlink hier einfügen -->
-          <a href="https://shop.unbreak-one.com" target="_blank" class="btn btn-primary btn-magnetic pulse-glow">Jetzt
+          <a href="https://shop.unbreak-one.com" target="_blank" class="btn btn-primary btn-magnetic pulse-glow" data-i18n="hero.ctaPrimary">Jetzt
             kaufen</a>
-          <a href="#produkt" class="btn btn-secondary btn-magnetic">Mehr erfahren</a>
+          <a href="#produkt" class="btn btn-secondary btn-magnetic" data-i18n="hero.ctaSecondary">Mehr erfahren</a>
         </div>
       </div>
     </div>
@@ -131,28 +136,28 @@
        =================================== -->
   <section id="produkt">
     <div class="container">
-      <h2 class="text-center mb-lg" data-scroll-reveal="fade-up">Das System hinter UNBREAK ONE</h2>
-      <p class="text-center mb-xl" data-scroll-reveal="fade-up" data-scroll-delay="1">Unsere magnetischen Halter
+      <h2 class="text-center mb-lg" data-scroll-reveal="fade-up" data-i18n="product.sectionTitle">Das System hinter UNBREAK ONE</h2>
+      <p class="text-center mb-xl" data-scroll-reveal="fade-up" data-scroll-delay="1" data-i18n="product.sectionSubtitle">Unsere magnetischen Halter
         kombinieren innovative Technik mit elegantem Design. Ob Weinglas, Glas oder Flasche – UNBREAK ONE sorgt für
         sicheren Halt, egal wo.</p>
 
       <!-- Weinglashalter - Text links, Bild rechts -->
       <div class="product-row" data-scroll-reveal="fade-up">
         <div class="product-text" data-scroll-reveal="fade-right" data-scroll-delay="2">
-          <h3>🍷 Weinglashalter</h3>
-          <p>Entwickelt für alle gängigen Weingläser – vom Bordeaux bis zum Champagnerglas.</p>
+          <h3 data-i18n="product.wineGlass.title">🍷 Weinglashalter</h3>
+          <p data-i18n="product.wineGlass.description">Entwickelt für alle gängigen Weingläser – vom Bordeaux bis zum Champagnerglas.</p>
 
           <ul>
-            <li>Hält Gläser sicher auch bei Bewegung</li>
-            <li>Elegantes Design für jeden Anlass</li>
-            <li>Platz sparend und flexibel einsetzbar</li>
-            <li>Magnetisch oder mit Nano-Gel Untersetzer montierbar</li>
+            <li data-i18n="product.wineGlass.feature1">Hält Gläser sicher auch bei Bewegung</li>
+            <li data-i18n="product.wineGlass.feature2">Elegantes Design für jeden Anlass</li>
+            <li data-i18n="product.wineGlass.feature3">Platz sparend und flexibel einsetzbar</li>
+            <li data-i18n="product.wineGlass.feature4">Magnetisch oder mit Nano-Gel Untersetzer montierbar</li>
           </ul>
         </div>
 
         <div class="product-image tilt-card float" data-scroll-reveal="scale" data-scroll-delay="1">
           <img src="images/weinglashalter_szene_ship.jpg"
-            alt="UNBREAK ONE Weinglashalter mit Weinglas auf Schiff - Magnetischer Halter für Weingläser">
+            alt="UNBREAK ONE Weinglashalter mit Weinglas auf Schiff - Magnetischer Halter für Weingläser" data-i18n-alt="product.wineGlass.imageAlt">
         </div>
       </div>
 
@@ -160,18 +165,18 @@
       <div class="product-row product-row-reverse" data-scroll-reveal="fade-up">
         <div class="product-image tilt-card float-slow" data-scroll-reveal="scale" data-scroll-delay="1">
           <img src="images/flaschenhalter_szene_ship.jpg"
-            alt="UNBREAK ONE Flaschenhalter mit Flasche auf Schiff - Magnetischer Halter für Flaschen">
+            alt="UNBREAK ONE Flaschenhalter mit Flasche auf Schiff - Magnetischer Halter für Flaschen" data-i18n-alt="product.bottle.imageAlt">
         </div>
 
         <div class="product-text" data-scroll-reveal="fade-left" data-scroll-delay="2">
-          <h3>🍾 Flaschen- & Getränkehalter</h3>
-          <p>Für Weinflaschen, Bierflaschen, Wasserflaschen, Gläser und mehr – vielseitig und robust.</p>
+          <h3 data-i18n="product.bottle.title">🍾 Flaschen- & Getränkehalter</h3>
+          <p data-i18n="product.bottle.description">Für Weinflaschen, Bierflaschen, Wasserflaschen, Gläser und mehr – vielseitig und robust.</p>
 
           <ul>
-            <li>Universell passend für gängige Flaschengrößen und Gläser</li>
-            <li>Premium-Halt auch auf schwankenden Oberflächen</li>
-            <li>Perfekt für Boot, Camper, Outdoor, Zug & Flugzeug</li>
-            <li>Kombinierbar mit Glashaltern</li>
+            <li data-i18n="product.bottle.feature1">Universell passend für gängige Flaschengrößen und Gläser</li>
+            <li data-i18n="product.bottle.feature2">Premium-Halt auch auf schwankenden Oberflächen</li>
+            <li data-i18n="product.bottle.feature3">Perfekt für Boot, Camper, Outdoor, Zug & Flugzeug</li>
+            <li data-i18n="product.bottle.feature4">Kombinierbar mit Glashaltern</li>
           </ul>
         </div>
       </div>
@@ -183,8 +188,8 @@
        =================================== -->
   <section id="einsatzbereiche">
     <div class="container">
-      <h2 class="text-center mb-lg" data-scroll-reveal="fade-up">Ein System – viele Einsatzbereiche</h2>
-      <p class="text-center mb-xl" data-scroll-reveal="fade-up" data-scroll-delay="1">UNBREAK ONE passt sich Ihrem
+      <h2 class="text-center mb-lg" data-scroll-reveal="fade-up" data-i18n="useCases.sectionTitle">Ein System – viele Einsatzbereiche</h2>
+      <p class="text-center mb-xl" data-scroll-reveal="fade-up" data-scroll-delay="1" data-i18n="useCases.sectionSubtitle">UNBREAK ONE passt sich Ihrem
         Leben
         an – ob auf dem Wasser, unterwegs oder Zuhause.
       </p>
@@ -195,10 +200,10 @@
           <div class="bereich-icon float">⚓</div>
           <!-- Yacht / Boot -->
           <img src="images/hero-cinematic.jpg"
-            alt="UNBREAK ONE auf Boot und Yacht - Sichere Glashalterung auf dem Wasser"
+            alt="UNBREAK ONE auf Boot und Yacht - Sichere Glashalterung auf dem Wasser" data-i18n-alt="useCases.boat.imageAlt"
             style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;">
-          <h3>Boot & Yacht</h3>
-          <p>Sicherheit auch bei Wellengang. Perfekt für entspannte Stunden auf dem Wasser.</p>
+          <h3 data-i18n="useCases.boat.title">Boot & Yacht</h3>
+          <p data-i18n="useCases.boat.description">Sicherheit auch bei Wellengang. Perfekt für entspannte Stunden auf dem Wasser.</p>
         </div>
 
         <!-- Camper & Wohnmobil -->
@@ -206,10 +211,10 @@
           <div class="bereich-icon float">🚐</div>
           <!-- Camper / Vanlife -->
           <img src="images/Camper_Hero.jpg?v=5"
-            alt="UNBREAK ONE im Camper und Wohnmobil - Magnetische Halter für unterwegs"
+            alt="UNBREAK ONE im Camper und Wohnmobil - Magnetische Halter für unterwegs" data-i18n-alt="useCases.camper.imageAlt"
             style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;">
-          <h3>Camper & Wohnmobil</h3>
-          <p>Kein Umkippen während der Fahrt. Genießen Sie Ihre Getränke auch unterwegs.</p>
+          <h3 data-i18n="useCases.camper.title">Camper & Wohnmobil</h3>
+          <p data-i18n="useCases.camper.description">Kein Umkippen während der Fahrt. Genießen Sie Ihre Getränke auch unterwegs.</p>
         </div>
 
         <!-- Gastronomie -->
@@ -217,10 +222,10 @@
           <div class="bereich-icon float">🍽️</div>
           <!-- Gastro / Bar -->
           <img src="images/Bar_Hero.jpg?v=8"
-            alt="UNBREAK ONE in der Gastronomie - Professionelle Halterung für Restaurants"
+            alt="UNBREAK ONE in der Gastronomie - Professionelle Halterung für Restaurants" data-i18n-alt="useCases.gastro.imageAlt"
             style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;">
-          <h3>Gastronomie</h3>
-          <p>Weniger Bruch, mehr Eleganz. Premium-Wirkung für Restaurants und Bars.</p>
+          <h3 data-i18n="useCases.gastro.title">Gastronomie</h3>
+          <p data-i18n="useCases.gastro.description">Weniger Bruch, mehr Eleganz. Premium-Wirkung für Restaurants und Bars.</p>
         </div>
 
         <!-- Zuhause / Terrasse -->
@@ -228,10 +233,10 @@
           <div class="bereich-icon float">🏡</div>
           <!-- Zuhause / Terrasse -->
           <img src="images/scene-home.jpg?v=9"
-            alt="UNBREAK ONE Zuhause und auf der Terrasse - Sichere Glashalter für jeden Anlass"
+            alt="UNBREAK ONE Zuhause und auf der Terrasse - Sichere Glashalter für jeden Anlass" data-i18n-alt="useCases.home.imageAlt"
             style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;">
-          <h3>Zuhause / Terrasse</h3>
-          <p>Eleganz & Funktion. Ideal für Balkone, Garten oder Wohnzimmer.</p>
+          <h3 data-i18n="useCases.home.title">Zuhause / Terrasse</h3>
+          <p data-i18n="useCases.home.description">Eleganz & Funktion. Ideal für Balkone, Garten oder Wohnzimmer.</p>
         </div>
       </div>
     </div>
@@ -247,22 +252,22 @@
 
       <!-- Linke Spalte -->
       <div class="gastro-hero-left" data-scroll-reveal="fade-right" data-scroll-delay="1">
-        <h1 class="text-shimmer">UNBREAK ONE Gastro-Edition</h1>
-        <p class="gastro-hero-subtitle">Professioneller Halter für Fine Dining und Bars</p>
-        <a href="#shop" class="btn btn-primary btn-magnetic">Mehr erfahren</a>
+        <h1 class="text-shimmer" data-i18n="gastroHero.title">UNBREAK ONE Gastro-Edition</h1>
+        <p class="gastro-hero-subtitle" data-i18n="gastroHero.subtitle">Professioneller Halter für Fine Dining und Bars</p>
+        <a href="#shop" class="btn btn-primary btn-magnetic" data-i18n="gastroHero.ctaPrimary">Mehr erfahren</a>
       </div>
 
       <!-- Rechte Spalte -->
       <div class="gastro-hero-right glass-enhanced" data-scroll-reveal="fade-left" data-scroll-delay="2">
-        <h3>Vorteile für die Gastronomie</h3>
+        <h3 data-i18n="gastroHero.benefitsTitle">Vorteile für die Gastronomie</h3>
         <ul class="gastro-benefits">
-          <li>Weniger Glasbruch und Verschüttungen</li>
-          <li>Professionelle Präsentation am Tisch</li>
-          <li>Hygienisch und leicht zu reinigen</li>
-          <li>Premium-Wirkung für anspruchsvolle Gäste</li>
-          <li>Spezielle Gastro-Sets mit Mengenrabatt</li>
+          <li data-i18n="gastroHero.benefit1">Weniger Glasbruch und Verschüttungen</li>
+          <li data-i18n="gastroHero.benefit2">Professionelle Präsentation am Tisch</li>
+          <li data-i18n="gastroHero.benefit3">Hygienisch und leicht zu reinigen</li>
+          <li data-i18n="gastroHero.benefit4">Premium-Wirkung für anspruchsvolle Gäste</li>
+          <li data-i18n="gastroHero.benefit5">Spezielle Gastro-Sets mit Mengenrabatt</li>
         </ul>
-        <a href="#kontakt" class="btn btn-secondary btn-magnetic">Infos für Gastronomie</a>
+        <a href="#kontakt" class="btn btn-secondary btn-magnetic" data-i18n="gastroHero.ctaSecondary">Infos für Gastronomie</a>
       </div>
 
     </div>
@@ -273,7 +278,7 @@
        TECHNIK & NACHHALTIGKEIT SECTION
        =================================== -->
   <section id="technik">
-    <h2 class="text-center mb-xl" data-scroll-reveal="fade-up">Technik, die hält. Werte, die bleiben.</h2>
+    <h2 class="text-center mb-xl" data-scroll-reveal="fade-up" data-i18n="tech.sectionTitle">Technik, die hält. Werte, die bleiben.</h2>
 
     <div class="tech-content">
       <!-- Linke Spalte: Bilder -->
@@ -281,58 +286,58 @@
         <!-- Bild 1: Magnethalter mit LED -->
         <div class="tech-image-container glass-enhanced tilt-card" data-scroll-reveal="fade-right"
           data-scroll-delay="1">
-          <img src="images/weinglashalter_szene_ship.jpg" alt="UNBREAK ONE Weinglashalter mit Weinglas auf Schiff">
+          <img src="images/weinglashalter_szene_ship.jpg" alt="UNBREAK ONE Weinglashalter mit Weinglas auf Schiff" data-i18n-alt="tech.image1Alt">
         </div>
 
         <!-- Bild 2: Innenleben -->
         <div class="tech-image-container glass-enhanced tilt-card" data-scroll-reveal="fade-right"
           data-scroll-delay="2">
-          <img src="images/flaschenhalter_szene_ship.jpg" alt="UNBREAK ONE Flaschenhalter mit Flasche auf Schiff">
+          <img src="images/flaschenhalter_szene_ship.jpg" alt="UNBREAK ONE Flaschenhalter mit Flasche auf Schiff" data-i18n-alt="tech.image2Alt">
         </div>
       </div>
 
       <!-- Rechte Spalte: Text Content -->
       <div class="tech-text">
         <div class="tech-block" data-scroll-reveal="fade-left" data-scroll-delay="1">
-          <h3>Technische Features</h3>
+          <h3 data-i18n="tech.featuresTitle">Technische Features</h3>
           <ul>
             <li>
-              <strong>Starke Magnete:</strong>
-              Hochwertige Neodym-Magnete sorgen für sicheren Halt auf allen metallischen Oberflächen.
+              <strong data-i18n="tech.feature1Title">Starke Magnete:</strong>
+              <span data-i18n="tech.feature1Text">Hochwertige Neodym-Magnete sorgen für sicheren Halt auf allen metallischen Oberflächen.</span>
             </li>
             <li>
-              <strong>Nano-Gel-Technologie:</strong>
-              Alternative Montage ohne metallischen Untergrund. Unsere Nano-Gel-Untersetzer haften zuverlässig auf glatten Oberflächen wie Glas, Holz oder Kunststoff – ideal überall dort, wo Magnete nicht eingesetzt werden können.
+              <strong data-i18n="tech.feature2Title">Nano-Gel-Technologie:</strong>
+              <span data-i18n="tech.feature2Text">Alternative Montage ohne metallischen Untergrund. Unsere Nano-Gel-Untersetzer haften zuverlässig auf glatten Oberflächen wie Glas, Holz oder Kunststoff – ideal überall dort, wo Magnete nicht eingesetzt werden können.</span>
             </li>
             <li>
-              <strong>Maximale Stabilität:</strong>
-              Getestet auf Boot, in Fahrzeugen und unter extremen Bedingungen.
+              <strong data-i18n="tech.feature3Title">Maximale Stabilität:</strong>
+              <span data-i18n="tech.feature3Text">Getestet auf Boot, in Fahrzeugen und unter extremen Bedingungen.</span>
             </li>
             <li>
-              <strong>Temperaturbeständig:</strong>
-              Von 0°C bis +50°C – für jede Situation gewappnet.
+              <strong data-i18n="tech.feature4Title">Temperaturbeständig:</strong>
+              <span data-i18n="tech.feature4Text">Von 0°C bis +50°C – für jede Situation gewappnet.</span>
             </li>
           </ul>
         </div>
 
         <div class="tech-block" data-scroll-reveal="fade-left" data-scroll-delay="2">
-          <h3>Nachhaltigkeit</h3>
+          <h3 data-i18n="tech.sustainabilityTitle">Nachhaltigkeit</h3>
           <ul>
             <li>
-              <strong>Recycelte Materialien:</strong>
-              Unsere Halter bestehen zu einem großen Teil aus recycelten Kunststoffen.
+              <strong data-i18n="tech.sustainability1Title">Recycelte Materialien:</strong>
+              <span data-i18n="tech.sustainability1Text">Unsere Halter bestehen zu einem großen Teil aus recycelten Kunststoffen.</span>
             </li>
             <li>
-              <strong>CO₂-neutral produziert:</strong>
-              Wir kompensieren alle CO₂-Emissionen in der Produktion und im Versand.
+              <strong data-i18n="tech.sustainability2Title">CO₂-neutral produziert:</strong>
+              <span data-i18n="tech.sustainability2Text">Wir kompensieren alle CO₂-Emissionen in der Produktion und im Versand.</span>
             </li>
             <li>
-              <strong>Langlebigkeit:</strong>
-              Entwickelt für jahrelange Nutzung – gegen die Wegwerfkultur.
+              <strong data-i18n="tech.sustainability3Title">Langlebigkeit:</strong>
+              <span data-i18n="tech.sustainability3Text">Entwickelt für jahrelange Nutzung – gegen die Wegwerfkultur.</span>
             </li>
             <li>
-              <strong>Reparierbar & modular:</strong>
-              Einzelteile können nachbestellt und ausgetauscht werden.
+              <strong data-i18n="tech.sustainability4Title">Reparierbar & modular:</strong>
+              <span data-i18n="tech.sustainability4Text">Einzelteile können nachbestellt und ausgetauscht werden.</span>
             </li>
           </ul>
         </div>
@@ -347,8 +352,8 @@
        =================================== -->
   <section id="anwendung">
     <div class="container">
-      <h2 class="text-center mb-lg" data-scroll-reveal="fade-up">In drei Schritten zum sicheren Halt</h2>
-      <p class="text-center mb-xl" data-scroll-reveal="fade-up" data-scroll-delay="1">UNBREAK ONE ist kinderleicht
+      <h2 class="text-center mb-lg" data-scroll-reveal="fade-up" data-i18n="howTo.sectionTitle">In drei Schritten zum sicheren Halt</h2>
+      <p class="text-center mb-xl" data-scroll-reveal="fade-up" data-scroll-delay="1" data-i18n="howTo.sectionSubtitle">UNBREAK ONE ist kinderleicht
         zu
         montieren und zu nutzen – ohne Schrauben, ohne
         Bohren.</p>
@@ -357,29 +362,29 @@
         <!-- Schritt 1 -->
         <div class="step-card glass-enhanced tilt-card" data-scroll-reveal="fade-up" data-scroll-delay="1">
           <div class="step-number pulse-glow">1</div>
-          <h3>Platzieren</h3>
-          <p>Magnetisch auf Metalloberflächen oder mit Nano-Gel auf glatten Flächen – einfach anbringen mit Nano-Gel
+          <h3 data-i18n="howTo.step1Title">Platzieren</h3>
+          <p data-i18n="howTo.step1Text">Magnetisch auf Metalloberflächen oder mit Nano-Gel auf glatten Flächen – einfach anbringen mit Nano-Gel
             Untersetzern.</p>
           <!-- Platzhalter-Bild: Schritt 1 -->
-          <img src="images/step-1.jpg" alt="UNBREAK ONE Montage Schritt 1 - Halter platzieren">
+          <img src="images/step-1.jpg" alt="UNBREAK ONE Montage Schritt 1 - Halter platzieren" data-i18n-alt="howTo.step1ImageAlt">
         </div>
 
         <!-- Schritt 2 -->
         <div class="step-card glass-enhanced tilt-card" data-scroll-reveal="fade-up" data-scroll-delay="2">
           <div class="step-number pulse-glow">2</div>
-          <h3>Einsetzen</h3>
-          <p>Glas oder Flasche in den Halter setzen. Der Halter passt sich automatisch an.</p>
+          <h3 data-i18n="howTo.step2Title">Einsetzen</h3>
+          <p data-i18n="howTo.step2Text">Glas oder Flasche in den Halter setzen. Der Halter passt sich automatisch an.</p>
           <!-- Platzhalter-Bild: Schritt 2 -->
-          <img src="images/step-2.jpg" alt="UNBREAK ONE Montage Schritt 2 - Glas oder Flasche einsetzen">
+          <img src="images/step-2.jpg" alt="UNBREAK ONE Montage Schritt 2 - Glas oder Flasche einsetzen" data-i18n-alt="howTo.step2ImageAlt">
         </div>
 
         <!-- Schritt 3 -->
         <div class="step-card glass-enhanced tilt-card" data-scroll-reveal="fade-up" data-scroll-delay="3">
           <div class="step-number pulse-glow">3</div>
-          <h3>Genießen</h3>
-          <p>Stabil & sicher – egal ob auf dem Wasser, im Camper oder Zuhause.</p>
+          <h3 data-i18n="howTo.step3Title">Genießen</h3>
+          <p data-i18n="howTo.step3Text">Stabil & sicher – egal ob auf dem Wasser, im Camper oder Zuhause.</p>
           <!-- Platzhalter-Bild: Schritt 3 -->
-          <img src="images/step-3.jpg" alt="UNBREAK ONE Montage Schritt 3 - Genießen und entspannen">
+          <img src="images/step-3.jpg" alt="UNBREAK ONE Montage Schritt 3 - Genießen und entspannen" data-i18n-alt="howTo.step3ImageAlt">
         </div>
       </div>
     </div>
@@ -390,8 +395,8 @@
        =================================== -->
   <section id="shop">
     <div class="container">
-      <h2 class="text-center mb-lg" data-scroll-reveal="fade-up">Wähle dein UNBREAK ONE Set</h2>
-      <p class="text-center mb-xl" data-scroll-reveal="fade-up" data-scroll-delay="1">Von der kleinen
+      <h2 class="text-center mb-lg" data-scroll-reveal="fade-up" data-i18n="shop.sectionTitle">Wähle dein UNBREAK ONE Set</h2>
+      <p class="text-center mb-xl" data-scroll-reveal="fade-up" data-scroll-delay="1" data-i18n="shop.sectionSubtitle">Von der kleinen
         Haushaltslösung
         bis zum professionellen Gastro-Bundle – wir haben das
         passende Set für dich.</p>
@@ -401,14 +406,14 @@
         <!-- Basic Set -->
         <div class="set-card glass-enhanced card-3d" data-scroll-reveal="fade-up" data-scroll-delay="1">
           <!-- Platzhalter-Bild: Basic Set -->
-          <img src="images/set-basic.jpg" alt="UNBREAK ONE Basic Set - Starter Set für Zuhause">
+          <img src="images/set-basic.jpg" alt="UNBREAK ONE Basic Set - Starter Set für Zuhause" data-i18n-alt="shop.basicImageAlt">
           <div class="set-card-content">
-            <h3>Basic Set</h3>
-            <p>Perfekt für den Einstieg: 2 Weinglashalter + 1 Flaschenhalter. Ideal für Zuhause oder die Terrasse.
+            <h3 data-i18n="shop.basicTitle">Basic Set</h3>
+            <p data-i18n="shop.basicDescription">Perfekt für den Einstieg: 2 Weinglashalter + 1 Flaschenhalter. Ideal für Zuhause oder die Terrasse.
             </p>
             <!-- TODO: Shopify-Produktlink hier einfügen -->
             <!-- TODO: Shopify-Produktlink hier einfügen -->
-            <a href="https://shop.unbreak-one.com/basic-set" target="_blank" class="btn btn-primary btn-magnetic">In den
+            <a href="https://shop.unbreak-one.com/basic-set" target="_blank" class="btn btn-primary btn-magnetic" data-i18n="shop.basicCta">In den
               Shop</a>
           </div>
         </div>
@@ -416,12 +421,12 @@
         <!-- Premium Set -->
         <div class="set-card glass-enhanced card-3d" data-scroll-reveal="fade-up" data-scroll-delay="2">
           <!-- Platzhalter-Bild: Premium Set -->
-          <img src="images/set-premium.jpg" alt="UNBREAK ONE Premium Set - Komplettset für Boot und Camper">
+          <img src="images/set-premium.jpg" alt="UNBREAK ONE Premium Set - Komplettset für Boot und Camper" data-i18n-alt="shop.premiumImageAlt">
           <div class="set-card-content">
-            <h3>Premium Set</h3>
-            <p>Für Boot & Camper: 4 Weinglashalter + 2 Flaschenhalter + Nano-Gel-Pads. Alles, was du brauchst.</p>
+            <h3 data-i18n="shop.premiumTitle">Premium Set</h3>
+            <p data-i18n="shop.premiumDescription">Für Boot & Camper: 4 Weinglashalter + 2 Flaschenhalter + Nano-Gel-Pads. Alles, was du brauchst.</p>
             <!-- TODO: Shopify-Produktlink hier einfügen -->
-            <a href="https://shop.unbreak-one.com/premium-set" target="_blank" class="btn btn-primary btn-magnetic">In
+            <a href="https://shop.unbreak-one.com/premium-set" target="_blank" class="btn btn-primary btn-magnetic" data-i18n="shop.premiumCta">In
               den Shop</a>
           </div>
         </div>
@@ -429,13 +434,13 @@
         <!-- Gastro Bundle -->
         <div class="set-card glass-enhanced card-3d" data-scroll-reveal="fade-up" data-scroll-delay="3">
           <!-- Platzhalter-Bild: Gastro Bundle -->
-          <img src="images/set-gastro.jpg" alt="UNBREAK ONE Gastro Bundle - Professionelles Set für Restaurants">
+          <img src="images/set-gastro.jpg" alt="UNBREAK ONE Gastro Bundle - Professionelles Set für Restaurants" data-i18n-alt="shop.gastroImageAlt">
           <div class="set-card-content">
-            <h3>Gastro Bundle</h3>
-            <p>Für Restaurants & Bars: 10 Weinglashalter + 6 Flaschenhalter. Perfekt für professionelle Ansprüche.
+            <h3 data-i18n="shop.gastroTitle">Gastro Bundle</h3>
+            <p data-i18n="shop.gastroDescription">Für Restaurants & Bars: 10 Weinglashalter + 6 Flaschenhalter. Perfekt für professionelle Ansprüche.
             </p>
             <!-- TODO: Shopify-Produktlink hier einfügen -->
-            <a href="https://shop.unbreak-one.com/gastro-bundle" target="_blank" class="btn btn-primary btn-magnetic">In
+            <a href="https://shop.unbreak-one.com/gastro-bundle" target="_blank" class="btn btn-primary btn-magnetic" data-i18n="shop.gastroCta">In
               den Shop</a>
           </div>
         </div>
@@ -445,12 +450,12 @@
       <div class="shopping-bar" data-scroll-reveal="fade-up" data-scroll-delay="4">
         <!-- TODO: Shopify-Produktlinks hier einfügen -->
         <a href="https://shop.unbreak-one.com/weinglashalter" target="_blank"
-          class="btn btn-primary btn-magnetic">Weinglashalter
+          class="btn btn-primary btn-magnetic" data-i18n="shop.buyWineGlass">Weinglashalter
           kaufen</a>
         <a href="https://shop.unbreak-one.com/flaschenhalter" target="_blank"
-          class="btn btn-primary btn-magnetic">Flaschenhalter
+          class="btn btn-primary btn-magnetic" data-i18n="shop.buyBottle">Flaschenhalter
           kaufen</a>
-        <a href="https://shop.unbreak-one.com/gastro" target="_blank" class="btn btn-primary btn-magnetic">Gastro
+        <a href="https://shop.unbreak-one.com/gastro" target="_blank" class="btn btn-primary btn-magnetic" data-i18n="shop.buyGastroSets">Gastro
           Sets</a>
       </div>
     </div>
@@ -462,24 +467,24 @@
   <section id="kontakt">
     <div class="container">
       <div class="contact-info glass-enhanced" data-scroll-reveal="scale">
-        <h2>Kontakt</h2>
-        <p>Haben Sie Fragen zu UNBREAK ONE oder möchten Sie ein individuelles Angebot für Ihr Restaurant oder
+        <h2 data-i18n="contact.title">Kontakt</h2>
+        <p data-i18n="contact.text1">Haben Sie Fragen zu UNBREAK ONE oder möchten Sie ein individuelles Angebot für Ihr Restaurant oder
           Hotel?</p>
-        <p>Wir freuen uns auf Ihre Nachricht!</p>
+        <p data-i18n="contact.text2">Wir freuen uns auf Ihre Nachricht!</p>
 
         <p class="mt-lg">
-          <strong>E-Mail:</strong> <a href="mailto:info@unbreak-one.com" class="glow-hover">info@unbreak-one.com</a>
+          <strong data-i18n="contact.emailLabel">E-Mail:</strong> <a href="mailto:info@unbreak-one.com" class="glow-hover">info@unbreak-one.com</a>
         </p>
 
         <!-- Social Media Icons -->
         <div class="social-icons">
           <!-- TODO: Social-Media-Links hier einfügen -->
           <a href="https://instagram.com/unbreakone" target="_blank" class="social-icon btn-magnetic"
-            aria-label="Instagram">📷</a>
+            aria-label="Instagram" data-i18n-aria="contact.instagramAria">📷</a>
           <a href="https://tiktok.com/@unbreakone" target="_blank" class="social-icon btn-magnetic"
-            aria-label="TikTok">🎵</a>
+            aria-label="TikTok" data-i18n-aria="contact.tiktokAria">🎵</a>
           <a href="https://youtube.com/@unbreakone" target="_blank" class="social-icon btn-magnetic"
-            aria-label="YouTube">▶️</a>
+            aria-label="YouTube" data-i18n-aria="contact.youtubeAria">▶️</a>
         </div>
       </div>
     </div>
@@ -489,9 +494,9 @@
   <footer data-scroll-reveal="fade-up">
     <div class="container">
       <p>
-        <a href="impressum.html">Impressum</a> |
-        <a href="datenschutz.html">Datenschutz</a> |
-        <a href="agb.html">AGB</a>
+        <a href="impressum.html" data-i18n="footer.impressum">Impressum</a> |
+        <a href="datenschutz.html" data-i18n="footer.privacy">Datenschutz</a> |
+        <a href="agb.html" data-i18n="footer.terms">AGB</a>
       </p>
     </div>
   </footer>
