@@ -118,19 +118,40 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(0, 0, 0, 0.65);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    transform: scale(1);
 }
 
 .loading-overlay.hidden {
     display: none !important;
     opacity: 0;
     pointer-events: none;
+}
+
+/* Loading Card */
+.loading-card {
+    background: white;
+    border-radius: 16px;
+    padding: 40px 50px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.loading-logo {
+    width: 120px;
+    height: auto;
+    margin-bottom: 10px;
 }
 
 .loading-spinner {
@@ -140,7 +161,6 @@
     border-top: 4px solid #0A6C74;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin-bottom: 20px;
 }
 
 @keyframes spin {
@@ -148,10 +168,97 @@
     100% { transform: rotate(360deg); }
 }
 
-.loading-overlay p {
+.loading-text {
     font-size: 1.1rem;
-    color: #555;
+    color: #333;
     font-weight: 500;
+    text-align: center;
+    margin: 0;
+}
+
+/* Progress Bar */
+.loading-progress {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0A6C74, #0d8895);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-percent {
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 600;
+}
+
+/* Error State */
+.error-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 1rem;
+    text-align: center;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.reload-button {
+    background: #0A6C74;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.reload-button:hover {
+    background: #085660;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(10, 108, 116, 0.3);
+}
+
+.reload-button:active {
+    transform: translateY(0);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .loading-card {
+        padding: 30px 35px;
+        min-width: 280px;
+    }
+    
+    .loading-logo {
+        width: 100px;
+    }
+    
+    .loading-text {
+        font-size: 1rem;
+    }
 }
 
 /* ========================================

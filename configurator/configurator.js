@@ -7,46 +7,130 @@
 document.addEventListener('DOMContentLoaded', () => {
     const iframe = document.getElementById('configurator-iframe');
     const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const loadingText = document.getElementById('loading-text');
+    const loadingProgress = document.getElementById('loading-progress');
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercent = document.getElementById('progress-percent');
+    const errorContainer = document.getElementById('error-container');
+    const errorMessage = document.getElementById('error-message');
+    const reloadButton = document.getElementById('reload-button');
     
-    console.log('Configurator loaded, iframe:', iframe, 'overlay:', loadingOverlay);
+    let timeoutTimer = null;
+    let isReady = false;
     
-    // Function to hide loading overlay
+    console.log('Configurator loaded, waiting for UNBREAK_CONFIG_READY...');
+    
+    // Function to hide loading overlay with animation
     const hideLoading = () => {
-        if (loadingOverlay && !loadingOverlay.classList.contains('hidden')) {
-            loadingOverlay.classList.add('hidden');
-            console.log('Loading overlay hidden');
+        if (loadingOverlay && !isReady) {
+            isReady = true;
+            loadingOverlay.style.opacity = '0';
+            loadingOverlay.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                loadingOverlay.classList.add('hidden');
+                console.log('✓ Configurator ready');
+            }, 400);
+            if (timeoutTimer) clearTimeout(timeoutTimer);
         }
     };
     
-    // AGGRESSIVE: Hide loading after 1 second
-    setTimeout(hideLoading, 1000);
+    // Function to show error
+    const showError = (msg) => {
+        if (loadingSpinner) loadingSpinner.style.display = 'none';
+        if (loadingText) loadingText.style.display = 'none';
+        if (loadingProgress) loadingProgress.style.display = 'none';
+        if (errorContainer) errorContainer.style.display = 'block';
+        if (errorMessage) errorMessage.textContent = msg;
+        console.error('✗ Configurator error:', msg);
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+    };
     
-    // Hide loading when iframe loads
-    if (iframe) {
-        iframe.addEventListener('load', () => {
-            console.log('Iframe loaded successfully');
-            hideLoading();
-        });
-        
-        iframe.addEventListener('error', (e) => {
-            console.error('Iframe loading error:', e);
-            if (loadingOverlay) {
-                loadingOverlay.innerHTML = '<p style="color: #e74c3c;">Fehler beim Laden des Konfigurators. Bitte laden Sie die Seite neu.</p>';
+    // Function to update progress
+    const updateProgress = (percent) => {
+        if (loadingProgress) loadingProgress.style.display = 'flex';
+        if (progressFill) progressFill.style.width = percent + '%';
+        if (progressPercent) progressPercent.textContent = percent + '%';
+    };
+    
+    // 15 second timeout fallback
+    timeoutTimer = setTimeout(() => {
+        if (!isReady) {
+            showError('Konfigurator lädt länger als erwartet. Bitte versuchen Sie es erneut.');
+        }
+    }, 15000);
+    
+    // Reload button handler
+    if (reloadButton) {
+        reloadButton.addEventListener('click', () => {
+            console.log('Reloading configurator...');
+            // Reset state
+            isReady = false;
+            if (errorContainer) errorContainer.style.display = 'none';
+            if (loadingSpinner) loadingSpinner.style.display = 'block';
+            if (loadingText) {
+                loadingText.style.display = 'block';
+                loadingText.textContent = 'Konfigurator wird geladen...';
             }
+            if (loadingProgress) loadingProgress.style.display = 'none';
+            if (loadingOverlay) {
+                loadingOverlay.style.opacity = '1';
+                loadingOverlay.style.transform = 'scale(1)';
+                loadingOverlay.classList.remove('hidden');
+            }
+            // Reload iframe
+            if (iframe) {
+                iframe.src = iframe.src;
+            }
+            // Restart timeout
+            if (timeoutTimer) clearTimeout(timeoutTimer);
+            timeoutTimer = setTimeout(() => {
+                if (!isReady) {
+                    showError('Konfigurator lädt länger als erwartet. Bitte versuchen Sie es erneut.');
+                }
+            }, 15000);
         });
     }
     
-    // Communication with iframe (optional)
+    // PostMessage Handler for UNBREAK_CONFIG Messages
     window.addEventListener('message', (event) => {
-        console.log('Message received from iframe:', event.origin, event.data);
+        // Verify origin (accept both Vercel URLs)
+        const allowedOrigins = [
+            'https://unbreak-3-d-konfigurator.vercel.app',
+            'http://localhost:5173',
+            'http://localhost:3000'
+        ];
         
-        // Verify origin
-        if (event.origin !== 'https://unbreak-3-d-konfigurator.vercel.app') return;
+        if (!allowedOrigins.includes(event.origin)) {
+            console.log('Message from unknown origin:', event.origin);
+            return;
+        }
         
-        // Handle messages from configurator
         const data = event.data;
         
+        // Handle UNBREAK_CONFIG Messages
         switch(data.type) {
+            case 'UNBREAK_CONFIG_READY':
+                console.log('✓ UNBREAK_CONFIG_READY received');
+                hideLoading();
+                break;
+                
+            case 'UNBREAK_CONFIG_LOADING':
+                console.log('⏳ UNBREAK_CONFIG_LOADING:', data.progress || 'no progress');
+                if (data.progress !== undefined) {
+                    updateProgress(Math.round(data.progress));
+                }
+                if (data.message && loadingText) {
+                    loadingText.textContent = data.message;
+                }
+                break;
+                
+            case 'UNBREAK_CONFIG_ERROR':
+                console.log('✗ UNBREAK_CONFIG_ERROR:', data.message);
+                showError(data.message || 'Fehler beim Laden des Konfigurators');
+                break;
+            
+            // Legacy support
             case 'addToCart':
                 handleAddToCart(data.config);
                 break;
@@ -54,7 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Config updated:', data.config);
                 break;
             case 'loaded':
-                // Konfigurator signalisiert, dass er fertig geladen ist
                 hideLoading();
                 break;
         }

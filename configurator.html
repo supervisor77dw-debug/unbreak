@@ -69,8 +69,21 @@
                     
                     <!-- Loading State -->
                     <div id="loading-overlay" class="loading-overlay">
-                        <div class="loading-spinner"></div>
-                        <p data-i18n="configurator.loading">Lade 3D-Konfigurator...</p>
+                        <div class="loading-card">
+                            <img src="images/logo.png" alt="UNBREAK ONE" class="loading-logo">
+                            <div id="loading-spinner" class="loading-spinner"></div>
+                            <p id="loading-text" class="loading-text" data-i18n="configurator.loading">Konfigurator wird geladen...</p>
+                            <div id="loading-progress" class="loading-progress" style="display: none;">
+                                <div class="progress-bar">
+                                    <div id="progress-fill" class="progress-fill"></div>
+                                </div>
+                                <span id="progress-percent" class="progress-percent">0%</span>
+                            </div>
+                            <div id="error-container" class="error-container" style="display: none;">
+                                <p id="error-message" class="error-message"></p>
+                                <button id="reload-button" class="reload-button">Neu laden</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
