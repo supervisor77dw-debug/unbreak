@@ -167,24 +167,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 15000);
     
-    // iframe onLoad Fallback: 3s nach iframe-Load, wenn kein READY kam
-    // versuche Soft-Reload (nur einmal)
-    let iframeLoadAttempted = false;
+    // PRAGMATISCHER FALLBACK: Nach 5s Loader ausblenden, auch ohne READY
+    // Grund: Der 3D-Konfigurator sendet möglicherweise (noch) keine Messages
+    // User soll den Konfigurator trotzdem sehen können
+    setTimeout(() => {
+        if (!isReady) {
+            logDebugEvent('FALLBACK', 'Kein READY nach 5s - Loader wird trotzdem ausgeblendet (pragmatischer Fallback)');
+            console.log('⚠️ Kein READY empfangen, aber Loader wird ausgeblendet damit User den Konfigurator sehen kann');
+            hideLoading();
+        }
+    }, 5000);
+    
+    // iframe onLoad Event (für Debugging)
     if (iframe) {
         iframe.addEventListener('load', () => {
             logDebugEvent('IFRAME', 'iframe load event fired');
-            
-            if (!isReady && !iframeLoadAttempted) {
-                iframeLoadAttempted = true;
-                iframeLoadTimer = setTimeout(() => {
-                    if (!isReady) {
-                        logDebugEvent('IFRAME', 'Kein READY nach 3s, versuche Soft-Reload', true);
-                        // Soft-Reload: nur einmal versuchen
-                        const baseUrl = iframe.src.split('?')[0];
-                        iframe.src = baseUrl + '?retry=' + Date.now();
-                    }
-                }, 3000);
-            }
         });
         
         iframe.addEventListener('error', (e) => {
