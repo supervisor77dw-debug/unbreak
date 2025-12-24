@@ -59,6 +59,24 @@
         debugEvents.scrollTop = debugEvents.scrollHeight;
     }
 
+// GLOBALER FALLBACK: Läuft unabhängig von allem anderen
+// Nach 2 Sekunden Loader GARANTIERT ausblenden
+setTimeout(() => {
+    const overlay = document.getElementById('loading-overlay');
+    const iframe = document.getElementById('configurator-iframe');
+    
+    if (overlay) {
+        console.log('🔥 GLOBALER FALLBACK: Loader wird nach 2s GARANTIERT ausgeblendet');
+        overlay.style.display = 'none';
+    }
+    
+    if (iframe) {
+        console.log('🔥 GLOBALER FALLBACK: iframe wird sichtbar gemacht');
+        iframe.style.opacity = '1';
+        iframe.style.pointerEvents = 'auto';
+    }
+}, 2000);
+
 document.addEventListener('DOMContentLoaded', () => {
     const iframe = document.getElementById('configurator-iframe');
     const loadingOverlay = document.getElementById('loading-overlay');
