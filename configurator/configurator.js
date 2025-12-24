@@ -8,13 +8,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const iframe = document.getElementById('configurator-iframe');
     const loadingOverlay = document.getElementById('loading-overlay');
     
-    // Force hide loading after 3 seconds (fallback)
+    console.log('Configurator loaded, iframe:', iframe, 'overlay:', loadingOverlay);
+    
+    // AGGRESSIVE: Hide loading immediately after 1.5 seconds
     setTimeout(() => {
         if (loadingOverlay) {
-            loadingOverlay.classList.add('hidden');
-            console.log('Loading overlay hidden (timeout)');
+            loadingOverlay.style.opacity = '0';
+            loadingOverlay.style.transition = 'opacity 0.3s';
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+                console.log('Loading overlay forcefully hidden');
+            }, 300);
         }
-    }, 3000);
+    }, 1500);
     
     // Hide loading when iframe loads
     if (iframe) {
