@@ -261,6 +261,85 @@
     }
 }
 
+/* Debug Mode: Event Log */
+.debug-log {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 350px;
+    max-height: 400px;
+    background: rgba(0, 0, 0, 0.9);
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    padding: 15px;
+    border-radius: 8px;
+    z-index: 10000;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.debug-log h4 {
+    margin: 0 0 10px 0;
+    color: #0f0;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #0f0;
+    padding-bottom: 5px;
+}
+
+.debug-events {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.debug-event {
+    margin-bottom: 8px;
+    padding: 5px;
+    background: rgba(0, 255, 0, 0.1);
+    border-left: 2px solid #0f0;
+}
+
+.debug-event.error {
+    background: rgba(255, 0, 0, 0.1);
+    border-left-color: #f00;
+    color: #f00;
+}
+
+.debug-event.success {
+    background: rgba(0, 255, 0, 0.1);
+    border-left-color: #0f0;
+}
+
+.debug-timestamp {
+    color: #888;
+    font-size: 0.7rem;
+}
+
+.debug-clear-btn {
+    background: #0A6C74;
+    color: white;
+    border: none;
+    padding: 5px 15px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    width: 100%;
+}
+
+.debug-clear-btn:hover {
+    background: #085660;
+}
+
+@media (max-width: 768px) {
+    .debug-log {
+        width: calc(100% - 40px);
+        left: 20px;
+        right: 20px;
+        bottom: 10px;
+    }
+}
+
 /* ========================================
    Controls Panel
    ======================================== */
