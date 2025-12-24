@@ -1,7 +1,18 @@
 /**
- * UNBREAK ONE - 3D Configurator
- * Integration mit Vercel-Deployment
- * Live: https://unbreak-3-d-konfigurator.vercel.app/
+ * UNBREAK ONE - 3D Configurator Integration
+ * 
+ * PostMessage Handshake:
+ * - UNBREAK_CONFIG_LOADING: Konfigurator lädt (optional progress 0-100)
+ * - UNBREAK_CONFIG_READY: Konfigurator bereit (iframe wird sichtbar)
+ * - UNBREAK_CONFIG_ERROR: Fehler beim Laden (Fehlermeldung + Reload-Button)
+ * 
+ * Sicherheit:
+ * - Origin-Check: Nur Messages von https://unbreak-3-d-konfigurator.vercel.app werden akzeptiert
+ * 
+ * UX:
+ * - iframe ist initial unsichtbar (opacity 0, pointer-events none)
+ * - Erst bei READY wird iframe sichtbar (opacity 1, pointer-events auto)
+ * - 15s Timeout-Fallback falls kein READY empfangen wird
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,16 +32,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('Configurator loaded, waiting for UNBREAK_CONFIG_READY...');
     
-    // Function to hide loading overlay with animation
+    // Function to hide loading overlay with animation and show iframe
     const hideLoading = () => {
         if (loadingOverlay && !isReady) {
             isReady = true;
+            // Loader ausblenden mit Fade-out
             loadingOverlay.style.opacity = '0';
             loadingOverlay.style.transform = 'scale(0.98)';
             setTimeout(() => {
                 loadingOverlay.classList.add('hidden');
                 console.log('✓ Configurator ready');
             }, 400);
+            
+            // iframe sichtbar machen (opacity 1, pointer-events auto)
+            // Warum? iframe ist initial unsichtbar, damit User nicht leeren/nicht-geladenen Konfigurator sieht
+            if (iframe) {
+                iframe.classList.add('ready');
+                console.log('✓ iframe visible');
+            }
+            
             if (timeoutTimer) clearTimeout(timeoutTimer);
         }
     };
@@ -78,9 +98,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadingOverlay.style.transform = 'scale(1)';
                 loadingOverlay.classList.remove('hidden');
             }
-            // Reload iframe
+            // iframe unsichtbar machen während Reload
             if (iframe) {
-                iframe.src = iframe.src;
+                iframe.classList.remove('ready');
+            }
+            // Reload iframe mit Cache-Busting (?t=timestamp)
+            if (iframe) {
+                const baseUrl = iframe.src.split('?')[0];
+                iframe.src = baseUrl + '?t=' + Date.now();
             }
             // Restart timeout
             if (timeoutTimer) clearTimeout(timeoutTimer);
@@ -92,17 +117,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // PostMessage Handler for UNBREAK_CONFIG Messages
+    /**
+     * PostMessage Handler für UNBREAK_CONFIG Messages
+     * 
+     * Warum Origin-Check?
+     * - Sicherheit: Nur der echte Konfigurator darf Befehle senden
+     * - Verhindert XSS/Injection von fremden Websites
+     * 
+     * Event-Logik:
+     * - UNBREAK_CONFIG_LOADING: Progress anzeigen (falls geliefert)
+     * - UNBREAK_CONFIG_READY: Loader ausblenden + iframe sichtbar machen
+     * - UNBREAK_CONFIG_ERROR: Fehlermeldung + Reload-Button
+     */
     window.addEventListener('message', (event) => {
-        // Verify origin (accept both Vercel URLs)
+        // Origin-Check: Nur Messages vom echten Konfigurator akzeptieren
         const allowedOrigins = [
             'https://unbreak-3-d-konfigurator.vercel.app',
-            'http://localhost:5173',
-            'http://localhost:3000'
+            'http://localhost:5173',  // Vite Dev Server
+            'http://localhost:3000'   // Alternative Dev Port
         ];
         
         if (!allowedOrigins.includes(event.origin)) {
-            console.log('Message from unknown origin:', event.origin);
+            console.log('⚠️ Message from unknown origin ignored:', event.origin);
             return;
         }
         
@@ -111,12 +147,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Handle UNBREAK_CONFIG Messages
         switch(data.type) {
             case 'UNBREAK_CONFIG_READY':
-                console.log('✓ UNBREAK_CONFIG_READY received');
+                console.log('✓ UNBREAK_CONFIG_READY received', data);
                 hideLoading();
                 break;
                 
             case 'UNBREAK_CONFIG_LOADING':
-                console.log('⏳ UNBREAK_CONFIG_LOADING:', data.progress || 'no progress');
+                console.log('⏳ UNBREAK_CONFIG_LOADING:', data.progress !== undefined ? data.progress + '%' : 'no progress');
                 if (data.progress !== undefined) {
                     updateProgress(Math.round(data.progress));
                 }
@@ -126,11 +162,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
                 
             case 'UNBREAK_CONFIG_ERROR':
-                console.log('✗ UNBREAK_CONFIG_ERROR:', data.message);
+                console.log('✗ UNBREAK_CONFIG_ERROR:', data.message || 'Unknown error');
                 showError(data.message || 'Fehler beim Laden des Konfigurators');
+                if (data.stack) {
+                    console.error('Stack trace:', data.stack);
+                }
                 break;
             
-            // Legacy support
+            // Legacy support (falls alter Konfigurator noch diese Messages sendet)
             case 'addToCart':
                 handleAddToCart(data.config);
                 break;

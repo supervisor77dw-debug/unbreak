@@ -64,6 +64,16 @@
     height: 100%;
     border: none;
     border-radius: 20px;
+    /* Initial unsichtbar bis READY empfangen */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+/* iframe visible state (wird per JS bei READY gesetzt) */
+#configurator-iframe.ready {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 /* Legacy viewer wrapper (falls noch verwendet) */
@@ -80,16 +90,6 @@
     .viewer-wrapper {
         min-height: 60vh;
     }
-}
-
-#configurator-iframe {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: none;
-    border-radius: 20px;
 }
 
 .canvas-container {
