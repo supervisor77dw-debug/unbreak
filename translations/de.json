@@ -13,12 +13,15 @@
     "useCases": "Einsatzbereiche",
     "gastroEdition": "Gastro Edition",
     "tech": "Technik",
+    "configurator": "Konfigurator",
     "shop": "Shop",
     "contact": "Kontakt",
     "buyNow": "Jetzt kaufen",
     "impressum": "Impressum",
     "privacy": "Datenschutz",
-    "terms": "AGB"
+    "terms": "AGB",
+    "howTo": "Anwendung",
+    "imprint": "Impressum"
   },
   "hero": {
     "title": "UNBREAK ONE",
@@ -275,5 +278,29 @@
       "section6Title": "§6 Schlussbestimmungen",
       "section6Text": "Es gilt deutsches Recht. Gerichtsstand – soweit gesetzlich zulässig – ist Kiel."
     }
+  },
+  "configurator": {
+    "title": "3D-Konfigurator",
+    "subtitle": "Gestalten Sie Ihren individuellen UNBREAK ONE Weinglashalter",
+    "loading": "Lade 3D-Modell...",
+    "colorTitle": "Farbe wählen",
+    "finishTitle": "Oberfläche",
+    "glossy": "Glänzend",
+    "matte": "Matt",
+    "customizationTitle": "Personalisierung",
+    "addEngraving": "Gravur hinzufügen",
+    "viewTitle": "Ansicht",
+    "viewFront": "Vorne",
+    "viewSide": "Seite",
+    "viewTop": "Oben",
+    "viewReset": "Zurücksetzen",
+    "addToCart": "In den Warenkorb",
+    "priceFrom": "Ab",
+    "infoMaterialTitle": "Premium-Material",
+    "infoMaterialText": "Hochwertige Verarbeitung aus robustem Material für langlebigen Halt.",
+    "infoDeliveryTitle": "Schnelle Lieferung",
+    "infoDeliveryText": "Ihre Bestellung wird innerhalb von 3-5 Tagen bearbeitet und versendet.",
+    "infoCustomTitle": "Individuell",
+    "infoCustomText": "Jedes Stück wird nach Ihren Wünschen gefertigt."
   }
 }

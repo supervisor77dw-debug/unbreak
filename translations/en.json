@@ -13,12 +13,15 @@
     "useCases": "Use Cases",
     "gastroEdition": "Gastro Edition",
     "tech": "Technology",
+    "configurator": "Configurator",
     "shop": "Shop",
     "contact": "Contact",
     "buyNow": "Buy Now",
     "impressum": "Imprint",
     "privacy": "Privacy Policy",
-    "terms": "Terms & Conditions"
+    "terms": "Terms",
+    "howTo": "How To",
+    "imprint": "Imprint"
   },
   "hero": {
     "title": "UNBREAK ONE",
@@ -275,5 +278,29 @@
       "section6Title": "§6 Final Provisions",
       "section6Text": "German law applies. Place of jurisdiction – insofar as legally permissible – is Kiel."
     }
+  },
+  "configurator": {
+    "title": "3D Configurator",
+    "subtitle": "Design your individual UNBREAK ONE wine glass holder",
+    "loading": "Loading 3D model...",
+    "colorTitle": "Choose Color",
+    "finishTitle": "Surface",
+    "glossy": "Glossy",
+    "matte": "Matte",
+    "customizationTitle": "Personalization",
+    "addEngraving": "Add Engraving",
+    "viewTitle": "View",
+    "viewFront": "Front",
+    "viewSide": "Side",
+    "viewTop": "Top",
+    "viewReset": "Reset",
+    "addToCart": "Add to Cart",
+    "priceFrom": "From",
+    "infoMaterialTitle": "Premium Material",
+    "infoMaterialText": "High-quality workmanship made of robust material for long-lasting hold.",
+    "infoDeliveryTitle": "Fast Delivery",
+    "infoDeliveryText": "Your order will be processed and shipped within 3-5 days.",
+    "infoCustomTitle": "Individual",
+    "infoCustomText": "Each piece is made according to your wishes."
   }
 }
