@@ -17,11 +17,6 @@
     <!-- i18n System -->
     <script src="i18n.js"></script>
     <script src="language-switch.js" defer></script>
-    
-    <!-- Three.js (CDN) - wird später durch lokale Version ersetzt -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 
 <body>
@@ -63,68 +58,19 @@
             </div>
 
             <div class="configurator-container">
-                <!-- 3D Viewer -->
-                <div class="viewer-wrapper">
-                    <div id="canvas-container" class="canvas-container">
-                        <canvas id="configurator-canvas"></canvas>
-                    </div>
+                <!-- 3D Viewer - Vercel Integration -->
+                <div class="viewer-wrapper-fullwidth">
+                    <iframe 
+                        id="configurator-iframe"
+                        src="https://unbreak-3-d-konfigurator.vercel.app/"
+                        title="UNBREAK ONE 3D Konfigurator"
+                        allowfullscreen>
+                    </iframe>
                     
                     <!-- Loading State -->
                     <div id="loading-overlay" class="loading-overlay">
                         <div class="loading-spinner"></div>
-                        <p data-i18n="configurator.loading">Lade 3D-Modell...</p>
-                    </div>
-                </div>
-
-                <!-- Controls Panel -->
-                <div class="controls-panel">
-                    <div class="control-group">
-                        <h3 data-i18n="configurator.colorTitle">Farbe wählen</h3>
-                        <div class="color-options">
-                            <button class="color-btn active" data-color="#0A6C74" style="background-color: #0A6C74;" title="Petrol"></button>
-                            <button class="color-btn" data-color="#000000" style="background-color: #000000;" title="Schwarz"></button>
-                            <button class="color-btn" data-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #ddd;" title="Weiß"></button>
-                            <button class="color-btn" data-color="#C0C0C0" style="background-color: #C0C0C0;" title="Silber"></button>
-                            <button class="color-btn" data-color="#FFD700" style="background-color: #FFD700;" title="Gold"></button>
-                        </div>
-                    </div>
-
-                    <div class="control-group">
-                        <h3 data-i18n="configurator.finishTitle">Oberfläche</h3>
-                        <div class="finish-options">
-                            <button class="finish-btn active" data-finish="glossy" data-i18n="configurator.glossy">Glänzend</button>
-                            <button class="finish-btn" data-finish="matte" data-i18n="configurator.matte">Matt</button>
-                        </div>
-                    </div>
-
-                    <div class="control-group">
-                        <h3 data-i18n="configurator.customizationTitle">Personalisierung</h3>
-                        <div class="customization-options">
-                            <label>
-                                <input type="checkbox" id="engravingToggle">
-                                <span data-i18n="configurator.addEngraving">Gravur hinzufügen</span>
-                            </label>
-                            <input type="text" id="engravingText" placeholder="Ihr Text (max. 20 Zeichen)" maxlength="20" disabled>
-                        </div>
-                    </div>
-
-                    <div class="control-group">
-                        <h3 data-i18n="configurator.viewTitle">Ansicht</h3>
-                        <div class="view-options">
-                            <button class="view-btn" data-view="front" data-i18n="configurator.viewFront">Vorne</button>
-                            <button class="view-btn" data-view="side" data-i18n="configurator.viewSide">Seite</button>
-                            <button class="view-btn" data-view="top" data-i18n="configurator.viewTop">Oben</button>
-                            <button class="view-btn active" data-view="reset" data-i18n="configurator.viewReset">Zurücksetzen</button>
-                        </div>
-                    </div>
-
-                    <div class="cta-group">
-                        <button class="btn btn-primary btn-magnetic" id="addToCartBtn">
-                            <span data-i18n="configurator.addToCart">In den Warenkorb</span>
-                        </button>
-                        <p class="price-info">
-                            <span data-i18n="configurator.priceFrom">Ab</span> <strong>49,99 €</strong>
-                        </p>
+                        <p data-i18n="configurator.loading">Lade 3D-Konfigurator...</p>
                     </div>
                 </div>
             </div>

@@ -1,18 +1,49 @@
 /**
  * UNBREAK ONE - 3D Configurator
- * 
- * WICHTIG: Dies ist ein Platzhalter/Template.
- * Ersetzen Sie diesen Code durch Ihre bestehende Konfigurator-Logik.
- * 
- * TODO:
- * 1. GLB-Modell einbinden (public/assets/models/wine-holder.glb)
- * 2. Material-Updates implementieren (Farbe, Finish)
- * 3. Gravur-System integrieren
- * 4. Kamera-Positionen für Views definieren
- * 5. Warenkorb-Integration
+ * Integration mit Vercel-Deployment
+ * Live: https://unbreak-3-d-konfigurator.vercel.app/
  */
 
-class Configurator3D {
+document.addEventListener('DOMContentLoaded', () => {
+    const iframe = document.getElementById('configurator-iframe');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    
+    // Hide loading when iframe loads
+    if (iframe) {
+        iframe.addEventListener('load', () => {
+            setTimeout(() => {
+                if (loadingOverlay) {
+                    loadingOverlay.classList.add('hidden');
+                }
+            }, 500);
+        });
+    }
+    
+    // Communication with iframe (optional)
+    window.addEventListener('message', (event) => {
+        // Verify origin
+        if (event.origin !== 'https://unbreak-3-d-konfigurator.vercel.app') return;
+        
+        // Handle messages from configurator
+        const data = event.data;
+        
+        switch(data.type) {
+            case 'addToCart':
+                handleAddToCart(data.config);
+                break;
+            case 'configChanged':
+                console.log('Config updated:', data.config);
+                break;
+        }
+    });
+});
+
+function handleAddToCart(config) {
+    console.log('Add to cart:', config);
+    
+    // TODO: Integration mit Shop-System
+    alert('Produkt wurde zum Warenkorb hinzugefügt!\n\n' + JSON.stringify(config, null, 2));
+}
     constructor() {
         this.scene = null;
         this.camera = null;

@@ -32,29 +32,64 @@
    ======================================== */
 
 .configurator-container {
-    display: grid;
-    grid-template-columns: 1fr 400px;
-    gap: 40px;
+    display: block;
     margin-bottom: 60px;
 }
 
-@media (max-width: 1024px) {
-    .configurator-container {
-        grid-template-columns: 1fr;
-        gap: 30px;
+/* ========================================
+   3D Viewer - Fullwidth iframe
+   ======================================== */
+
+.viewer-wrapper-fullwidth {
+    position: relative;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    width: 100%;
+    min-height: 80vh;
+}
+
+@media (max-width: 768px) {
+    .viewer-wrapper-fullwidth {
+        min-height: 70vh;
     }
 }
 
-/* ========================================
-   3D Viewer
-   ======================================== */
+#configurator-iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 20px;
+}
 
+/* Legacy viewer wrapper (falls noch verwendet) */
 .viewer-wrapper {
     position: relative;
     background: #ffffff;
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    min-height: 70vh;
+}
+
+@media (max-width: 768px) {
+    .viewer-wrapper {
+        min-height: 60vh;
+    }
+}
+
+#configurator-iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 20px;
 }
 
 .canvas-container {
