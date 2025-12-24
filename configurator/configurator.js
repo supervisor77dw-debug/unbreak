@@ -8,19 +8,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const iframe = document.getElementById('configurator-iframe');
     const loadingOverlay = document.getElementById('loading-overlay');
     
+    // Force hide loading after 3 seconds (fallback)
+    setTimeout(() => {
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('hidden');
+            console.log('Loading overlay hidden (timeout)');
+        }
+    }, 3000);
+    
     // Hide loading when iframe loads
     if (iframe) {
         iframe.addEventListener('load', () => {
+            console.log('Iframe loaded successfully');
             setTimeout(() => {
                 if (loadingOverlay) {
                     loadingOverlay.classList.add('hidden');
                 }
             }, 500);
         });
+        
+        iframe.addEventListener('error', (e) => {
+            console.error('Iframe loading error:', e);
+            if (loadingOverlay) {
+                loadingOverlay.innerHTML = '<p style="color: #e74c3c;">Fehler beim Laden des Konfigurators. Bitte laden Sie die Seite neu.</p>';
+            }
+        });
     }
     
     // Communication with iframe (optional)
     window.addEventListener('message', (event) => {
+        console.log('Message received from iframe:', event.origin, event.data);
+        
         // Verify origin
         if (event.origin !== 'https://unbreak-3-d-konfigurator.vercel.app') return;
         
@@ -33,6 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'configChanged':
                 console.log('Config updated:', data.config);
+                break;
+            case 'loaded':
+                // Konfigurator signalisiert, dass er fertig geladen ist
+                if (loadingOverlay) {
+                    loadingOverlay.classList.add('hidden');
+                }
                 break;
         }
     });
