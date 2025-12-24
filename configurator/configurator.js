@@ -10,27 +10,22 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('Configurator loaded, iframe:', iframe, 'overlay:', loadingOverlay);
     
-    // AGGRESSIVE: Hide loading immediately after 1.5 seconds
-    setTimeout(() => {
-        if (loadingOverlay) {
-            loadingOverlay.style.opacity = '0';
-            loadingOverlay.style.transition = 'opacity 0.3s';
-            setTimeout(() => {
-                loadingOverlay.style.display = 'none';
-                console.log('Loading overlay forcefully hidden');
-            }, 300);
+    // Function to hide loading overlay
+    const hideLoading = () => {
+        if (loadingOverlay && !loadingOverlay.classList.contains('hidden')) {
+            loadingOverlay.classList.add('hidden');
+            console.log('Loading overlay hidden');
         }
-    }, 1500);
+    };
+    
+    // AGGRESSIVE: Hide loading after 1 second
+    setTimeout(hideLoading, 1000);
     
     // Hide loading when iframe loads
     if (iframe) {
         iframe.addEventListener('load', () => {
             console.log('Iframe loaded successfully');
-            setTimeout(() => {
-                if (loadingOverlay) {
-                    loadingOverlay.classList.add('hidden');
-                }
-            }, 500);
+            hideLoading();
         });
         
         iframe.addEventListener('error', (e) => {
@@ -60,9 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'loaded':
                 // Konfigurator signalisiert, dass er fertig geladen ist
-                if (loadingOverlay) {
-                    loadingOverlay.classList.add('hidden');
-                }
+                hideLoading();
                 break;
         }
     });
