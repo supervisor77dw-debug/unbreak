@@ -167,16 +167,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 15000);
     
-    // PRAGMATISCHER FALLBACK: Nach 5s Loader ausblenden, auch ohne READY
+    // PRAGMATISCHER FALLBACK: Nach 3s Loader DIREKT ausblenden
     // Grund: Der 3D-Konfigurator sendet möglicherweise (noch) keine Messages
     // User soll den Konfigurator trotzdem sehen können
     setTimeout(() => {
-        if (!isReady) {
-            logDebugEvent('FALLBACK', 'Kein READY nach 5s - Loader wird trotzdem ausgeblendet (pragmatischer Fallback)');
-            console.log('⚠️ Kein READY empfangen, aber Loader wird ausgeblendet damit User den Konfigurator sehen kann');
-            hideLoading();
+        if (!isReady && loadingOverlay) {
+            logDebugEvent('FALLBACK', 'Kein READY nach 3s - Loader wird SOFORT ausgeblendet (direkter Fallback)');
+            console.log('⚠️ FALLBACK: Loader wird nach 3s ausgeblendet');
+            
+            // DIREKT ausblenden ohne Animation
+            loadingOverlay.style.display = 'none';
+            
+            // iframe sichtbar machen
+            if (iframe) {
+                iframe.style.opacity = '1';
+                iframe.style.pointerEvents = 'auto';
+                iframe.classList.add('ready');
+            }
+            
+            isReady = true;
+            if (timeoutTimer) clearTimeout(timeoutTimer);
         }
-    }, 5000);
+    }, 3000);
     
     // iframe onLoad Event (für Debugging)
     if (iframe) {
