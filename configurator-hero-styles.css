@@ -196,21 +196,20 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: rgba(0, 255, 220, 0.1);
-  border: 1px solid rgba(0, 255, 220, 0.3);
+  background: linear-gradient(135deg, rgba(10, 108, 116, 0.2), rgba(0, 255, 220, 0.15));
+  border: 1px solid rgba(10, 108, 116, 0.4);
   border-radius: 24px;
-  color: var(--color-cyan);
-  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 24px;
-  animation: badgeGlow 3s ease-in-out infinite;
+  letter-spacing: 1.5px;
+  margin-bottom: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .badge-icon {
-  font-size: 1rem;
-  animation: sparkle 2s ease-in-out infinite;
+  display: none; /* Hide icon for Made in Germany */
 }
 
 @keyframes badgeGlow {
@@ -220,27 +219,32 @@
 
 .configurator-hero-title {
   font-family: var(--font-heading);
-  font-size: 3.5rem;
+  font-size: 4.5rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.1;
   color: var(--color-white);
   margin-bottom: 24px;
   background: linear-gradient(
     135deg,
     var(--color-white) 0%,
+    rgba(255, 255, 255, 0.9) 50%,
     var(--color-cyan) 100%
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  letter-spacing: -0.02em;
 }
 
 .configurator-hero-subtitle {
   font-family: var(--font-body);
-  font-size: 1.25rem;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 40px;
+  font-size: 1.5rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 56px;
+  font-weight: 300;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
 }
 
 .configurator-features {
@@ -292,39 +296,81 @@
   font-size: 1.2rem;
 }
 
-/* Pulse Glow Cyan Effect */
+/* Pulse Glow Cyan Effect - Signature Emotional CTA */
 .pulse-glow-cyan {
-  background: linear-gradient(135deg, var(--color-cyan) 0%, var(--color-teal) 100%);
-  color: var(--color-graphit);
-  border: 1px solid var(--color-cyan);
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.45) 0%, 
+    rgba(10, 108, 116, 0.35) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--color-cyan);
+  border: 1px solid rgba(0, 255, 220, 0.4);
   box-shadow: 
-    0 0 24px rgba(0, 255, 220, 0.4),
-    0 4px 12px rgba(0, 0, 0, 0.3);
-  animation: pulseGlowCyan 6s ease-in-out infinite;
+    0 0 28px rgba(0, 255, 220, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: signatureGlowPulse 8s ease-in-out infinite;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 20px 48px;
+  position: relative;
+  overflow: hidden;
 }
 
-@keyframes pulseGlowCyan {
+/* Signature glow pulse - very subtle, premium */
+@keyframes signatureGlowPulse {
   0%, 100% {
     box-shadow: 
-      0 0 24px rgba(0, 255, 220, 0.4),
-      0 4px 12px rgba(0, 0, 0, 0.3);
+      0 0 28px rgba(0, 255, 220, 0.35),
+      0 8px 24px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border-color: rgba(0, 255, 220, 0.4);
   }
   50% {
     box-shadow: 
-      0 0 40px rgba(0, 255, 220, 0.6),
-      0 6px 16px rgba(0, 0, 0, 0.4);
+      0 0 45px rgba(0, 255, 220, 0.55),
+      0 12px 32px rgba(0, 0, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    border-color: rgba(0, 255, 220, 0.6);
   }
 }
 
+.pulse-glow-cyan::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(0, 255, 220, 0.15) 0%,
+    transparent 70%
+  );
+  animation: shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer {
+  0%, 100% { transform: translate(0, 0); opacity: 0; }
+  50% { transform: translate(10%, 10%); opacity: 1; }
+}
+
 .pulse-glow-cyan:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.03);
   box-shadow: 
-    0 0 50px rgba(0, 255, 220, 0.7),
-    0 8px 20px rgba(0, 0, 0, 0.4);
+    0 0 55px rgba(0, 255, 220, 0.7),
+    0 16px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-color: var(--color-cyan);
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.5) 0%, 
+    rgba(10, 108, 116, 0.45) 100%);
 }
 
 .pulse-glow-cyan:active {
-  transform: translateY(0);
+  transform: translateY(-1px) scale(0.98);
 }
 
 .btn-configurator-secondary {
@@ -497,11 +543,12 @@
 
 @media (max-width: 768px) {
   .configurator-hero-title {
-    font-size: 2.5rem;
+    font-size: 3rem;
   }
   
   .configurator-hero-subtitle {
     font-size: 1.1rem;
+    letter-spacing: 0.1em;
   }
   
   .configurator-features li {
@@ -516,11 +563,25 @@
     width: 100%;
     justify-content: center;
   }
+  
+  .pulse-glow-cyan {
+    font-size: 1.1rem;
+    padding: 18px 40px;
+  }
 }
 
 @media (max-width: 480px) {
   .configurator-hero-title {
-    font-size: 2rem;
+    font-size: 2.25rem;
+  }
+  
+  .configurator-hero-subtitle {
+    font-size: 1rem;
+  }
+  
+  .pulse-glow-cyan {
+    font-size: 1rem;
+    padding: 16px 32px;
   }
   
   .live-badge {

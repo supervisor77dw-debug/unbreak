@@ -35,16 +35,16 @@
     "ctaSecondary": "Mehr erfahren"
   },
   "configuratorHero": {
-    "badge": "Live 3D",
-    "title": "UNBREAK ONE 3D-Konfigurator",
-    "subtitle": "Gestalte deinen Halter live in 3D – Farben, Varianten, Details.",
+    "badge": "Made in Germany",
+    "title": "Mach es zu deinem.",
+    "subtitle": "Form. Farbe. Charakter.",
     "feature1": "Alle Farben & Materialien live ansehen",
     "feature2": "360° Ansicht aus jedem Winkel",
     "feature3": "Direkt konfigurieren & bestellen",
-    "ctaPrimary": "Jetzt konfigurieren",
+    "ctaPrimary": "Gestalte dein UNBREAK",
     "ctaSecondary": "So funktioniert's",
     "previewPlaceholder": "Live 3D Konfigurator",
-    "liveBadge": "Live"
+    "liveBadge": "Live 3D"
   },
   "product": {
     "sectionTitle": "Das System hinter UNBREAK ONE",
