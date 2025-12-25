@@ -13,6 +13,199 @@
 }
 
 /* ===================================
+   SIGNATURE UNBREAK EMBLEM
+   Above the Fold - Hero Integration
+   =================================== */
+
+.unbreak-emblem-container {
+  position: absolute;
+  top: 50%;
+  right: 10%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+
+.unbreak-emblem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 320px;
+  height: 320px;
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.75) 0%, 
+    rgba(10, 108, 116, 0.45) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(0, 255, 220, 0.3);
+  border-radius: 50%;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 0 40px rgba(0, 255, 220, 0.25),
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+/* Animated glow background */
+.emblem-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150%;
+  height: 150%;
+  background: radial-gradient(
+    circle,
+    rgba(0, 255, 220, 0.2) 0%,
+    transparent 60%
+  );
+  animation: emblemGlowPulse 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes emblemGlowPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+.emblem-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: 40px;
+}
+
+.emblem-logo {
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-white);
+  margin-bottom: 24px;
+  background: linear-gradient(
+    135deg,
+    var(--color-white) 0%,
+    var(--color-cyan) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: emblemLogoShimmer 4s ease-in-out infinite;
+}
+
+@keyframes emblemLogoShimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.emblem-tagline {
+  font-family: var(--font-heading);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--color-cyan);
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+}
+
+.emblem-subline {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+
+/* Hover state */
+.unbreak-emblem:hover {
+  transform: translateY(-50%) scale(1.05);
+  border-color: var(--color-cyan);
+  box-shadow: 
+    0 0 60px rgba(0, 255, 220, 0.5),
+    0 25px 70px rgba(0, 0, 0, 0.6),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+
+.unbreak-emblem:hover .emblem-glow {
+  animation: emblemGlowPulse 3s ease-in-out infinite;
+}
+
+.unbreak-emblem:hover .emblem-logo {
+  transform: scale(1.05);
+}
+
+.unbreak-emblem:active {
+  transform: translateY(-50%) scale(0.98);
+}
+
+/* Responsive - Mobile */
+@media (max-width: 1024px) {
+  .unbreak-emblem-container {
+    position: relative;
+    top: auto;
+    right: auto;
+    transform: none;
+    margin: 40px auto 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .unbreak-emblem {
+    width: 280px;
+    height: 280px;
+  }
+
+  .emblem-logo {
+    font-size: 2rem;
+    margin-bottom: 20px;
+  }
+
+  .emblem-tagline {
+    font-size: 1.2rem;
+  }
+
+  .emblem-subline {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .unbreak-emblem {
+    width: 240px;
+    height: 240px;
+  }
+
+  .emblem-content {
+    padding: 30px;
+  }
+
+  .emblem-logo {
+    font-size: 1.75rem;
+    margin-bottom: 16px;
+  }
+
+  .emblem-tagline {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+
+  .emblem-subline {
+    font-size: 0.7rem;
+  }
+}
+
+/* ===================================
    HEADER - PREMIUM CTA BUTTON
    =================================== */
 

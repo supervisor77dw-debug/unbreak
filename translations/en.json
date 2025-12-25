@@ -34,6 +34,11 @@
     "ctaPrimary": "Buy Now",
     "ctaSecondary": "Learn More"
   },
+  "emblem": {
+    "title": "Design Your UNBREAK",
+    "tagline": "Make it yours.",
+    "subline": "Form · Color · Character"
+  },
   "configuratorHero": {
     "badge": "Made in Germany",
     "title": "Make it yours.",

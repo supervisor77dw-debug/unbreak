@@ -34,6 +34,11 @@
     "ctaPrimary": "Jetzt kaufen",
     "ctaSecondary": "Mehr erfahren"
   },
+  "emblem": {
+    "title": "Gestalte dein UNBREAK",
+    "tagline": "Mach es zu deinem.",
+    "subline": "Form · Farbe · Charakter"
+  },
   "configuratorHero": {
     "badge": "Made in Germany",
     "title": "Mach es zu deinem.",
