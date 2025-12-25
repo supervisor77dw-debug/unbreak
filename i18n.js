@@ -17,6 +17,8 @@ class I18n {
    * Priority: URL param > localStorage > browser language > default (de)
    */
   async init() {
+    console.log('🌍 i18n: Initializing...');
+    
     // Check URL param first (?lang=en)
     const urlParams = new URLSearchParams(window.location.search);
     const urlLang = urlParams.get('lang');
@@ -24,22 +26,33 @@ class I18n {
     if (urlLang && ['de', 'en'].includes(urlLang)) {
       this.currentLang = urlLang;
       localStorage.setItem('unbreakone_lang', urlLang);
+      console.log(`🌍 i18n: Language from URL: ${urlLang}`);
     } else {
       // Check localStorage
       const savedLang = localStorage.getItem('unbreakone_lang');
       if (savedLang && ['de', 'en'].includes(savedLang)) {
         this.currentLang = savedLang;
+        console.log(`🌍 i18n: Language from localStorage: ${savedLang}`);
       } else {
         // Check browser language as fallback
         const browserLang = navigator.language.split('-')[0];
         if (browserLang === 'en') {
           this.currentLang = 'en';
+          console.log(`🌍 i18n: Language from browser: en`);
+        } else {
+          console.log(`🌍 i18n: Using default language: de`);
         }
       }
     }
 
     // Load translations
     await this.loadTranslations();
+    
+    console.log(`🌍 i18n: Translations loaded:`, {
+      currentLang: this.currentLang,
+      deKeys: Object.keys(this.translations.de || {}).length,
+      enKeys: Object.keys(this.translations.en || {}).length
+    });
     
     // Update HTML lang attribute
     document.documentElement.lang = this.currentLang;
@@ -52,8 +65,46 @@ class I18n {
     
     this.initialized = true;
     
+    // Add debug indicator
+    this.addDebugIndicator();
+    
+    console.log('✅ i18n: Initialization complete');
+    
     // Dispatch event for other scripts
     window.dispatchEvent(new CustomEvent('i18nReady', { detail: { lang: this.currentLang } }));
+  }
+
+  /**
+   * Add visual debug indicator
+   */
+  addDebugIndicator() {
+    const hasTranslations = this.translations.de && Object.keys(this.translations.de).length > 0;
+    const indicator = document.createElement('div');
+    indicator.id = 'i18n-debug';
+    indicator.style.cssText = `
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      padding: 6px 12px;
+      background: ${hasTranslations ? '#00FFDC' : '#FF4444'};
+      color: #000;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: bold;
+      border-radius: 4px;
+      z-index: 99999;
+      pointer-events: none;
+      opacity: 0.8;
+    `;
+    indicator.textContent = hasTranslations ? `CONTENT OK (${this.currentLang.toUpperCase()})` : 'CONTENT FALLBACK';
+    document.body.appendChild(indicator);
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      indicator.style.transition = 'opacity 0.5s';
+      indicator.style.opacity = '0';
+      setTimeout(() => indicator.remove(), 500);
+    }, 5000);
   }
 
   /**
@@ -61,18 +112,27 @@ class I18n {
    */
   async loadTranslations() {
     try {
+      console.log('🌍 i18n: Loading translation files...');
       const [deData, enData] = await Promise.all([
-        fetch(`translations/de.json?v=${Date.now()}`).then(r => r.json()),
-        fetch(`translations/en.json?v=${Date.now()}`).then(r => r.json())
+        fetch(`translations/de.json?v=${Date.now()}`).then(r => {
+          if (!r.ok) throw new Error(`Failed to load de.json: ${r.status}`);
+          return r.json();
+        }),
+        fetch(`translations/en.json?v=${Date.now()}`).then(r => {
+          if (!r.ok) throw new Error(`Failed to load en.json: ${r.status}`);
+          return r.json();
+        })
       ]);
       
       this.translations = {
         de: deData,
         en: enData
       };
+      
+      console.log('✅ i18n: Translation files loaded successfully');
     } catch (error) {
-      console.error('Failed to load translations:', error);
-      // Fallback: keep empty translations
+      console.error('❌ i18n: Failed to load translations:', error);
+      // Fallback: keep empty translations - HTML fallback texts will be preserved
       this.translations = { de: {}, en: {} };
     }
   }
@@ -117,7 +177,7 @@ class I18n {
     
     if (value === undefined) {
       console.warn(`Translation missing for key "${key}"`);
-      return key; // Return key as fallback
+      return ''; // Return empty string instead of key - preserve HTML fallback
     }
     
     return value;
@@ -132,7 +192,8 @@ class I18n {
       const key = element.getAttribute('data-i18n');
       const translation = this.t(key);
       
-      if (translation) {
+      // Only update if translation exists (not empty)
+      if (translation && translation !== key) {
         element.textContent = translation;
       }
     });
@@ -142,7 +203,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-html');
       const translation = this.t(key);
       
-      if (translation) {
+      if (translation && translation !== key) {
         element.innerHTML = translation;
       }
     });
@@ -152,7 +213,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-placeholder');
       const translation = this.t(key);
       
-      if (translation) {
+      if (translation && translation !== key) {
         element.placeholder = translation;
       }
     });
@@ -162,7 +223,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-aria');
       const translation = this.t(key);
       
-      if (translation) {
+      if (translation && translation !== key) {
         element.setAttribute('aria-label', translation);
       }
     });
@@ -172,7 +233,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-alt');
       const translation = this.t(key);
       
-      if (translation) {
+      if (translation && translation !== key) {
         element.alt = translation;
       }
     });
@@ -182,7 +243,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-title');
       const translation = this.t(key);
       
-      if (translation) {
+      if (translation && translation !== key) {
         element.title = translation;
       }
     });
