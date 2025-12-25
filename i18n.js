@@ -51,7 +51,13 @@ class I18n {
     console.log(`🌍 i18n: Translations loaded:`, {
       currentLang: this.currentLang,
       deKeys: Object.keys(this.translations.de || {}).length,
-      enKeys: Object.keys(this.translations.en || {}).length
+      enKeys: Object.keys(this.translations.en || {}).length,
+      deTopLevel: Object.keys(this.translations.de || {}),
+      sampleDE: {
+        'hero.title': this.t('hero.title'),
+        'nav.home': this.t('nav.home'),
+        'nav.product': this.t('nav.product')
+      }
     });
     
     // Update HTML lang attribute
@@ -70,6 +76,17 @@ class I18n {
     
     console.log('✅ i18n: Initialization complete');
     
+    // Final diagnostic check
+    console.group('🔍 i18n Final Diagnostic');
+    console.log('Language:', this.currentLang);
+    console.log('Initialized:', this.initialized);
+    console.log('Translations Object:', this.translations);
+    console.log('DE Keys:', Object.keys(this.translations.de || {}).length);
+    console.log('EN Keys:', Object.keys(this.translations.en || {}).length);
+    console.log('Test t("hero.title"):', this.t('hero.title'));
+    console.log('Test t("nav.home"):', this.t('nav.home'));
+    console.groupEnd();
+    
     // Dispatch event for other scripts
     window.dispatchEvent(new CustomEvent('i18nReady', { detail: { lang: this.currentLang } }));
   }
@@ -79,32 +96,60 @@ class I18n {
    */
   addDebugIndicator() {
     const hasTranslations = this.translations.de && Object.keys(this.translations.de).length > 0;
+    const deCount = Object.keys(this.translations.de || {}).length;
+    const enCount = Object.keys(this.translations.en || {}).length;
+    
     const indicator = document.createElement('div');
     indicator.id = 'i18n-debug';
     indicator.style.cssText = `
       position: fixed;
       top: 10px;
       left: 10px;
-      padding: 6px 12px;
+      padding: 8px 16px;
       background: ${hasTranslations ? '#00FFDC' : '#FF4444'};
       color: #000;
       font-family: monospace;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: bold;
       border-radius: 4px;
       z-index: 99999;
       pointer-events: none;
-      opacity: 0.8;
+      opacity: 0.9;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     `;
-    indicator.textContent = hasTranslations ? `CONTENT OK (${this.currentLang.toUpperCase()})` : 'CONTENT FALLBACK';
+    indicator.innerHTML = hasTranslations 
+      ? `✅ CONTENT OK (${this.currentLang.toUpperCase()})<br><small>DE: ${deCount} | EN: ${enCount} keys</small>` 
+      : `❌ CONTENT FALLBACK<br><small>No translations loaded</small>`;
+    
     document.body.appendChild(indicator);
     
-    // Auto-hide after 5 seconds
+    // Click to toggle detailed debug
+    indicator.style.pointerEvents = 'auto';
+    indicator.style.cursor = 'pointer';
+    indicator.addEventListener('click', () => {
+      console.group('🌍 i18n Debug Info');
+      console.log('Current Language:', this.currentLang);
+      console.log('DE Keys Count:', deCount);
+      console.log('EN Keys Count:', enCount);
+      console.log('DE Top-Level Keys:', Object.keys(this.translations.de || {}));
+      console.log('Sample Translations:', {
+        'hero.title': this.t('hero.title'),
+        'hero.subtitle': this.t('hero.subtitle'),
+        'hero.cta': this.t('hero.cta'),
+        'nav.home': this.t('nav.home'),
+        'nav.product': this.t('nav.product')
+      });
+      console.log('Full DE Translations:', this.translations.de);
+      console.log('Full EN Translations:', this.translations.en);
+      console.groupEnd();
+    });
+    
+    // Auto-hide after 8 seconds
     setTimeout(() => {
       indicator.style.transition = 'opacity 0.5s';
       indicator.style.opacity = '0';
       setTimeout(() => indicator.remove(), 500);
-    }, 5000);
+    }, 8000);
   }
 
   /**
@@ -147,6 +192,12 @@ class I18n {
     const keys = key.split('.');
     let value = this.translations[this.currentLang];
     
+    // Debug: Log translation lookup
+    const debugMode = window.location.search.includes('debug=1');
+    if (debugMode) {
+      console.log(`🔍 t("${key}") - currentLang: ${this.currentLang}`);
+    }
+    
     // Navigate through nested object
     for (const k of keys) {
       if (value && typeof value === 'object') {
@@ -155,6 +206,10 @@ class I18n {
         value = undefined;
         break;
       }
+    }
+    
+    if (debugMode && value !== undefined) {
+      console.log(`✅ t("${key}") = "${value}"`);
     }
     
     // Fallback to default language if not found
@@ -170,13 +225,15 @@ class I18n {
       }
       
       if (fallbackValue !== undefined) {
-        console.warn(`Translation missing for key "${key}" in language "${this.currentLang}", using fallback`);
+        if (debugMode) {
+          console.warn(`⚠️ Translation missing for key "${key}" in language "${this.currentLang}", using fallback: "${fallbackValue}"`);
+        }
         return fallbackValue;
       }
     }
     
     if (value === undefined) {
-      console.warn(`Translation missing for key "${key}"`);
+      console.warn(`❌ Translation missing for key "${key}" - returning empty string to preserve HTML fallback`);
       return ''; // Return empty string instead of key - preserve HTML fallback
     }
     
