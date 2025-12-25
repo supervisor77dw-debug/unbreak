@@ -52,6 +52,14 @@ class I18n {
     
     this.initialized = true;
     
+    // Clean up any old debug elements that might exist
+    const oldDebugElements = document.querySelectorAll('.i18n-debug-indicator, .i18n-debug-badge, [class*="debug"]');
+    oldDebugElements.forEach(el => {
+      if (el.className && (el.className.includes('i18n') || el.className.includes('debug'))) {
+        el.remove();
+      }
+    });
+    
     // Dispatch event for other scripts
     window.dispatchEvent(new CustomEvent('i18nReady', { detail: { lang: this.currentLang } }));
   }
