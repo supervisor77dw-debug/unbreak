@@ -52,13 +52,19 @@ class I18n {
     
     this.initialized = true;
     
-    // Clean up any old debug elements that might exist
-    const oldDebugElements = document.querySelectorAll('.i18n-debug-indicator, .i18n-debug-badge, [class*="debug"]');
-    oldDebugElements.forEach(el => {
-      if (el.className && (el.className.includes('i18n') || el.className.includes('debug'))) {
-        el.remove();
-      }
-    });
+    // Clean up any old debug elements (production safety)
+    // Only in production without debug mode
+    if (typeof window.UNBREAKONE_IS_PROD !== 'undefined' && window.UNBREAKONE_IS_PROD && !window.UNBREAKONE_IS_DEBUG) {
+      const oldDebugElements = document.querySelectorAll(
+        '.i18n-debug-indicator, .i18n-debug-badge, .debug-badge, .content-ok-badge, [class*="i18n-debug"]'
+      );
+      oldDebugElements.forEach(el => {
+        // Don't remove configurator debug elements
+        if (!el.closest('#debug-log') && !el.id?.includes('debug')) {
+          el.remove();
+        }
+      });
+    }
     
     // Dispatch event for other scripts
     window.dispatchEvent(new CustomEvent('i18nReady', { detail: { lang: this.currentLang } }));
