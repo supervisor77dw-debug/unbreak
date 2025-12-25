@@ -31,50 +31,50 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  width: 320px;
-  height: 320px;
+  width: 224px;
+  height: 224px;
   background: linear-gradient(135deg, 
-    rgba(0, 0, 0, 0.75) 0%, 
-    rgba(10, 108, 116, 0.45) 100%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 2px solid rgba(0, 255, 220, 0.3);
+    rgba(0, 0, 0, 0.65) 0%, 
+    rgba(10, 108, 116, 0.35) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(0, 255, 220, 0.25);
   border-radius: 50%;
   text-decoration: none;
   cursor: pointer;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 
-    0 0 40px rgba(0, 255, 220, 0.25),
-    0 20px 60px rgba(0, 0, 0, 0.5),
-    inset 0 2px 0 rgba(255, 255, 255, 0.1);
+    0 0 24px rgba(0, 255, 220, 0.15),
+    0 16px 48px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   overflow: hidden;
 }
 
-/* Animated glow background */
+/* Animated glow background - softer */
 .emblem-glow {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 150%;
-  height: 150%;
+  width: 140%;
+  height: 140%;
   background: radial-gradient(
     circle,
-    rgba(0, 255, 220, 0.2) 0%,
+    rgba(0, 255, 220, 0.15) 0%,
     transparent 60%
   );
-  animation: emblemGlowPulse 6s ease-in-out infinite;
+  animation: emblemGlowPulse 8s ease-in-out infinite;
   pointer-events: none;
 }
 
 @keyframes emblemGlowPulse {
   0%, 100% {
-    opacity: 0.6;
+    opacity: 0.4;
     transform: translate(-50%, -50%) scale(1);
   }
   50% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(1.1);
   }
 }
 
@@ -82,16 +82,16 @@
   position: relative;
   z-index: 1;
   text-align: center;
-  padding: 40px;
+  padding: 28px;
 }
 
 .emblem-logo {
   font-family: var(--font-heading);
-  font-size: 2.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: var(--color-white);
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   background: linear-gradient(
     135deg,
     var(--color-white) 0%,
@@ -100,83 +100,126 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: emblemLogoShimmer 4s ease-in-out infinite;
-}
-
-@keyframes emblemLogoShimmer {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
 }
 
 .emblem-tagline {
   font-family: var(--font-heading);
-  font-size: 1.4rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--color-cyan);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   letter-spacing: 0.02em;
 }
 
 .emblem-subline {
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   font-weight: 300;
-  color: rgba(255, 255, 255, 0.7);
-  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   line-height: 1.6;
 }
 
-/* Hover state */
+/* Hover state - subtle */
 .unbreak-emblem:hover {
-  transform: translateY(-50%) scale(1.05);
-  border-color: var(--color-cyan);
+  transform: translateY(-50%) scale(1.03);
+  border-color: rgba(0, 255, 220, 0.4);
   box-shadow: 
-    0 0 60px rgba(0, 255, 220, 0.5),
-    0 25px 70px rgba(0, 0, 0, 0.6),
-    inset 0 2px 0 rgba(255, 255, 255, 0.2);
+    0 0 36px rgba(0, 255, 220, 0.3),
+    0 20px 56px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .unbreak-emblem:hover .emblem-glow {
-  animation: emblemGlowPulse 3s ease-in-out infinite;
-}
-
-.unbreak-emblem:hover .emblem-logo {
-  transform: scale(1.05);
+  animation: emblemGlowPulse 4s ease-in-out infinite;
 }
 
 .unbreak-emblem:active {
-  transform: translateY(-50%) scale(0.98);
+  transform: translateY(-50%) scale(0.99);
 }
 
-/* Responsive - Mobile */
+/* Responsive - Mobile: HIDE EMBLEM COMPLETELY */
 @media (max-width: 1024px) {
   .unbreak-emblem-container {
-    position: relative;
-    top: auto;
-    right: auto;
-    transform: none;
-    margin: 40px auto 0;
-    display: flex;
-    justify-content: center;
+    display: none;
   }
+}
 
-  .unbreak-emblem {
-    width: 280px;
-    height: 280px;
+/* ===================================
+   HERO - MOBILE CTA BUTTON
+   =================================== */
+
+/* Hide mobile CTA on desktop */
+.hero-mobile-cta {
+  display: none;
+}
+
+/* Hide desktop buttons on mobile */
+@media (max-width: 768px) {
+  .hero-buttons-desktop {
+    display: none;
   }
-
-  .emblem-logo {
-    font-size: 2rem;
-    margin-bottom: 20px;
+  
+  .hero-mobile-cta {
+    display: block;
+    margin-top: 32px;
   }
-
-  .emblem-tagline {
-    font-size: 1.2rem;
+  
+  .btn-mobile-cta {
+    display: block;
+    width: 100%;
+    padding: 18px 32px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 255, 220, 0.3);
+    border-radius: 8px;
+    color: var(--color-white);
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   }
+  
+  .btn-mobile-cta:hover,
+  .btn-mobile-cta:active {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: var(--color-cyan);
+    color: var(--color-cyan);
+  }
+}
 
-  .emblem-subline {
-    font-size: 0.75rem;
+/* ===================================
+   HERO - MADE IN GERMANY BADGE
+   =================================== */
+
+/* Desktop: position badge subtly below emblem */
+.hero-badge-container {
+  position: absolute;
+  bottom: 60px;
+  right: 8%;
+  z-index: 5;
+}
+
+.hero-badge-container .badge-mig {
+  width: 80px;
+  height: auto;
+  opacity: 0.85;
+  transition: opacity 0.3s ease;
+}
+
+.hero-badge-container .badge-mig:hover {
+  opacity: 1;
+}
+
+/* Hide badge on mobile */
+@media (max-width: 1024px) {
+  .hero-badge-container {
+    display: none;
   }
 }
 
