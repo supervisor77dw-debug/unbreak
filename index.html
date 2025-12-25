@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="animations.css">
   <link rel="stylesheet" href="readability-optimization.css?v=2">
-  <link rel="stylesheet" href="configurator-hero-styles.css?v=5">
+  <link rel="stylesheet" href="configurator-hero-styles.css?v=6">
   <link rel="stylesheet" href="i18n.css">
   
   <!-- i18n System (must load before other scripts) -->
@@ -121,40 +121,22 @@
     <div class="container">
       <div class="hero-content">
         <h1 data-i18n="hero.title">UNBREAK ONE</h1>
-        <p class="subheadline" data-i18n="hero.subtitle">Magnetische Halter für Gläser &
-          Flaschen</p>
+        <p class="subheadline" data-i18n="hero.subtitle">Magnetische Halter für Gläser & Flaschen</p>
 
-        <!-- Desktop-only buttons -->
-        <div class="hero-buttons hero-buttons-desktop">
-          <a href="https://shop.unbreak-one.com" target="_blank" class="btn btn-primary btn-magnetic pulse-glow" data-i18n="hero.ctaPrimary">Jetzt
-            kaufen</a>
-          <a href="#produkt" class="btn btn-secondary btn-magnetic" data-i18n="hero.ctaSecondary">Mehr erfahren</a>
+        <!-- Single CTA Button -->
+        <div class="hero-cta">
+          <a href="configurator.html" class="btn-hero-primary" data-i18n="hero.cta">Jetzt individuell gestalten</a>
         </div>
-
-        <!-- Mobile-only CTA -->
-        <div class="hero-mobile-cta">
-          <a href="configurator.html" class="btn-mobile-cta" data-i18n="hero.mobileCta">Jetzt gestalten</a>
-        </div>
-      </div>
-
-      <!-- Desktop-only: Made in Germany Badge -->
-      <div class="hero-badge-container">
-        <img src="images/badge-made-in-germany.png" class="badge-mig" alt="Made in Germany - Premium Quality" data-i18n-alt="hero.badgeAlt">
-      </div>
-
-      <!-- SIGNATURE UNBREAK EMBLEM - Above the Fold -->
-      <div class="unbreak-emblem-container">
-        <a href="configurator.html" class="unbreak-emblem" data-i18n-title="emblem.title">
-          <div class="emblem-glow"></div>
-          <div class="emblem-content">
-            <div class="emblem-logo">UNBREAK</div>
-            <div class="emblem-tagline" data-i18n="emblem.tagline">Mach es zu deinem.</div>
-            <div class="emblem-subline" data-i18n="emblem.subline">Form · Farbe · Charakter</div>
-          </div>
-        </a>
       </div>
     </div>
   </section>
+
+  <!-- Made in Germany Badge - Below Hero -->
+  <div class="badge-section">
+    <div class="container">
+      <img src="images/badge-made-in-germany.png" class="badge-mig-standalone" alt="Made in Germany - Premium Quality" data-i18n-alt="hero.badgeAlt">
+    </div>
+  </div>
 
   <!-- ===================================
        3D KONFIGURATOR HERO SECTION

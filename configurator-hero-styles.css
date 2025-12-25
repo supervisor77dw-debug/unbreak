@@ -13,238 +13,94 @@
 }
 
 /* ===================================
-   SIGNATURE UNBREAK EMBLEM
-   Above the Fold - Hero Integration
+   HERO - SINGLE CTA BUTTON
+   Clean, Premium, Focused
    =================================== */
 
-.unbreak-emblem-container {
-  position: absolute;
-  top: 50%;
-  right: 10%;
-  transform: translateY(-50%);
-  z-index: 10;
+.hero-cta {
+  margin-top: 48px;
 }
 
-.unbreak-emblem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  width: 224px;
-  height: 224px;
+.btn-hero-primary {
+  display: inline-block;
+  padding: 18px 48px;
   background: linear-gradient(135deg, 
-    rgba(0, 0, 0, 0.65) 0%, 
-    rgba(10, 108, 116, 0.35) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1.5px solid rgba(0, 255, 220, 0.25);
-  border-radius: 50%;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
-    0 0 24px rgba(0, 255, 220, 0.15),
-    0 16px 48px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-
-/* Animated glow background - softer */
-.emblem-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 140%;
-  height: 140%;
-  background: radial-gradient(
-    circle,
-    rgba(0, 255, 220, 0.15) 0%,
-    transparent 60%
-  );
-  animation: emblemGlowPulse 8s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes emblemGlowPulse {
-  0%, 100% {
-    opacity: 0.4;
-    transform: translate(-50%, -50%) scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-}
-
-.emblem-content {
-  position: relative;
-  z-index: 1;
-  text-align: center;
-  padding: 28px;
-}
-
-.emblem-logo {
-  font-family: var(--font-heading);
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+    rgba(0, 0, 0, 0.7) 0%, 
+    rgba(10, 108, 116, 0.5) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid var(--color-cyan);
+  border-radius: 8px;
   color: var(--color-white);
-  margin-bottom: 16px;
-  background: linear-gradient(
-    135deg,
-    var(--color-white) 0%,
-    var(--color-cyan) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.emblem-tagline {
   font-family: var(--font-heading);
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  color: var(--color-cyan);
-  margin-bottom: 8px;
-  letter-spacing: 0.02em;
-}
-
-.emblem-subline {
-  font-family: var(--font-body);
-  font-size: 0.7rem;
-  font-weight: 300;
-  color: rgba(255, 255, 255, 0.6);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  line-height: 1.6;
-}
-
-/* Hover state - subtle */
-.unbreak-emblem:hover {
-  transform: translateY(-50%) scale(1.03);
-  border-color: rgba(0, 255, 220, 0.4);
+  text-decoration: none;
+  text-align: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 
-    0 0 36px rgba(0, 255, 220, 0.3),
-    0 20px 56px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 0 20px rgba(0, 255, 220, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
 }
 
-.unbreak-emblem:hover .emblem-glow {
-  animation: emblemGlowPulse 4s ease-in-out infinite;
+.btn-hero-primary:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.8) 0%, 
+    rgba(10, 108, 116, 0.6) 100%);
+  border-color: var(--color-cyan);
+  box-shadow: 
+    0 0 32px rgba(0, 255, 220, 0.5),
+    0 12px 32px rgba(0, 0, 0, 0.5);
+  color: var(--color-cyan);
 }
 
-.unbreak-emblem:active {
-  transform: translateY(-50%) scale(0.99);
+.btn-hero-primary:active {
+  transform: translateY(0);
 }
 
-/* Responsive - Mobile: HIDE EMBLEM COMPLETELY */
-@media (max-width: 1024px) {
-  .unbreak-emblem-container {
-    display: none;
-  }
-}
-
-/* ===================================
-   HERO - MOBILE CTA BUTTON
-   =================================== */
-
-/* Hide mobile CTA on desktop */
-.hero-mobile-cta {
-  display: none;
-}
-
-/* Hide desktop buttons on mobile */
+/* Mobile */
 @media (max-width: 768px) {
-  .hero-buttons-desktop {
-    display: none;
-  }
-  
-  .hero-mobile-cta {
-    display: block;
+  .hero-cta {
     margin-top: 32px;
   }
   
-  .btn-mobile-cta {
+  .btn-hero-primary {
     display: block;
     width: 100%;
     padding: 18px 32px;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(0, 255, 220, 0.3);
-    border-radius: 8px;
-    color: var(--color-white);
-    font-family: var(--font-heading);
-    font-size: 1.1rem;
-    font-weight: 600;
-    text-align: center;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  }
-  
-  .btn-mobile-cta:hover,
-  .btn-mobile-cta:active {
-    background: rgba(0, 0, 0, 0.8);
-    border-color: var(--color-cyan);
-    color: var(--color-cyan);
+    font-size: 1rem;
   }
 }
 
 /* ===================================
-   HERO - MADE IN GERMANY BADGE
+   BADGE SECTION - Below Hero
    =================================== */
 
-/* Desktop: position badge subtly below emblem */
-.hero-badge-container {
-  position: absolute;
-  bottom: 60px;
-  right: 8%;
-  z-index: 5;
+.badge-section {
+  padding: 32px 0;
+  background: linear-gradient(180deg, 
+    var(--color-graphit) 0%, 
+    rgba(0, 0, 0, 0.5) 100%);
+  text-align: center;
 }
 
-.hero-badge-container .badge-mig {
-  width: 80px;
+.badge-mig-standalone {
+  width: 100px;
   height: auto;
-  opacity: 0.85;
+  opacity: 0.9;
   transition: opacity 0.3s ease;
 }
 
-.hero-badge-container .badge-mig:hover {
+.badge-mig-standalone:hover {
   opacity: 1;
 }
 
 /* Hide badge on mobile */
-@media (max-width: 1024px) {
-  .hero-badge-container {
+@media (max-width: 768px) {
+  .badge-section {
     display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .unbreak-emblem {
-    width: 240px;
-    height: 240px;
-  }
-
-  .emblem-content {
-    padding: 30px;
-  }
-
-  .emblem-logo {
-    font-size: 1.75rem;
-    margin-bottom: 16px;
-  }
-
-  .emblem-tagline {
-    font-size: 1.1rem;
-    margin-bottom: 10px;
-  }
-
-  .emblem-subline {
-    font-size: 0.7rem;
   }
 }
 

@@ -26,14 +26,15 @@
   },
   "hero": {
     "title": "UNBREAK ONE",
-    "subtitle": "Magnetische Halter für Gläser & Flaschen – sicher, elegant, überall.",
+    "subtitle": "Magnetische Halter für Gläser & Flaschen",
     "badgeAlt": "Made in Germany - Premium Quality",
     "feature1": "Stabil auf Boot, Camper, Terrasse, Flugzeug, Zug, Serviceroboter & in der Gastronomie",
     "feature2": "Premium-Materialien – entwickelt für echte Nutzung",
     "feature3": "Modular kombinierbar für Gläser & Flaschen",
     "ctaPrimary": "Jetzt kaufen",
     "ctaSecondary": "Mehr erfahren",
-    "mobileCta": "Jetzt gestalten"
+    "mobileCta": "Jetzt gestalten",
+    "cta": "Jetzt individuell gestalten"
   },
   "emblem": {
     "title": "Gestalte dein UNBREAK",
