@@ -110,13 +110,11 @@ class I18n {
       }
       
       if (fallbackValue !== undefined) {
-        console.warn(`Translation missing for key "${key}" in language "${this.currentLang}", using fallback`);
         return fallbackValue;
       }
     }
     
     if (value === undefined) {
-      console.warn(`Translation missing for key "${key}"`);
       return key; // Return key as fallback
     }
     
