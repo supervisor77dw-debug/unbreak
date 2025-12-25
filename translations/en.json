@@ -14,6 +14,7 @@
     "gastroEdition": "Gastro Edition",
     "tech": "Technology",
     "configurator": "Configurator",
+    "configuratorCTA": "3D Configurator",
     "shop": "Shop",
     "contact": "Contact",
     "buyNow": "Buy Now",
@@ -32,6 +33,18 @@
     "feature3": "Modular system for glasses & bottles",
     "ctaPrimary": "Buy Now",
     "ctaSecondary": "Learn More"
+  },
+  "configuratorHero": {
+    "badge": "Live 3D",
+    "title": "UNBREAK ONE 3D Configurator",
+    "subtitle": "Design your holder live in 3D – colors, variants, details.",
+    "feature1": "View all colors & materials live",
+    "feature2": "360° view from every angle",
+    "feature3": "Configure & order directly",
+    "ctaPrimary": "Configure Now",
+    "ctaSecondary": "How It Works",
+    "previewPlaceholder": "Live 3D Configurator",
+    "liveBadge": "Live"
   },
   "product": {
     "sectionTitle": "The System Behind UNBREAK ONE",
