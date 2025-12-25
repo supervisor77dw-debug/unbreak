@@ -14,7 +14,6 @@
     "gastroEdition": "Gastro Edition",
     "tech": "Technology",
     "configurator": "Configurator",
-    "configuratorCTA": "3D Configurator",
     "shop": "Shop",
     "contact": "Contact",
     "buyNow": "Buy Now",
@@ -33,25 +32,7 @@
     "feature3": "Modular system for glasses & bottles",
     "ctaPrimary": "Buy Now",
     "ctaSecondary": "Learn More",
-    "mobileCta": "Design Now",
-    "cta": "Design Your UNBREAK Now"
-  },
-  "emblem": {
-    "title": "Design Your UNBREAK",
-    "tagline": "Make it yours.",
-    "subline": "Form · Color · Character"
-  },
-  "configuratorHero": {
-    "badge": "Made in Germany",
-    "title": "Make it yours.",
-    "subtitle": "Form. Color. Character.",
-    "feature1": "View all colors & materials live",
-    "feature2": "360° view from every angle",
-    "feature3": "Configure & order directly",
-    "ctaPrimary": "Design Your UNBREAK",
-    "ctaSecondary": "How It Works",
-    "previewPlaceholder": "Live 3D Configurator",
-    "liveBadge": "Live 3D"
+    "cta": "Design Yours Now"
   },
   "product": {
     "sectionTitle": "The System Behind UNBREAK ONE",

@@ -492,6 +492,10 @@ section {
   justify-content: center;
 }
 
+.hero-buttons .btn {
+  max-width: 420px;
+}
+
 .hero-image {
   text-align: center;
 }

@@ -14,7 +14,6 @@
     "gastroEdition": "Gastro Edition",
     "tech": "Technik",
     "configurator": "Konfigurator",
-    "configuratorCTA": "3D-Konfigurator",
     "shop": "Shop",
     "contact": "Kontakt",
     "buyNow": "Jetzt kaufen",
@@ -26,32 +25,14 @@
   },
   "hero": {
     "title": "UNBREAK ONE",
-    "subtitle": "Magnetische Halter für Gläser & Flaschen",
+    "subtitle": "Magnetische Halter für Gläser & Flaschen – sicher, elegant, überall.",
     "badgeAlt": "Made in Germany - Premium Quality",
     "feature1": "Stabil auf Boot, Camper, Terrasse, Flugzeug, Zug, Serviceroboter & in der Gastronomie",
     "feature2": "Premium-Materialien – entwickelt für echte Nutzung",
     "feature3": "Modular kombinierbar für Gläser & Flaschen",
     "ctaPrimary": "Jetzt kaufen",
     "ctaSecondary": "Mehr erfahren",
-    "mobileCta": "Jetzt gestalten",
     "cta": "Jetzt individuell gestalten"
-  },
-  "emblem": {
-    "title": "Gestalte dein UNBREAK",
-    "tagline": "Mach es zu deinem.",
-    "subline": "Form · Farbe · Charakter"
-  },
-  "configuratorHero": {
-    "badge": "Made in Germany",
-    "title": "Mach es zu deinem.",
-    "subtitle": "Form. Farbe. Charakter.",
-    "feature1": "Alle Farben & Materialien live ansehen",
-    "feature2": "360° Ansicht aus jedem Winkel",
-    "feature3": "Direkt konfigurieren & bestellen",
-    "ctaPrimary": "Gestalte dein UNBREAK",
-    "ctaSecondary": "So funktioniert's",
-    "previewPlaceholder": "Live 3D Konfigurator",
-    "liveBadge": "Live 3D"
   },
   "product": {
     "sectionTitle": "Das System hinter UNBREAK ONE",

@@ -17,8 +17,6 @@ class I18n {
    * Priority: URL param > localStorage > browser language > default (de)
    */
   async init() {
-    console.log('🌍 i18n: Initializing...');
-    
     // Check URL param first (?lang=en)
     const urlParams = new URLSearchParams(window.location.search);
     const urlLang = urlParams.get('lang');
@@ -26,39 +24,22 @@ class I18n {
     if (urlLang && ['de', 'en'].includes(urlLang)) {
       this.currentLang = urlLang;
       localStorage.setItem('unbreakone_lang', urlLang);
-      console.log(`🌍 i18n: Language from URL: ${urlLang}`);
     } else {
       // Check localStorage
       const savedLang = localStorage.getItem('unbreakone_lang');
       if (savedLang && ['de', 'en'].includes(savedLang)) {
         this.currentLang = savedLang;
-        console.log(`🌍 i18n: Language from localStorage: ${savedLang}`);
       } else {
         // Check browser language as fallback
         const browserLang = navigator.language.split('-')[0];
         if (browserLang === 'en') {
           this.currentLang = 'en';
-          console.log(`🌍 i18n: Language from browser: en`);
-        } else {
-          console.log(`🌍 i18n: Using default language: de`);
         }
       }
     }
 
     // Load translations
     await this.loadTranslations();
-    
-    console.log(`🌍 i18n: Translations loaded:`, {
-      currentLang: this.currentLang,
-      deKeys: Object.keys(this.translations.de || {}).length,
-      enKeys: Object.keys(this.translations.en || {}).length,
-      deTopLevel: Object.keys(this.translations.de || {}),
-      sampleDE: {
-        'hero.title': this.t('hero.title'),
-        'nav.home': this.t('nav.home'),
-        'nav.product': this.t('nav.product')
-      }
-    });
     
     // Update HTML lang attribute
     document.documentElement.lang = this.currentLang;
@@ -71,85 +52,22 @@ class I18n {
     
     this.initialized = true;
     
-    // Add debug indicator
-    this.addDebugIndicator();
-    
-    console.log('✅ i18n: Initialization complete');
-    
-    // Final diagnostic check
-    console.group('🔍 i18n Final Diagnostic');
-    console.log('Language:', this.currentLang);
-    console.log('Initialized:', this.initialized);
-    console.log('Translations Object:', this.translations);
-    console.log('DE Keys:', Object.keys(this.translations.de || {}).length);
-    console.log('EN Keys:', Object.keys(this.translations.en || {}).length);
-    console.log('Test t("hero.title"):', this.t('hero.title'));
-    console.log('Test t("nav.home"):', this.t('nav.home'));
-    console.groupEnd();
+    // Clean up any old debug elements (production safety)
+    // Only in production without debug mode
+    if (typeof window.UNBREAKONE_IS_PROD !== 'undefined' && window.UNBREAKONE_IS_PROD && !window.UNBREAKONE_IS_DEBUG) {
+      const oldDebugElements = document.querySelectorAll(
+        '.i18n-debug-indicator, .i18n-debug-badge, .debug-badge, .content-ok-badge, [class*="i18n-debug"]'
+      );
+      oldDebugElements.forEach(el => {
+        // Don't remove configurator debug elements
+        if (!el.closest('#debug-log') && !el.id?.includes('debug')) {
+          el.remove();
+        }
+      });
+    }
     
     // Dispatch event for other scripts
     window.dispatchEvent(new CustomEvent('i18nReady', { detail: { lang: this.currentLang } }));
-  }
-
-  /**
-   * Add visual debug indicator
-   */
-  addDebugIndicator() {
-    const hasTranslations = this.translations.de && Object.keys(this.translations.de).length > 0;
-    const deCount = Object.keys(this.translations.de || {}).length;
-    const enCount = Object.keys(this.translations.en || {}).length;
-    
-    const indicator = document.createElement('div');
-    indicator.id = 'i18n-debug';
-    indicator.style.cssText = `
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      padding: 8px 16px;
-      background: ${hasTranslations ? '#00FFDC' : '#FF4444'};
-      color: #000;
-      font-family: monospace;
-      font-size: 12px;
-      font-weight: bold;
-      border-radius: 4px;
-      z-index: 99999;
-      pointer-events: none;
-      opacity: 0.9;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    `;
-    indicator.innerHTML = hasTranslations 
-      ? `✅ CONTENT OK (${this.currentLang.toUpperCase()})<br><small>DE: ${deCount} | EN: ${enCount} keys</small>` 
-      : `❌ CONTENT FALLBACK<br><small>No translations loaded</small>`;
-    
-    document.body.appendChild(indicator);
-    
-    // Click to toggle detailed debug
-    indicator.style.pointerEvents = 'auto';
-    indicator.style.cursor = 'pointer';
-    indicator.addEventListener('click', () => {
-      console.group('🌍 i18n Debug Info');
-      console.log('Current Language:', this.currentLang);
-      console.log('DE Keys Count:', deCount);
-      console.log('EN Keys Count:', enCount);
-      console.log('DE Top-Level Keys:', Object.keys(this.translations.de || {}));
-      console.log('Sample Translations:', {
-        'hero.title': this.t('hero.title'),
-        'hero.subtitle': this.t('hero.subtitle'),
-        'hero.cta': this.t('hero.cta'),
-        'nav.home': this.t('nav.home'),
-        'nav.product': this.t('nav.product')
-      });
-      console.log('Full DE Translations:', this.translations.de);
-      console.log('Full EN Translations:', this.translations.en);
-      console.groupEnd();
-    });
-    
-    // Auto-hide after 8 seconds
-    setTimeout(() => {
-      indicator.style.transition = 'opacity 0.5s';
-      indicator.style.opacity = '0';
-      setTimeout(() => indicator.remove(), 500);
-    }, 8000);
   }
 
   /**
@@ -157,27 +75,18 @@ class I18n {
    */
   async loadTranslations() {
     try {
-      console.log('🌍 i18n: Loading translation files...');
       const [deData, enData] = await Promise.all([
-        fetch(`translations/de.json?v=${Date.now()}`).then(r => {
-          if (!r.ok) throw new Error(`Failed to load de.json: ${r.status}`);
-          return r.json();
-        }),
-        fetch(`translations/en.json?v=${Date.now()}`).then(r => {
-          if (!r.ok) throw new Error(`Failed to load en.json: ${r.status}`);
-          return r.json();
-        })
+        fetch(`translations/de.json?v=${Date.now()}`).then(r => r.json()),
+        fetch(`translations/en.json?v=${Date.now()}`).then(r => r.json())
       ]);
       
       this.translations = {
         de: deData,
         en: enData
       };
-      
-      console.log('✅ i18n: Translation files loaded successfully');
     } catch (error) {
-      console.error('❌ i18n: Failed to load translations:', error);
-      // Fallback: keep empty translations - HTML fallback texts will be preserved
+      console.error('Failed to load translations:', error);
+      // Fallback: keep empty translations
       this.translations = { de: {}, en: {} };
     }
   }
@@ -192,12 +101,6 @@ class I18n {
     const keys = key.split('.');
     let value = this.translations[this.currentLang];
     
-    // Debug: Log translation lookup
-    const debugMode = window.location.search.includes('debug=1');
-    if (debugMode) {
-      console.log(`🔍 t("${key}") - currentLang: ${this.currentLang}`);
-    }
-    
     // Navigate through nested object
     for (const k of keys) {
       if (value && typeof value === 'object') {
@@ -206,10 +109,6 @@ class I18n {
         value = undefined;
         break;
       }
-    }
-    
-    if (debugMode && value !== undefined) {
-      console.log(`✅ t("${key}") = "${value}"`);
     }
     
     // Fallback to default language if not found
@@ -225,16 +124,12 @@ class I18n {
       }
       
       if (fallbackValue !== undefined) {
-        if (debugMode) {
-          console.warn(`⚠️ Translation missing for key "${key}" in language "${this.currentLang}", using fallback: "${fallbackValue}"`);
-        }
         return fallbackValue;
       }
     }
     
     if (value === undefined) {
-      console.warn(`❌ Translation missing for key "${key}" - returning empty string to preserve HTML fallback`);
-      return ''; // Return empty string instead of key - preserve HTML fallback
+      return key; // Return key as fallback
     }
     
     return value;
@@ -249,8 +144,7 @@ class I18n {
       const key = element.getAttribute('data-i18n');
       const translation = this.t(key);
       
-      // Only update if translation exists (not empty)
-      if (translation && translation !== key) {
+      if (translation) {
         element.textContent = translation;
       }
     });
@@ -260,7 +154,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-html');
       const translation = this.t(key);
       
-      if (translation && translation !== key) {
+      if (translation) {
         element.innerHTML = translation;
       }
     });
@@ -270,7 +164,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-placeholder');
       const translation = this.t(key);
       
-      if (translation && translation !== key) {
+      if (translation) {
         element.placeholder = translation;
       }
     });
@@ -280,7 +174,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-aria');
       const translation = this.t(key);
       
-      if (translation && translation !== key) {
+      if (translation) {
         element.setAttribute('aria-label', translation);
       }
     });
@@ -290,7 +184,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-alt');
       const translation = this.t(key);
       
-      if (translation && translation !== key) {
+      if (translation) {
         element.alt = translation;
       }
     });
@@ -300,7 +194,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-title');
       const translation = this.t(key);
       
-      if (translation && translation !== key) {
+      if (translation) {
         element.title = translation;
       }
     });
