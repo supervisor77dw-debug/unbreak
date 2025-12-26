@@ -897,35 +897,39 @@ section {
 }
 
 /* === CONTACT & FOOTER === */
+/* Full-bleed background wie Gastro-Hero */
 #kontakt {
-  background-color: var(--color-petrol-dark);
-  background-image: url('images/Kontakt.jpg') !important;
-  background-size: cover !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
-  background-attachment: scroll;
-  color: var(--color-white);
-  padding: var(--spacing-xl) 0;
   position: relative;
-  min-height: 400px;
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: url('images/Kontakt.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: var(--color-petrol-dark);
+  color: var(--color-white);
+  overflow: hidden;
 }
 
-/* Dark overlay for better text readability */
-#kontakt::before {
-  content: '';
+/* Dunkles Overlay für bessere Textlesbarkeit */
+.kontakt-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(8, 79, 85, 0.65);
-  z-index: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(10, 108, 116, 0.4) 100%);
+  z-index: 1;
 }
 
-/* Container and content must be above overlay */
+/* Container must be above overlay */
 #kontakt .container {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .contact-info {
@@ -943,15 +947,6 @@ section {
 
 /* Desktop: Breiterer Kontaktbereich */
 @media (min-width: 1024px) {
-  /* Explizit Hintergrundbild für Desktop erzwingen */
-  #kontakt {
-    background-image: url('images/Kontakt.jpg') !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    background-attachment: scroll !important;
-  }
-  
   .contact-info {
     max-width: 800px;
     margin-left: auto;
