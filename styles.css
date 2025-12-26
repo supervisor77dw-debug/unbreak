@@ -889,6 +889,13 @@ section {
   flex-wrap: wrap;
 }
 
+/* Desktop: Shopping Bar ausblenden */
+@media (min-width: 1024px) {
+  .shopping-bar {
+    display: none;
+  }
+}
+
 /* === CONTACT & FOOTER === */
 #kontakt {
   background-color: var(--color-petrol-dark);
@@ -899,6 +906,16 @@ section {
 .contact-info {
   text-align: center;
   margin-bottom: var(--spacing-lg);
+}
+
+/* Desktop: Breiterer Kontaktbereich */
+@media (min-width: 1024px) {
+  .contact-info {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: var(--spacing-xl) var(--spacing-lg);
+  }
 }
 
 .contact-info h2 {
