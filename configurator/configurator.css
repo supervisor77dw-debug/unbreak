@@ -40,28 +40,31 @@
    3D Viewer - Fullwidth iframe
    ======================================== */
 
+/* CRITICAL: viewer-wrapper-fullwidth muss sich an cfgFrameOuter Höhe anpassen */
 .viewer-wrapper-fullwidth {
     position: relative;
     background: #ffffff;
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    overflow: visible; /* WICHTIG: nicht hidden, sonst wird .cfgFrameOuter abgeschnitten */
     width: 100%;
+    /* Höhe wird von .cfgFrameOuter bestimmt */
 }
 
 /* ===================================
-   IFRAME SKALIERUNG (Desktop 30% kleiner)
+   IFRAME SKALIERUNG (Desktop + Mobile 30% kleiner)
    =================================== */
 
-/* Outer: Sichtbarer Bereich (Container) */
+/* Outer: Sichtbarer Bereich (Container) - EINHEITLICH für Desktop + Mobile */
 .cfgFrameOuter {
     width: 100%;
-    height: 70vh; /* Desktop Höhe */
-    overflow: hidden;
+    height: 70vh; /* Desktop + Mobile Default */
+    overflow: hidden; /* Hier wird overflow hidden angewendet */
     position: relative;
+    border-radius: 20px; /* Border Radius vom Outer, nicht vom Wrapper */
 }
 
-/* Scaled: Transform für 30% Verkleinerung */
+/* Scaled: Transform für 30% Verkleinerung - EINHEITLICH */
 .cfgFrameScaled {
     width: 142.857%; /* = 100 / 0.7 (kompensiert Scale) */
     height: 142.857%;
@@ -80,6 +83,7 @@
     height: 100%;
     border: none;
     display: block;
+    border-radius: 20px; /* Runde Ecken für iframe */
     /* Initial unsichtbar bis READY empfangen */
     opacity: 0;
     pointer-events: none;
@@ -93,17 +97,12 @@
     pointer-events: auto;
 }
 
-/* Mobile: Gleiche Skalierung */
+/* Mobile: Nur Höhe anpassen, Skalierung bleibt gleich */
 @media (max-width: 768px) {
     .cfgFrameOuter {
-        height: 65vh; /* Mobile etwas kleiner */
+        height: 65vh; /* Mobile etwas kompakter */
     }
-    
-    .cfgFrameScaled {
-        transform: scale(0.7);
-        width: 142.857%;
-        height: 142.857%;
-    }
+    /* .cfgFrameScaled bleibt unverändert - kein erneutes Deklarieren nötig */
 }
 
 /* Legacy viewer wrapper (falls noch verwendet) */
