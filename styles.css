@@ -166,60 +166,72 @@ a {
 }
 
 /* === NAVIGATION (STICKY HEADER) === */
+/* ===================================
+   HEADER - EINHEITLICHES GLAS-DESIGN
+   =================================== */
+
 header {
   position: sticky;
   top: 0;
-  background-color: var(--color-white);
-  box-shadow: var(--shadow-light);
+  /* Glassmorphism: Dunkles Glas mit Verlauf */
+  background: linear-gradient(180deg, rgba(20, 24, 30, 0.78), rgba(20, 24, 30, 0.55));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   transition: all 0.3s ease;
   height: auto;
 }
 
 header.scrolled {
-  box-shadow: var(--shadow-medium);
+  background: linear-gradient(180deg, rgba(20, 24, 30, 0.92), rgba(20, 24, 30, 0.78));
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
 }
 
-/* PRIO 1: Header Theme States (stabil) */
-header.header--light {
-  background-color: var(--color-white);
+/* Navigation Typo: Edles Hellgrau */
+header .nav-links a,
+header .nav-links button {
+  color: rgba(230, 235, 240, 0.88);
+  text-decoration: none;
+  transition: color 0.3s ease, text-decoration 0.2s ease;
 }
 
-header.header--light .logo,
-header.header--light .nav-links a {
-  color: var(--color-graphit);
-}
-
-header.header--light .nav-links a:hover {
+/* Hover/Focus: Petrol Accent */
+header .nav-links a:hover,
+header .nav-links button:hover {
   color: var(--color-petrol-deep);
-  text-decoration: underline;
+  text-decoration: none;
 }
 
-header.header--light .burger-menu span {
-  background-color: var(--color-graphit);
+header .nav-links a:focus-visible,
+header .nav-links button:focus-visible {
+  outline: 2px solid rgba(0, 255, 220, 0.55);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
-header.header--dark {
-  background-color: rgba(26, 26, 26, 0.95);
-  backdrop-filter: blur(12px);
+/* Burger Menu Icons: Hellgrau, Hover Petrol */
+header .burger-menu span {
+  width: 28px;
+  height: 3px;
+  background-color: rgba(230, 235, 240, 0.88);
+  border-radius: 2px;
+  transition: background-color 0.3s ease;
 }
 
-header.header--dark .logo,
-header.header--dark .nav-links a {
-  color: var(--color-white);
+header .burger-menu:hover span {
+  background-color: var(--color-petrol-deep);
 }
 
-header.header--dark .nav-links a:hover {
-  color: var(--color-cyan);
-  text-decoration: underline;
+/* Logo: Keine Zwangsfärbung */
+header .nav-logo {
+  filter: none;
+  transition: opacity 0.3s ease;
 }
 
-header.header--dark .burger-menu span {
-  background-color: var(--color-white);
-}
-
-header.header--dark .nav-logo {
-  filter: brightness(0) invert(1);
+header .nav-logo:hover {
+  opacity: 0.85;
 }
 
 /* Fix 3: Mobile Header - kein Content-Crop */
@@ -257,17 +269,13 @@ nav {
   align-items: center;
 }
 
+/* Überschrieben durch header .nav-links a im Header-Bereich */
 .nav-links a {
-  color: var(--color-graphit);
   font-size: 16px;
   font-weight: 500;
   padding: var(--spacing-xs) var(--spacing-sm);
   transition: color 0.3s ease;
   white-space: nowrap;
-}
-
-.nav-links a:hover {
-  color: var(--color-petrol-deep);
 }
 
 /* Mobile Menu Toggle */
@@ -279,13 +287,7 @@ nav {
   padding: var(--spacing-xs);
 }
 
-.burger-menu span {
-  width: 28px;
-  height: 3px;
-  background-color: var(--color-graphit);
-  transition: all 0.3s ease;
-  border-radius: 2px;
-}
+/* Burger spans: bereits in header .burger-menu span definiert */
 
 /* === BUTTONS === */
 .btn {
@@ -1083,11 +1085,14 @@ footer a:hover {
     left: -100%;
     width: 100%;
     height: calc(100vh - 60px);
-    background-color: var(--color-white);
+    /* Gleiches Glassmorphism wie Desktop Header */
+    background: linear-gradient(180deg, rgba(20, 24, 30, 0.95), rgba(20, 24, 30, 0.88));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     flex-direction: column;
     align-items: flex-start;
     padding: var(--spacing-lg);
-    box-shadow: var(--shadow-medium);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
     transition: left 0.3s ease;
     gap: 0;
   }
@@ -1098,13 +1103,19 @@ footer a:hover {
 
   .nav-links li {
     width: 100%;
-    border-bottom: 1px solid var(--color-hellgrau);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .nav-links a {
     display: block;
     padding: var(--spacing-sm) 0;
     width: 100%;
+    /* Hellgrau Text, Petrol Hover (konsistent mit Desktop) */
+    color: rgba(230, 235, 240, 0.88) !important;
+  }
+
+  .nav-links a:hover {
+    color: var(--color-petrol-deep) !important;
   }
 
   .burger-menu {
