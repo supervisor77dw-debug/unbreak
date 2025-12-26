@@ -34,6 +34,7 @@
   <link rel="stylesheet" href="animations.css?v=2.0.0">
   <link rel="stylesheet" href="readability-optimization.css?v=2.0.0">
   <link rel="stylesheet" href="i18n.css?v=2.0.0">
+  <link rel="stylesheet" href="premium.css?v=2.0.1">
   
   <!-- Version & Cache Management (MUST load first) -->
   <script src="version.js?v=2.0.0"></script>
@@ -112,9 +113,9 @@
       <div class="hero-video-overlay"></div>
     </div>
 
-    <div class="container">
+    <div class="container" style="position: relative;">
+      <img src="images/badge-made-in-germany.png" class="badge-mig" alt="Made in Germany - Premium Quality" data-i18n-alt="hero.badgeAlt">
       <div class="hero-content">
-        <img src="images/badge-made-in-germany.png" class="badge-mig" alt="Made in Germany - Premium Quality" data-i18n-alt="hero.badgeAlt">
         <h1 data-i18n="hero.title">UNBREAK ONE</h1>
         <p class="subheadline" data-i18n="hero.subtitle">Magnetische Halter für Gläser &
           Flaschen – sicher, elegant, überall.</p>
@@ -502,8 +503,25 @@
     </div>
   </footer>
 
+  <!-- ===================================
+       CONFIGURATOR MODAL OVERLAY
+       =================================== -->
+  <div id="configurator-modal" class="modal-overlay">
+    <div class="modal-container">
+      <button class="modal-close" aria-label="Close configurator">&times;</button>
+      <iframe class="modal-iframe" title="UNBREAK ONE Configurator"></iframe>
+    </div>
+  </div>
+
   <!-- JavaScript -->
   <script src="script.js?v=2.0.0"></script>
+  
+  <!-- GSAP Animation Library (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
+  
+  <!-- Motion System (Progressive Enhancement) -->
+  <script src="motion.js?v=2.0.1" defer></script>
 
 </body>
 
