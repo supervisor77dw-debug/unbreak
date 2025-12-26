@@ -901,29 +901,31 @@ section {
 }
 
 /* === CONTACT & FOOTER === */
-/* Full-bleed background EXAKT wie Gastro-Hero */
-.kontakt-section {
+/* Hero-Pattern: Section als Wrapper, Background als separate Layer */
+.contactHero {
   position: relative;
-  min-height: 70vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-image: url('images/Kontakt.jpg');
-  background-size: cover;
-  background-position: center top;
-  background-repeat: no-repeat;
+  width: 100%;
+  min-height: clamp(420px, 55vh, 780px);
+  padding: 0 !important;
+  margin: 0 !important;
   overflow: hidden;
-  padding: 0;
-  margin: 0;
 }
 
-/* Dark Overlay - Verbessert Textlesbarkeit */
+/* Background Layer - absolut positioniert, startet bei top:0 */
+.contactBg {
+  position: absolute;
+  inset: 0;  /* top:0 right:0 bottom:0 left:0 */
+  background-image: url('images/Kontakt.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center top;  /* wichtig: NICHT center center */
+  z-index: 0;
+}
+
+/* Dark Overlay - über Background, unter Content */
 .kontakt-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: linear-gradient(
     135deg,
     rgba(0, 0, 0, 0.5) 0%,
@@ -932,14 +934,16 @@ section {
   z-index: 1;
 }
 
-/* Content Layer - Über Overlay */
-.kontakt-section .container {
+/* Content Layer - über Background und Overlay */
+.contactInner {
   position: relative;
   z-index: 2;
+  padding-block: clamp(48px, 6vh, 96px);
   display: flex;
   justify-content: center;
   align-items: center;
   text-align: center;
+  min-height: clamp(420px, 55vh, 780px);
 }
 
 .kontakt-content {
