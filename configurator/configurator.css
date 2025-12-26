@@ -70,10 +70,12 @@
     height: 142.857%;
     transform: scale(0.7);
     transform-origin: top left;
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
-/* Frame: füllt den skalierten Bereich - WICHTIG: NICHT absolute! */
+/* Frame: füllt den skalierten Bereich */
 .cfgFrame,
 #configurator-iframe {
     width: 100%;
