@@ -899,11 +899,11 @@ section {
 /* === CONTACT & FOOTER === */
 #kontakt {
   background-color: var(--color-petrol-dark);
-  background-image: linear-gradient(rgba(8, 79, 85, 0.85), rgba(8, 79, 85, 0.85)), url('images/Kontakt.jpg');
+  background-image: linear-gradient(rgba(8, 79, 85, 0.5), rgba(8, 79, 85, 0.5)), url('images/Kontakt.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-attachment: scroll;
   color: var(--color-white);
   padding: var(--spacing-xl) 0;
   position: relative;
