@@ -229,23 +229,26 @@ header.scrolled {
 }
 
 /* ===================================
-   BADGE POLISH (BUG A FIX: Absolute positioning to prevent clipping)
+   BADGE POLISH - RECHTS OBEN auf Hero-Card
    =================================== */
 .badge-mig {
   position: absolute;
   top: 1.5rem;
-  left: 1.5rem;
+  right: 1.5rem;
   max-width: 120px;
   height: auto;
   z-index: 100;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
   transition: var(--premium-transition-fast);
   pointer-events: none;
+  transform: none;
+  transform-origin: top right;
 }
 
 @media (hover: hover) {
   .badge-mig:hover {
     transform: scale(1.05);
+    transform-origin: top right;
   }
 }
 
@@ -253,7 +256,9 @@ header.scrolled {
   .badge-mig {
     max-width: 90px;
     top: 1rem;
-    left: 1rem;
+    right: 1rem;
+    transform: scale(0.9);
+    transform-origin: top right;
   }
 }
 
