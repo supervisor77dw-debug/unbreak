@@ -173,10 +173,22 @@ header {
   box-shadow: var(--shadow-light);
   z-index: 1000;
   transition: all 0.3s ease;
+  height: auto;
 }
 
 header.scrolled {
   box-shadow: var(--shadow-medium);
+}
+
+/* Fix 3: Mobile Header - kein Content-Crop */
+main {
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  main {
+    padding-top: 0; /* Sections haben scroll-margin-top */
+  }
 }
 
 nav {

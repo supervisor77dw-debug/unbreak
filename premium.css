@@ -61,6 +61,13 @@ h3 {
 
 section {
   padding-block: clamp(3rem, 8vw, 6rem);
+  scroll-margin-top: 80px; /* Fix 3: Mobile Header-Höhe */
+}
+
+@media (max-width: 768px) {
+  section {
+    scroll-margin-top: 72px; /* Mobile Header kompakter */
+  }
 }
 
 /* ===================================

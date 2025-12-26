@@ -44,7 +44,8 @@
   }
   
   // ===================================
-  // HERO ENTRANCE ANIMATION
+  // HERO ENTRANCE ANIMATION (HIGH-CLASS DRAMATURGIE)
+  // Reihenfolge: Headline → Subline → Features → CTA → Badge (Stempel)
   // ===================================
   function heroEntrance() {
     const hero = document.querySelector('.hero-content');
@@ -54,37 +55,55 @@
     const subtitle = hero.querySelector('p');
     const features = hero.querySelectorAll('ul li');
     const buttons = hero.querySelectorAll('.btn');
-    const badge = hero.querySelector('.badge-mig');
+    const badge = document.querySelector('.badge-mig');
     
     // Set initial states
-    gsap.set([h1, subtitle, features, buttons, badge], {
-      opacity: 0,
-      y: 30
-    });
+    gsap.set(h1, { opacity: 0, y: 24 });
+    gsap.set(subtitle, { opacity: 0, y: 16 });
+    gsap.set(features, { opacity: 0, y: 12 });
+    gsap.set(buttons, { opacity: 0, y: 12 });
+    gsap.set(badge, { opacity: 0, scale: 0.6, rotation: -8 });
     
-    // Create timeline
+    // Create timeline with logical progression
     const tl = gsap.timeline({ 
       defaults: { 
-        ease: 'power3.out',
-        duration: 0.8
+        ease: 'power3.out'
       }
     });
     
-    tl.to(badge, { opacity: 1, y: 0, duration: 0.6 }, 0.2)
-      .to(h1, { opacity: 1, y: 0 }, 0.4)
-      .to(subtitle, { opacity: 1, y: 0, duration: 0.7 }, 0.6)
-      .to(features, { 
-        opacity: 1, 
-        y: 0,
-        stagger: 0.12,
-        duration: 0.6
-      }, 0.8)
-      .to(buttons, { 
-        opacity: 1, 
-        y: 0,
-        stagger: 0.15,
-        duration: 0.6
-      }, 1.0);
+    // 1. Headline (zentrale Botschaft)
+    tl.to(h1, { 
+      opacity: 1, 
+      y: 0, 
+      duration: 0.8 
+    })
+    // 2. Subline (Erklärung)
+    .to(subtitle, { 
+      opacity: 1, 
+      y: 0, 
+      duration: 0.6 
+    }, '-=0.4')
+    // 3. Feature-Liste (Details)
+    .to(features, { 
+      opacity: 1, 
+      y: 0,
+      stagger: 0.1,
+      duration: 0.5
+    }, '-=0.2')
+    // 4. CTA Button (Handlung)
+    .to(buttons, { 
+      opacity: 1, 
+      y: 0,
+      duration: 0.5
+    }, '+=0.1')
+    // 5. Badge (Qualitätssiegel, Stempel-Effekt)
+    .to(badge, { 
+      opacity: 1, 
+      scale: 1,
+      rotation: 0,
+      duration: 0.5,
+      ease: 'back.out(2.2)'
+    }, '+=0.15');
   }
   
   // ===================================
@@ -93,12 +112,15 @@
   function scrollReveals() {
     if (typeof ScrollTrigger === 'undefined') return;
     
-    // Reveal all sections except hero
+    // Reveal all sections except hero (inkl. Gastro-Section)
     const sections = document.querySelectorAll('section:not(.hero)');
     
     sections.forEach((section) => {
       // Check if section has content
       if (!section.children.length) return;
+      
+      // Ensure section is visible (Fix für Gastro-Section)
+      gsap.set(section, { opacity: 1, visibility: 'visible' });
       
       gsap.from(section, {
         scrollTrigger: {
