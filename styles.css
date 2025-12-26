@@ -900,65 +900,84 @@ section {
 /* Full-bleed background wie Gastro-Hero */
 #kontakt {
   position: relative;
-  width: 100%;
+  color: var(--color-white);
   min-height: 70vh;
   display: flex;
   align-items: center;
-  justify-content: center;
   padding: var(--spacing-xl) 0;
-  background-image: url('images/Kontakt.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-color: var(--color-petrol-dark);
-  color: var(--color-white);
+  overflow: hidden;
+  /* Fallback Background */
+  background: var(--color-petrol-dark);
+}
+
+/* Background Image Container - Fullscreen (wie Hero Video Container) */
+.kontakt-background-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
   overflow: hidden;
 }
 
-/* Dunkles Overlay für bessere Textlesbarkeit */
+/* Background Image - Cover gesamten Bereich (wie Hero Video) */
+.kontakt-background-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* Dark Overlay - Verbessert Textlesbarkeit (wie Hero) */
 .kontakt-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg,
-      rgba(0, 0, 0, 0.5) 0%,
-      rgba(10, 108, 116, 0.4) 100%);
-  z-index: 1;
+  z-index: 2;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(10, 108, 116, 0.4) 100%
+  );
 }
 
-/* Container must be above overlay */
-.kontakt-container {
+/* Content Layer - Über Background und Overlay (wie Hero) */
+#kontakt .container {
   position: relative;
-  z-index: 2;
+  z-index: 3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   text-align: center;
 }
 
-/* Desktop: Breiterer Kontaktbereich */
-@media (min-width: 1024px) {
-  .kontakt-container {
-    max-width: 800px;
-  }
+.kontakt-content {
+  max-width: 800px;
 }
 
-.kontakt-container h2 {
+.kontakt-content h2 {
   color: var(--color-white);
   margin-bottom: var(--spacing-md);
 }
 
-.kontakt-container p {
+.kontakt-content p {
   color: var(--color-white);
 }
 
-.kontakt-container a {
+.kontakt-content a {
   color: var(--color-white);
   font-size: 20px;
   font-weight: 500;
   text-decoration: underline;
 }
 
-.kontakt-container a:hover {
+.kontakt-content a:hover {
   color: var(--color-hellgrau);
 }
 
