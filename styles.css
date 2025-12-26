@@ -900,10 +900,12 @@ section {
 /* Full-bleed background wie Gastro-Hero */
 #kontakt {
   position: relative;
+  width: 100%;
   min-height: 70vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--spacing-xl) 0;
   background-image: url('images/Kontakt.jpg');
   background-size: cover;
   background-position: center;
