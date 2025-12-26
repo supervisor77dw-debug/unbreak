@@ -52,37 +52,25 @@
 }
 
 /* ===================================
-   IFRAME SKALIERUNG (Desktop + Mobile 30% kleiner)
+   IFRAME CONTAINER (Native Darstellung)
    =================================== */
 
-/* Outer: Sichtbarer Bereich (Container) - EINHEITLICH für Desktop + Mobile */
+/* Container: Definiert nur Höhe und Overflow - keine Skalierung */
 .cfgFrameOuter {
     width: 100%;
-    height: 70vh; /* Desktop + Mobile Default */
-    overflow: hidden; /* Hier wird overflow hidden angewendet */
+    height: 70vh;
+    overflow: hidden;
     position: relative;
-    border-radius: 20px; /* Border Radius vom Outer, nicht vom Wrapper */
+    border-radius: 20px;
 }
 
-/* Scaled: Transform für 30% Verkleinerung - EINHEITLICH - HIGHER SPECIFICITY */
-.viewer-wrapper-fullwidth .cfgFrameScaled {
-    width: 142.857% !important; /* = 100 / 0.7 (kompensiert Scale) */
-    height: 142.857% !important;
-    transform: scale(0.7) !important;
-    transform-origin: top left !important;
-    position: absolute !important;
-    top: 0;
-    left: 0;
-}
-
-/* Frame: füllt den skalierten Bereich - HIGHER SPECIFICITY */
-.viewer-wrapper-fullwidth .cfgFrame,
-.viewer-wrapper-fullwidth #configurator-iframe {
-    width: 100% !important;
-    height: 100% !important;
+/* iframe: Füllt Container 1:1 - nutzt native 3D-Projekt-Darstellung */
+#configurator-iframe {
+    width: 100%;
+    height: 100%;
     border: none;
     display: block;
-    border-radius: 20px; /* Runde Ecken für iframe */
+    border-radius: 20px;
     /* Initial unsichtbar bis READY empfangen */
     opacity: 0;
     pointer-events: none;
@@ -90,53 +78,16 @@
 }
 
 /* iframe visible state (wird per JS bei READY gesetzt) */
-#configurator-iframe.ready,
-.cfgFrame.ready {
+#configurator-iframe.ready {
     opacity: 1;
     pointer-events: auto;
 }
 
-/* Mobile: Nur Höhe anpassen, Skalierung bleibt gleich */
+/* Mobile: Etwas kompaktere Höhe */
 @media (max-width: 768px) {
     .cfgFrameOuter {
-        height: 65vh; /* Mobile etwas kompakter */
+        height: 65vh;
     }
-    /* .cfgFrameScaled bleibt unverändert - kein erneutes Deklarieren nötig */
-}
-
-/* Legacy viewer wrapper (falls noch verwendet) */
-.viewer-wrapper {
-    position: relative;
-    background: #ffffff;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    min-height: 70vh;
-}
-
-@media (max-width: 768px) {
-    .viewer-wrapper {
-        min-height: 60vh;
-    }
-}
-
-.canvas-container {
-    position: relative;
-    width: 100%;
-    min-height: 70vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-@media (max-width: 768px) {
-    .canvas-container {
-        min-height: 60vh;
-    }
-}
-
-#configurator-canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
 }
 
 /* Loading Overlay */

@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="animations.css">
     <link rel="stylesheet" href="i18n.css">
     <link rel="stylesheet" href="readability-optimization.css">
-    <link rel="stylesheet" href="configurator/configurator.css?v=1.0.1">
+    <link rel="stylesheet" href="configurator/configurator.css">
 
     <!-- i18n System -->
     <script src="i18n.js"></script>
@@ -60,20 +60,15 @@
             <div class="configurator-container">
                 <!-- 3D Viewer - Vercel Integration -->
                 <div class="viewer-wrapper-fullwidth">
-                    <!-- Outer: sichtbarer Bereich -->
                     <div class="cfgFrameOuter">
-                        <!-- Scaled: transformiert um 30% kleiner -->
-                        <div class="cfgFrameScaled">
-                            <iframe 
-                                id="configurator-iframe"
-                                class="cfgFrame"
-                                src="https://unbreak-3-d-konfigurator.vercel.app/"
-                                title="UNBREAK ONE 3D Konfigurator"
-                                allow="accelerometer; autoplay; camera; encrypted-media; fullscreen; geolocation; gyroscope; magnetometer; microphone; midi; payment; vr; xr-spatial-tracking; web-share"
-                                loading="eager"
-                                allowfullscreen>
-                            </iframe>
-                        </div>
+                        <iframe 
+                            id="configurator-iframe"
+                            src="https://unbreak-3-d-konfigurator.vercel.app/"
+                            title="UNBREAK ONE 3D Konfigurator"
+                            allow="accelerometer; autoplay; camera; encrypted-media; fullscreen; geolocation; gyroscope; magnetometer; microphone; midi; payment; vr; xr-spatial-tracking; web-share"
+                            loading="eager"
+                            allowfullscreen>
+                        </iframe>
                     </div>
                     
                     <!-- Loading State -->
