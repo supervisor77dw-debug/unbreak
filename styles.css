@@ -943,6 +943,15 @@ section {
 
 /* Desktop: Breiterer Kontaktbereich */
 @media (min-width: 1024px) {
+  /* Explizit Hintergrundbild für Desktop erzwingen */
+  #kontakt {
+    background-image: url('images/Kontakt.jpg') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: scroll !important;
+  }
+  
   .contact-info {
     max-width: 800px;
     margin-left: auto;
