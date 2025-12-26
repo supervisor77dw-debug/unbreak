@@ -180,6 +180,48 @@ header.scrolled {
   box-shadow: var(--shadow-medium);
 }
 
+/* PRIO 1: Header Theme States (stabil) */
+header.header--light {
+  background-color: var(--color-white);
+}
+
+header.header--light .logo,
+header.header--light .nav-links a {
+  color: var(--color-graphit);
+}
+
+header.header--light .nav-links a:hover {
+  color: var(--color-petrol-deep);
+  text-decoration: underline;
+}
+
+header.header--light .burger-menu span {
+  background-color: var(--color-graphit);
+}
+
+header.header--dark {
+  background-color: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(12px);
+}
+
+header.header--dark .logo,
+header.header--dark .nav-links a {
+  color: var(--color-white);
+}
+
+header.header--dark .nav-links a:hover {
+  color: var(--color-cyan);
+  text-decoration: underline;
+}
+
+header.header--dark .burger-menu span {
+  background-color: var(--color-white);
+}
+
+header.header--dark .nav-logo {
+  filter: brightness(0) invert(1);
+}
+
 /* Fix 3: Mobile Header - kein Content-Crop */
 main {
   min-height: 100vh;
