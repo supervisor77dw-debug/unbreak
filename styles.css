@@ -929,46 +929,36 @@ section {
 }
 
 /* Container must be above overlay */
-#kontakt .container {
+.kontakt-container {
   position: relative;
   z-index: 2;
-}
-
-.contact-info {
   text-align: center;
-  margin-bottom: var(--spacing-lg);
-  /* Override glass-enhanced background - let section background show through */
-  background: transparent !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  border: none !important;
-  box-shadow: none !important;
-  position: relative;
-  z-index: 1;
 }
 
 /* Desktop: Breiterer Kontaktbereich */
 @media (min-width: 1024px) {
-  .contact-info {
+  .kontakt-container {
     max-width: 800px;
-    margin-left: auto;
-    margin-right: auto;
-    padding: var(--spacing-xl) var(--spacing-lg);
   }
 }
 
-.contact-info h2 {
+.kontakt-container h2 {
+  color: var(--color-white);
+  margin-bottom: var(--spacing-md);
+}
+
+.kontakt-container p {
   color: var(--color-white);
 }
 
-.contact-info a {
+.kontakt-container a {
   color: var(--color-white);
   font-size: 20px;
   font-weight: 500;
   text-decoration: underline;
 }
 
-.contact-info a:hover {
+.kontakt-container a:hover {
   color: var(--color-hellgrau);
 }
 
