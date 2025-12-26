@@ -838,6 +838,10 @@ section {
 }
 
 /* === SHOP SECTION === */
+#shop {
+  padding-bottom: 0;
+}
+
 #shop .sets-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -904,7 +908,8 @@ section {
   min-height: 70vh;
   display: flex;
   align-items: center;
-  padding: var(--spacing-xl) 0;
+  padding: 0 !important;
+  margin: 0 !important;
   overflow: hidden;
   /* Fallback Background */
   background: var(--color-petrol-dark);
