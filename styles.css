@@ -912,6 +912,14 @@ section {
 .contact-info {
   text-align: center;
   margin-bottom: var(--spacing-lg);
+  /* Override glass-enhanced background - let section background show through */
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  position: relative;
+  z-index: 1;
 }
 
 /* Desktop: Breiterer Kontaktbereich */
