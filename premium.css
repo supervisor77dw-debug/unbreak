@@ -331,23 +331,23 @@ header.scrolled {
   transform: scale(1);
 }
 
-/* Close button */
+/* Close button - UNTEN RECHTS */
 .modal-close {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  right: 1.5rem;
   z-index: 10000;
   
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.25);
   border-radius: 50%;
   
   color: var(--color-white);
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   line-height: 1;
   
   cursor: pointer;
@@ -356,6 +356,9 @@ header.scrolled {
   display: flex;
   align-items: center;
   justify-content: center;
+  
+  /* Verhindert Überschneidung mit Action-Buttons */
+  margin-left: auto;
 }
 
 @media (hover: hover) {
@@ -398,8 +401,11 @@ header.scrolled {
   }
   
   .modal-close {
-    top: env(safe-area-inset-top, 1rem);
-    right: env(safe-area-inset-right, 1rem);
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    right: calc(1rem + env(safe-area-inset-right, 0px));
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
   }
 }
 

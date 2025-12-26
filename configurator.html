@@ -60,14 +60,21 @@
             <div class="configurator-container">
                 <!-- 3D Viewer - Vercel Integration -->
                 <div class="viewer-wrapper-fullwidth">
-                    <iframe 
-                        id="configurator-iframe"
-                        src="https://unbreak-3-d-konfigurator.vercel.app/"
-                        title="UNBREAK ONE 3D Konfigurator"
-                        allow="accelerometer; autoplay; camera; encrypted-media; fullscreen; geolocation; gyroscope; magnetometer; microphone; midi; payment; vr; xr-spatial-tracking; web-share"
-                        loading="eager"
-                        allowfullscreen>
-                    </iframe>
+                    <!-- Outer: sichtbarer Bereich -->
+                    <div class="cfgFrameOuter">
+                        <!-- Scaled: transformiert um 30% kleiner -->
+                        <div class="cfgFrameScaled">
+                            <iframe 
+                                id="configurator-iframe"
+                                class="cfgFrame"
+                                src="https://unbreak-3-d-konfigurator.vercel.app/"
+                                title="UNBREAK ONE 3D Konfigurator"
+                                allow="accelerometer; autoplay; camera; encrypted-media; fullscreen; geolocation; gyroscope; magnetometer; microphone; midi; payment; vr; xr-spatial-tracking; web-share"
+                                loading="eager"
+                                allowfullscreen>
+                            </iframe>
+                        </div>
+                    </div>
                     
                     <!-- Loading State -->
                     <div id="loading-overlay" class="loading-overlay">
