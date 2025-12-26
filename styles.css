@@ -899,14 +899,33 @@ section {
 /* === CONTACT & FOOTER === */
 #kontakt {
   background-color: var(--color-petrol-dark);
-  background-image: linear-gradient(rgba(8, 79, 85, 0.5), rgba(8, 79, 85, 0.5)), url('images/Kontakt.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  background-image: url('images/Kontakt.jpg') !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
   background-attachment: scroll;
   color: var(--color-white);
   padding: var(--spacing-xl) 0;
   position: relative;
+  min-height: 400px;
+}
+
+/* Dark overlay for better text readability */
+#kontakt::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(8, 79, 85, 0.65);
+  z-index: 0;
+}
+
+/* Container and content must be above overlay */
+#kontakt .container {
+  position: relative;
+  z-index: 1;
 }
 
 .contact-info {
