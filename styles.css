@@ -901,49 +901,66 @@ section {
 }
 
 /* === CONTACT & FOOTER === */
-/* Hero-Pattern: Section als Wrapper, Background als separate Layer */
-.contactHero {
+/* 1:1 Hero Pattern - Section + Background Container */
+#kontakt {
   position: relative;
+  color: var(--color-white);
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  overflow: hidden;
+  /* Fallback Background */
+  background: var(--color-petrol-dark);
+}
+
+/* Background Container - Fullscreen (wie Hero Video Container) */
+.kontakt-background-container {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  min-height: clamp(420px, 55vh, 780px);
-  padding: 0 !important;
-  margin: 0 !important;
+  height: 100%;
+  z-index: 1;
   overflow: hidden;
 }
 
-/* Background Layer - absolut positioniert, startet bei top:0 */
-.contactBg {
+/* Background Image - Cover gesamten Bereich (wie Hero Video) */
+.kontakt-background-image {
   position: absolute;
-  inset: 0;  /* top:0 right:0 bottom:0 left:0 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background-image: url('images/Kontakt.jpg');
   background-size: cover;
+  background-position: center top;
   background-repeat: no-repeat;
-  background-position: center top;  /* wichtig: NICHT center center */
-  z-index: 0;
 }
 
-/* Dark Overlay - über Background, unter Content */
+/* Dark Overlay - Verbessert Textlesbarkeit (wie Hero) */
 .kontakt-overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
   background: linear-gradient(
-    135deg,
-    rgba(0, 0, 0, 0.5) 0%,
-    rgba(10, 108, 116, 0.4) 100%
+    to bottom,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.4) 100%
   );
-  z-index: 1;
 }
 
-/* Content Layer - über Background und Overlay */
-.contactInner {
+/* Content Layer - Über Background und Overlay (wie Hero) */
+#kontakt .container {
   position: relative;
-  z-index: 2;
-  padding-block: clamp(48px, 6vh, 96px);
+  z-index: 3;
   display: flex;
   justify-content: center;
   align-items: center;
   text-align: center;
-  min-height: clamp(420px, 55vh, 780px);
 }
 
 .kontakt-content {
