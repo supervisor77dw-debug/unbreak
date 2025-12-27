@@ -3,7 +3,7 @@
 
 .gastro-hero {
     position: relative;
-    min-height: 80vh;
+    min-height: 85vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -103,10 +103,10 @@
     width: 100%;
 }
 
-/* Responsive - add to mobile section @media (max-width: 767px) */
+/* Responsive - Mobile Consistency */
 @media (max-width: 767px) {
     .gastro-hero {
-        min-height: 60vh;
+        min-height: 70vh;
     }
 
     .gastro-hero-container {

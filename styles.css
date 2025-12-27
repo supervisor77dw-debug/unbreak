@@ -167,48 +167,52 @@ a {
 
 /* === NAVIGATION (STICKY HEADER) === */
 /* ===================================
-   HEADER - EINHEITLICHES GLAS-DESIGN
+   HEADER - PREMIUM GLASSMORPHISM (Launch-Ready)
+   3 States: Initial | Scrolled | Interaction
    =================================== */
 
 header {
   position: sticky;
   top: 0;
-  /* Glassmorphism: Dunkles Glas mit Verlauf */
-  background: linear-gradient(180deg, rgba(20, 24, 30, 0.78), rgba(20, 24, 30, 0.55));
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  /* State 1: Initial - Subtle Glass */
+  background: linear-gradient(180deg, rgba(20, 24, 30, 0.82), rgba(20, 24, 30, 0.68));
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   z-index: 1000;
-  transition: all 0.3s ease;
+  transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+              box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   height: auto;
 }
 
 header.scrolled {
-  background: linear-gradient(180deg, rgba(20, 24, 30, 0.92), rgba(20, 24, 30, 0.78));
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  /* State 2: Scrolled - Solid Premium Glass */
+  background: linear-gradient(180deg, rgba(20, 24, 30, 0.95), rgba(20, 24, 30, 0.88));
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* Navigation Typo: Edles Hellgrau */
+/* State 3: Navigation Links - Unified Interaction */
 header .nav-links a,
 header .nav-links button {
   color: rgba(230, 235, 240, 0.88);
   text-decoration: none;
-  transition: color 0.3s ease, text-decoration 0.2s ease;
+  position: relative;
+  transition: color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Hover/Focus: Petrol Accent */
+/* Hover - Minimal Petrol Accent */
 header .nav-links a:hover,
 header .nav-links button:hover {
   color: var(--color-petrol-deep);
-  text-decoration: none;
 }
 
-/* Active State (Multi-Page Navigation) */
+/* Active State - Clear Visual Marker */
 header .nav-links a.active {
   color: var(--color-petrol-deep);
   font-weight: 600;
-  position: relative;
 }
 
 header .nav-links a.active::after {
@@ -219,7 +223,8 @@ header .nav-links a.active::after {
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, var(--color-petrol-deep), var(--color-cyan));
-  border-radius: 2px;
+  border-radius: 1px;
+  opacity: 1;
 }
 
 header .nav-links a:focus-visible,
@@ -229,13 +234,13 @@ header .nav-links button:focus-visible {
   border-radius: 4px;
 }
 
-/* Burger Menu Icons: Hellgrau, Hover Petrol */
+/* Burger Menu - Consistent Interaction */
 header .burger-menu span {
   width: 28px;
   height: 3px;
   background-color: rgba(230, 235, 240, 0.88);
   border-radius: 2px;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 header .burger-menu:hover span {
@@ -325,7 +330,7 @@ nav {
 
 /* Burger spans: bereits in header .burger-menu span definiert */
 
-/* === BUTTONS === */
+/* === BUTTONS - Premium Differentiation === */
 .btn {
   display: inline-block;
   padding: 14px 32px;
@@ -335,22 +340,26 @@ nav {
   text-align: center;
   border-radius: var(--border-radius-md);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid transparent;
+  text-decoration: none;
 }
 
+/* Primary CTA - Shop/Kaufen - Prominent */
 .btn-primary {
   background-color: var(--color-petrol-deep);
   color: var(--color-white);
   border-color: var(--color-petrol-deep);
+  box-shadow: 0 2px 8px rgba(10, 108, 116, 0.3);
 }
 
 .btn-primary:hover {
   background-color: var(--color-petrol-dark);
-  box-shadow: var(--shadow-medium);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(10, 108, 116, 0.4);
+  transform: translateY(-1px);
 }
 
+/* Secondary CTA - Info/Mehr - Subtle */
 .btn-secondary {
   background-color: transparent;
   color: var(--color-petrol-deep);
@@ -358,19 +367,23 @@ nav {
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-petrol-deep);
-  color: var(--color-white);
+  background-color: rgba(10, 108, 116, 0.1);
+  border-color: var(--color-petrol-dark);
+  color: var(--color-petrol-dark);
 }
 
+/* Nav Button - Consistent with Primary */
 .btn-nav {
   background-color: var(--color-petrol-deep);
   color: var(--color-white);
   padding: 10px 24px;
   font-size: 15px;
+  box-shadow: 0 2px 6px rgba(10, 108, 116, 0.25);
 }
 
 .btn-nav:hover {
   background-color: var(--color-petrol-dark);
+  box-shadow: 0 3px 10px rgba(10, 108, 116, 0.35);
 }
 
 /* === CARDS === */
@@ -462,7 +475,7 @@ section {
 #hero {
   position: relative;
   color: var(--color-white);
-  min-height: 90vh;
+  min-height: 85vh;
   display: flex;
   align-items: center;
   padding: var(--spacing-xl) 0;
@@ -940,7 +953,7 @@ section {
 /* Kontakt Section - 1:1 Gastro-Hero Pattern */
 #kontakt {
   position: relative;
-  min-height: 80vh;
+  min-height: 85vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1204,9 +1217,9 @@ footer a:hover {
     display: flex;
   }
 
-  /* Hero Mobile */
+  /* Hero Mobile - Consistent Height */
   #hero {
-    min-height: auto;
+    min-height: 70vh;
     padding: var(--spacing-lg) 0;
   }
 

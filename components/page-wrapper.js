@@ -41,10 +41,20 @@ const PageWrapper = {
   },
   
   /**
-   * Smooth Navigation Setup (OnePager-Gefühl)
+   * Smooth Navigation Setup (OnePager-Gefühl mit Premium Transitions)
    */
   setupSmoothNavigation() {
-    // Bei Navigation: smooth scroll to top
+    // Page Transition: Subtle Fade-In on Load
+    document.body.style.opacity = '0';
+    document.body.style.transition = 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.body.style.opacity = '1';
+      }, 50);
+    });
+    
+    // Bei Navigation: Instant scroll to top
     window.addEventListener('beforeunload', () => {
       window.scrollTo({ top: 0, behavior: 'instant' });
     });
@@ -63,9 +73,13 @@ const PageWrapper = {
           !href.startsWith('mailto') &&
           href.endsWith('.html')) {
         
-        // Optional: Fade-out Animation vor Navigation
-        // (kann aktiviert werden für OnePager-Gefühl)
-        // document.body.style.opacity = '0.8';
+        // Subtle Fade-out vor Navigation
+        e.preventDefault();
+        document.body.style.opacity = '0.85';
+        
+        setTimeout(() => {
+          window.location.href = href;
+        }, 150);
       }
     });
   },
