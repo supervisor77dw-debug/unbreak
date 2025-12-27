@@ -4,12 +4,16 @@
   "description": "UNBREAK ONE - Homepage with 3D Configurator Integration + E-Commerce Backend",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/inject-env.js && next build",
     "start": "next start",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
-    "serve": "python -m http.server 8000"
+    "serve": "python -m http.server 8000",
+    "inject-env": "node scripts/inject-env.js",
+    "db:setup": "echo 'Run database/auth-setup.sql in Supabase Dashboard SQL Editor'",
+    "db:catalog": "echo 'Run database/catalog-setup.sql in Supabase Dashboard SQL Editor'",
+    "test:auth": "node test-auth-setup.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

@@ -327,5 +327,38 @@
     "infoDeliveryText": "Your order will be processed and shipped within 3-5 days.",
     "infoCustomTitle": "Individual",
     "infoCustomText": "Each piece is made according to your wishes."
+  },
+  "shop": {
+    "hero": {
+      "title": "Shop",
+      "subtitle": "Magnetic holders for glasses & bottles – Individual products, bundles, and pre-configured sets"
+    },
+    "products": {
+      "title": "Individual Products",
+      "empty": "No products available"
+    },
+    "bundles": {
+      "title": "Bundles & Packages",
+      "subtitle": "Save with our pre-packaged sets – perfect for gastronomy, office, or home",
+      "empty": "No bundles available"
+    },
+    "presets": {
+      "title": "Pre-configured Designs",
+      "subtitle": "Our most popular color and material combinations – available immediately",
+      "empty": "No presets available"
+    },
+    "badge": {
+      "bundle": "Bundle",
+      "preset": "Preset"
+    },
+    "button": {
+      "buy": "Buy Now"
+    },
+    "loading": "Loading products...",
+    "cta": {
+      "title": "Want a custom configuration?",
+      "text": "Design your own UNBREAK ONE with our 3D configurator",
+      "button": "To Configurator"
+    }
   }
 }

@@ -27,12 +27,14 @@ export const config = {
 /**
  * Process checkout.session.completed event
  * Main event: payment successful → update order → create production job
+ * Supports: configured, standard, bundle, preset order types
  */
 async function handleCheckoutCompleted(session) {
   const orderId = session.metadata.order_id;
   const orderNumber = session.metadata.order_number;
+  const orderType = session.metadata.type || 'standard';
 
-  console.log(`[Webhook] Checkout completed for order: ${orderNumber}`);
+  console.log(`[Webhook] Checkout completed for order: ${orderNumber} (type: ${orderType})`);
 
   // 1. Fetch order with related data
   const { data: order, error: orderError } = await supabaseAdmin
@@ -72,31 +74,78 @@ async function handleCheckoutCompleted(session) {
     throw new Error('Failed to update order status');
   }
 
-  // 4. Create production job
-  const productionPayload = {
-    order_number: orderNumber,
-    product: {
-      sku: order.product?.products?.sku || 'UNKNOWN',
-      name: order.product?.products?.name || 'UNKNOWN',
-    },
-    configuration: order.configuration.config_json,
-    customer: {
-      email: order.customer.email,
-      name: order.customer.name,
-      phone: order.customer.phone,
-    },
-    shipping_address: order.shipping_address,
-    pricing: {
-      subtotal_cents: order.subtotal_cents,
-      shipping_cents: order.shipping_cents,
-      tax_cents: order.tax_cents,
-      total_cents: order.total_cents,
-      currency: order.currency,
-    },
-    preview_image_url: order.configuration.preview_image_url,
-    model_export_url: order.configuration.model_export_url,
-    paid_at: new Date().toISOString(),
-  };
+  // 4. Create production job payload based on order type
+  let productionPayload;
+
+  switch (orderType) {
+    case 'bundle':
+      // Bundle: Multiple items from metadata
+      productionPayload = {
+        order_number: orderNumber,
+        order_type: 'bundle',
+        bundle_id: session.metadata.bundle_id,
+        bundle_items: order.metadata?.items || [],
+        customer: {
+          email: order.customer_email,
+        },
+        pricing: {
+          total_cents: order.total_amount_cents,
+          currency: order.currency,
+        },
+        paid_at: new Date().toISOString(),
+      };
+      break;
+
+    case 'preset':
+      // Preset: Pre-configured product
+      productionPayload = {
+        order_number: orderNumber,
+        order_type: 'preset',
+        preset_id: session.metadata.preset_id,
+        product: {
+          sku: order.metadata?.product_sku || 'UNKNOWN',
+        },
+        configuration: order.metadata?.config || order.configuration?.config_json,
+        customer: {
+          email: order.customer_email,
+        },
+        pricing: {
+          total_cents: order.total_amount_cents,
+          currency: order.currency,
+        },
+        preview_image_url: order.configuration?.preview_image_url,
+        paid_at: new Date().toISOString(),
+      };
+      break;
+
+    default:
+      // Standard or configured product
+      productionPayload = {
+        order_number: orderNumber,
+        order_type: orderType,
+        product: {
+          sku: order.product?.products?.sku || 'UNKNOWN',
+          name: order.product?.products?.name || 'UNKNOWN',
+        },
+        configuration: order.configuration?.config_json,
+        customer: {
+          email: order.customer?.email || order.customer_email,
+          name: order.customer?.name,
+          phone: order.customer?.phone,
+        },
+        shipping_address: order.shipping_address,
+        pricing: {
+          subtotal_cents: order.subtotal_cents,
+          shipping_cents: order.shipping_cents,
+          tax_cents: order.tax_cents,
+          total_cents: order.total_cents || order.total_amount_cents,
+          currency: order.currency,
+        },
+        preview_image_url: order.configuration?.preview_image_url,
+        model_export_url: order.configuration?.model_export_url,
+        paid_at: new Date().toISOString(),
+      };
+  }
 
   const { error: jobError } = await supabaseAdmin
     .from('production_jobs')

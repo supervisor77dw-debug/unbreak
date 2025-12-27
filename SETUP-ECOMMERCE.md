@@ -128,8 +128,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 STRIPE_SECRET_KEY=sk_test_...  # oder sk_live_... für Production
 STRIPE_WEBHOOK_SECRET=whsec_...
 
-# App
-NEXT_PUBLIC_BASE_URL=http://localhost:3000  # oder https://unbreak-one.com
+# App (main domain only - no subdomains)
+NEXT_PUBLIC_BASE_URL=http://localhost:3000  # oder https://unbreak-one.com (Production)
 ```
 
 **WICHTIG**: Füge `.env.local` zu `.gitignore` hinzu!

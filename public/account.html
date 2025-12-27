@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mein Konto - UNBREAK ONE</title>
+  <meta name="description" content="Manage your UNBREAK ONE orders and account">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .account-container {
+      min-height: calc(100vh - var(--header-height, 80px));
+      padding: var(--spacing-xl) var(--spacing-md);
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 40, 50, 0.98) 100%);
+    }
+
+    .account-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .account-header {
+      margin-bottom: var(--spacing-xl);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--spacing-md);
+    }
+
+    .account-header h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .btn-logout {
+      padding: 10px 24px;
+      background: rgba(255, 68, 68, 0.2);
+      color: #ff4444;
+      border: 1px solid rgba(255, 68, 68, 0.3);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-logout:hover {
+      background: rgba(255, 68, 68, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .profile-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .profile-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: var(--spacing-md);
+      color: var(--color-primary);
+    }
+
+    .profile-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--spacing-md);
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .info-label {
+      font-size: 0.85rem;
+      color: var(--color-text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-value {
+      font-size: 1.1rem;
+      color: var(--color-text);
+      font-weight: 500;
+    }
+
+    .orders-section {
+      margin-top: var(--spacing-xl);
+    }
+
+    .orders-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .orders-header h2 {
+      font-size: 1.75rem;
+      color: var(--color-primary);
+    }
+
+    .order-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-md);
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .order-card:hover {
+      border-color: var(--color-primary);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 229, 255, 0.2);
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--spacing-md);
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+    }
+
+    .order-number {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .order-status {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-pending {
+      background: rgba(255, 193, 7, 0.2);
+      color: #ffc107;
+      border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    .status-confirmed {
+      background: rgba(0, 229, 255, 0.2);
+      color: var(--color-primary);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+    }
+
+    .status-processing {
+      background: rgba(33, 150, 243, 0.2);
+      color: #2196f3;
+      border: 1px solid rgba(33, 150, 243, 0.3);
+    }
+
+    .status-shipped {
+      background: rgba(76, 175, 80, 0.2);
+      color: #4caf50;
+      border: 1px solid rgba(76, 175, 80, 0.3);
+    }
+
+    .status-delivered {
+      background: rgba(0, 229, 100, 0.2);
+      color: #00e564;
+      border: 1px solid rgba(0, 229, 100, 0.3);
+    }
+
+    .status-cancelled {
+      background: rgba(255, 68, 68, 0.2);
+      color: #ff4444;
+      border: 1px solid rgba(255, 68, 68, 0.3);
+    }
+
+    .order-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-md);
+      padding-top: var(--spacing-md);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .order-detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .detail-label {
+      font-size: 0.8rem;
+      color: var(--color-text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+      font-size: 1rem;
+      color: var(--color-text);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: var(--spacing-xl) var(--spacing-md);
+      color: var(--color-text-light);
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: var(--spacing-md);
+      opacity: 0.3;
+    }
+
+    .loading-spinner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: var(--spacing-xl);
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .account-header h1 {
+        font-size: 2rem;
+      }
+
+      .order-header {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="header-container"></div>
+
+  <main class="account-container">
+    <div class="account-inner">
+      <div class="account-header">
+        <h1>Mein Konto</h1>
+        <button class="btn-logout" id="logout-btn">Abmelden</button>
+      </div>
+
+      <!-- Profile Card -->
+      <div class="profile-card" id="profile-card" style="display: none;">
+        <h2>Profil</h2>
+        <div class="profile-info">
+          <div class="info-item">
+            <span class="info-label">E-Mail</span>
+            <span class="info-value" id="profile-email">-</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Rolle</span>
+            <span class="info-value" id="profile-role">-</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Mitglied seit</span>
+            <span class="info-value" id="profile-created">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Orders Section -->
+      <div class="orders-section">
+        <div class="orders-header">
+          <h2>Meine Bestellungen</h2>
+        </div>
+
+        <div id="loading-state" class="loading-spinner">
+          <div class="spinner"></div>
+        </div>
+
+        <div id="orders-container" style="display: none;"></div>
+
+        <div id="empty-state" class="empty-state" style="display: none;">
+          <div class="empty-state-icon">📦</div>
+          <h3>Noch keine Bestellungen</h3>
+          <p>Gestalten Sie Ihren ersten UNBREAK Halter!</p>
+          <a href="/configurator.html" class="btn btn-primary" style="margin-top: var(--spacing-md);">
+            Jetzt konfigurieren
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="footer-container"></div>
+
+  <!-- Load Components -->
+  <script src="components/header.js"></script>
+  <script src="components/footer.js"></script>
+
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    // Initialize Supabase
+    const supabaseUrl = 'YOUR_SUPABASE_URL';
+    const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+    const { createClient } = supabase;
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    // DOM Elements
+    const profileCard = document.getElementById('profile-card');
+    const loadingState = document.getElementById('loading-state');
+    const ordersContainer = document.getElementById('orders-container');
+    const emptyState = document.getElementById('empty-state');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    // Check authentication and load data
+    (async function init() {
+      try {
+        // Get session
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        
+        if (sessionError || !session) {
+          window.location.href = '/login.html?redirect=/account.html';
+          return;
+        }
+
+        // Get profile
+        const { data: profile, error: profileError } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        // Check role - only customers allowed
+        if (profile.role === 'admin') {
+          window.location.href = '/admin.html';
+          return;
+        } else if (profile.role === 'staff') {
+          window.location.href = '/ops.html';
+          return;
+        }
+
+        // Display profile
+        displayProfile(profile);
+
+        // Load orders
+        await loadOrders(session.user.id);
+
+      } catch (error) {
+        console.error('Init error:', error);
+        alert('Fehler beim Laden der Daten: ' + error.message);
+      }
+    })();
+
+    // Display profile information
+    function displayProfile(profile) {
+      document.getElementById('profile-email').textContent = profile.email;
+      document.getElementById('profile-role').textContent = getRoleLabel(profile.role);
+      document.getElementById('profile-created').textContent = formatDate(profile.created_at);
+      profileCard.style.display = 'block';
+    }
+
+    // Load orders
+    async function loadOrders(userId) {
+      try {
+        const { data: orders, error } = await supabaseClient
+          .from('orders')
+          .select(`
+            *,
+            customer:customers(email, full_name),
+            configurations(config_data),
+            payments(status, amount_cents)
+          `)
+          .eq('customer_user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        loadingState.style.display = 'none';
+
+        if (orders.length === 0) {
+          emptyState.style.display = 'block';
+        } else {
+          displayOrders(orders);
+          ordersContainer.style.display = 'block';
+        }
+
+      } catch (error) {
+        console.error('Load orders error:', error);
+        loadingState.style.display = 'none';
+        ordersContainer.innerHTML = '<div class="empty-state"><p>Fehler beim Laden der Bestellungen</p></div>';
+        ordersContainer.style.display = 'block';
+      }
+    }
+
+    // Display orders
+    function displayOrders(orders) {
+      ordersContainer.innerHTML = orders.map(order => `
+        <div class="order-card">
+          <div class="order-header">
+            <div>
+              <div class="order-number">Bestellung #${order.order_number || order.id.slice(0, 8)}</div>
+              <div style="color: var(--color-text-light); font-size: 0.9rem; margin-top: 4px;">
+                ${formatDate(order.created_at)}
+              </div>
+            </div>
+            <div class="order-status status-${order.status}">
+              ${getStatusLabel(order.status)}
+            </div>
+          </div>
+          <div class="order-details">
+            <div class="order-detail-item">
+              <span class="detail-label">SKU</span>
+              <span class="detail-value">${order.product_sku}</span>
+            </div>
+            <div class="order-detail-item">
+              <span class="detail-label">Menge</span>
+              <span class="detail-value">${order.quantity}</span>
+            </div>
+            <div class="order-detail-item">
+              <span class="detail-label">Betrag</span>
+              <span class="detail-value">${formatPrice(order.total_price_cents)}</span>
+            </div>
+            ${order.tracking_number ? `
+              <div class="order-detail-item">
+                <span class="detail-label">Tracking</span>
+                <span class="detail-value">${order.tracking_number}</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Logout handler
+    logoutBtn.addEventListener('click', async () => {
+      const { error } = await supabaseClient.auth.signOut();
+      if (error) {
+        alert('Logout fehlgeschlagen: ' + error.message);
+      } else {
+        window.location.href = '/index.html';
+      }
+    });
+
+    // Utility functions
+    function getRoleLabel(role) {
+      const labels = {
+        customer: 'Kunde',
+        staff: 'Mitarbeiter',
+        admin: 'Administrator'
+      };
+      return labels[role] || role;
+    }
+
+    function getStatusLabel(status) {
+      const labels = {
+        pending: 'Ausstehend',
+        confirmed: 'Bestätigt',
+        processing: 'In Bearbeitung',
+        shipped: 'Versandt',
+        delivered: 'Zugestellt',
+        cancelled: 'Storniert'
+      };
+      return labels[status] || status;
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    }
+
+    function formatPrice(cents) {
+      return new Intl.NumberFormat('de-DE', {
+        style: 'currency',
+        currency: 'EUR'
+      }).format(cents / 100);
+    }
+  </script>
+</body>
+</html>

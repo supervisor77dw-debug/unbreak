@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Katalog Verwaltung – Ops Portal</title>
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="/styles.css">
+  
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .ops-header {
+      background: linear-gradient(135deg, #1a4d5c 0%, #2d7a8f 100%);
+      color: white;
+      padding: 1.5rem 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .ops-header h1 {
+      margin: 0;
+      font-size: 1.75rem;
+    }
+    
+    .ops-header .user-info {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-top: 0.5rem;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .tab {
+      padding: 1rem 2rem;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s ease;
+    }
+    
+    .tab:hover {
+      color: #2d7a8f;
+    }
+    
+    .tab.active {
+      color: #2d7a8f;
+      border-bottom-color: #2d7a8f;
+    }
+    
+    .tab-content {
+      display: none;
+      background: white;
+      border-radius: 8px;
+      padding: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+      background: #2d7a8f;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1a4d5c;
+    }
+    
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #ccc;
+    }
+    
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #c82333;
+    }
+    
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #218838;
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    
+    .data-table th {
+      background: #f8f9fa;
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid #dee2e6;
+    }
+    
+    .data-table td {
+      padding: 1rem;
+      border-bottom: 1px solid #dee2e6;
+    }
+    
+    .data-table tr:hover {
+      background: #f8f9fa;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    .badge-active {
+      background: #28a745;
+      color: white;
+    }
+    
+    .badge-inactive {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      padding: 2rem;
+      max-width: 700px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .modal-header h2 {
+      margin: 0;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #999;
+    }
+    
+    .close-modal:hover {
+      color: #333;
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    
+    .form-group textarea {
+      min-height: 100px;
+      font-family: monospace;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .checkbox-wrapper input[type="checkbox"] {
+      width: auto;
+    }
+    
+    .bundle-items-editor {
+      border: 1px solid #dee2e6;
+      border-radius: 4px;
+      padding: 1rem;
+    }
+    
+    .bundle-item-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr auto;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .alert {
+      padding: 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+    }
+    
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .alert-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #999;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 2rem;
+    }
+    
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #2d7a8f;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="ops-header">
+    <h1>📦 Katalog Verwaltung</h1>
+    <div class="user-info">
+      <span id="user-email">Lädt...</span> | 
+      <a href="/ops.html" style="color: white;">← Zurück zu Ops</a> | 
+      <a href="/account.html" style="color: white;">Konto</a>
+    </div>
+  </div>
+  
+  <!-- Main Container -->
+  <div class="container">
+    <!-- Alert Messages -->
+    <div id="alert-container"></div>
+    
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="products">Produkte</button>
+      <button class="tab" data-tab="bundles">Bundles</button>
+      <button class="tab" data-tab="presets">Presets</button>
+    </div>
+    
+    <!-- Products Tab -->
+    <div id="products-tab" class="tab-content active">
+      <div class="action-bar">
+        <h2>Produkte verwalten</h2>
+        <button class="btn btn-secondary" onclick="refreshProducts()">🔄 Aktualisieren</button>
+      </div>
+      <div id="products-loading" class="loading">
+        <div class="spinner"></div>
+        <p>Produkte werden geladen...</p>
+      </div>
+      <div id="products-list"></div>
+    </div>
+    
+    <!-- Bundles Tab -->
+    <div id="bundles-tab" class="tab-content">
+      <div class="action-bar">
+        <h2>Bundles verwalten</h2>
+        <div>
+          <button class="btn btn-secondary" onclick="refreshBundles()">🔄 Aktualisieren</button>
+          <button class="btn btn-primary" onclick="openBundleModal()">+ Neues Bundle</button>
+        </div>
+      </div>
+      <div id="bundles-loading" class="loading">
+        <div class="spinner"></div>
+        <p>Bundles werden geladen...</p>
+      </div>
+      <div id="bundles-list"></div>
+    </div>
+    
+    <!-- Presets Tab -->
+    <div id="presets-tab" class="tab-content">
+      <div class="action-bar">
+        <h2>Presets verwalten</h2>
+        <div>
+          <button class="btn btn-secondary" onclick="refreshPresets()">🔄 Aktualisieren</button>
+          <button class="btn btn-primary" onclick="openPresetModal()">+ Neues Preset</button>
+        </div>
+      </div>
+      <div id="presets-loading" class="loading">
+        <div class="spinner"></div>
+        <p>Presets werden geladen...</p>
+      </div>
+      <div id="presets-list"></div>
+    </div>
+  </div>
+  
+  <!-- Bundle Modal -->
+  <div id="bundle-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="bundle-modal-title">Neues Bundle</h2>
+        <button class="close-modal" onclick="closeBundleModal()">×</button>
+      </div>
+      <form id="bundle-form" onsubmit="saveBundleSubmit(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Titel (DE) *</label>
+            <input type="text" name="title_de" required>
+          </div>
+          <div class="form-group">
+            <label>Titel (EN) *</label>
+            <input type="text" name="title_en" required>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Beschreibung (DE)</label>
+            <textarea name="description_de"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Beschreibung (EN)</label>
+            <textarea name="description_en"></textarea>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Preis (EUR) *</label>
+            <input type="number" step="0.01" name="price" required min="0">
+          </div>
+          <div class="form-group">
+            <label>Bild URL</label>
+            <input type="url" name="image_url">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Bundle Inhalt *</label>
+          <div id="bundle-items-container" class="bundle-items-editor"></div>
+          <button type="button" class="btn btn-secondary" onclick="addBundleItem()">+ Artikel hinzufügen</button>
+        </div>
+        
+        <div class="form-group">
+          <div class="checkbox-wrapper">
+            <input type="checkbox" name="active" id="bundle-active" checked>
+            <label for="bundle-active">Aktiv (im Shop sichtbar)</label>
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="closeBundleModal()">Abbrechen</button>
+          <button type="submit" class="btn btn-success">Speichern</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Preset Modal -->
+  <div id="preset-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="preset-modal-title">Neues Preset</h2>
+        <button class="close-modal" onclick="closePresetModal()">×</button>
+      </div>
+      <form id="preset-form" onsubmit="savePresetSubmit(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Titel (DE) *</label>
+            <input type="text" name="title_de" required>
+          </div>
+          <div class="form-group">
+            <label>Titel (EN) *</label>
+            <input type="text" name="title_en" required>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Beschreibung (DE)</label>
+            <textarea name="description_de"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Beschreibung (EN)</label>
+            <textarea name="description_en"></textarea>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Preis (EUR) *</label>
+            <input type="number" step="0.01" name="price" required min="0">
+          </div>
+          <div class="form-group">
+            <label>Bild URL</label>
+            <input type="url" name="image_url">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Produkt SKU *</label>
+          <input type="text" name="product_sku" required placeholder="z.B. UO-CONFIGURED">
+        </div>
+        
+        <div class="form-group">
+          <label>Konfiguration (JSON) *</label>
+          <textarea name="config_json" style="font-family: monospace;" placeholder='{"finish":"matte-black","magnet":"gold","quantity":1}'></textarea>
+          <small style="color: #666;">Erlaubte Felder: finish, magnet, quantity, color, material</small>
+        </div>
+        
+        <div class="form-group">
+          <div class="checkbox-wrapper">
+            <input type="checkbox" name="active" id="preset-active" checked>
+            <label for="preset-active">Aktiv (im Shop sichtbar)</label>
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="closePresetModal()">Abbrechen</button>
+          <button type="submit" class="btn btn-success">Speichern</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- Auth & Catalog Script -->
+  <script src="/lib/auth.js"></script>
+  <script>
+    // Initialize Supabase
+    const supabaseUrl = 'YOUR_SUPABASE_URL';
+    const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+    
+    let currentUser = null;
+    let currentProfile = null;
+    let editingBundle = null;
+    let editingPreset = null;
+    
+    // Initialize
+    async function init() {
+      // Check auth
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = '/login.html';
+        return;
+      }
+      
+      // Get profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (!profile || (profile.role !== 'staff' && profile.role !== 'admin')) {
+        alert('Zugriff verweigert. Diese Seite ist nur für Staff und Admins.');
+        window.location.href = '/account.html';
+        return;
+      }
+      
+      currentUser = session.user;
+      currentProfile = profile;
+      
+      document.getElementById('user-email').textContent = profile.email;
+      
+      // Load initial data
+      await Promise.all([
+        loadProducts(),
+        loadBundles(),
+        loadPresets()
+      ]);
+      
+      // Setup tabs
+      setupTabs();
+    }
+    
+    // Tab switching
+    function setupTabs() {
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          // Remove active from all tabs
+          tabs.forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+          
+          // Add active to clicked tab
+          tab.classList.add('active');
+          const tabName = tab.getAttribute('data-tab');
+          document.getElementById(`${tabName}-tab`).classList.add('active');
+        });
+      });
+    }
+    
+    // Show alert
+    function showAlert(message, type = 'success') {
+      const container = document.getElementById('alert-container');
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type}`;
+      alert.textContent = message;
+      container.appendChild(alert);
+      
+      setTimeout(() => {
+        alert.remove();
+      }, 5000);
+    }
+    
+    // PRODUCTS
+    async function loadProducts() {
+      const loading = document.getElementById('products-loading');
+      const list = document.getElementById('products-list');
+      
+      loading.style.display = 'block';
+      list.innerHTML = '';
+      
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('name_de');
+        
+        if (error) throw error;
+        
+        loading.style.display = 'none';
+        
+        if (!data || data.length === 0) {
+          list.innerHTML = '<div class="empty-state">Keine Produkte gefunden</div>';
+          return;
+        }
+        
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Name (DE)</th>
+              <th>Name (EN)</th>
+              <th>Preis</th>
+              <th>Status</th>
+              <th>Bild</th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody"></tbody>
+        `;
+        
+        const tbody = table.querySelector('#products-tbody');
+        
+        data.forEach(product => {
+          const row = document.createElement('tr');
+          const price = (product.base_price_cents / 100).toFixed(2);
+          row.innerHTML = `
+            <td><strong>${product.sku}</strong></td>
+            <td>${product.name_de}</td>
+            <td>${product.name_en || '—'}</td>
+            <td>€${price}</td>
+            <td><span class="badge badge-${product.active ? 'active' : 'inactive'}">${product.active ? 'Aktiv' : 'Inaktiv'}</span></td>
+            <td>${product.image_url ? '✓' : '—'}</td>
+          `;
+          tbody.appendChild(row);
+        });
+        
+        list.appendChild(table);
+        
+      } catch (error) {
+        loading.style.display = 'none';
+        list.innerHTML = `<div class="alert alert-error">Fehler: ${error.message}</div>`;
+      }
+    }
+    
+    async function refreshProducts() {
+      await loadProducts();
+      showAlert('Produkte aktualisiert');
+    }
+    
+    // BUNDLES
+    async function loadBundles() {
+      const loading = document.getElementById('bundles-loading');
+      const list = document.getElementById('bundles-list');
+      
+      loading.style.display = 'block';
+      list.innerHTML = '';
+      
+      try {
+        const { data, error } = await supabase
+          .from('bundles')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        loading.style.display = 'none';
+        
+        if (!data || data.length === 0) {
+          list.innerHTML = '<div class="empty-state">Keine Bundles gefunden. Erstelle dein erstes Bundle!</div>';
+          return;
+        }
+        
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>Titel (DE)</th>
+              <th>Titel (EN)</th>
+              <th>Preis</th>
+              <th>Artikel</th>
+              <th>Status</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="bundles-tbody"></tbody>
+        `;
+        
+        const tbody = table.querySelector('#bundles-tbody');
+        
+        data.forEach(bundle => {
+          const row = document.createElement('tr');
+          const price = (bundle.price_cents / 100).toFixed(2);
+          const itemCount = bundle.items_json?.length || 0;
+          
+          row.innerHTML = `
+            <td><strong>${bundle.title_de}</strong></td>
+            <td>${bundle.title_en}</td>
+            <td>€${price}</td>
+            <td>${itemCount} Artikel</td>
+            <td><span class="badge badge-${bundle.active ? 'active' : 'inactive'}">${bundle.active ? 'Aktiv' : 'Inaktiv'}</span></td>
+            <td>
+              <button class="btn btn-secondary" style="padding: 0.5rem 1rem; margin-right: 0.5rem;" onclick="editBundle('${bundle.id}')">✏️ Bearbeiten</button>
+              <button class="btn btn-danger" style="padding: 0.5rem 1rem;" onclick="deleteBundle('${bundle.id}')">🗑️ Löschen</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+        
+        list.appendChild(table);
+        
+      } catch (error) {
+        loading.style.display = 'none';
+        list.innerHTML = `<div class="alert alert-error">Fehler: ${error.message}</div>`;
+      }
+    }
+    
+    async function refreshBundles() {
+      await loadBundles();
+      showAlert('Bundles aktualisiert');
+    }
+    
+    function openBundleModal(bundle = null) {
+      editingBundle = bundle;
+      const modal = document.getElementById('bundle-modal');
+      const title = document.getElementById('bundle-modal-title');
+      const form = document.getElementById('bundle-form');
+      
+      form.reset();
+      
+      if (bundle) {
+        title.textContent = 'Bundle bearbeiten';
+        form.elements.title_de.value = bundle.title_de;
+        form.elements.title_en.value = bundle.title_en;
+        form.elements.description_de.value = bundle.description_de || '';
+        form.elements.description_en.value = bundle.description_en || '';
+        form.elements.price.value = (bundle.price_cents / 100).toFixed(2);
+        form.elements.image_url.value = bundle.image_url || '';
+        form.elements.active.checked = bundle.active;
+        
+        // Load bundle items
+        renderBundleItems(bundle.items_json || []);
+      } else {
+        title.textContent = 'Neues Bundle';
+        renderBundleItems([{ sku: '', qty: 1 }]);
+      }
+      
+      modal.classList.add('active');
+    }
+    
+    function closeBundleModal() {
+      document.getElementById('bundle-modal').classList.remove('active');
+      editingBundle = null;
+    }
+    
+    function renderBundleItems(items) {
+      const container = document.getElementById('bundle-items-container');
+      container.innerHTML = '';
+      
+      items.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.className = 'bundle-item-row';
+        row.innerHTML = `
+          <input type="text" placeholder="SKU (z.B. UO-GLASSHOLDER)" value="${item.sku}" data-index="${index}" data-field="sku">
+          <input type="number" placeholder="Menge" min="1" value="${item.qty}" data-index="${index}" data-field="qty">
+          <button type="button" class="btn btn-danger" onclick="removeBundleItem(${index})">✕</button>
+        `;
+        container.appendChild(row);
+      });
+    }
+    
+    function addBundleItem() {
+      const container = document.getElementById('bundle-items-container');
+      const currentItems = Array.from(container.querySelectorAll('.bundle-item-row'));
+      const items = currentItems.map(row => ({
+        sku: row.querySelector('[data-field="sku"]').value,
+        qty: parseInt(row.querySelector('[data-field="qty"]').value) || 1
+      }));
+      
+      items.push({ sku: '', qty: 1 });
+      renderBundleItems(items);
+    }
+    
+    function removeBundleItem(index) {
+      const container = document.getElementById('bundle-items-container');
+      const currentItems = Array.from(container.querySelectorAll('.bundle-item-row'));
+      const items = currentItems.map(row => ({
+        sku: row.querySelector('[data-field="sku"]').value,
+        qty: parseInt(row.querySelector('[data-field="qty"]').value) || 1
+      }));
+      
+      items.splice(index, 1);
+      renderBundleItems(items);
+    }
+    
+    async function saveBundleSubmit(event) {
+      event.preventDefault();
+      const form = event.target;
+      
+      // Collect bundle items
+      const container = document.getElementById('bundle-items-container');
+      const itemRows = Array.from(container.querySelectorAll('.bundle-item-row'));
+      const items = itemRows.map(row => ({
+        sku: row.querySelector('[data-field="sku"]').value.trim(),
+        qty: parseInt(row.querySelector('[data-field="qty"]').value) || 1
+      })).filter(item => item.sku); // Remove empty
+      
+      if (items.length === 0) {
+        alert('Bitte mindestens einen Artikel hinzufügen');
+        return;
+      }
+      
+      const bundleData = {
+        title_de: form.elements.title_de.value,
+        title_en: form.elements.title_en.value,
+        description_de: form.elements.description_de.value,
+        description_en: form.elements.description_en.value,
+        price_cents: Math.round(parseFloat(form.elements.price.value) * 100),
+        image_url: form.elements.image_url.value || null,
+        items_json: items,
+        active: form.elements.active.checked
+      };
+      
+      try {
+        if (editingBundle) {
+          // Update
+          const { error } = await supabase
+            .from('bundles')
+            .update({...bundleData, updated_by: currentUser.id})
+            .eq('id', editingBundle.id);
+          
+          if (error) throw error;
+          showAlert('Bundle erfolgreich aktualisiert', 'success');
+        } else {
+          // Create
+          const { error } = await supabase
+            .from('bundles')
+            .insert({...bundleData, created_by: currentUser.id});
+          
+          if (error) throw error;
+          showAlert('Bundle erfolgreich erstellt', 'success');
+        }
+        
+        closeBundleModal();
+        await loadBundles();
+        
+      } catch (error) {
+        showAlert(`Fehler: ${error.message}`, 'error');
+      }
+    }
+    
+    async function editBundle(id) {
+      const { data, error } = await supabase
+        .from('bundles')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        showAlert(`Fehler: ${error.message}`, 'error');
+        return;
+      }
+      
+      openBundleModal(data);
+    }
+    
+    async function deleteBundle(id) {
+      if (!confirm('Bundle wirklich löschen?')) return;
+      
+      try {
+        const { error } = await supabase
+          .from('bundles')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+        
+        showAlert('Bundle gelöscht', 'success');
+        await loadBundles();
+        
+      } catch (error) {
+        showAlert(`Fehler: ${error.message}`, 'error');
+      }
+    }
+    
+    // PRESETS
+    async function loadPresets() {
+      const loading = document.getElementById('presets-loading');
+      const list = document.getElementById('presets-list');
+      
+      loading.style.display = 'block';
+      list.innerHTML = '';
+      
+      try {
+        const { data, error } = await supabase
+          .from('presets')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        loading.style.display = 'none';
+        
+        if (!data || data.length === 0) {
+          list.innerHTML = '<div class="empty-state">Keine Presets gefunden. Erstelle dein erstes Preset!</div>';
+          return;
+        }
+        
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>Titel (DE)</th>
+              <th>Titel (EN)</th>
+              <th>Preis</th>
+              <th>Produkt SKU</th>
+              <th>Status</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="presets-tbody"></tbody>
+        `;
+        
+        const tbody = table.querySelector('#presets-tbody');
+        
+        data.forEach(preset => {
+          const row = document.createElement('tr');
+          const price = (preset.price_cents / 100).toFixed(2);
+          
+          row.innerHTML = `
+            <td><strong>${preset.title_de}</strong></td>
+            <td>${preset.title_en}</td>
+            <td>€${price}</td>
+            <td>${preset.product_sku}</td>
+            <td><span class="badge badge-${preset.active ? 'active' : 'inactive'}">${preset.active ? 'Aktiv' : 'Inaktiv'}</span></td>
+            <td>
+              <button class="btn btn-secondary" style="padding: 0.5rem 1rem; margin-right: 0.5rem;" onclick="editPreset('${preset.id}')">✏️ Bearbeiten</button>
+              <button class="btn btn-danger" style="padding: 0.5rem 1rem;" onclick="deletePreset('${preset.id}')">🗑️ Löschen</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+        
+        list.appendChild(table);
+        
+      } catch (error) {
+        loading.style.display = 'none';
+        list.innerHTML = `<div class="alert alert-error">Fehler: ${error.message}</div>`;
+      }
+    }
+    
+    async function refreshPresets() {
+      await loadPresets();
+      showAlert('Presets aktualisiert');
+    }
+    
+    function openPresetModal(preset = null) {
+      editingPreset = preset;
+      const modal = document.getElementById('preset-modal');
+      const title = document.getElementById('preset-modal-title');
+      const form = document.getElementById('preset-form');
+      
+      form.reset();
+      
+      if (preset) {
+        title.textContent = 'Preset bearbeiten';
+        form.elements.title_de.value = preset.title_de;
+        form.elements.title_en.value = preset.title_en;
+        form.elements.description_de.value = preset.description_de || '';
+        form.elements.description_en.value = preset.description_en || '';
+        form.elements.price.value = (preset.price_cents / 100).toFixed(2);
+        form.elements.image_url.value = preset.image_url || '';
+        form.elements.product_sku.value = preset.product_sku;
+        form.elements.config_json.value = JSON.stringify(preset.config_json, null, 2);
+        form.elements.active.checked = preset.active;
+      } else {
+        title.textContent = 'Neues Preset';
+        form.elements.config_json.value = '{\n  "finish": "",\n  "magnet": "",\n  "quantity": 1\n}';
+      }
+      
+      modal.classList.add('active');
+    }
+    
+    function closePresetModal() {
+      document.getElementById('preset-modal').classList.remove('active');
+      editingPreset = null;
+    }
+    
+    async function savePresetSubmit(event) {
+      event.preventDefault();
+      const form = event.target;
+      
+      // Validate and parse JSON
+      let configJson;
+      try {
+        configJson = JSON.parse(form.elements.config_json.value);
+        
+        // Whitelist validation
+        const allowedKeys = ['finish', 'magnet', 'quantity', 'color', 'material'];
+        const keys = Object.keys(configJson);
+        const invalidKeys = keys.filter(k => !allowedKeys.includes(k));
+        
+        if (invalidKeys.length > 0) {
+          alert(`Ungültige Felder in Konfiguration: ${invalidKeys.join(', ')}\nErlaubt: ${allowedKeys.join(', ')}`);
+          return;
+        }
+      } catch (e) {
+        alert('Ungültiges JSON Format in Konfiguration');
+        return;
+      }
+      
+      const presetData = {
+        title_de: form.elements.title_de.value,
+        title_en: form.elements.title_en.value,
+        description_de: form.elements.description_de.value,
+        description_en: form.elements.description_en.value,
+        price_cents: Math.round(parseFloat(form.elements.price.value) * 100),
+        image_url: form.elements.image_url.value || null,
+        product_sku: form.elements.product_sku.value,
+        config_json: configJson,
+        active: form.elements.active.checked
+      };
+      
+      try {
+        if (editingPreset) {
+          // Update
+          const { error } = await supabase
+            .from('presets')
+            .update({...presetData, updated_by: currentUser.id})
+            .eq('id', editingPreset.id);
+          
+          if (error) throw error;
+          showAlert('Preset erfolgreich aktualisiert', 'success');
+        } else {
+          // Create
+          const { error } = await supabase
+            .from('presets')
+            .insert({...presetData, created_by: currentUser.id});
+          
+          if (error) throw error;
+          showAlert('Preset erfolgreich erstellt', 'success');
+        }
+        
+        closePresetModal();
+        await loadPresets();
+        
+      } catch (error) {
+        showAlert(`Fehler: ${error.message}`, 'error');
+      }
+    }
+    
+    async function editPreset(id) {
+      const { data, error } = await supabase
+        .from('presets')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (error) {
+        showAlert(`Fehler: ${error.message}`, 'error');
+        return;
+      }
+      
+      openPresetModal(data);
+    }
+    
+    async function deletePreset(id) {
+      if (!confirm('Preset wirklich löschen?')) return;
+      
+      try {
+        const { error } = await supabase
+          .from('presets')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+        
+        showAlert('Preset gelöscht', 'success');
+        await loadPresets();
+        
+      } catch (error) {
+        showAlert(`Fehler: ${error.message}`, 'error');
+      }
+    }
+    
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>

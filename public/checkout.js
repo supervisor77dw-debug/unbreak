@@ -163,9 +163,136 @@ const UnbreakCheckout = {
   }
 };
 
-// Make available globally
+// ===========================================
+// AUTO-BINDING: Automatic Button Integration
+// ===========================================
+
+/**
+ * Global state for configurator data
+ */
+window.UnbreakCheckoutState = {
+  lastConfig: null,
+  initialized: false,
+};
+
+/**
+ * Initialize checkout buttons automatically
+ * Idempotent - can be called multiple times safely
+ */
+function initCheckoutButtons() {
+  // Standard Product Buttons
+  const standardButtons = document.querySelectorAll('[data-checkout="standard"]');
+  standardButtons.forEach(button => {
+    // Skip if already bound
+    if (button.dataset.bound === '1') return;
+    
+    const sku = button.dataset.sku;
+    const qty = parseInt(button.dataset.qty || '1', 10);
+    
+    if (!sku) {
+      console.warn('Checkout button missing data-sku:', button);
+      return;
+    }
+    
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      UnbreakCheckout.buyStandard(sku, { quantity: qty });
+    });
+    
+    // Mark as bound
+    button.dataset.bound = '1';
+  });
+  
+  // Configured Product Buttons (Configurator)
+  const configuredButtons = document.querySelectorAll('[data-checkout="configured"]');
+  configuredButtons.forEach(button => {
+    // Skip if already bound
+    if (button.dataset.bound === '1') return;
+    
+    const productSku = button.dataset.productSku || 'UNBREAK-GLAS-01';
+    
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      
+      // Use last config from state
+      const config = window.UnbreakCheckoutState.lastConfig;
+      
+      if (!config || !config.color) {
+        alert('Bitte wähle zuerst eine Farbe im Konfigurator aus.');
+        return;
+      }
+      
+      UnbreakCheckout.buyConfigured({
+        productSku: productSku,
+        ...config
+      });
+    });
+    
+    // Mark as bound
+    button.dataset.bound = '1';
+  });
+  
+  console.log(`✓ Checkout buttons initialized: ${standardButtons.length + configuredButtons.length} buttons`);
+}
+
+/**
+ * Listen to configurator updates via postMessage
+ */
+function initConfiguratorListener() {
+  if (window.UnbreakCheckoutState.initialized) return;
+  
+  window.addEventListener('message', (event) => {
+    // Security: Check origin (adjust for your configurator domain)
+    const allowedOrigins = [
+      'https://unbreak-3-d-konfigurator.vercel.app',
+      window.location.origin,
+    ];
+    
+    if (!allowedOrigins.includes(event.origin)) {
+      return; // Ignore messages from unknown origins
+    }
+    
+    // Handle config updates from configurator
+    if (event.data.type === 'UNBREAK_CONFIG_UPDATE') {
+      window.UnbreakCheckoutState.lastConfig = event.data.config;
+      console.log('✓ Configurator config updated:', event.data.config);
+    }
+  });
+  
+  window.UnbreakCheckoutState.initialized = true;
+}
+
+/**
+ * Initialize on DOM ready
+ */
 if (typeof window !== 'undefined') {
+  // Make UnbreakCheckout available globally
   window.UnbreakCheckout = UnbreakCheckout;
+  
+  // Auto-initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      initCheckoutButtons();
+      initConfiguratorListener();
+    });
+  } else {
+    // DOM already loaded
+    initCheckoutButtons();
+    initConfiguratorListener();
+  }
+  
+  // Re-initialize on dynamic content changes (MutationObserver)
+  const observer = new MutationObserver(() => {
+    initCheckoutButtons(); // Idempotent
+  });
+  
+  // Observe body for new buttons
+  if (document.body) {
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
 }
 
 // Export for module usage

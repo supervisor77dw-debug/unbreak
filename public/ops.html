@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operations Portal - UNBREAK ONE</title>
+  <meta name="description" content="UNBREAK ONE Operations Portal - Order Management">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .ops-container {
+      min-height: calc(100vh - var(--header-height, 80px));
+      padding: var(--spacing-xl) var(--spacing-md);
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.95) 0%, rgba(50, 0, 40, 0.98) 100%);
+    }
+
+    .ops-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .ops-header {
+      margin-bottom: var(--spacing-xl);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--spacing-md);
+    }
+
+    .ops-header h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, #ff6b9d, #c44569);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .ops-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-xl);
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--color-text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .filters {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+      display: flex;
+      gap: var(--spacing-md);
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filter-group label {
+      display: block;
+      margin-bottom: var(--spacing-xs);
+      font-size: 0.85rem;
+      color: var(--color-text-light);
+      text-transform: uppercase;
+    }
+
+    .filter-group select {
+      width: 100%;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      color: var(--color-text);
+      font-size: 0.95rem;
+    }
+
+    .order-card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-md);
+      transition: all 0.3s ease;
+    }
+
+    .order-card:hover {
+      border-color: #ff6b9d;
+      box-shadow: 0 8px 24px rgba(255, 107, 157, 0.2);
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--spacing-md);
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+    }
+
+    .order-number {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    .order-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+
+    .btn-small {
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    .btn-edit {
+      background: rgba(0, 229, 255, 0.2);
+      color: var(--color-primary);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+    }
+
+    .btn-edit:hover {
+      background: rgba(0, 229, 255, 0.3);
+    }
+
+    .order-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+    }
+
+    .order-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field-label {
+      font-size: 0.8rem;
+      color: var(--color-text-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .field-value {
+      font-size: 1rem;
+      color: var(--color-text);
+      font-weight: 500;
+    }
+
+    .order-status {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-pending { background: rgba(255, 193, 7, 0.2); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
+    .status-confirmed { background: rgba(0, 229, 255, 0.2); color: var(--color-primary); border: 1px solid rgba(0, 229, 255, 0.3); }
+    .status-processing { background: rgba(33, 150, 243, 0.2); color: #2196f3; border: 1px solid rgba(33, 150, 243, 0.3); }
+    .status-shipped { background: rgba(76, 175, 80, 0.2); color: #4caf50; border: 1px solid rgba(76, 175, 80, 0.3); }
+    .status-delivered { background: rgba(0, 229, 100, 0.2); color: #00e564; border: 1px solid rgba(0, 229, 100, 0.3); }
+    .status-cancelled { background: rgba(255, 68, 68, 0.2); color: #ff4444; border: 1px solid rgba(255, 68, 68, 0.3); }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: rgba(20, 20, 30, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: var(--spacing-xl);
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-lg);
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      color: var(--color-primary);
+    }
+
+    .btn-close {
+      background: none;
+      border: none;
+      color: var(--color-text);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .form-group {
+      margin-bottom: var(--spacing-md);
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: var(--spacing-xs);
+      color: var(--color-text-light);
+      font-size: 0.9rem;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      color: var(--color-text);
+      font-size: 1rem;
+    }
+
+    .btn-save {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: var(--spacing-md);
+    }
+
+    .btn-save:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 768px) {
+      .ops-header h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="header-container"></div>
+
+  <main class="ops-container">
+    <div class="ops-inner">
+      <div class="ops-header">
+        <h1>Operations Portal</h1>
+        <button class="btn-logout" id="logout-btn">Abmelden</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="ops-stats">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total">-</div>
+          <div class="stat-label">Gesamt</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-pending">-</div>
+          <div class="stat-label">Ausstehend</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-processing">-</div>
+          <div class="stat-label">In Bearbeitung</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-shipped">-</div>
+          <div class="stat-label">Versandt</div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <div class="filter-group">
+          <label>Status Filter</label>
+          <select id="status-filter">
+            <option value="">Alle Status</option>
+            <option value="pending">Ausstehend</option>
+            <option value="confirmed">Bestätigt</option>
+            <option value="processing">In Bearbeitung</option>
+            <option value="shipped">Versandt</option>
+            <option value="delivered">Zugestellt</option>
+            <option value="cancelled">Storniert</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Sortierung</label>
+          <select id="sort-filter">
+            <option value="created_desc">Neueste zuerst</option>
+            <option value="created_asc">Älteste zuerst</option>
+            <option value="amount_desc">Höchster Betrag</option>
+            <option value="amount_asc">Niedrigster Betrag</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Orders -->
+      <div id="orders-container"></div>
+    </div>
+  </main>
+
+  <!-- Edit Modal -->
+  <div id="edit-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Bestellung bearbeiten</h2>
+        <button class="btn-close" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="edit-form">
+        <input type="hidden" id="edit-order-id">
+        <div class="form-group">
+          <label>Status</label>
+          <select id="edit-status" required>
+            <option value="pending">Ausstehend</option>
+            <option value="confirmed">Bestätigt</option>
+            <option value="processing">In Bearbeitung</option>
+            <option value="shipped">Versandt</option>
+            <option value="delivered">Zugestellt</option>
+            <option value="cancelled">Storniert</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tracking-Nummer (optional)</label>
+          <input type="text" id="edit-tracking" placeholder="z.B. DHL12345678">
+        </div>
+        <div class="form-group">
+          <label>Notizen (intern)</label>
+          <input type="text" id="edit-notes" placeholder="Interne Notizen">
+        </div>
+        <button type="submit" class="btn-save" id="save-btn">Speichern</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="footer-container"></div>
+
+  <script src="components/header.js"></script>
+  <script src="components/footer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const supabaseUrl = 'YOUR_SUPABASE_URL';
+    const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+    const { createClient } = supabase;
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    let allOrders = [];
+
+    (async function init() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      if (!session) {
+        window.location.href = '/login.html?redirect=/ops.html';
+        return;
+      }
+
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile || !['staff', 'admin'].includes(profile.role)) {
+        window.location.href = '/account.html';
+        return;
+      }
+
+      await loadOrders();
+    })();
+
+    async function loadOrders() {
+      const { data: orders, error } = await supabaseClient
+        .from('orders')
+        .select(`
+          *,
+          customer:customers(email, full_name),
+          configurations(config_data),
+          payments(status, amount_cents)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Load orders error:', error);
+        return;
+      }
+
+      allOrders = orders;
+      updateStats(orders);
+      displayOrders(orders);
+    }
+
+    function updateStats(orders) {
+      document.getElementById('stat-total').textContent = orders.length;
+      document.getElementById('stat-pending').textContent = orders.filter(o => o.status === 'pending').length;
+      document.getElementById('stat-processing').textContent = orders.filter(o => o.status === 'processing').length;
+      document.getElementById('stat-shipped').textContent = orders.filter(o => o.status === 'shipped').length;
+    }
+
+    function displayOrders(orders) {
+      const container = document.getElementById('orders-container');
+      container.innerHTML = orders.map(order => `
+        <div class="order-card">
+          <div class="order-header">
+            <div>
+              <div class="order-number">Bestellung #${order.order_number || order.id.slice(0, 8)}</div>
+              <div style="color: var(--color-text-light); font-size: 0.9rem; margin-top: 4px;">
+                ${formatDate(order.created_at)}
+              </div>
+            </div>
+            <div class="order-actions">
+              <span class="order-status status-${order.status}">${getStatusLabel(order.status)}</span>
+              <button class="btn-small btn-edit" onclick="editOrder('${order.id}')">Bearbeiten</button>
+            </div>
+          </div>
+          <div class="order-grid">
+            <div class="order-field">
+              <span class="field-label">Kunde</span>
+              <span class="field-value">${order.customer?.email || 'N/A'}</span>
+            </div>
+            <div class="order-field">
+              <span class="field-label">Produkt</span>
+              <span class="field-value">${order.product_sku}</span>
+            </div>
+            <div class="order-field">
+              <span class="field-label">Menge</span>
+              <span class="field-value">${order.quantity}</span>
+            </div>
+            <div class="order-field">
+              <span class="field-label">Betrag</span>
+              <span class="field-value">${formatPrice(order.total_price_cents)}</span>
+            </div>
+            ${order.tracking_number ? `
+              <div class="order-field">
+                <span class="field-label">Tracking</span>
+                <span class="field-value">${order.tracking_number}</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function editOrder(orderId) {
+      const order = allOrders.find(o => o.id === orderId);
+      if (!order) return;
+
+      document.getElementById('edit-order-id').value = order.id;
+      document.getElementById('edit-status').value = order.status;
+      document.getElementById('edit-tracking').value = order.tracking_number || '';
+      document.getElementById('edit-notes').value = order.internal_notes || '';
+      
+      document.getElementById('edit-modal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('edit-modal').classList.remove('show');
+    }
+
+    document.getElementById('edit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const orderId = document.getElementById('edit-order-id').value;
+      const status = document.getElementById('edit-status').value;
+      const tracking = document.getElementById('edit-tracking').value || null;
+      const notes = document.getElementById('edit-notes').value || null;
+
+      const { error } = await supabaseClient
+        .from('orders')
+        .update({
+          status,
+          tracking_number: tracking,
+          internal_notes: notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (error) {
+        alert('Fehler: ' + error.message);
+      } else {
+        closeModal();
+        await loadOrders();
+      }
+    });
+
+    document.getElementById('status-filter').addEventListener('change', filterOrders);
+    document.getElementById('sort-filter').addEventListener('change', filterOrders);
+
+    function filterOrders() {
+      const statusFilter = document.getElementById('status-filter').value;
+      const sortFilter = document.getElementById('sort-filter').value;
+
+      let filtered = [...allOrders];
+
+      if (statusFilter) {
+        filtered = filtered.filter(o => o.status === statusFilter);
+      }
+
+      if (sortFilter === 'created_asc') filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      else if (sortFilter === 'created_desc') filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      else if (sortFilter === 'amount_asc') filtered.sort((a, b) => a.total_price_cents - b.total_price_cents);
+      else if (sortFilter === 'amount_desc') filtered.sort((a, b) => b.total_price_cents - a.total_price_cents);
+
+      displayOrders(filtered);
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = '/index.html';
+    });
+
+    function getStatusLabel(status) {
+      const labels = {
+        pending: 'Ausstehend',
+        confirmed: 'Bestätigt',
+        processing: 'In Bearbeitung',
+        shipped: 'Versandt',
+        delivered: 'Zugestellt',
+        cancelled: 'Storniert'
+      };
+      return labels[status] || status;
+    }
+
+    function formatDate(dateString) {
+      return new Date(dateString).toLocaleString('de-DE');
+    }
+
+    function formatPrice(cents) {
+      return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
+    }
+  </script>
+</body>
+</html>

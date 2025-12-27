@@ -1,53 +1,210 @@
-# UNBREAK ONE - Konfigurator → Stripe Integration
+# UNBREAK ONE - Automatische Checkout-Integration
 
-## Quick Reference Guide
+## 🚀 Quick Start (Automatische Button-Integration)
 
-### 🎯 Integration Points
+### ✨ Automatisches System
+Seit dem neuesten Update werden **alle Buttons automatisch** über data-Attribute verbunden.
+**Kein manueller onclick-Code mehr nötig!**
 
-```javascript
-// 1. In configurator.js - Add Buy Button Handler
-import { startCheckout } from './checkout-integration.js';
+---
 
-document.getElementById('buy-button').addEventListener('click', async () => {
-  const config = {
-    product: 'wine_glass_holder',
-    color: selectedColor,      // aus UI State
-    finish: selectedFinish,     // aus UI State
-    engraving: engravingText,   // optional
-    previewImageUrl: captureScreenshot(), // optional
-  };
-  
-  await startCheckout(config);
-});
+## 📋 Verfügbare Produkt-SKUs
 
-// 2. Product SKU Mapping
-const productSkus = {
-  'wine_glass_holder': 'UNBREAK-WEIN-01',
-  'bottle_holder': 'UNBREAK-FLASCHE-01',
-  'gastro_edition': 'UNBREAK-GASTRO-01',
-};
+| SKU | Produkt | Preis |
+|-----|---------|-------|
+| `UNBREAK-WEIN-01` | Weinglashalter | €59.90 |
+| `UNBREAK-GLAS-01` | Glashalter Universal | €49.90 |
+| `UNBREAK-FLASCHE-01` | Flaschenhalter | €54.90 |
+| `UNBREAK-GASTRO-01` | Gastro Edition Set | €199.90 |
 
-// 3. Config Structure
-const configExample = {
-  product: 'wine_glass_holder',
-  color: 'petrol',           // petrol | anthracite | graphite
-  finish: 'matte',           // matte | glossy (+2 EUR)
-  engraving: null,           // null oder { text: 'Text', font: 'sans' } (+9.90 EUR)
-  
-  // Optional - für Produktion
-  modelData: exportSceneState(),
-  previewImageUrl: 'https://...',
-  modelExportUrl: 'https://...',
-};
+---
+
+## 🔧 Button-Integration (data-Attribute)
+
+### Standard-Produkt Button
+```html
+<!-- Einfach data-Attribute hinzufügen, kein onclick nötig! -->
+<button 
+  class="btn btn-primary"
+  data-checkout="standard"
+  data-sku="UNBREAK-WEIN-01"
+  data-qty="1">
+  Jetzt kaufen
+</button>
 ```
 
-### 📊 Database Tables (wichtigste)
+**Wie es funktioniert:**
+- `data-checkout="standard"` → Markiert Button als Standard-Produkt
+- `data-sku="..."` → Produkt-SKU aus Datenbank
+- `data-qty="..."` → Optional, Standard: 1
 
+Das System bindet den Button **automatisch** beim Seitenladen!
+
+---
+
+### Konfigurator Button
+```html
+<button 
+  class="btn btn-primary"
+  data-checkout="configured"
+  data-product-sku="UNBREAK-GLAS-01">
+  Konfiguration kaufen
+</button>
+```
+
+**Wie es funktioniert:**
+- `data-checkout="configured"` → Markiert Button als Konfigurator-Produkt
+- `data-product-sku="..."` → Basis-Produkt für Konfiguration
+- Config wird automatisch via **postMessage** vom 3D-Konfigurator empfangen
+
+---
+
+## 📡 PostMessage-Protokoll (Konfigurator → Parent)
+
+### Config-Update vom Konfigurator
+```javascript
+// Der 3D-Konfigurator sendet bei jeder Änderung:
+window.parent.postMessage({
+  type: 'UNBREAK_CONFIG_UPDATE',
+  config: {
+    color: 'petrol',
+    finish: 'matte',
+    engraving: null
+  }
+}, '*');
+```
+
+Das Checkout-System empfängt dies automatisch und speichert die Config in:
+```javascript
+window.UnbreakCheckoutState.lastConfig
+```
+
+Beim Klick auf "Jetzt kaufen" wird automatisch die **letzte Config** verwendet!
+
+---
+
+## 🎯 Integration Points
+
+### 1. Globales checkout.js laden
+**Bereits erledigt!** Das Script wird automatisch im Header geladen.
+
+```javascript
+// In header.js (automatisch):
+<script src="checkout.js" defer></script>
+```
+
+---
+
+### 2. Buttons markieren (Beispiele)
+
+#### Shop-Page
+```html
+<!-- Weinglashalter -->
+<a href="#" 
+   class="btn btn-primary" 
+   data-checkout="standard" 
+   data-sku="UNBREAK-WEIN-01">
+  Weinglashalter kaufen
+</a>
+
+<!-- Flaschenhalter -->
+<a href="#" 
+   class="btn btn-primary" 
+   data-checkout="standard" 
+   data-sku="UNBREAK-FLASCHE-01">
+  Flaschenhalter kaufen
+</a>
+
+<!-- Gastro Set -->
+<a href="#" 
+   class="btn btn-primary" 
+   data-checkout="standard" 
+   data-sku="UNBREAK-GASTRO-01">
+  Gastro Sets
+</a>
+```
+
+#### Konfigurator-Page
+```html
+<button 
+  class="btn btn-primary btn-magnetic"
+  data-checkout="configured"
+  data-product-sku="UNBREAK-GLAS-01">
+  🛒 Jetzt kaufen
+</button>
+```
+
+---
+
+## 🔄 Workflow
+
+### Standard-Produkt
+1. User klickt Button mit `data-checkout="standard"`
+2. System liest `data-sku` und `data-qty`
+3. Automatischer API-Call zu `/api/checkout/create`
+4. Redirect zu Stripe Checkout
+
+### Konfiguriertes Produkt
+1. User ändert Farbe/Finish im 3D-Konfigurator
+2. Konfigurator sendet `UNBREAK_CONFIG_UPDATE` via postMessage
+3. System speichert Config in `window.UnbreakCheckoutState.lastConfig`
+4. User klickt "Jetzt kaufen" Button
+5. System verwendet gespeicherte Config
+6. API-Call zu `/api/checkout/create` mit Config
+7. Redirect zu Stripe Checkout
+
+---
+
+## 🛡️ Sicherheit
+
+### Origin-Check
+```javascript
+// checkout.js prüft automatisch:
+const allowedOrigins = [
+  'https://unbreak-3-d-konfigurator.vercel.app',
+  window.location.origin
+];
+
+// Nur Messages von diesen Origins werden akzeptiert!
+```
+
+### Idempotenz
+```javascript
+// Buttons werden nur EINMAL gebunden:
+if (button.dataset.bound === '1') return;
+button.dataset.bound = '1';
+```
+
+---
+
+## 🧪 Testing
+
+### Test-Flow (Standard)
+1. Öffne Shop-Page
+2. Klicke "Weinglashalter kaufen"
+3. Erwarte: Redirect zu Stripe
+4. Zahle mit: `4242 4242 4242 4242`
+5. Erwarte: Redirect zu success.html
+
+### Test-Flow (Konfigurator)
+1. Öffne configurator.html
+2. Wähle Farbe im 3D-Konfigurator
+3. Prüfe Console: "✓ Configurator config updated: {color: ...}"
+4. Klicke "Jetzt kaufen"
+5. Erwarte: Redirect zu Stripe mit Config
+6. Zahle mit Testkarte
+7. Prüfe Supabase: Config sollte in `configurations` Tabelle sein
+
+---
+
+## 📊 Database Structure
+
+### Products (Basiskatalog)
 ```sql
--- Products (Basiskatalog)
 SELECT * FROM products;
 -- sku: UNBREAK-WEIN-01
 -- base_price_cents: 5990 (59.90 EUR)
+```
 
 -- Product Options (Konfigurierbare Optionen)
 SELECT * FROM product_options WHERE product_id = '...';

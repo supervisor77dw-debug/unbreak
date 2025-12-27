@@ -329,5 +329,38 @@
     "infoDeliveryText": "Ihre Bestellung wird innerhalb von 3-5 Tagen bearbeitet und versendet.",
     "infoCustomTitle": "Individuell",
     "infoCustomText": "Jedes Stück wird nach Ihren Wünschen gefertigt."
+  },
+  "shop": {
+    "hero": {
+      "title": "Shop",
+      "subtitle": "Magnetische Halter für Gläser & Flaschen – Einzelprodukte, Bundles und vorkonfigurierte Sets"
+    },
+    "products": {
+      "title": "Einzelprodukte",
+      "empty": "Keine Produkte verfügbar"
+    },
+    "bundles": {
+      "title": "Bundles & Pakete",
+      "subtitle": "Spare mit unseren vorgepackten Sets – perfekt für Gastronomie, Büro oder zu Hause",
+      "empty": "Keine Bundles verfügbar"
+    },
+    "presets": {
+      "title": "Vorkonfigurierte Designs",
+      "subtitle": "Unsere beliebtesten Farb- und Material-Kombinationen – sofort lieferbar",
+      "empty": "Keine Presets verfügbar"
+    },
+    "badge": {
+      "bundle": "Bundle",
+      "preset": "Preset"
+    },
+    "button": {
+      "buy": "Jetzt kaufen"
+    },
+    "loading": "Produkte werden geladen...",
+    "cta": {
+      "title": "Individuelle Konfiguration gewünscht?",
+      "text": "Gestalte deinen eigenen UNBREAK ONE mit unserem 3D-Konfigurator",
+      "button": "Zum Konfigurator"
+    }
   }
 }

@@ -319,6 +319,14 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'configChanged':
                 logDebugEvent('LEGACY', 'configChanged received');
                 console.log('Config updated:', data.config);
+                
+                // Send config update to parent (for checkout system)
+                if (data.config && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'UNBREAK_CONFIG_UPDATE',
+                        config: data.config
+                    }, '*'); // Checkout.js will filter by origin
+                }
                 break;
             case 'loaded':
                 logDebugEvent('LEGACY', 'loaded received (deprecated)');

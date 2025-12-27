@@ -1,7 +1,7 @@
 # 🎉 UNBREAK ONE - E-Commerce System: LAUNCH READY
 
 **Datum**: 27. Dezember 2025  
-**Status**: ✅ **PRODUKTIONSBEREIT** (nach finalen Webhook-Tests)
+**Status**: ✅ **PRODUKTIONSBEREIT** (mit Auth & Rollen-System)
 
 ---
 
@@ -11,27 +11,55 @@
 
 | Component | Status | Details |
 |-----------|--------|---------|
-| **Datenbank** | ✅ Deployed | 7 Tabellen, RLS aktiv, 4 Produkte |
+| **Datenbank** | ✅ Deployed | 8 Tabellen (inkl. profiles), RLS aktiv, 4 Produkte |
+| **Auth System** | ✅ Ready | Supabase Auth + Role-based Access Control |
+| **User Portals** | ✅ Ready | /account (customer), /ops (staff), /admin |
 | **Checkout API** | ✅ Funktioniert | `/api/checkout/create` (getestet) |
 | **Webhook Handler** | ✅ Bereit | `/api/stripe/webhook` (Code fertig) |
+| **Admin APIs** | ✅ Ready | `/api/admin/set-role`, `/api/admin/products/update` |
 | **Success Page** | ✅ Ready | `public/success.html` |
 | **Cancel Page** | ✅ Ready | `public/cancel.html` |
-| **Frontend Integration** | ✅ Ready | `public/checkout.js` |
-| **Environment** | ✅ 6/6 Keys | Alle Secrets konfiguriert |
+| **Frontend Integration** | ✅ Ready | `public/checkout.js` + Auto-Binding |
+| **Environment** | ✅ 8/8 Keys | Alle Secrets konfiguriert (inkl. Supabase) |
 | **Tests** | ✅ 21/21 Passed | Alle Systemtests bestanden |
+
+---
+
+## 🔐 Authentication & Authorization
+
+### Rollen-System
+- **customer** (Default) - Eigene Bestellungen einsehen
+- **staff** - Alle Orders verwalten, Status ändern
+- **admin** - Vollzugriff + Rollenverwaltung
+
+### Portale
+- `/login.html` - Login Page
+- `/account.html` - Customer Portal (Orders, Profile)
+- `/ops.html` - Staff Portal (Order Management)
+- `/admin.html` - Admin Portal (Users, Products, Orders)
+
+### Security
+- ✅ Row Level Security (RLS) auf allen Tabellen
+- ✅ Server-side auth mit service_role key
+- ✅ Client-side auth mit anon key
+- ✅ JWT-basierte Sessions
+- ✅ Auto-create profile trigger
+
+**Setup:** Siehe [AUTH-SETUP.md](AUTH-SETUP.md) | [QUICK-START-AUTH.md](QUICK-START-AUTH.md)
 
 ---
 
 ## 🗄️ Database Schema (Supabase)
 
-### Tabellen (7):
-1. **products** - Produktkatalog
-2. **product_options** - Konfigurationsoptionen
-3. **configurations** - 3D-Konfigurationen
-4. **customers** - Kundendaten
-5. **orders** - Bestellungen + Status
-6. **payments** - Zahlungshistorie
-7. **production_jobs** - Produktionsaufträge
+### Tabellen (8):
+1. **profiles** - User Rollen & Metadaten 🆕
+2. **products** - Produktkatalog
+3. **product_options** - Konfigurationsoptionen
+4. **configurations** - 3D-Konfigurationen
+5. **customers** - Kundendaten
+6. **orders** - Bestellungen + Status
+7. **payments** - Zahlungshistorie
+8. **production_jobs** - Produktionsaufträge
 
 ### Geseedete Produkte (4):
 - `UNBREAK-WEIN-01` - Weinglashalter (€59.90)
@@ -43,7 +71,9 @@
 
 ## 🔌 API Endpoints
 
-### 1. POST `/api/checkout/create`
+### E-Commerce APIs
+
+#### 1. POST `/api/checkout/create`
 **Input**:
 ```json
 {
@@ -93,7 +123,63 @@
 
 ---
 
-## 🎨 Frontend Integration
+### Admin APIs 🆕
+
+#### 3. POST `/api/admin/set-role`
+**Auth:** Admin only (Bearer token required)
+
+**Input**:
+```json
+{
+  "email": "user@example.com",
+  "role": "staff"
+}
+```
+
+**Output**:
+```json
+{
+  "success": true,
+  "message": "Role updated successfully",
+  "profile": { "id": "...", "email": "...", "role": "staff" }
+}
+```
+
+**Features**:
+- ✅ Admin-only access
+- ✅ Prevents self-demotion
+- ✅ Validates roles (customer|staff|admin)
+
+#### 4. POST `/api/admin/products/update`
+**Auth:** Admin only (Bearer token required)
+
+**Input**:
+```json
+{
+  "productId": "uuid",
+  "name_de": "Neuer Name",
+  "base_price_cents": 6990,
+  "active": true
+}
+```
+
+**Output**:
+```json
+{
+  "success": true,
+  "message": "Product UNBREAK-WEIN-01 updated",
+  "product": { ... }
+}
+```
+
+**Features**:
+- ✅ Admin-only access
+- ✅ Validates prices
+- ✅ Updates product catalog
+
+---
+
+## 🔌 API Endpoints
 
 ### checkout.js (Production-Ready)
 ```html
@@ -153,19 +239,47 @@ node test-production-readiness.js
 
 ### Configured (.env.local):
 ```bash
-✅ SUPABASE_URL
-✅ SUPABASE_SERVICE_ROLE_KEY (server-only)
-✅ NEXT_PUBLIC_SUPABASE_ANON_KEY
-✅ STRIPE_SECRET_KEY (server-only)
+# Supabase
+✅ NEXT_PUBLIC_SUPABASE_URL
+✅ NEXT_PUBLIC_SUPABASE_ANON_KEY (client-safe)
+✅ SUPABASE_SERVICE_ROLE_KEY (server-only, admin access)
+
+# Stripe
 ✅ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+✅ STRIPE_SECRET_KEY (server-only)
 ✅ STRIPE_WEBHOOK_SECRET (für Webhook-Tests)
 ```
+
+**Total:** 6/6 (8/8 mit Supabase Auth) ✅
 
 ---
 
 ## 📝 Nächste Schritte
 
-### 1. Webhook lokal testen
+### 1. Auth System Setup 🆕
+```bash
+# 1. Run SQL Setup
+# Öffne Supabase Dashboard → SQL Editor
+# Kopiere & führe aus: database/auth-setup.sql
+
+# 2. Inject Environment Variables
+npm run inject-env
+
+# 3. Test Auth System
+npm run test:auth
+
+# 4. Erstelle ersten Admin
+# Via Supabase Dashboard → profiles table
+# UPDATE profiles SET role = 'admin' WHERE email = 'your-email@example.com'
+```
+
+**Dokumentation:**
+- [AUTH-SETUP.md](AUTH-SETUP.md) - Vollständige Auth-Dokumentation
+- [QUICK-START-AUTH.md](QUICK-START-AUTH.md) - 5-Minuten Quick-Start
+
+---
+
+### 2. Webhook lokal testen
 ```bash
 # Terminal 1: Stripe CLI
 stripe listen --forward-to localhost:3000/api/stripe/webhook
@@ -207,15 +321,44 @@ Siehe [BUTTON-INTEGRATION.html](BUTTON-INTEGRATION.html) für Beispiele
 
 ## 📚 Dokumentation
 
-### Für Entwickler:
+### Auth & Rollen 🆕
+- [AUTH-SETUP.md](AUTH-SETUP.md) - Komplette Auth-Dokumentation
+- [QUICK-START-AUTH.md](QUICK-START-AUTH.md) - 5-Minuten Setup-Guide
+- [test-auth-setup.js](test-auth-setup.js) - Auth System Verification
+
+### E-Commerce System
 - [LAUNCH-GUIDE.md](LAUNCH-GUIDE.md) - Komplette Deployment-Anleitung
 - [BUTTON-INTEGRATION.html](BUTTON-INTEGRATION.html) - Integration-Beispiele
 - [SETUP-ECOMMERCE.md](SETUP-ECOMMERCE.md) - Technische Details
-- [INTEGRATION-GUIDE.md](INTEGRATION-GUIDE.md) - Frontend-Guide
+- [INTEGRATION-GUIDE.md](INTEGRATION-GUIDE.md) - Frontend-Guide (Auto-Binding)
 
-### Für Tests:
-- [test-production-readiness.js](test-production-readiness.js) - Automatisierte Tests
+### Tests
+- [test-production-readiness.js](test-production-readiness.js) - E-Commerce Tests
 - [test-db-setup.js](test-db-setup.js) - Database Verification
+- [test-auth-setup.js](test-auth-setup.js) - Auth System Verification 🆕
+
+---
+
+## 🎯 Quick Commands
+
+```bash
+# Development
+npm run dev                 # Start Next.js dev server
+npm run serve               # Static file server (Python)
+
+# Build & Deploy
+npm run build               # Inject env + build for production
+npm run inject-env          # Inject Supabase credentials only
+
+# Testing
+npm test                    # E2E tests (Playwright)
+npm run test:auth           # Auth system verification 🆕
+node test-production-readiness.js  # E-commerce tests
+node test-db-setup.js       # Database tests
+
+# Database
+npm run db:setup            # Shows SQL setup instructions
+```
 
 ---
 

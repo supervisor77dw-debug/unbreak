@@ -31,12 +31,15 @@ function getHeaderHTML() {
         <li><a href="shop.html" data-page="shop" data-i18n="nav.shop">Shop</a></li>
         <li><a href="kontakt.html" data-page="kontakt" data-i18n="nav.contact">Kontakt</a></li>
 
+        <!-- Auth-based Links (will be populated by JS) -->
+        <li id="auth-nav-container"></li>
+
         <!-- Mobile Only Legal Links -->
         <li class="mobile-only"><a href="impressum.html" data-page="impressum" data-i18n="nav.impressum">Impressum</a></li>
         <li class="mobile-only"><a href="datenschutz.html" data-page="datenschutz" data-i18n="nav.privacy">Datenschutz</a></li>
         <li class="mobile-only"><a href="agb.html" data-page="agb" data-i18n="nav.terms">AGB</a></li>
 
-        <li><a href="https://shop.unbreak-one.com" target="_blank" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
+        <li><a href="/shop.html" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
       </ul>
     </nav>
   </header>
@@ -69,7 +72,7 @@ function setActiveMenuItem() {
 /**
  * Initialisiert den Header
  */
-function initHeader() {
+async function initHeader() {
   // Header-HTML einfügen
   const headerContainer = document.getElementById('header-container');
   if (headerContainer) {
@@ -78,10 +81,93 @@ function initHeader() {
     // Active State setzen
     setActiveMenuItem();
     
-    // Burger Menu Event (wird von script.js gehandhabt, aber wir stellen sicher dass IDs existieren)
+    // Load checkout.js globally (for all pages)
+    if (!document.querySelector('script[src*="checkout.js"]')) {
+      const checkoutScript = document.createElement('script');
+      checkoutScript.src = 'checkout.js';
+      checkoutScript.defer = true;
+      document.head.appendChild(checkoutScript);
+      console.log('✓ Checkout.js loaded globally');
+    }
+
+    // Load Supabase client for auth check
+    if (!document.querySelector('script[src*="@supabase/supabase-js"]')) {
+      const supabaseScript = document.createElement('script');
+      supabaseScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      supabaseScript.onload = initAuthNav;
+      document.head.appendChild(supabaseScript);
+    } else {
+      initAuthNav();
+    }
+    
     console.log('✓ Header loaded');
   } else {
     console.error('❌ Header container (#header-container) not found');
+  }
+}
+
+/**
+ * Initialize auth-based navigation
+ */
+async function initAuthNav() {
+  try {
+    // Create Supabase client
+    const supabaseUrl = 'YOUR_SUPABASE_URL'; // Will be replaced by build process
+    const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY'; // Will be replaced by build process
+    
+    if (!window.supabase) {
+      console.log('Supabase not loaded yet, skipping auth nav');
+      return;
+    }
+
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Get current session
+    const { data: { session } } = await supabaseClient.auth.getSession();
+
+    const authContainer = document.getElementById('auth-nav-container');
+    if (!authContainer) return;
+
+    if (!session) {
+      // Not logged in - show login link
+      authContainer.innerHTML = '<a href="login.html" data-page="login">Login</a>';
+    } else {
+      // Logged in - get user role
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profile) {
+        let portalLinks = '';
+
+        // Add appropriate portal link based on role
+        if (profile.role === 'admin') {
+          portalLinks = `
+            <a href="admin.html" data-page="admin" style="color: #ff00ff;">Admin</a>
+            <li><a href="ops.html" data-page="ops" style="color: #ff6b9d;">Ops</a></li>
+            <li><a href="account.html" data-page="account">Konto</a></li>
+          `;
+        } else if (profile.role === 'staff') {
+          portalLinks = `
+            <a href="ops.html" data-page="ops" style="color: #ff6b9d;">Ops</a>
+            <li><a href="account.html" data-page="account">Konto</a></li>
+          `;
+        } else {
+          portalLinks = '<a href="account.html" data-page="account">Konto</a>';
+        }
+
+        authContainer.innerHTML = portalLinks;
+        
+        // Re-apply active state after adding auth links
+        setActiveMenuItem();
+      }
+    }
+  } catch (error) {
+    console.error('Auth nav error:', error);
+    // Silent fail - nav will just not show auth links
   }
 }
 

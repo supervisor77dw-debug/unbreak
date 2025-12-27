@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout Integration Demo – UNBREAK ONE</title>
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0a4d4d 0%, #083838 100%);
+      color: white;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    
+    .intro {
+      text-align: center;
+      margin-bottom: 3rem;
+      opacity: 0.9;
+    }
+    
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+    
+    .demo-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 2rem;
+    }
+    
+    .demo-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #4dd5d5;
+    }
+    
+    .demo-card h3 {
+      font-size: 1.125rem;
+      margin: 1.5rem 0 0.5rem;
+      color: #7ee7e7;
+    }
+    
+    .demo-card p {
+      opacity: 0.9;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+    
+    .code-block {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    
+    .code-block code {
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      color: #a5f3f3;
+    }
+    
+    .product-demo {
+      background: white;
+      color: #333;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+    }
+    
+    .product-demo img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      background: #f0f0f0;
+    }
+    
+    .product-demo h4 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .product-demo .price {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0a4d4d;
+      margin: 1rem 0;
+    }
+    
+    .product-demo .badge {
+      display: inline-block;
+      background: #4dd5d5;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      margin-bottom: 0.5rem;
+    }
+    
+    .product-demo .badge.preset {
+      background: #ff6b9d;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #0a4d4d 0%, #083838 100%);
+      color: white;
+      border: none;
+      padding: 0.875rem 1.75rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      margin-top: 1rem;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(10, 77, 77, 0.4);
+    }
+    
+    button:disabled {
+      background: #666;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    button.loading {
+      opacity: 0.7;
+    }
+    
+    .info-box {
+      background: rgba(77, 213, 213, 0.1);
+      border-left: 4px solid #4dd5d5;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 4px;
+    }
+    
+    .info-box strong {
+      color: #4dd5d5;
+    }
+    
+    @media (max-width: 768px) {
+      h1 { font-size: 1.75rem; }
+      .demo-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+  
+  <!-- Checkout Library -->
+  <script src="lib/checkout.js" type="module" defer></script>
+</head>
+<body>
+  <div class="container">
+    <h1>🛒 Checkout Integration Demo</h1>
+    <p class="intro">
+      Demonstriert die automatische Checkout-Button-Integration mit <code>data-</code> Attributen.<br>
+      <strong>Keine Hardcodierung</strong> – Buttons funktionieren automatisch für alle Katalogprodukte.
+    </p>
+    
+    <!-- Demo Grid -->
+    <div class="demo-grid">
+      
+      <!-- Standard Product Demo -->
+      <div class="demo-card">
+        <h2>1️⃣ Standard-Produkt</h2>
+        <p>Einfaches Produkt mit SKU-basiertem Checkout.</p>
+        
+        <h3>HTML:</h3>
+        <div class="code-block"><code>&lt;button <br>
+  data-checkout="standard" <br>
+  data-sku="UO-GLASS-01"&gt;<br>
+  Jetzt kaufen<br>
+&lt;/button&gt;</code></div>
+        
+        <h3>Live-Demo:</h3>
+        <div class="product-demo">
+          <img src="images/glassholder.jpg" alt="Glashalter" onerror="this.style.background='#e0e0e0'">
+          <h4>UNBREAK ONE Glashalter</h4>
+          <p>Magnetischer Halter für Weingläser – perfekt für Bar & Küche.</p>
+          <div class="price">€79.00</div>
+          <button 
+            data-checkout="standard" 
+            data-sku="UO-GLASS-01">
+            Jetzt kaufen
+          </button>
+        </div>
+        
+        <div class="info-box">
+          <strong>Automatisch:</strong> SKU wird an /api/checkout/standard gesendet, Server holt Preis aus DB.
+        </div>
+      </div>
+      
+      <!-- Bundle Demo -->
+      <div class="demo-card">
+        <h2>2️⃣ Bundle</h2>
+        <p>Mehrere Produkte als Set – mit Bundle-ID aus Supabase.</p>
+        
+        <h3>HTML:</h3>
+        <div class="code-block"><code>&lt;button <br>
+  data-checkout="bundle" <br>
+  data-bundle-id="uuid-123"&gt;<br>
+  Bundle kaufen<br>
+&lt;/button&gt;</code></div>
+        
+        <h3>Live-Demo:</h3>
+        <div class="product-demo">
+          <span class="badge">Bundle</span>
+          <img src="images/gastro-set.jpg" alt="Gastro Set" onerror="this.style.background='#e0e0e0'">
+          <h4>Gastro Starter Set</h4>
+          <p>4x Glashalter + 2x Flaschenhalter – perfekt für Restaurants.</p>
+          <div class="price">€249.00</div>
+          <button 
+            data-checkout="bundle" 
+            data-bundle-id="bundle-demo-123">
+            Bundle kaufen
+          </button>
+        </div>
+        
+        <div class="info-box">
+          <strong>Automatisch:</strong> Bundle-ID wird gesendet, Server lädt Bundle mit items_json aus DB.
+        </div>
+      </div>
+      
+      <!-- Preset Demo -->
+      <div class="demo-card">
+        <h2>3️⃣ Preset</h2>
+        <p>Vorkonfiguriertes Produkt – mit Config aus Supabase.</p>
+        
+        <h3>HTML:</h3>
+        <div class="code-block"><code>&lt;button <br>
+  data-checkout="preset" <br>
+  data-preset-id="uuid-456"&gt;<br>
+  Preset kaufen<br>
+&lt;/button&gt;</code></div>
+        
+        <h3>Live-Demo:</h3>
+        <div class="product-demo">
+          <span class="badge preset">Preset</span>
+          <img src="images/preset-black-gold.jpg" alt="Preset" onerror="this.style.background='#e0e0e0'">
+          <h4>Schwarz/Gold Premium</h4>
+          <p>Vorkonfiguriert: Matte Black Finish + Gold Magnet – sofort lieferbar.</p>
+          <div class="price">€89.00</div>
+          <button 
+            data-checkout="preset" 
+            data-preset-id="preset-demo-456">
+            Preset kaufen
+          </button>
+        </div>
+        
+        <div class="info-box">
+          <strong>Automatisch:</strong> Preset-ID wird gesendet, Server erstellt Configuration + Order.
+        </div>
+      </div>
+      
+    </div>
+    
+    <!-- Technical Info -->
+    <div class="demo-card" style="grid-column: 1 / -1;">
+      <h2>🔐 Sicherheit</h2>
+      <p>
+        <strong>Preise werden NIE aus dem Frontend gesendet.</strong><br>
+        Das Frontend übergibt nur Identifier (SKU, Bundle-ID, Preset-ID).<br>
+        Der Server holt finale Preise aus Supabase und erstellt den Stripe Checkout.
+      </p>
+      
+      <h3>Datenfluss:</h3>
+      <div class="code-block"><code>1. Button Click → data-sku="UO-GLASS-01"<br>
+2. checkout.js → POST /api/checkout/standard { sku: "UO-GLASS-01" }<br>
+3. Server → SELECT base_price_cents FROM products WHERE sku = ...<br>
+4. Server → Stripe Session mit echtem DB-Preis<br>
+5. Client → Redirect zu Stripe Checkout</code></div>
+      
+      <h3>Neue Produkte kaufbar machen:</h3>
+      <div class="code-block"><code>-- Einfach in Supabase einfügen:<br>
+INSERT INTO products (sku, name_de, base_price_cents, active)<br>
+VALUES ('UO-NEW', 'Neues Produkt', 8900, true);<br>
+<br>
+-- Shop-Seite lädt dynamisch → Button erscheint automatisch! ✅</code></div>
+    </div>
+    
+    <!-- Documentation Link -->
+    <div class="demo-card" style="grid-column: 1 / -1; text-align: center;">
+      <h2>📚 Vollständige Dokumentation</h2>
+      <p>Alle Details zur Integration, API-Spezifikation und Best Practices:</p>
+      <a href="CHECKOUT-INTEGRATION.md" style="color: #4dd5d5; font-weight: 600; font-size: 1.125rem;">
+        → CHECKOUT-INTEGRATION.md öffnen
+      </a>
+    </div>
+    
+  </div>
+  
+  <script>
+    // Debug: Log all checkout button clicks
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('%c[Demo] Checkout Integration Active', 'color: #4dd5d5; font-weight: bold;');
+      console.log('Try clicking any "Jetzt kaufen" button to test the checkout flow.');
+      console.log('Note: This demo uses placeholder IDs – real checkout requires valid Supabase data.');
+    });
+  </script>
+</body>
+</html>

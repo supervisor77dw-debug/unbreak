@@ -99,23 +99,27 @@
                 </div>
             </div>
 
-            <!-- Checkout Button (Test) -->
+            <!-- Checkout Button (Production Ready) -->
             <div style="text-align: center; margin: 3rem 0;">
-                <button id="test-checkout-btn" style="
-                    padding: 1.2rem 3rem;
-                    font-size: 1.2rem;
-                    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-                    color: white;
-                    border: none;
-                    border-radius: 12px;
-                    cursor: pointer;
-                    box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3);
-                    transition: all 0.3s ease;
-                    font-weight: 600;
-                " 
-                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 12px 40px rgba(8, 145, 178, 0.4)';"
-                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 32px rgba(8, 145, 178, 0.3)';">
-                    🛒 Test Checkout (€99.00)
+                <button 
+                    class="btn btn-primary btn-magnetic"
+                    data-checkout="configured"
+                    data-product-sku="UNBREAK-GLAS-01"
+                    style="
+                        padding: 1.2rem 3rem;
+                        font-size: 1.2rem;
+                        background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 12px;
+                        cursor: pointer;
+                        box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3);
+                        transition: all 0.3s ease;
+                        font-weight: 600;
+                    " 
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 12px 40px rgba(8, 145, 178, 0.4)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 32px rgba(8, 145, 178, 0.3)';">
+                    🛒 Jetzt kaufen
                 </button>
             </div>
 
@@ -153,70 +157,6 @@
     <script src="animations.js"></script>
     <script src="script.js"></script>
     <script src="configurator/configurator.js"></script>
-    <script src="configurator/checkout-integration.js"></script>
-    
-    <!-- Test Checkout Button Handler -->
-    <script>
-    document.getElementById('test-checkout-btn')?.addEventListener('click', async function() {
-        console.log('🛒 Test Checkout Button clicked');
-        
-        // Disable button during request
-        this.disabled = true;
-        this.textContent = '⏳ Loading...';
-        
-        try {
-            // Test configuration data
-            const testConfig = {
-                product_sku: 'UNBREAK-GLAS-01',
-                config: {
-                    color: 'petrol',
-                    finish: 'matte',
-                    engraving: null
-                },
-                customer: {
-                    email: 'test@example.com',
-                    name: 'Test User'
-                }
-            };
-            
-            console.log('📤 Sending to API:', testConfig);
-            
-            // Call checkout API
-            const response = await fetch('/api/checkout/create', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(testConfig)
-            });
-            
-            console.log('📥 API Response Status:', response.status);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ API Error:', errorText);
-                throw new Error(`API Error: ${response.status} - ${errorText}`);
-            }
-            
-            const result = await response.json();
-            console.log('✅ API Success:', result);
-            
-            // Redirect to Stripe Checkout
-            if (result.checkout_url) {
-                console.log('🔀 Redirecting to Stripe:', result.checkout_url);
-                window.location.href = result.checkout_url;
-            } else {
-                throw new Error('No checkout URL in response');
-            }
-            
-        } catch (error) {
-            console.error('💥 Checkout Error:', error);
-            alert('Fehler beim Checkout: ' + error.message);
-            this.disabled = false;
-            this.textContent = '🛒 Test Checkout (€99.00)';
-        }
-    });
-    </script>
 
 </body>
 

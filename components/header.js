@@ -36,7 +36,7 @@ function getHeaderHTML() {
         <li class="mobile-only"><a href="datenschutz.html" data-page="datenschutz" data-i18n="nav.privacy">Datenschutz</a></li>
         <li class="mobile-only"><a href="agb.html" data-page="agb" data-i18n="nav.terms">AGB</a></li>
 
-        <li><a href="https://shop.unbreak-one.com" target="_blank" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
+        <li><a href="/shop.html" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
       </ul>
     </nav>
   </header>
