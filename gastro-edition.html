@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO Meta Tags -->
+  <title>Gastro Edition – UNBREAK ONE | Professionelle Halter für Fine Dining & Bars</title>
+  <meta name="description"
+    content="UNBREAK ONE Gastro-Edition: Professionelle magnetische Halter für Restaurants, Bars und Hotels. Weniger Glasbruch, mehr Eleganz. Spezielle Gastro-Sets verfügbar.">
+  <meta name="keywords" content="Gastronomie, Restaurant, Bar, Hotel, Fine Dining, Glashalter, Gastro-Edition, UNBREAK ONE">
+  <meta name="author" content="UNBREAK ONE">
+
+  <!-- Open Graph / Social Media Meta Tags -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Gastro Edition – UNBREAK ONE">
+  <meta property="og:description"
+    content="Professioneller Halter für Fine Dining und Bars. Weniger Glasbruch, mehr Premium-Wirkung.">
+  <meta property="og:url" content="https://www.unbreak-one.com/gastro-edition.html">
+  <meta property="og:image" content="https://www.unbreak-one.com/images/Bar_Hero.jpg">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles.css?v=2.0.0">
+  <link rel="stylesheet" href="animations.css?v=2.0.0">
+  <link rel="stylesheet" href="readability-optimization.css?v=2.0.0">
+  <link rel="stylesheet" href="i18n.css?v=2.0.0">
+  <link rel="stylesheet" href="premium.css?v=2.0.1">
+  <link rel="stylesheet" href="gastro-hero-styles.css?v=2.0.0">
+  
+  <!-- Version & Cache Management (MUST load first) -->
+  <script src="version.js?v=2.0.0"></script>
+  
+  <!-- i18n System (must load before other scripts) -->
+  <script src="i18n.js?v=2.0.0"></script>
+  <script src="language-switch.js?v=2.0.0" defer></script>
+</head>
+
+<body>
+  <!-- Animation Scripts -->
+  <script src="animations.js?v=2.0.0" defer></script>
+
+  <!-- ===================================
+       HEADER (dynamisch geladen)
+       =================================== -->
+  <div id="header-container"></div>
+
+  <!-- ===================================
+       PAGE CONTENT START
+       =================================== -->
+  <main class="page-content">
+    
+    <!-- ===================================
+         GASTRO EDITION HERO SECTION
+         =================================== -->
+    <section id="gastro-hero" class="gastro-hero" data-scroll-reveal="fade-up">
+      <div class="gastro-hero-overlay"></div>
+      <div class="container gastro-hero-container">
+
+        <!-- Linke Spalte -->
+        <div class="gastro-hero-left" data-scroll-reveal="fade-right" data-scroll-delay="1">
+          <h1 class="text-shimmer" data-i18n="gastroHero.title">UNBREAK ONE Gastro-Edition</h1>
+          <p class="gastro-hero-subtitle" data-i18n="gastroHero.subtitle">Professioneller Halter für Fine Dining und Bars</p>
+          <a href="shop.html" class="btn btn-primary btn-magnetic" data-i18n="gastroHero.ctaPrimary">Mehr erfahren</a>
+        </div>
+
+        <!-- Rechte Spalte -->
+        <div class="gastro-hero-right glass-enhanced" data-scroll-reveal="fade-left" data-scroll-delay="2">
+          <h3 data-i18n="gastroHero.benefitsTitle">Vorteile für die Gastronomie</h3>
+          <ul class="gastro-benefits">
+            <li data-i18n="gastroHero.benefit1">Weniger Glasbruch und Verschüttungen</li>
+            <li data-i18n="gastroHero.benefit2">Professionelle Präsentation am Tisch</li>
+            <li data-i18n="gastroHero.benefit3">Hygienisch und leicht zu reinigen</li>
+            <li data-i18n="gastroHero.benefit4">Premium-Wirkung für anspruchsvolle Gäste</li>
+            <li data-i18n="gastroHero.benefit5">Spezielle Gastro-Sets mit Mengenrabatt</li>
+          </ul>
+          <a href="kontakt.html" class="btn btn-secondary btn-magnetic" data-i18n="gastroHero.ctaSecondary">Infos für Gastronomie</a>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================
+       FOOTER (dynamisch geladen)
+       =================================== -->
+  <div id="footer-container"></div>
+
+  <!-- ===================================
+       COMPONENTS & SCRIPTS
+       =================================== -->
+  <script src="components/header.js"></script>
+  <script src="components/footer.js"></script>
+  <script src="components/page-wrapper.js"></script>
+  <script src="script.js?v=2.0.0" defer></script>
+  <script src="motion.js?v=2.0.0" defer></script>
+  <script src="header-theme.js?v=2.0.0" defer></script>
+</body>
+
+</html>
