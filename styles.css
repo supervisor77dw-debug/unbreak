@@ -937,62 +937,37 @@ section {
 }
 
 /* === CONTACT & FOOTER === */
-/* 1:1 Hero Pattern - Section + Background Container */
+/* Kontakt Section - 1:1 Gastro-Hero Pattern */
 #kontakt {
   position: relative;
-  color: var(--color-white);
-  min-height: 70vh;
+  min-height: 80vh;
   display: flex;
   align-items: center;
-  padding: 0;
-  overflow: hidden;
-  /* Fallback Background */
-  background: var(--color-petrol-dark);
-}
-
-/* Background Container - Fullscreen (wie Hero Video Container) */
-.kontakt-background-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  overflow: hidden;
-}
-
-/* Background Image - Cover gesamten Bereich (wie Hero Video) */
-.kontakt-background-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  justify-content: center;
   background-image: url('images/Kontakt.jpg');
   background-size: cover;
-  background-position: center top;
+  background-position: center;
   background-repeat: no-repeat;
+  overflow: hidden;
+  padding: var(--spacing-xxl) 0;
+  color: var(--color-white);
 }
 
-/* Dark Overlay - Verbessert Textlesbarkeit (wie Hero) */
+/* Dark Overlay - Verbessert Textlesbarkeit */
 .kontakt-overlay {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 2;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.2) 0%,
-    rgba(0, 0, 0, 0.4) 100%
-  );
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.45) 0%, rgba(10, 108, 116, 0.35) 100%);
+  z-index: 1;
 }
 
-/* Content Layer - Über Background und Overlay (wie Hero) */
+/* Content Layer - Über Overlay */
 #kontakt .container {
   position: relative;
-  z-index: 3;
+  z-index: 2;
   display: flex;
   justify-content: center;
   align-items: center;
