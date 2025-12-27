@@ -199,7 +199,106 @@ LIMIT 1;
 
 ## 🌐 Production Deployment Checklist
 
-### 1. Environment Variables (Vercel/Hosting)
+### 1. Vercel Deployment Setup
+
+**📌 CRITICAL: Set Environment Variables BEFORE deploying**
+
+#### Step 1: Configure Vercel Environment Variables
+
+1. **Go to Vercel Dashboard:**
+   - Navigate to your project
+   - Click **Settings** → **Environment Variables**
+
+2. **Add Required Variables for ALL Environments:**
+   - ✅ Production
+   - ✅ Preview
+   - ✅ Development
+
+| Variable Name | Where to Get | Example | Required |
+|---------------|--------------|---------|----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Settings → API | `https://xxx.supabase.co` | ✅ YES |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Settings → API | `eyJhbGciOiJIUzI1NiIs...` | ✅ YES |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Settings → API | `eyJhbGciOiJIUzI1NiIs...` | ✅ YES |
+| `STRIPE_SECRET_KEY` | Stripe Dashboard → Developers → API Keys | `sk_live_xxx` (Production)<br>`sk_test_xxx` (Preview/Dev) | ✅ YES |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe Dashboard → Developers → API Keys | `pk_live_xxx` (Production)<br>`pk_test_xxx` (Preview/Dev) | ✅ YES |
+| `STRIPE_WEBHOOK_SECRET` | Stripe Dashboard → Developers → Webhooks | `whsec_xxx` | ✅ YES |
+| `NEXT_PUBLIC_BASE_URL` | Your domain | `https://unbreak-one.com` | ⚠️ Recommended |
+
+**⚠️ IMPORTANT:**
+- Use **LIVE keys** for Production environment
+- Use **TEST keys** for Preview/Development environments
+- Keep `SUPABASE_SERVICE_ROLE_KEY` and `STRIPE_SECRET_KEY` **SECRET** (never expose to client)
+
+#### Step 2: Verify Build Settings
+
+**Vercel Build Configuration:**
+- **Framework Preset:** Next.js
+- **Build Command:** `npm run build` (or default)
+- **Output Directory:** `.next` (default)
+- **Install Command:** `npm install`
+
+**package.json build script should include:**
+```json
+{
+  "scripts": {
+    "build": "node scripts/inject-env.js && next build"
+  }
+}
+```
+
+#### Step 3: Deploy & Verify
+
+1. **Push to Git:**
+   ```bash
+   git push origin master
+   ```
+
+2. **Vercel Auto-Deploys:**
+   - Monitor deployment in Vercel Dashboard
+   - Check build logs for environment injection:
+     ```
+     🔧 Injecting Supabase credentials...
+     📍 Environment: Vercel
+     🔗 Supabase URL: https://xxx.supabase.co...
+     ```
+
+3. **Verify Environment Variables Loaded:**
+   - Build should **NOT** show this error:
+     ```
+     ❌ MISSING SUPABASE ENVIRONMENT VARIABLES
+     ```
+   - If you see the error, environment variables are not set correctly
+
+#### Troubleshooting Build Failures
+
+**Error: "Missing Supabase environment variables"**
+
+✅ **Fix:**
+1. Go to Vercel → Settings → Environment Variables
+2. Verify ALL required variables are set for the **correct environment**
+3. Make sure there are no typos in variable names
+4. Redeploy after adding variables
+
+**Error: "NEXT_PUBLIC_SUPABASE_URL is undefined"**
+
+✅ **Fix:**
+- Variable names MUST match exactly (case-sensitive)
+- Variables starting with `NEXT_PUBLIC_` are exposed to browser
+- Restart deployment after changing variables
+
+**Error: "Cannot find module 'scripts/inject-env.js'"**
+
+✅ **Fix:**
+- Ensure `scripts/inject-env.js` is committed to Git
+- Verify `package.json` has correct build command
+- Check Vercel build logs for file structure
+
+---
+
+### 2. Environment Variables (Legacy/Self-Hosted)
+
+**For non-Vercel hosting (e.g., custom server):**
+
 ```bash
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJhbG...  # ⚠️ STRENG GEHEIM
@@ -209,7 +308,9 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx  # Von Stripe Dashboard
 ```
 
-### 2. Stripe Webhook (Production)
+---
+
+### 3. Stripe Webhook (Production)
 1. Gehe zu: https://dashboard.stripe.com/webhooks
 2. "Add endpoint" klicken
 3. URL: `https://unbreak-one.de/api/stripe/webhook`
@@ -219,14 +320,14 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx  # Von Stripe Dashboard
    - `charge.refunded`
 5. Webhook Secret kopieren → `STRIPE_WEBHOOK_SECRET`
 
-### 3. Success/Cancel URLs
+### 4. Success/Cancel URLs
 In Stripe Checkout Code:
 ```javascript
 success_url: `${process.env.NEXT_PUBLIC_URL}/success?order_id={CHECKOUT_SESSION_ID}`,
 cancel_url: `${process.env.NEXT_PUBLIC_URL}/cancel`,
 ```
 
-### 4. Frontend Button Integration
+### 5. Frontend Button Integration
 
 **Shop Page** (Standardprodukte):
 ```html

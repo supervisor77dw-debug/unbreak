@@ -24,17 +24,63 @@ const files = [
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+// Detect environment
+const isVercel = process.env.VERCEL === '1';
+const isCI = process.env.CI === 'true' || process.env.CI === '1';
+const environment = isVercel ? 'Vercel' : isCI ? 'CI' : 'Local';
+
 // Validation
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase environment variables!');
-  console.error('Required:');
-  console.error('  - NEXT_PUBLIC_SUPABASE_URL');
-  console.error('  - NEXT_PUBLIC_SUPABASE_ANON_KEY');
-  console.error('\nMake sure .env.local exists with these variables.');
+  console.error('\n' + '='.repeat(70));
+  console.error('❌ MISSING SUPABASE ENVIRONMENT VARIABLES');
+  console.error('='.repeat(70));
+  console.error('\nRequired variables:');
+  console.error('  • NEXT_PUBLIC_SUPABASE_URL');
+  console.error('  • NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  
+  console.error('\n📍 Current environment:', environment);
+  
+  if (isVercel) {
+    console.error('\n🚀 VERCEL DEPLOYMENT - ACTION REQUIRED:');
+    console.error('   1. Go to: Vercel Dashboard → Your Project → Settings');
+    console.error('   2. Click: Environment Variables');
+    console.error('   3. Add the following variables for ALL ENVIRONMENTS:');
+    console.error('      (Production, Preview, Development)');
+    console.error('');
+    console.error('      Variable Name                     Value');
+    console.error('      ─────────────────────────────────────────────────────');
+    console.error('      NEXT_PUBLIC_SUPABASE_URL          https://xxx.supabase.co');
+    console.error('      NEXT_PUBLIC_SUPABASE_ANON_KEY     eyJhbGciOiJIUzI1NiIs...');
+    console.error('');
+    console.error('   4. Get values from: https://app.supabase.com/project/YOUR_PROJECT/settings/api');
+    console.error('   5. Redeploy after saving');
+    console.error('');
+    console.error('   📖 Full guide: https://vercel.com/docs/concepts/projects/environment-variables');
+  } else if (isCI) {
+    console.error('\n🔧 CI ENVIRONMENT - ACTION REQUIRED:');
+    console.error('   Configure environment variables in your CI/CD settings.');
+  } else {
+    console.error('\n💻 LOCAL DEVELOPMENT - ACTION REQUIRED:');
+    console.error('   1. Copy .env.example to .env.local:');
+    console.error('      cp .env.example .env.local');
+    console.error('');
+    console.error('   2. Edit .env.local and add your Supabase credentials:');
+    console.error('      NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co');
+    console.error('      NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...');
+    console.error('');
+    console.error('   3. Get values from: https://app.supabase.com/project/YOUR_PROJECT/settings/api');
+  }
+  
+  console.error('\n' + '='.repeat(70));
+  console.error('Build cannot continue without these variables.');
+  console.error('='.repeat(70) + '\n');
   process.exit(1);
 }
 
-console.log('🔧 Injecting Supabase credentials...\n');
+console.log('🔧 Injecting Supabase credentials...');
+console.log(`📍 Environment: ${environment}`);
+console.log(`🔗 Supabase URL: ${supabaseUrl.substring(0, 30)}...`);
+console.log('');
 
 let successCount = 0;
 let errorCount = 0;
