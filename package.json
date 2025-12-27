@@ -1,12 +1,23 @@
 {
   "name": "unbreak-one-homepage",
   "version": "1.0.0",
-  "description": "UNBREAK ONE - Homepage with 3D Configurator Integration",
+  "description": "UNBREAK ONE - Homepage with 3D Configurator Integration + E-Commerce Backend",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "serve": "python -m http.server 8000"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "micro": "^10.0.1",
+    "next": "^14.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "stripe": "^14.10.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0"

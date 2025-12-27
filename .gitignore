@@ -17,3 +17,16 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Environment Variables (CRITICAL - NEVER COMMIT!)
+.env
+.env.local
+.env.*.local
+
+# Next.js
+.next/
+out/
+build/
+
+# Production
+dist/
