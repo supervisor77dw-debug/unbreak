@@ -1,0 +1,126 @@
+/* ===================================
+   i18n Language Switch Styles
+   =================================== */
+
+/* Language Switch Container */
+.language-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(10, 108, 116, 0.2);
+  border-radius: 20px;
+  padding: 4px;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.language-switch:hover {
+  border-color: rgba(10, 108, 116, 0.4);
+  box-shadow: 0 4px 12px rgba(10, 108, 116, 0.15);
+}
+
+/* Language Button */
+.language-switch button {
+  position: relative;
+  z-index: 2;
+  padding: 6px 14px;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-graphit);
+  background: transparent;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.language-switch button:focus {
+  outline: 2px solid var(--color-petrol-deep);
+  outline-offset: 2px;
+}
+
+.language-switch button:hover:not(.active) {
+  color: var(--color-petrol-deep);
+}
+
+/* Active Language Button */
+.language-switch button.active {
+  color: var(--color-white);
+  background: var(--color-petrol-deep);
+  box-shadow: 0 2px 8px rgba(10, 108, 116, 0.3);
+}
+
+/* Separator */
+.language-switch .separator {
+  width: 1px;
+  height: 18px;
+  background: rgba(10, 108, 116, 0.2);
+}
+
+/* Mobile Styles for Language Switch */
+@media (max-width: 768px) {
+  .language-switch {
+    position: fixed;
+    top: 16px;
+    right: 70px;
+    z-index: 1001;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+  }
+
+  /* When mobile menu is open */
+  .nav-links.active ~ .language-switch {
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .language-switch button {
+    font-size: 12px;
+    padding: 5px 12px;
+  }
+}
+
+/* Desktop: Integrate into nav */
+@media (min-width: 769px) {
+  .language-switch {
+    margin-left: 8px;
+  }
+}
+
+/* Smooth animation for language change */
+[data-i18n],
+[data-i18n-html] {
+  transition: opacity 0.15s ease;
+}
+
+.i18n-changing [data-i18n],
+.i18n-changing [data-i18n-html] {
+  opacity: 0.6;
+}
+
+/* Accessibility: High contrast mode support */
+@media (prefers-contrast: high) {
+  .language-switch {
+    border: 2px solid currentColor;
+  }
+  
+  .language-switch button.active {
+    border: 2px solid var(--color-white);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .language-switch,
+  .language-switch button,
+  [data-i18n],
+  [data-i18n-html] {
+    transition: none;
+  }
+}

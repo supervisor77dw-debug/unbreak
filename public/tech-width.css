@@ -1,0 +1,15 @@
+/* TECH SECTION - VOLLE BREITE OHNE CONTAINER */
+
+#technik {
+    padding: 80px 0;
+}
+
+#technik h2 {
+    padding: 0 40px 60px 40px;
+}
+
+#technik .tech-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+}

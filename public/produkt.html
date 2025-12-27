@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO Meta Tags -->
+  <title>Produkt – UNBREAK ONE | Magnetische Weinglashalter & Flaschenhalter</title>
+  <meta name="description"
+    content="Das UNBREAK ONE System: Magnetische Weinglashalter und Flaschenhalter für Boot, Camper und Gastronomie. Premium-Qualität, sicherer Halt.">
+  <meta name="keywords" content="Weinglashalter, Flaschenhalter, magnetisch, UNBREAK ONE, Produktübersicht">
+  <meta name="author" content="UNBREAK ONE">
+
+  <!-- Open Graph / Social Media Meta Tags -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Produkt – UNBREAK ONE Magnetische Halter">
+  <meta property="og:description"
+    content="Entdecke das UNBREAK ONE System: Weinglashalter und Flaschenhalter mit innovativer Magnettechnik.">
+  <meta property="og:url" content="https://www.unbreak-one.com/produkt.html">
+  <meta property="og:image" content="https://www.unbreak-one.com/images/weinglashalter_szene_ship.jpg">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles.css?v=2.0.0">
+  <link rel="stylesheet" href="animations.css?v=2.0.0">
+  <link rel="stylesheet" href="readability-optimization.css?v=2.0.0">
+  <link rel="stylesheet" href="i18n.css?v=2.0.0">
+  <link rel="stylesheet" href="premium.css?v=2.0.1">
+  
+  <!-- Version & Cache Management (MUST load first) -->
+  <script src="version.js?v=2.0.0"></script>
+  
+  <!-- i18n System (must load before other scripts) -->
+  <script src="i18n.js?v=2.0.0"></script>
+  <script src="language-switch.js?v=2.0.0" defer></script>
+</head>
+
+<body>
+  <!-- Animation Scripts -->
+  <script src="animations.js?v=2.0.0" defer></script>
+
+  <!-- ===================================
+       HEADER (dynamisch geladen)
+       =================================== -->
+  <div id="header-container"></div>
+
+  <!-- ===================================
+       PAGE CONTENT START
+       =================================== -->
+  <main class="page-content">
+    
+    <!-- ===================================
+         PRODUKTÜBERBLICK SECTION
+         =================================== -->
+    <section id="produkt">
+      <div class="container">
+        <h2 class="text-center mb-lg" data-scroll-reveal="fade-up" data-i18n="product.sectionTitle">Das System hinter UNBREAK ONE</h2>
+        <p class="text-center mb-xl" data-scroll-reveal="fade-up" data-scroll-delay="1" data-i18n="product.sectionSubtitle">Unsere magnetischen Halter
+          kombinieren innovative Technik mit elegantem Design. Ob Weinglas, Glas oder Flasche – UNBREAK ONE sorgt für
+          sicheren Halt, egal wo.</p>
+
+        <!-- Weinglashalter - Text links, Bild rechts -->
+        <div class="product-row" data-scroll-reveal="fade-up">
+          <div class="product-text" data-scroll-reveal="fade-right" data-scroll-delay="2">
+            <h3 data-i18n="product.wineGlass.title">🍷 Weinglashalter</h3>
+            <p data-i18n="product.wineGlass.description">Entwickelt für alle gängigen Weingläser – vom Bordeaux bis zum Champagnerglas.</p>
+
+            <ul>
+              <li data-i18n="product.wineGlass.feature1">Hält Gläser sicher auch bei Bewegung</li>
+              <li data-i18n="product.wineGlass.feature2">Elegantes Design für jeden Anlass</li>
+              <li data-i18n="product.wineGlass.feature3">Platz sparend und flexibel einsetzbar</li>
+              <li data-i18n="product.wineGlass.feature4">Magnetisch oder mit Nano-Gel Untersetzer montierbar</li>
+            </ul>
+          </div>
+
+          <div class="product-image tilt-card float" data-scroll-reveal="scale" data-scroll-delay="1">
+            <img src="images/weinglashalter_szene_ship.jpg"
+              alt="UNBREAK ONE Weinglashalter mit Weinglas auf Schiff - Magnetischer Halter für Weingläser" data-i18n-alt="product.wineGlass.imageAlt">
+          </div>
+        </div>
+
+        <!-- Flaschenhalter - Bild links, Text rechts (alternierend) -->
+        <div class="product-row product-row-reverse" data-scroll-reveal="fade-up">
+          <div class="product-image tilt-card float-slow" data-scroll-reveal="scale" data-scroll-delay="1">
+            <img src="images/flaschenhalter_szene_ship.jpg"
+              alt="UNBREAK ONE Flaschenhalter mit Flasche auf Schiff - Magnetischer Halter für Flaschen" data-i18n-alt="product.bottle.imageAlt">
+          </div>
+
+          <div class="product-text" data-scroll-reveal="fade-left" data-scroll-delay="2">
+            <h3 data-i18n="product.bottle.title">🍾 Flaschen- & Getränkehalter</h3>
+            <p data-i18n="product.bottle.description">Für Weinflaschen, Bierflaschen, Wasserflaschen, Gläser und mehr – vielseitig und robust.</p>
+
+            <ul>
+              <li data-i18n="product.bottle.feature1">Universell passend für gängige Flaschengrößen und Gläser</li>
+              <li data-i18n="product.bottle.feature2">Premium-Halt auch auf schwankenden Oberflächen</li>
+              <li data-i18n="product.bottle.feature3">Perfekt für Boot, Camper, Outdoor, Zug & Flugzeug</li>
+              <li data-i18n="product.bottle.feature4">Kombinierbar mit Glashaltern</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================
+       FOOTER (dynamisch geladen)
+       =================================== -->
+  <div id="footer-container"></div>
+
+  <!-- ===================================
+       COMPONENTS & SCRIPTS
+       =================================== -->
+  
+  <!-- Header/Footer/Page-Wrapper Components -->
+  <script src="components/header.js?v=2.0.0"></script>
+  <script src="components/footer.js?v=2.0.0"></script>
+  <script src="components/page-wrapper.js?v=2.0.0"></script>
+
+  <!-- Main JavaScript -->
+  <script src="script.js?v=2.0.0"></script>
+  
+  <!-- GSAP Animation Library (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
+  
+  <!-- Motion System (Progressive Enhancement) -->
+  <script src="motion.js?v=2.0.1" defer></script>
+
+</body>
+
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D-Konfigurator – UNBREAK ONE</title>
+    <meta name="description" content="Gestalten Sie Ihren individuellen UNBREAK ONE Weinglashalter im 3D-Konfigurator.">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="animations.css">
+    <link rel="stylesheet" href="i18n.css">
+    <link rel="stylesheet" href="readability-optimization.css">
+    <link rel="stylesheet" href="configurator/configurator.css">
+
+    <!-- i18n System -->
+    <script src="i18n.js"></script>
+    <script src="language-switch.js" defer></script>
+</head>
+
+<body>
+
+    <!-- Header / Navigation -->
+    <header>
+        <nav>
+            <div class="logo">
+                <a href="index.html" class="logo-link">
+                    <img src="images/logo.png" alt="UNBREAK ONE" class="nav-logo">
+                </a>
+            </div>
+
+            <!-- Mobile Burger Menu -->
+            <div class="burger-menu" id="burgerMenu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html#product" data-i18n="nav.product">Produkt</a></li>
+                <li><a href="index.html#use-cases" data-i18n="nav.useCases">Einsatzbereiche</a></li>
+                <li><a href="index.html#tech" data-i18n="nav.tech">Technologie</a></li>
+                <li><a href="index.html#how-to" data-i18n="nav.howTo">Anwendung</a></li>
+                <li><a href="configurator.html" class="active" data-i18n="nav.configurator">Konfigurator</a></li>
+                <li><a href="index.html#shop" data-i18n="nav.shop">Shop</a></li>
+                <li><a href="index.html#contact" data-i18n="nav.contact">Kontakt</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Configurator Section -->
+    <section class="configurator-section">
+        <div class="container">
+            <div class="configurator-header">
+                <h1 data-i18n="configurator.title">3D-Konfigurator</h1>
+                <p data-i18n="configurator.subtitle">Gestalten Sie Ihren individuellen UNBREAK ONE Weinglashalter</p>
+            </div>
+
+            <div class="configurator-container">
+                <!-- 3D Viewer - Vercel Integration -->
+                <div class="viewer-wrapper-fullwidth">
+                    <div class="cfgFrameOuter">
+                        <iframe 
+                            id="configurator-iframe"
+                            src="https://unbreak-3-d-konfigurator.vercel.app/"
+                            title="UNBREAK ONE 3D Konfigurator"
+                            allow="accelerometer; autoplay; camera; encrypted-media; fullscreen; geolocation; gyroscope; magnetometer; microphone; midi; payment; vr; xr-spatial-tracking; web-share"
+                            loading="eager"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    
+                    <!-- Loading State -->
+                    <div id="loading-overlay" class="loading-overlay">
+                        <div class="loading-card">
+                            <img src="images/logo.png" alt="UNBREAK ONE" class="loading-logo">
+                            <div id="loading-spinner" class="loading-spinner"></div>
+                            <p id="loading-text" class="loading-text" data-i18n="configurator.loading">Konfigurator wird geladen...</p>
+                            <div id="loading-progress" class="loading-progress" style="display: none;">
+                                <div class="progress-bar">
+                                    <div id="progress-fill" class="progress-fill"></div>
+                                </div>
+                                <span id="progress-percent" class="progress-percent">0%</span>
+                            </div>
+                            <div id="error-container" class="error-container" style="display: none;">
+                                <p id="error-message" class="error-message"></p>
+                                <button id="reload-button" class="reload-button">Neu laden</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Debug Mode: Event Log (?debug=1 in URL) -->
+                    <div id="debug-log" class="debug-log" style="display: none;">
+                        <h4>Event Log</h4>
+                        <div id="debug-events" class="debug-events"></div>
+                        <button id="debug-clear" class="debug-clear-btn">Clear Log</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checkout Button (Test) -->
+            <div style="text-align: center; margin: 3rem 0;">
+                <button id="test-checkout-btn" style="
+                    padding: 1.2rem 3rem;
+                    font-size: 1.2rem;
+                    background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3);
+                    transition: all 0.3s ease;
+                    font-weight: 600;
+                " 
+                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 12px 40px rgba(8, 145, 178, 0.4)';"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 32px rgba(8, 145, 178, 0.3)';">
+                    🛒 Test Checkout (€99.00)
+                </button>
+            </div>
+
+            <!-- Info Section -->
+            <div class="configurator-info">
+                <div class="info-card">
+                    <h4 data-i18n="configurator.infoMaterialTitle">Premium-Material</h4>
+                    <p data-i18n="configurator.infoMaterialText">Hochwertige Verarbeitung aus robustem Material für langlebigen Halt.</p>
+                </div>
+                <div class="info-card">
+                    <h4 data-i18n="configurator.infoDeliveryTitle">Schnelle Lieferung</h4>
+                    <p data-i18n="configurator.infoDeliveryText">Ihre Bestellung wird innerhalb von 3-5 Tagen bearbeitet und versendet.</p>
+                </div>
+                <div class="info-card">
+                    <h4 data-i18n="configurator.infoCustomTitle">Individuell</h4>
+                    <p data-i18n="configurator.infoCustomText">Jedes Stück wird nach Ihren Wünschen gefertigt.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 UNBREAK ONE. Alle Rechte vorbehalten.</p>
+            <p>
+                <a href="impressum.html" data-i18n="footer.imprint">Impressum</a> |
+                <a href="datenschutz.html" data-i18n="footer.privacy">Datenschutz</a> |
+                <a href="agb.html" data-i18n="footer.terms">AGB</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="animations.js"></script>
+    <script src="script.js"></script>
+    <script src="configurator/configurator.js"></script>
+    <script src="configurator/checkout-integration.js"></script>
+    
+    <!-- Test Checkout Button Handler -->
+    <script>
+    document.getElementById('test-checkout-btn')?.addEventListener('click', async function() {
+        console.log('🛒 Test Checkout Button clicked');
+        
+        // Disable button during request
+        this.disabled = true;
+        this.textContent = '⏳ Loading...';
+        
+        try {
+            // Test configuration data
+            const testConfig = {
+                product_sku: 'UNBREAK-GLAS-01',
+                config: {
+                    color: 'petrol',
+                    finish: 'matte',
+                    engraving: null
+                },
+                customer: {
+                    email: 'test@example.com',
+                    name: 'Test User'
+                }
+            };
+            
+            console.log('📤 Sending to API:', testConfig);
+            
+            // Call checkout API
+            const response = await fetch('/api/checkout/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(testConfig)
+            });
+            
+            console.log('📥 API Response Status:', response.status);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ API Error:', errorText);
+                throw new Error(`API Error: ${response.status} - ${errorText}`);
+            }
+            
+            const result = await response.json();
+            console.log('✅ API Success:', result);
+            
+            // Redirect to Stripe Checkout
+            if (result.checkout_url) {
+                console.log('🔀 Redirecting to Stripe:', result.checkout_url);
+                window.location.href = result.checkout_url;
+            } else {
+                throw new Error('No checkout URL in response');
+            }
+            
+        } catch (error) {
+            console.error('💥 Checkout Error:', error);
+            alert('Fehler beim Checkout: ' + error.message);
+            this.disabled = false;
+            this.textContent = '🛒 Test Checkout (€99.00)';
+        }
+    });
+    </script>
+
+</body>
+
+</html>

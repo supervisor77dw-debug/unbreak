@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bestellung erfolgreich – UNBREAK ONE</title>
+  <meta name="robots" content="noindex, nofollow">
+  
+  <link rel="stylesheet" href="styles.css?v=2.0.3">
+  <link rel="stylesheet" href="premium.css?v=2.0.3">
+  
+  <style>
+    .success-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0A6C74 0%, #1A1A1A 100%);
+      padding: var(--spacing-xl);
+    }
+    
+    .success-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(16px);
+      border-radius: 12px;
+      padding: var(--spacing-xxl);
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+    
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #0A6C74, #084F55);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto var(--spacing-lg);
+      animation: scaleIn 0.5s ease-out;
+    }
+    
+    .success-icon svg {
+      width: 40px;
+      height: 40px;
+      stroke: white;
+      stroke-width: 3;
+      fill: none;
+    }
+    
+    @keyframes scaleIn {
+      from {
+        transform: scale(0);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    
+    .success-card h1 {
+      font-size: 2rem;
+      color: var(--color-graphit);
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .success-card p {
+      font-size: 1.1rem;
+      color: var(--color-anthrazit);
+      line-height: 1.6;
+      margin-bottom: var(--spacing-lg);
+    }
+    
+    .order-info {
+      background: var(--color-hellgrau);
+      border-radius: 8px;
+      padding: var(--spacing-md);
+      margin: var(--spacing-lg) 0;
+    }
+    
+    .order-number {
+      font-family: 'Courier New', monospace;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-petrol-deep);
+      letter-spacing: 1px;
+    }
+    
+    .next-steps {
+      text-align: left;
+      margin: var(--spacing-lg) 0;
+    }
+    
+    .next-steps h3 {
+      font-size: 1.25rem;
+      margin-bottom: var(--spacing-sm);
+      color: var(--color-graphit);
+    }
+    
+    .next-steps ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .next-steps li {
+      padding: var(--spacing-sm) 0;
+      padding-left: var(--spacing-lg);
+      position: relative;
+    }
+    
+    .next-steps li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--color-petrol-deep);
+      font-weight: bold;
+    }
+    
+    .btn-home {
+      display: inline-block;
+      margin-top: var(--spacing-lg);
+      padding: var(--spacing-md) var(--spacing-xl);
+      background: linear-gradient(135deg, #0A6C74, #084F55);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .btn-home:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(10, 108, 116, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="success-container">
+    <div class="success-card">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      
+      <h1>Vielen Dank für Ihre Bestellung!</h1>
+      
+      <p>
+        Ihre Zahlung wurde erfolgreich verarbeitet. 
+        Sie erhalten in Kürze eine Bestätigungs-E-Mail mit allen Details.
+      </p>
+      
+      <div class="order-info">
+        <p style="margin: 0; font-size: 0.9rem; color: var(--color-graphit);">
+          Ihre Bestellnummer:
+        </p>
+        <div class="order-number" id="order-number">
+          <!-- Wird via JavaScript eingefügt -->
+          Lädt...
+        </div>
+      </div>
+      
+      <div class="next-steps">
+        <h3>Wie geht es weiter?</h3>
+        <ul>
+          <li>Sie erhalten eine Bestätigungs-E-Mail mit allen Bestelldetails</li>
+          <li>Ihr individuelles UNBREAK ONE geht in Produktion</li>
+          <li>Wir informieren Sie über den Versandstatus</li>
+          <li>Lieferzeit: ca. 2-3 Wochen</li>
+        </ul>
+      </div>
+      
+      <a href="index.html" class="btn-home">Zurück zur Startseite</a>
+    </div>
+  </div>
+  
+  <script>
+    // Extract order_number from URL query params
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderNumber = urlParams.get('order_number');
+    const sessionId = urlParams.get('session_id');
+    
+    if (orderNumber) {
+      document.getElementById('order-number').textContent = orderNumber;
+    } else {
+      document.getElementById('order-number').textContent = 'Wird geladen...';
+    }
+    
+    // Optional: Fetch order details via API for confirmation
+    // if (sessionId) {
+    //   fetch(`/api/orders/verify?session_id=${sessionId}`)
+    //     .then(res => res.json())
+    //     .then(data => {
+    //       if (data.order_number) {
+    //         document.getElementById('order-number').textContent = data.order_number;
+    //       }
+    //     });
+    // }
+  </script>
+</body>
+</html>

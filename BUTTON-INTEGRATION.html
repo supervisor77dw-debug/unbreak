@@ -1,0 +1,289 @@
+<!-- 
+  UNBREAK ONE - Checkout Button Integration
+  
+  Diese Datei zeigt, wie du die bestehenden Buttons mit dem Checkout-System verbindest.
+  WICHTIG: Keine Design-Änderungen, nur onclick-Handler ergänzen!
+-->
+
+<!-- ================================================ -->
+<!-- SCHRITT 1: checkout.js im <head> einbinden -->
+<!-- ================================================ -->
+
+<head>
+  <!-- Bestehende Scripts... -->
+  
+  <!-- HINZUFÜGEN: Checkout Integration -->
+  <script src="checkout.js" defer></script>
+</head>
+
+
+<!-- ================================================ -->
+<!-- SCHRITT 2: Bestehende Buttons erweitern -->
+<!-- ================================================ -->
+
+<!-- BEISPIEL 1: Standard-Produkt Button (Weinglashalter) -->
+<button 
+  class="cta-button"
+  onclick="UnbreakCheckout.buyStandard('UNBREAK-WEIN-01')">
+  In den Shop
+</button>
+
+<!-- BEISPIEL 2: Gastro-Edition -->
+<button 
+  class="cta-button premium-btn"
+  onclick="UnbreakCheckout.buyStandard('UNBREAK-GASTRO-01')">
+  Gastro-Set bestellen
+</button>
+
+<!-- BEISPIEL 3: Konfigurator-Button -->
+<button 
+  id="buy-configured-btn"
+  class="cta-button"
+  onclick="buyFromConfigurator()">
+  Jetzt kaufen
+</button>
+
+<script>
+// Konfigurator-spezifische Funktion
+function buyFromConfigurator() {
+  // Hole aktuelle Konfiguration aus dem iframe oder State
+  const currentConfig = {
+    color: 'petrol',        // Aus Konfigurator
+    finish: 'matte',        // Aus Konfigurator
+    engraving: null,        // Optional
+    email: null,            // Optional, wird in Stripe abgefragt
+  };
+  
+  // Call UnbreakCheckout mit Konfiguration
+  UnbreakCheckout.buyConfigured(currentConfig);
+}
+</script>
+
+
+<!-- ================================================ -->
+<!-- BEISPIEL-INTEGRATION: Shop-Seite -->
+<!-- ================================================ -->
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>UNBREAK ONE - Shop</title>
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Checkout Integration -->
+  <script src="checkout.js" defer></script>
+</head>
+<body>
+  
+  <!-- Produktkarte 1 -->
+  <div class="product-card">
+    <h3>Weinglashalter</h3>
+    <p class="price">€59,90</p>
+    <button 
+      class="cta-button" 
+      onclick="UnbreakCheckout.buyStandard('UNBREAK-WEIN-01')">
+      Jetzt kaufen
+    </button>
+  </div>
+  
+  <!-- Produktkarte 2 -->
+  <div class="product-card">
+    <h3>Glashalter Universal</h3>
+    <p class="price">€49,90</p>
+    <button 
+      class="cta-button" 
+      onclick="UnbreakCheckout.buyStandard('UNBREAK-GLAS-01')">
+      Jetzt kaufen
+    </button>
+  </div>
+  
+  <!-- Produktkarte 3 -->
+  <div class="product-card">
+    <h3>Flaschenhalter</h3>
+    <p class="price">€54,90</p>
+    <button 
+      class="cta-button" 
+      onclick="UnbreakCheckout.buyStandard('UNBREAK-FLASCHE-01')">
+      Jetzt kaufen
+    </button>
+  </div>
+  
+  <!-- Produktkarte 4 (Premium) -->
+  <div class="product-card premium">
+    <h3>Gastro Edition Set</h3>
+    <p class="price">€199,90</p>
+    <button 
+      class="cta-button premium-btn" 
+      onclick="UnbreakCheckout.buyStandard('UNBREAK-GASTRO-01')">
+      Gastro-Set bestellen
+    </button>
+  </div>
+  
+</body>
+</html>
+
+
+<!-- ================================================ -->
+<!-- BEISPIEL-INTEGRATION: Konfigurator-Seite -->
+<!-- ================================================ -->
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>UNBREAK ONE - Konfigurator</title>
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Checkout Integration -->
+  <script src="checkout.js" defer></script>
+</head>
+<body>
+  
+  <!-- 3D Konfigurator iframe -->
+  <div id="configurator-container">
+    <iframe 
+      id="configurator-iframe" 
+      src="https://unbreak-3-d-konfigurator.vercel.app/"
+      allowfullscreen>
+    </iframe>
+  </div>
+  
+  <!-- Kaufen-Button -->
+  <div class="checkout-actions">
+    <button 
+      id="buy-button" 
+      class="cta-button large"
+      onclick="handleConfiguredCheckout()">
+      🛒 Jetzt kaufen
+    </button>
+  </div>
+  
+  <script>
+    let currentConfiguration = {
+      color: 'petrol',
+      finish: 'matte',
+      engraving: null,
+    };
+    
+    // Listen to postMessage from iframe (wenn Konfigurator Daten sendet)
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'UNBREAK_CONFIG_UPDATE') {
+        currentConfiguration = event.data.config;
+        console.log('Konfiguration aktualisiert:', currentConfiguration);
+      }
+    });
+    
+    function handleConfiguredCheckout() {
+      // Validierung
+      if (!currentConfiguration.color) {
+        alert('Bitte wähle zuerst eine Farbe aus!');
+        return;
+      }
+      
+      // Checkout starten
+      UnbreakCheckout.buyConfigured({
+        productSku: 'UNBREAK-GLAS-01',
+        color: currentConfiguration.color,
+        finish: currentConfiguration.finish,
+        engraving: currentConfiguration.engraving,
+      });
+    }
+  </script>
+  
+</body>
+</html>
+
+
+<!-- ================================================ -->
+<!-- VERFÜGBARE PRODUKT-SKUs -->
+<!-- ================================================ -->
+
+<!--
+  UNBREAK-WEIN-01    → Weinglashalter (€59.90)
+  UNBREAK-GLAS-01    → Glashalter Universal (€49.90)
+  UNBREAK-FLASCHE-01 → Flaschenhalter (€54.90)
+  UNBREAK-GASTRO-01  → Gastro Edition Set (€199.90)
+-->
+
+
+<!-- ================================================ -->
+<!-- ERWEITERTE OPTIONEN -->
+<!-- ================================================ -->
+
+<!-- Mit Kundendaten -->
+<button onclick="buyWithCustomer()">Kaufen</button>
+
+<script>
+function buyWithCustomer() {
+  UnbreakCheckout.buyStandard('UNBREAK-WEIN-01', {
+    email: 'kunde@example.com',
+    name: 'Max Mustermann',
+    country: 'DE'
+  });
+}
+</script>
+
+<!-- Mit Menge -->
+<button onclick="buyMultiple()">3x kaufen</button>
+
+<script>
+function buyMultiple() {
+  UnbreakCheckout.buyStandard('UNBREAK-WEIN-01', {
+    quantity: 3
+  });
+}
+</script>
+
+
+<!-- ================================================ -->
+<!-- FEHLERBEHANDLUNG -->
+<!-- ================================================ -->
+
+<script>
+// Eigene Fehlerbehandlung (optional)
+async function customCheckout() {
+  try {
+    await UnbreakCheckout.buyStandard('UNBREAK-WEIN-01');
+  } catch (error) {
+    // Custom Error Handling
+    console.error('Checkout failed:', error);
+    showCustomErrorMessage(error.message);
+  }
+}
+
+function showCustomErrorMessage(message) {
+  // Zeige deinen eigenen Error-Dialog
+  const modal = document.getElementById('error-modal');
+  modal.querySelector('.error-text').textContent = message;
+  modal.classList.add('show');
+}
+</script>
+
+
+<!-- ================================================ -->
+<!-- HINWEISE -->
+<!-- ================================================ -->
+
+<!--
+  ✅ READY TO USE:
+  - checkout.js ist produktionsbereit
+  - Keine Design-Änderungen nötig
+  - Funktioniert mit bestehenden Buttons
+  
+  📋 CHECKLIST:
+  1. checkout.js in <head> einbinden
+  2. onclick="UnbreakCheckout.buyStandard('SKU')" zu Buttons hinzufügen
+  3. Testen mit Stripe Testkarte (4242 4242 4242 4242)
+  4. Success/Cancel Flow prüfen
+  
+  🔧 KONFIGURATION:
+  - Preise werden server-seitig aus Supabase geladen
+  - Keine Preise im Frontend hardcoden!
+  - SKUs müssen exakt mit Supabase übereinstimmen
+  
+  🚀 DEPLOYMENT:
+  - checkout.js nach public/ kopieren
+  - In alle relevanten HTML-Seiten einbinden
+  - Production ENV-Variablen setzen (siehe LAUNCH-GUIDE.md)
+-->
