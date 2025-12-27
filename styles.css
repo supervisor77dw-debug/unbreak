@@ -204,6 +204,24 @@ header .nav-links button:hover {
   text-decoration: none;
 }
 
+/* Active State (Multi-Page Navigation) */
+header .nav-links a.active {
+  color: var(--color-petrol-deep);
+  font-weight: 600;
+  position: relative;
+}
+
+header .nav-links a.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-petrol-deep), var(--color-cyan));
+  border-radius: 2px;
+}
+
 header .nav-links a:focus-visible,
 header .nav-links button:focus-visible {
   outline: 2px solid rgba(0, 255, 220, 0.55);
@@ -239,9 +257,27 @@ main {
   min-height: 100vh;
 }
 
+/* === PAGE CONTENT WRAPPER (Multi-Page Struktur) === */
+/* Sauberer Startpunkt für alle Seiten unter Header */
+.page-content {
+  /* Kein top-padding - Sections beginnen direkt unter Header */
+  padding-top: 0;
+  min-height: calc(100vh - 80px); /* Header-Höhe abziehen */
+}
+
+.page-content > section:first-child {
+  /* Erste Section startet direkt unter sticky Header */
+  margin-top: 0;
+  padding-top: var(--spacing-xl); /* Spacing innerhalb der Section */
+}
+
 @media (max-width: 768px) {
   main {
     padding-top: 0; /* Sections haben scroll-margin-top */
+  }
+  
+  .page-content > section:first-child {
+    padding-top: var(--spacing-lg); /* Mobile: weniger Spacing */
   }
 }
 
