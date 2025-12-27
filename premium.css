@@ -228,12 +228,9 @@ section {
 
 /* ===================================
    HEADER POLISH (SCROLL STATE)
+   ENTFERNT - Glassmorphismus wird in styles.css konsistent gehandhabt
+   Keine Overrides mehr, die den Glas-Effekt deaktivieren
    =================================== */
-header.scrolled {
-  background: rgba(26, 26, 26, 0.95);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.15);
-}
 
 /* ===================================
    BADGE POLISH - OBERHALB HERO-CONTENT (MOBILE FIX)

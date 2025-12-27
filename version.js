@@ -7,7 +7,7 @@
   'use strict';
 
   // Version tracking
-  const CURRENT_VERSION = '2.0.1'; // Update this on each deploy
+  const CURRENT_VERSION = '2.0.3'; // Update this on each deploy
   const VERSION_KEY = 'unbreakone_version';
   const CACHE_CLEARED_KEY = 'unbreakone_cache_cleared';
 

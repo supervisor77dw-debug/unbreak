@@ -169,29 +169,35 @@ a {
 /* ===================================
    HEADER - PREMIUM GLASSMORPHISM (Launch-Ready)
    3 States: Initial | Scrolled | Interaction
+   GLASSMORPHISM ALWAYS ACTIVE - nur subtile Variationen
    =================================== */
 
 header {
   position: sticky;
   top: 0;
-  /* State 1: Initial - Subtle Glass */
-  background: linear-gradient(180deg, rgba(20, 24, 30, 0.82), rgba(20, 24, 30, 0.68));
+  /* State 1: Initial - Subtle Glass (Default auf allen Seiten) */
+  background: linear-gradient(180deg, rgba(20, 24, 30, 0.72), rgba(20, 24, 30, 0.65));
   backdrop-filter: blur(8px) saturate(120%);
   -webkit-backdrop-filter: blur(8px) saturate(120%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.04);
   z-index: 1000;
   transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+              backdrop-filter 0.4s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
               border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   height: auto;
 }
 
 header.scrolled {
-  /* State 2: Scrolled - Solid Premium Glass */
-  background: linear-gradient(180deg, rgba(20, 24, 30, 0.95), rgba(20, 24, 30, 0.88));
+  /* State 2: Scrolled - Leicht erhöhte Dichte, aber GLASSMORPHISM BLEIBT */
+  background: linear-gradient(180deg, rgba(20, 24, 30, 0.85), rgba(20, 24, 30, 0.78));
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
   border-bottom-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /* State 3: Navigation Links - Unified Interaction */
@@ -615,7 +621,7 @@ section {
 /* === PRODUCT OVERVIEW SECTION === */
 /* Anthrazit = Marke/Produktpräsentation */
 #produkt {
-  background-color: var(--color-anthrazit);
+  background-color: var(--color-anthrazit) !important;
   color: var(--color-white);
 }
 
@@ -673,7 +679,7 @@ section {
 /* === EINSATZBEREICHE SECTION === */
 /* Anthrazit = Marke/Use Cases */
 #einsatzbereiche {
-  background-color: var(--color-anthrazit);
+  background-color: var(--color-anthrazit) !important;
   color: var(--color-white);
 }
 
