@@ -613,6 +613,21 @@ section {
 }
 
 /* === PRODUCT OVERVIEW SECTION === */
+/* Anthrazit = Marke/Produktpräsentation */
+#produkt {
+  background-color: var(--color-anthrazit);
+  color: var(--color-white);
+}
+
+#produkt h2,
+#produkt h3 {
+  color: var(--color-white);
+}
+
+#produkt p {
+  color: rgba(230, 235, 240, 0.88);
+}
+
 #produkt .grid {
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-xl);
@@ -656,8 +671,19 @@ section {
 }
 
 /* === EINSATZBEREICHE SECTION === */
+/* Anthrazit = Marke/Use Cases */
 #einsatzbereiche {
-  background-color: var(--color-hellgrau);
+  background-color: var(--color-anthrazit);
+  color: var(--color-white);
+}
+
+#einsatzbereiche h2,
+#einsatzbereiche h3 {
+  color: var(--color-white);
+}
+
+#einsatzbereiche p {
+  color: rgba(230, 235, 240, 0.88);
 }
 
 #einsatzbereiche .grid {
@@ -666,12 +692,15 @@ section {
 }
 
 .bereich-card {
-  background-color: var(--color-anthrazit);
+  /* Glassmorphism auf Anthrazit-Hintergrund */
+  background-color: rgba(30, 35, 45, 0.6);
   padding: var(--spacing-lg);
   border-radius: var(--border-radius-sm);
   text-align: center;
   transition: all 0.3s ease;
   border-top: 3px solid var(--color-petrol-deep);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .bereich-card:hover {
@@ -887,8 +916,19 @@ section {
 }
 
 /* === SHOP SECTION === */
+/* Weiß = Funktion/Shop (bewusste Abgrenzung zu Marken-Sections) */
 #shop {
+  background-color: var(--color-white);
+  color: var(--color-anthrazit);
   padding-bottom: 0;
+}
+
+#shop h2 {
+  color: var(--color-anthrazit);
+}
+
+#shop p {
+  color: var(--color-graphit);
 }
 
 #shop .sets-grid {
@@ -1441,14 +1481,14 @@ footer a:hover {
 }
 
 .product-text h3 {
-  color: var(--color-petrol-deep);
+  color: var(--color-white);
   font-size: 32px;
   margin-bottom: var(--spacing-md);
 }
 
 .product-text p {
   font-size: 18px;
-  color: var(--color-anthrazit);
+  color: rgba(230, 235, 240, 0.88);
   margin-bottom: var(--spacing-md);
   line-height: 1.6;
 }
@@ -1464,7 +1504,7 @@ footer a:hover {
   padding-left: 32px;
   position: relative;
   font-size: 16px;
-  color: var(--color-graphit);
+  color: rgba(230, 235, 240, 0.88);
 }
 
 .product-text ul li::before {
