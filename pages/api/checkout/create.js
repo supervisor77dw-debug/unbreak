@@ -18,6 +18,19 @@ import { supabaseAdmin } from '../../../lib/supabase';
 import { stripe } from '../../../lib/stripe';
 import { calculatePrice, calculateShipping, calculateTax } from '../../../lib/pricing';
 
+// Helper: Get origin from request (no hardcoded domains)
+function getOrigin(req) {
+  // Try origin header first (most reliable)
+  if (req.headers.origin) {
+    return req.headers.origin;
+  }
+  
+  // Fallback: construct from host header
+  const host = req.headers.host || 'localhost:3000';
+  const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
+  return `${protocol}://${host}`;
+}
+
 /**
  * Generate unique order number
  * Format: UB-YYYYMMDD-XXXX
@@ -187,8 +200,8 @@ export default async function handler(req, res) {
         configuration_id: configuration.id,
         product_sku: product.sku,
       },
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?session_id={CHECKOUT_SESSION_ID}&order_number=${orderNumber}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/configurator?canceled=true`,
+      success_url: `${getOrigin(req)}/success?session_id={CHECKOUT_SESSION_ID}&order_number=${orderNumber}`,
+      cancel_url: `${getOrigin(req)}/configurator?canceled=true`,
       expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour expiry
     });
 

@@ -25,22 +25,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { bundle_id, email } = req.body;
+    const { sku, email } = req.body;
 
-    if (!bundle_id) {
-      return res.status(400).json({ error: 'bundle_id is required' });
+    if (!sku) {
+      return res.status(400).json({ error: 'sku is required' });
     }
 
-    // 1. Fetch bundle from database
-    const { data: bundle, error: bundleError } = await supabase
-      .from('bundles')
+    // 1. Fetch product from database
+    const { data: product, error: productError } = await supabase
+      .from('products')
       .select('*')
-      .eq('id', bundle_id)
+      .eq('sku', sku)
       .eq('active', true)
       .single();
 
-    if (bundleError || !bundle) {
-      return res.status(404).json({ error: 'Bundle not found or inactive' });
+    if (productError || !product) {
+      return res.status(404).json({ error: 'Product not found or inactive' });
     }
 
     // 2. Get user from session (if logged in)
@@ -65,21 +65,16 @@ export default async function handler(req, res) {
       .from('orders')
       .insert({
         customer_user_id: userId,
-        customer_email: customerEmail || null,
-        total_amount_cents: bundle.price_cents,
-        currency: bundle.currency || 'EUR',
+        product_sku: product.sku,
+        quantity: 1,
+        total_amount_cents: product.base_price_cents,
         status: 'pending',
-        order_type: 'bundle',
-        metadata: {
-          bundle_id: bundle.id,
-          bundle_title: bundle.title_de,
-          items: bundle.items_json
-        }
+        order_type: 'standard',
       })
       .select()
       .single();
 
-    if (orderError) {
+    if (orderError || !order) {
       console.error('Order creation error:', orderError);
       return res.status(500).json({ error: 'Failed to create order' });
     }
@@ -90,13 +85,13 @@ export default async function handler(req, res) {
       line_items: [
         {
           price_data: {
-            currency: bundle.currency?.toLowerCase() || 'eur',
-            unit_amount: bundle.price_cents,
+            currency: 'eur',
             product_data: {
-              name: `UNBREAK ONE Bundle – ${bundle.title_de}`,
-              description: bundle.description_de || undefined,
-              images: bundle.image_url ? [bundle.image_url] : undefined,
+              name: product.title_de || product.sku,
+              description: product.description_de || undefined,
+              images: product.image_url ? [product.image_url] : undefined,
             },
+            unit_amount: product.base_price_cents,
           },
           quantity: 1,
         },
@@ -107,33 +102,33 @@ export default async function handler(req, res) {
       customer_email: customerEmail || undefined,
       metadata: {
         order_id: order.id,
-        bundle_id: bundle.id,
-        type: 'bundle',
+        product_sku: product.sku,
+        type: 'standard',
         user_id: userId || 'guest',
       },
     });
 
-    // 5. Update order with payment intent
+    // 5. Update order with Stripe session ID
     await supabase
       .from('orders')
-      .update({
-        stripe_payment_intent_id: session.payment_intent,
-        stripe_checkout_session_id: session.id,
+      .update({ 
+        stripe_session_id: session.id,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', order.id);
 
     // 6. Return checkout URL
-    return res.status(200).json({
+    res.status(200).json({ 
       url: session.url,
-      order_id: order.id,
       session_id: session.id,
+      order_id: order.id,
     });
 
   } catch (error) {
-    console.error('Bundle checkout error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message 
+    console.error('Checkout error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 }

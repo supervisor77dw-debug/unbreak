@@ -6,6 +6,19 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Helper: Get origin from request (no hardcoded domains)
+function getOrigin(req) {
+  // Try origin header first (most reliable)
+  if (req.headers.origin) {
+    return req.headers.origin;
+  }
+  
+  // Fallback: construct from host header
+  const host = req.headers.host || 'localhost:3000';
+  const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
+  return `${protocol}://${host}`;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -123,8 +136,8 @@ export default async function handler(req, res) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/cancel.html`,
+      success_url: `${getOrigin(req)}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${getOrigin(req)}/cancel.html`,
       customer_email: customerEmail || undefined,
       metadata: {
         order_id: order.id,
