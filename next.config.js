@@ -9,10 +9,7 @@ const nextConfig = {
         source: '/',
         destination: '/index.html',
       },
-      {
-        source: '/shop',
-        destination: '/shop.html',
-      },
+
       {
         source: '/produkt',
         destination: '/produkt.html',

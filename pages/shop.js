@@ -155,7 +155,7 @@ export default function Shop({ initialProducts }) {
 
         {/* CTA Section */}
         <section className="cta-section">
-          <div class="container">
+          <div className="container">
             <h2>Individuelle Konfiguration gewünscht?</h2>
             <p>
               Gestalte deinen eigenen UNBREAK ONE mit unserem 3D-Konfigurator
