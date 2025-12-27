@@ -37,6 +37,14 @@
   "product": {
     "sectionTitle": "The System Behind UNBREAK ONE",
     "sectionSubtitle": "Our magnetic holders combine innovative technology with elegant design. Whether wine glass, glass, or bottle – UNBREAK ONE provides secure hold, anywhere.",
+    "teaser": {
+      "title": "Wine Glass Holders & Bottle Holders",
+      "description": "Designed for all common wine glasses, bottles, and beverages. Magnetic or with nano-gel – flexible use on any surface.",
+      "feature1": "Strong neodymium magnets for secure hold",
+      "feature2": "Elegant premium design",
+      "feature3": "Universal use: Boat, camper, home",
+      "cta": "More about the product"
+    },
     "wineGlass": {
       "title": "🍷 Wine Glass Holder",
       "description": "Designed for all common wine glasses – from Bordeaux to champagne glasses.",
@@ -59,6 +67,9 @@
   "useCases": {
     "sectionTitle": "One System – Many Use Cases",
     "sectionSubtitle": "UNBREAK ONE adapts to your life – whether on water, on the road, or at home.",
+    "teaser": {
+      "cta": "Discover all use cases"
+    },
     "boat": {
       "title": "Boat & Yacht",
       "description": "Safety even in rough seas. Perfect for relaxing hours on the water.",
@@ -84,6 +95,9 @@
     "title": "UNBREAK ONE Gastro Edition",
     "subtitle": "Professional holder for fine dining and bars",
     "ctaPrimary": "Learn More",
+    "teaser": {
+      "cta": "Discover Gastro Edition"
+    },
     "benefitsTitle": "Benefits for Gastronomy",
     "benefit1": "Less glass breakage and spillage",
     "benefit2": "Professional presentation at the table",
@@ -94,6 +108,10 @@
   },
   "tech": {
     "sectionTitle": "Technology that holds. Values that last.",
+    "teaser": {
+      "feature2": "Alternative mounting without metallic surface – adheres to smooth surfaces.",
+      "cta": "More about technology & sustainability"
+    },
     "featuresTitle": "Technical Features",
     "feature1Title": "Strong Magnets:",
     "feature1Text": "High-quality neodymium magnets ensure secure hold on all metallic surfaces.",
@@ -131,6 +149,9 @@
   "shop": {
     "sectionTitle": "Choose Your UNBREAK ONE Set",
     "sectionSubtitle": "From small household solutions to professional gastro bundles – we have the right set for you.",
+    "teaser": {
+      "cta": "View all sets & bundles"
+    },
     "basicTitle": "Basic Set",
     "basicDescription": "Perfect to get started: 2 wine glass holders + 1 bottle holder. Ideal for home or terrace.",
     "basicImageAlt": "UNBREAK ONE Basic Set - Starter set for home",
@@ -148,8 +169,11 @@
     "buyGastroSets": "Gastro Sets"
   },
   "contact": {
-    "title": "Contact",
-    "text1": "Do you have questions about UNBREAK ONE or would you like a custom offer for your restaurant or hotel?",
+    "title": "Contact",    "teaser": {
+      "title": "Have Questions?",
+      "text": "We are happy to advise you on products, individual offers for gastronomy, or special requests.",
+      "cta": "Contact Us"
+    },    "text1": "Do you have questions about UNBREAK ONE or would you like a custom offer for your restaurant or hotel?",
     "text2": "We look forward to hearing from you!",
     "emailLabel": "Email:",
     "instagramAria": "Instagram",

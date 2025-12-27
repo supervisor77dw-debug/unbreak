@@ -37,6 +37,14 @@
   "product": {
     "sectionTitle": "Das System hinter UNBREAK ONE",
     "sectionSubtitle": "Unsere magnetischen Halter kombinieren innovative Technik mit elegantem Design. Ob Weinglas, Glas oder Flasche – UNBREAK ONE sorgt für sicheren Halt, egal wo.",
+    "teaser": {
+      "title": "Weinglashalter & Flaschenhalter",
+      "description": "Entwickelt für alle gängigen Weingläser, Flaschen und Getränke. Magnetisch oder mit Nano-Gel – flexibel einsetzbar auf jeder Oberfläche.",
+      "feature1": "Starke Neodym-Magnete für sicheren Halt",
+      "feature2": "Elegantes Premium-Design",
+      "feature3": "Universell einsetzbar: Boot, Camper, Zuhause",
+      "cta": "Mehr zum Produkt"
+    },
     "wineGlass": {
       "title": "🍷 Weinglashalter",
       "description": "Entwickelt für alle gängigen Weingläser – vom Bordeaux- bis zum Champagnerglas.",
@@ -59,6 +67,9 @@
   "useCases": {
     "sectionTitle": "Ein System – viele Einsatzbereiche",
     "sectionSubtitle": "UNBREAK ONE passt sich Ihrem Leben an – ob auf dem Wasser, unterwegs oder Zuhause.",
+    "teaser": {
+      "cta": "Alle Einsatzbereiche entdecken"
+    },
     "boat": {
       "title": "Boot & Yacht",
       "description": "Sicherheit auch bei Wellengang. Perfekt für entspannte Stunden auf dem Wasser.",
@@ -84,6 +95,9 @@
     "title": "UNBREAK ONE Gastro-Edition",
     "subtitle": "Professioneller Halter für Fine Dining und Bars",
     "ctaPrimary": "Mehr erfahren",
+    "teaser": {
+      "cta": "Gastro-Edition entdecken"
+    },
     "benefitsTitle": "Vorteile für die Gastronomie",
     "benefit1": "Weniger Glasbruch und Verschüttungen",
     "benefit2": "Professionelle Präsentation am Tisch",
@@ -94,6 +108,10 @@
   },
   "tech": {
     "sectionTitle": "Technik, die hält. Werte, die bleiben.",
+    "teaser": {
+      "feature2": "Alternative Montage ohne metallischen Untergrund – haftet auf glatten Oberflächen.",
+      "cta": "Mehr zu Technik & Nachhaltigkeit"
+    },
     "featuresTitle": "Technische Features",
     "feature1Title": "Starke Magnete:",
     "feature1Text": "Hochwertige Neodym-Magnete sorgen für sicheren Halt auf allen metallischen Oberflächen.",
@@ -131,6 +149,9 @@
   "shop": {
     "sectionTitle": "Wähle dein UNBREAK ONE Set",
     "sectionSubtitle": "Von der kleinen Haushaltslösung bis zum professionellen Gastro-Bundle – wir haben das passende Set für dich.",
+    "teaser": {
+      "cta": "Alle Sets & Bundles ansehen"
+    },
     "basicTitle": "Basic Set",
     "basicDescription": "Perfekt für den Einstieg: 2 Weinglashalter + 1 Flaschenhalter. Ideal für Zuhause oder die Terrasse.",
     "basicImageAlt": "UNBREAK ONE Basic Set - Starter Set für Zuhause",
@@ -149,6 +170,11 @@
   },
   "contact": {
     "title": "Kontakt",
+    "teaser": {
+      "title": "Haben Sie Fragen?",
+      "text": "Wir beraten Sie gerne zu Produkten, individuellen Angeboten für die Gastronomie oder besonderen Wünschen.",
+      "cta": "Zum Kontakt"
+    },
     "text1": "Haben Sie Fragen zu UNBREAK ONE oder möchten Sie ein individuelles Angebot für Ihr Restaurant oder Hotel?",
     "text2": "Wir freuen uns auf Ihre Nachricht!",
     "emailLabel": "E-Mail:",
