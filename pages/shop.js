@@ -28,7 +28,7 @@ export default function Shop({ initialProducts }) {
 
   async function loadProducts() {
     try {
-      const supabase = getSupabaseAdmin() || getSupabasePublic();
+      const supabase = getSupabasePublic();
       if (!supabase) {
         throw new Error('Supabase client not available');
       }
@@ -37,7 +37,7 @@ export default function Shop({ initialProducts }) {
         .from('products')
         .select('*')
         .eq('active', true)
-        .order('sort_order', { ascending: true });
+        .order('created_at', { ascending: true });
 
       if (fetchError) throw fetchError;
       setProducts(data || []);
@@ -185,7 +185,7 @@ export default function Shop({ initialProducts }) {
       <Script src="/animations.js" strategy="afterInteractive" />
       
       {/* Checkout Integration - Auto-initializes buy buttons */}
-      <Script src="/lib/checkout.js" strategy="afterInteractive" />
+        <Script src="/lib/checkout.js" strategy="afterInteractive" type="module" />
 
       <style jsx>{`
         .shop-hero {
@@ -542,7 +542,7 @@ export async function getServerSideProps() {
         .from('products')
         .select('*')
         .eq('active', true)
-        .order('sort_order', { ascending: true }),
+        .order('created_at', { ascending: true }),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Timeout')), 5000)
       ),
