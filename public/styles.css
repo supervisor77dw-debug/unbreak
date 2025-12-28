@@ -274,6 +274,7 @@ header .nav-logo:hover {
 main {
   min-height: 100vh;
     padding-top: var(--header-height);
+}
 /* Sauberer Startpunkt für alle Seiten unter Header */
 .page-content {
   /* Kein top-padding - Sections beginnen direkt unter Header */
