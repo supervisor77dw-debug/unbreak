@@ -304,6 +304,7 @@ main {
   header .nav-logo {
     max-height: 40px;
 }
+}
 
 nav {
   display: flex;
