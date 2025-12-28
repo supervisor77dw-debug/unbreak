@@ -28,6 +28,9 @@
   --spacing-lg: 40px;
   --spacing-xl: 64px;
   --spacing-xxl: 96px;
+  
+  /* Header Dimensions */
+  --header-height: 84px;
 
   /* Border & Shadows */
   --border-radius-sm: 4px;
@@ -175,6 +178,7 @@ a {
 header {
   position: sticky;
   top: 0;
+  height: var(--header-height);
   /* State 1: Initial - Subtle Glass (Default auf allen Seiten) */
   background: linear-gradient(180deg, rgba(20, 24, 30, 0.72), rgba(20, 24, 30, 0.65));
   backdrop-filter: blur(8px) saturate(120%);
@@ -255,8 +259,11 @@ header .burger-menu:hover span {
 
 /* Logo: Keine Zwangsfärbung */
 header .nav-logo {
-  filter: none;
-  transition: opacity 0.3s ease;
+  max-height: 48px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
 }
 
 header .nav-logo:hover {
@@ -266,9 +273,7 @@ header .nav-logo:hover {
 /* Fix 3: Mobile Header - kein Content-Crop */
 main {
   min-height: 100vh;
-}
-
-/* === PAGE CONTENT WRAPPER (Multi-Page Struktur) === */
+    padding-top: var(--header-height);
 /* Sauberer Startpunkt für alle Seiten unter Header */
 .page-content {
   /* Kein top-padding - Sections beginnen direkt unter Header */
@@ -283,13 +288,20 @@ main {
 }
 
 @media (max-width: 768px) {
-  main {
-    padding-top: 0; /* Sections haben scroll-margin-top */
+  :root {
+    --header-height: 72px;
   }
   
+  main {
+    padding-top: var(--header-height);
+  }
+
   .page-content > section:first-child {
     padding-top: var(--spacing-lg); /* Mobile: weniger Spacing */
   }
+  
+  header .nav-logo {
+    max-height: 40px;
 }
 
 nav {
@@ -1146,10 +1158,10 @@ footer a:hover {
 
   .nav-links {
     position: fixed;
-    top: 60px;
+    top: var(--header-height);
     left: -100%;
     width: 100%;
-    height: calc(100vh - 60px);
+    height: calc(100vh - var(--header-height));
     /* Gleiches Glassmorphism wie Desktop Header */
     background: linear-gradient(180deg, rgba(20, 24, 30, 0.95), rgba(20, 24, 30, 0.88));
     backdrop-filter: blur(12px);
@@ -1160,6 +1172,8 @@ footer a:hover {
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
     transition: left 0.3s ease;
     gap: 0;
+    z-index: 999;
+    z-index: 999;
   }
 
   .nav-links.active {
