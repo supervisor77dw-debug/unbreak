@@ -170,7 +170,9 @@ export default function Shop({ initialProducts }) {
 
     {/* Checkout Integration - Auto-initializes buy buttons */}
     <Script src="/lib/checkout.js" strategy="afterInteractive" type="module" />
-        .shop-hero {
+
+    <style jsx>{`
+      .shop-hero {
           padding: calc(var(--spacing-xl, 64px) * 1.5) 0 var(--spacing-lg, 40px);
           background: linear-gradient(135deg, #084F55 0%, #0A6C74 100%);
           color: white;
