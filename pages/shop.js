@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import Head from 'next/head';
 import { useEffect, useState } from 'react';
+import { startCheckout } from '../lib/checkout-utils';
 
 // Initialize Supabase client (client-side safe - uses anon key)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -37,33 +38,17 @@ export default function Shop({ initialProducts }) {
   }
 
   async function handleBuyClick(product) {
-    setCheckoutLoading({ ...checkoutLoading, [product.id]: true });
-
-    try {
-      // Call Stripe checkout API
-      const response = await fetch('/api/checkout/standard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sku: product.sku,
-          // email: optional - can be collected in Stripe Checkout
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        throw new Error(data.error || 'Checkout session creation failed');
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      alert('Fehler beim Starten des Checkouts. Bitte versuchen Sie es erneut.');
-    } finally {
-      setCheckoutLoading({ ...checkoutLoading, [product.id]: false });
-    }
+    // Use centralized checkout utility
+    await startCheckout({
+      sku: product.sku,
+      onLoading: (isLoading) => {
+        setCheckoutLoading({ ...checkoutLoading, [product.id]: isLoading });
+      },
+      onError: (error) => {
+        setCheckoutLoading({ ...checkoutLoading, [product.id]: false });
+        alert(`Fehler: ${error.message}\n\nBitte versuchen Sie es erneut.`);
+      },
+    });
   }
 
   function formatPrice(cents) {

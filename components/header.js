@@ -28,7 +28,7 @@ function getHeaderHTML() {
         <li><a href="gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition">Gastro Edition</a></li>
         <li><a href="technik.html" data-page="technik" data-i18n="nav.tech">Technik</a></li>
         <li><a href="configurator.html" data-page="configurator" data-i18n="nav.configurator">Konfigurator</a></li>
-        <li><a href="shop.html" data-page="shop" data-i18n="nav.shop">Shop</a></li>
+        <li><a href="/shop" data-page="shop" data-i18n="nav.shop">Shop</a></li>
         <li><a href="kontakt.html" data-page="kontakt" data-i18n="nav.contact">Kontakt</a></li>
 
         <!-- Mobile Only Legal Links -->
@@ -36,7 +36,7 @@ function getHeaderHTML() {
         <li class="mobile-only"><a href="datenschutz.html" data-page="datenschutz" data-i18n="nav.privacy">Datenschutz</a></li>
         <li class="mobile-only"><a href="agb.html" data-page="agb" data-i18n="nav.terms">AGB</a></li>
 
-        <li><a href="/shop.html" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
+        <li><a href="/shop" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
       </ul>
     </nav>
   </header>

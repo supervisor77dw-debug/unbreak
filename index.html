@@ -74,7 +74,7 @@
         <li><a href="#gastro-hero" data-i18n="nav.gastroEdition">Gastro Edition</a></li>
         <li><a href="#technik" data-i18n="nav.tech">Technik</a></li>
         <li><a href="configurator.html" data-i18n="nav.configurator">Konfigurator</a></li>
-        <li><a href="#shop" data-i18n="nav.shop">Shop</a></li>
+        <li><a href="/shop" data-i18n="nav.shop">Shop</a></li>
         <li><a href="#kontakt" data-i18n="nav.contact">Kontakt</a></li>
 
         <!-- Mobile Only Legal Links -->
@@ -82,7 +82,7 @@
         <li class="mobile-only"><a href="datenschutz.html" data-i18n="nav.privacy">Datenschutz</a></li>
         <li class="mobile-only"><a href="agb.html" data-i18n="nav.terms">AGB</a></li>
 
-        <li><a href="/shop.html" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
+        <li><a href="/shop" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
       </ul>
     </nav>
   </header>
@@ -338,56 +338,16 @@
   <!-- ===================================
        SETS & BUNDLES / SHOP SECTION (TEASER)
        =================================== -->
-  <section id="shop">
+  <!-- SHOP TEASER (Link zu /shop) -->
+  <section id="shop-teaser" style="padding: var(--spacing-xl) 0; background: linear-gradient(135deg, var(--petrol-dark) 0%, var(--petrol) 100%); text-align: center; color: white;">
     <div class="container">
-      <h2 class="text-center mb-lg" data-scroll-reveal="fade-up" data-i18n="shop.sectionTitle">Wähle dein UNBREAK ONE Set</h2>
-      <p class="text-center mb-xl" data-scroll-reveal="fade-up" data-scroll-delay="1" data-i18n="shop.sectionSubtitle">Von der kleinen
-        Haushaltslösung
-        bis zum professionellen Gastro-Bundle – wir haben das
-        passende Set für dich.</p>
-
-      <!-- Sets Grid - Alle 3 Sets -->
-      <div class="sets-grid">
-        <!-- Basic Set -->
-        <div class="set-card glass-enhanced card-3d" data-scroll-reveal="fade-up" data-scroll-delay="1">
-          <img src="images/set-basic.jpg" alt="UNBREAK ONE Basic Set - Starter Set für Zuhause" data-i18n-alt="shop.basicImageAlt">
-          <div class="set-card-content">
-            <h3 data-i18n="shop.basicTitle">Basic Set</h3>
-            <p data-i18n="shop.basicDescription">Perfekt für den Einstieg: 2 Weinglashalter + 1 Flaschenhalter. Ideal für Zuhause oder die Terrasse.
-            </p>
-            <a href="/shop.html#basic-set" class="btn btn-primary btn-magnetic" data-i18n="shop.basicCta">In den
-              Shop</a>
-          </div>
-        </div>
-
-        <!-- Premium Set -->
-        <div class="set-card glass-enhanced card-3d" data-scroll-reveal="fade-up" data-scroll-delay="2">
-          <img src="images/set-premium.jpg" alt="UNBREAK ONE Premium Set - Komplettset für Boot und Camper" data-i18n-alt="shop.premiumImageAlt">
-          <div class="set-card-content">
-            <h3 data-i18n="shop.premiumTitle">Premium Set</h3>
-            <p data-i18n="shop.premiumDescription">Für Boot & Camper: 4 Weinglashalter + 2 Flaschenhalter + Nano-Gel-Pads. Alles, was du brauchst.</p>
-            <a href="/shop.html#premium-set" class="btn btn-primary btn-magnetic" data-i18n="shop.premiumCta">In
-              den Shop</a>
-          </div>
-        </div>
-
-        <!-- Gastro Bundle -->
-        <div class="set-card glass-enhanced card-3d" data-scroll-reveal="fade-up" data-scroll-delay="3">
-          <img src="images/set-gastro.jpg" alt="UNBREAK ONE Gastro Bundle - Professionelles Set für Restaurants" data-i18n-alt="shop.gastroImageAlt">
-          <div class="set-card-content">
-            <h3 data-i18n="shop.gastroTitle">Gastro Bundle</h3>
-            <p data-i18n="shop.gastroDescription">Für Restaurants & Bars: 10 Weinglashalter + 6 Flaschenhalter. Perfekt für professionelle Ansprüche.
-            </p>
-            <a href="/shop.html#gastro-bundle" class="btn btn-primary btn-magnetic" data-i18n="shop.gastroCta">In
-              den Shop</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- CTA zu Shop-Seite -->
-      <div class="text-center mt-xl" data-scroll-reveal="fade-up" data-scroll-delay="4">
-        <a href="shop.html" class="btn btn-secondary btn-magnetic" data-i18n="shop.teaser.cta">Alle Sets & Bundles ansehen</a>
-      </div>
+      <h2 class="mb-md" data-scroll-reveal="fade-up" data-i18n="shop.teaser.title">Wähle dein UNBREAK ONE</h2>
+      <p class="mb-lg" data-scroll-reveal="fade-up" data-scroll-delay="1" data-i18n="shop.teaser.subtitle" style="max-width: 700px; margin: 0 auto 2rem; opacity: 0.95;">
+        Von der kleinen Haushaltslösung bis zum professionellen Gastro-Bundle – wir haben das passende Set für dich.
+      </p>
+      <a href="/shop" class="btn btn-primary btn-magnetic" data-scroll-reveal="fade-up" data-scroll-delay="2" data-i18n="shop.teaser.cta">
+        Jetzt zum Shop
+      </a>
     </div>
   </section>
 
