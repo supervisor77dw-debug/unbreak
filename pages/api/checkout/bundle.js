@@ -8,12 +8,17 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Helper: Get origin from request (no hardcoded domains)
 function getOrigin(req) {
-  // Try origin header first (most reliable)
+  // 1. Try ENV variable first (most reliable for production)
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL;
+  }
+  
+  // 2. Try origin header
   if (req.headers.origin) {
     return req.headers.origin;
   }
   
-  // Fallback: construct from host header
+  // 3. Fallback: construct from host header
   const host = req.headers.host || 'localhost:3000';
   const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
   return `${protocol}://${host}`;

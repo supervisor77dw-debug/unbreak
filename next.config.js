@@ -2,14 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  // Rewrite rules: Root → index.html, /shop → shop.html, etc.
+  // Rewrite rules: Root → index.html, /shop → pages/shop.js (dynamic), etc.
   async rewrites() {
     return [
       {
         source: '/',
         destination: '/index.html',
       },
-
+      // Note: /shop uses pages/shop.js (dynamic SSR), no rewrite needed
       {
         source: '/produkt',
         destination: '/produkt.html',

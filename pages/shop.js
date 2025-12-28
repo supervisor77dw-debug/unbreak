@@ -1,55 +1,42 @@
-import { createClient } from '@supabase/supabase-js';
 import Head from 'next/head';
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
-import { startCheckout } from '../lib/checkout-utils';
-
-// Initialize Supabase client (client-side safe - uses anon key)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { getSupabasePublic } from '../lib/supabase';
 
 export default function Shop({ initialProducts }) {
   const [products, setProducts] = useState(initialProducts || []);
   const [loading, setLoading] = useState(!initialProducts);
-  const [checkoutLoading, setCheckoutLoading] = useState({});
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // If no SSR data, fetch client-side
-    if (!initialProducts) {
+    if (!initialProducts || initialProducts.length === 0) {
       loadProducts();
     }
-  }, []);
+  }, [initialProducts]);
 
   async function loadProducts() {
     try {
-      const { data, error } = await supabase
+      const supabase = getSupabasePublic();
+      if (!supabase) {
+        throw new Error('Supabase client not available');
+      }
+
+      const { data, error: fetchError } = await supabase
         .from('products')
         .select('*')
         .eq('active', true)
         .order('sort_order', { ascending: true });
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
       setProducts(data || []);
-    } catch (error) {
-      console.error('Error loading products:', error);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading products:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleBuyClick(product) {
-    // Use centralized checkout utility
-    await startCheckout({
-      sku: product.sku,
-      onLoading: (isLoading) => {
-        setCheckoutLoading({ ...checkoutLoading, [product.id]: isLoading });
-      },
-      onError: (error) => {
-        setCheckoutLoading({ ...checkoutLoading, [product.id]: false });
-        alert(`Fehler: ${error.message}\n\nBitte versuchen Sie es erneut.`);
-      },
-    });
   }
 
   function formatPrice(cents) {
@@ -67,6 +54,10 @@ export default function Shop({ initialProducts }) {
           name="description"
           content="UNBREAK ONE Shop: Professionelle magnetische Weinglashalter und Flaschenhalter. Jetzt online kaufen."
         />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="/styles.css" />
+        <link rel="stylesheet" href="/i18n.css" />
+        <link rel="stylesheet" href="/animations.css" />
       </Head>
 
       {/* Header (dynamisch geladen via component) */}
@@ -76,8 +67,8 @@ export default function Shop({ initialProducts }) {
         {/* Hero Section */}
         <section className="shop-hero">
           <div className="container">
-            <h1>Shop</h1>
-            <p>
+            <h1 data-i18n="shop.title">Shop</h1>
+            <p data-i18n="shop.subtitle">
               Magnetische Halter für Gläser & Flaschen – Einzelprodukte,
               Bundles und vorkonfigurierte Sets
             </p>
@@ -87,27 +78,40 @@ export default function Shop({ initialProducts }) {
         {/* Products Section */}
         <section className="products-section">
           <div className="container">
-            <h2>Produkte</h2>
-
             {loading ? (
               <div className="loading-state">
                 <div className="spinner"></div>
                 <p>Produkte werden geladen...</p>
               </div>
+            ) : error ? (
+              <div className="error-state">
+                <p className="error-message">
+                  Fehler beim Laden der Produkte: {error}
+                </p>
+                <button onClick={loadProducts} className="btn-retry">
+                  Erneut versuchen
+                </button>
+              </div>
             ) : products.length === 0 ? (
               <div className="empty-state">
-                <p>Derzeit keine Produkte verfügbar.</p>
+                <h2>Bald verfügbar</h2>
+                <p>Unsere Produkte werden gerade vorbereitet.</p>
+                <a href="/configurator.html" className="btn-primary">
+                  Zum Konfigurator
+                </a>
               </div>
             ) : (
               <div className="products-grid">
                 {products.map((product) => (
-                  <div key={product.id} className="product-card">
+                  <div key={product.id} className="product-card glass-card">
                     {product.image_url && (
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="product-image"
-                      />
+                      <div className="product-image-wrapper">
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="product-image"
+                        />
+                      </div>
                     )}
 
                     <div className="product-content">
@@ -123,12 +127,10 @@ export default function Shop({ initialProducts }) {
 
                         <button
                           className="btn-buy"
-                          onClick={() => handleBuyClick(product)}
-                          disabled={checkoutLoading[product.id]}
+                          data-checkout="standard"
+                          data-sku={product.sku}
                         >
-                          {checkoutLoading[product.id]
-                            ? 'Lädt...'
-                            : 'Kaufen'}
+                          Kaufen
                         </button>
                       </div>
                     </div>
@@ -146,7 +148,7 @@ export default function Shop({ initialProducts }) {
             <p>
               Gestalte deinen eigenen UNBREAK ONE mit unserem 3D-Konfigurator
             </p>
-            <a href="/configurator" className="btn-primary">
+            <a href="/configurator.html" className="btn-cta-secondary">
               Zum Konfigurator
             </a>
           </div>
@@ -156,14 +158,19 @@ export default function Shop({ initialProducts }) {
       {/* Footer (dynamisch geladen via component) */}
       <div id="footer-container"></div>
 
-      {/* Load header/footer components */}
+      {/* Load Components */}
       <Script src="/components/header.js" strategy="afterInteractive" />
       <Script src="/components/footer.js" strategy="afterInteractive" />
       <Script src="/components/page-wrapper.js" strategy="afterInteractive" />
+      <Script src="/i18n.js" strategy="afterInteractive" />
+      <Script src="/animations.js" strategy="afterInteractive" />
+      
+      {/* Checkout Integration - Auto-initializes buy buttons */}
+      <Script src="/lib/checkout.js" strategy="afterInteractive" />
 
       <style jsx>{`
         .shop-hero {
-          padding: var(--spacing-xl) 0;
+          padding: calc(var(--spacing-xl) * 2) 0 var(--spacing-xl);
           background: linear-gradient(
             135deg,
             var(--petrol-dark) 0%,
@@ -171,30 +178,26 @@ export default function Shop({ initialProducts }) {
           );
           color: white;
           text-align: center;
+          margin-bottom: var(--spacing-xl);
         }
 
         .shop-hero h1 {
           font-size: 3rem;
           margin-bottom: 1rem;
+          font-weight: 600;
         }
 
         .shop-hero p {
           font-size: 1.25rem;
-          opacity: 0.9;
+          opacity: 0.95;
           max-width: 600px;
           margin: 0 auto;
+          line-height: 1.6;
         }
 
         .products-section {
           padding: var(--spacing-xl) 0;
           background: var(--background-light);
-        }
-
-        .products-section h2 {
-          text-align: center;
-          margin-bottom: var(--spacing-lg);
-          font-size: 2rem;
-          color: var(--text-primary);
         }
 
         .products-grid {
@@ -205,25 +208,33 @@ export default function Shop({ initialProducts }) {
         }
 
         .product-card {
-          background: white;
-          border-radius: 12px;
-          overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
           display: flex;
           flex-direction: column;
+          overflow: hidden;
+          transition: all 0.3s ease;
         }
 
         .product-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+          transform: translateY(-8px);
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+        }
+
+        .product-image-wrapper {
+          width: 100%;
+          height: 260px;
+          overflow: hidden;
+          background: var(--background-light);
         }
 
         .product-image {
           width: 100%;
-          height: 260px;
+          height: 100%;
           object-fit: cover;
-          background: var(--background-light);
+          transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .product-image {
+          transform: scale(1.05);
         }
 
         .product-content {
@@ -234,7 +245,7 @@ export default function Shop({ initialProducts }) {
         }
 
         .product-title {
-          font-size: 1.35rem;
+          font-size: 1.5rem;
           font-weight: 600;
           color: var(--text-primary);
           margin-bottom: 0.75rem;
@@ -245,14 +256,13 @@ export default function Shop({ initialProducts }) {
           color: var(--text-muted);
           margin-bottom: var(--spacing-md);
           flex: 1;
-          line-height: 1.5;
+          line-height: 1.6;
         }
 
         .product-footer {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-top: auto;
           padding-top: var(--spacing-sm);
           border-top: 1px solid var(--border-light);
         }
@@ -267,7 +277,7 @@ export default function Shop({ initialProducts }) {
           background: var(--petrol);
           color: white;
           border: none;
-          padding: 0.75rem 1.5rem;
+          padding: 0.75rem 1.75rem;
           border-radius: 8px;
           font-size: 1rem;
           font-weight: 600;
@@ -275,31 +285,35 @@ export default function Shop({ initialProducts }) {
           transition: all 0.3s ease;
         }
 
-        .btn-buy:hover:not(:disabled) {
+        .btn-buy:hover {
           background: var(--petrol-dark);
           transform: scale(1.05);
         }
 
-        .btn-buy:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
+        .btn-buy:active {
+          transform: scale(0.98);
         }
 
         .loading-state,
+        .error-state,
         .empty-state {
-          grid-column: 1 / -1;
           text-align: center;
           padding: var(--spacing-xl);
+          min-height: 400px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
         }
 
         .spinner {
           border: 3px solid var(--border-light);
           border-top: 3px solid var(--petrol);
           border-radius: 50%;
-          width: 40px;
-          height: 40px;
+          width: 50px;
+          height: 50px;
           animation: spin 1s linear infinite;
-          margin: 0 auto var(--spacing-md);
+          margin-bottom: var(--spacing-md);
         }
 
         @keyframes spin {
@@ -311,8 +325,42 @@ export default function Shop({ initialProducts }) {
           }
         }
 
+        .error-message {
+          color: var(--error-color, #e00);
+          margin-bottom: var(--spacing-md);
+          font-size: 1.1rem;
+        }
+
+        .btn-retry {
+          background: var(--petrol);
+          color: white;
+          border: none;
+          padding: 0.75rem 2rem;
+          border-radius: 8px;
+          font-size: 1rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .btn-retry:hover {
+          background: var(--petrol-dark);
+        }
+
+        .empty-state h2 {
+          font-size: 2rem;
+          margin-bottom: 1rem;
+          color: var(--text-primary);
+        }
+
+        .empty-state p {
+          font-size: 1.1rem;
+          color: var(--text-muted);
+          margin-bottom: var(--spacing-lg);
+        }
+
         .cta-section {
-          padding: var(--spacing-xl) 0;
+          padding: calc(var(--spacing-xl) * 2) 0;
           text-align: center;
           background: var(--petrol-dark);
           color: white;
@@ -321,28 +369,30 @@ export default function Shop({ initialProducts }) {
         .cta-section h2 {
           margin-bottom: 1rem;
           font-size: 2rem;
+          font-weight: 600;
         }
 
         .cta-section p {
-          opacity: 0.9;
+          opacity: 0.95;
           margin-bottom: var(--spacing-md);
           font-size: 1.1rem;
         }
 
-        .btn-primary {
+        .btn-cta-secondary {
           display: inline-block;
           background: white;
           color: var(--petrol-dark);
-          padding: 1rem 2rem;
+          padding: 1rem 2.5rem;
           border-radius: 8px;
           font-weight: 600;
           text-decoration: none;
           transition: all 0.3s ease;
+          font-size: 1.1rem;
         }
 
-        .btn-primary:hover {
-          transform: scale(1.05);
-          box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+        .btn-cta-secondary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(255, 255, 255, 0.3);
         }
 
         @media (max-width: 768px) {
@@ -361,6 +411,15 @@ export default function Shop({ initialProducts }) {
           .cta-section h2 {
             font-size: 1.5rem;
           }
+
+          .product-price {
+            font-size: 1.5rem;
+          }
+
+          .btn-buy {
+            padding: 0.65rem 1.5rem;
+            font-size: 0.95rem;
+          }
         }
       `}</style>
     </>
@@ -369,23 +428,18 @@ export default function Shop({ initialProducts }) {
 
 // Server-Side Rendering: Fetch products on server
 export async function getServerSideProps() {
-  // Always return valid props - never crash
   try {
-    // Validate environment variables exist
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabase = getSupabasePublic();
 
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn('⚠️ SSR: Missing Supabase environment variables');
+    // If no client available, return empty (client will retry)
+    if (!supabase) {
+      console.warn('⚠️ SSR: Supabase client not available');
       return {
         props: {
           initialProducts: [],
         },
       };
     }
-
-    // Create Supabase client on server-side
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch products with timeout protection
     const { data: products, error } = await Promise.race([
@@ -414,8 +468,8 @@ export async function getServerSideProps() {
       },
     };
   } catch (error) {
-    // Catch ALL errors - never let SSR crash
-    console.error('❌ SSR error loading products:', error.message || error);
+    // Never crash - always return valid props
+    console.error('❌ SSR error:', error.message || error);
     return {
       props: {
         initialProducts: [],
