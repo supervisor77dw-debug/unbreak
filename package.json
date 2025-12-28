@@ -1,41 +1,41 @@
-{
-  "name": "unbreak-one-homepage",
-  "version": "1.0.0",
-  "description": "UNBREAK ONE - Homepage with 3D Configurator Integration + E-Commerce Backend",
-  "scripts": {
-    "dev": "next dev",
-    "dev:clean": "npm run clean:next && next dev",
-    "build": "node scripts/inject-env.js && next build",
-    "start": "next start",
-    "clean:next": "rimraf .next",
-    "clean:all": "rimraf .next node_modules package-lock.json",
-    "reinstall": "npm run clean:all && npm install",
-    "healthcheck": "node scripts/healthcheck.mjs",
-    "seed": "node scripts/seed-products.js",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui",
-    "test:headed": "playwright test --headed",
-    "serve": "python -m http.server 8000",
-    "inject-env": "node scripts/inject-env.js",
-    "db:setup": "echo 'Run database/auth-setup.sql in Supabase Dashboard SQL Editor'",
-    "db:catalog": "echo 'Run database/catalog-setup.sql in Supabase Dashboard SQL Editor'",
-    "test:auth": "node test-auth-setup.js"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "dotenv": "^17.2.3",
-    "micro": "^10.0.1",
-    "next": "^14.0.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "stripe": "^14.10.0"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.40.0",
-    "rimraf": "^5.0.10"
-  },
-  "engines": {
-    "node": "20.x",
-    "npm": ">=9.0.0"
-  }
+﻿{
+    "name":  "unbreak-one-homepage",
+    "version":  "1.0.0",
+    "description":  "UNBREAK ONE - Homepage with 3D Configurator Integration + E-Commerce Backend",
+    "scripts":  {
+                    "dev":  "next dev",
+                    "dev:clean":  "npm run clean:next \u0026\u0026 next dev",
+                    "build":  "node scripts/inject-env.js \u0026\u0026 next build",
+                    "start":  "next start",
+                    "clean:next":  "rimraf .next",
+                    "clean:all":  "rimraf .next node_modules package-lock.json",
+                    "reinstall":  "npm run clean:all \u0026\u0026 npm install",
+                    "healthcheck":  "node scripts/healthcheck.mjs",
+                    "seed":  "node scripts/seed-products.js",
+                    "test":  "playwright test",
+                    "test:ui":  "playwright test --ui",
+                    "test:headed":  "playwright test --headed",
+                    "serve":  "python -m http.server 8000",
+                    "inject-env":  "node scripts/inject-env.js",
+                    "db:setup":  "echo \u0027Run database/auth-setup.sql in Supabase Dashboard SQL Editor\u0027",
+                    "db:catalog":  "echo \u0027Run database/catalog-setup.sql in Supabase Dashboard SQL Editor\u0027",
+                    "test:auth":  "node test-auth-setup.js"
+                },
+    "dependencies":  {
+                         "@supabase/supabase-js":  "^2.39.0",
+                         "dotenv":  "^17.2.3",
+                         "micro":  "^10.0.1",
+                         "next":  "^14.0.4",
+                         "react":  "^18.2.0",
+                         "react-dom":  "^18.2.0",
+                         "stripe":  "^14.10.0"
+                     },
+    "devDependencies":  {
+                            "@playwright/test":  "^1.40.0",
+                            "rimraf":  "^5.0.10"
+                        },
+    "engines":  {
+                    "node":  "18.x",
+                    "npm":  "\u003e=9.0.0"
+                }
 }
