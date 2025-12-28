@@ -2,6 +2,7 @@ import Head from 'next/head';
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
 import { getSupabasePublic, getSupabaseAdmin } from '../lib/supabase';
+import Layout from '../components/Layout';
 
 export default function Shop({ initialProducts }) {
   const [products, setProducts] = useState(initialProducts || []);
@@ -66,7 +67,7 @@ export default function Shop({ initialProducts }) {
   }
 
   return (
-    <>
+    <Layout>
       <Head>
         <title>Shop – UNBREAK ONE | Magnetische Halter kaufen</title>
         <meta
@@ -74,16 +75,10 @@ export default function Shop({ initialProducts }) {
           content="UNBREAK ONE Shop: Professionelle magnetische Weinglashalter und Flaschenhalter. Jetzt online kaufen."
         />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <link rel="stylesheet" href="/styles.css" />
-        <link rel="stylesheet" href="/i18n.css" />
-        <link rel="stylesheet" href="/animations.css" />
       </Head>
 
-      {/* Header (dynamisch geladen via component) */}
-      <div id="header-container"></div>
-
       <main className="page-content">
-        {/* Hero Section */}
+        <section className="shop-hero">
         <section className="shop-hero">
           <div className="container">
             <h1 data-i18n="shop.title">Shop</h1>
@@ -172,22 +167,10 @@ export default function Shop({ initialProducts }) {
             </a>
           </div>
         </section>
-      </main>
+    </main>
 
-      {/* Footer (dynamisch geladen via component) */}
-      <div id="footer-container"></div>
-
-      {/* Load Components */}
-      <Script src="/components/header.js" strategy="afterInteractive" />
-      <Script src="/components/footer.js" strategy="afterInteractive" />
-      <Script src="/components/page-wrapper.js" strategy="afterInteractive" />
-      <Script src="/i18n.js" strategy="afterInteractive" />
-      <Script src="/animations.js" strategy="afterInteractive" />
-      
-      {/* Checkout Integration - Auto-initializes buy buttons */}
-        <Script src="/lib/checkout.js" strategy="afterInteractive" type="module" />
-
-      <style jsx>{`
+    {/* Checkout Integration - Auto-initializes buy buttons */}
+    <Script src="/lib/checkout.js" strategy="afterInteractive" type="module" />
         .shop-hero {
           padding: calc(var(--spacing-xl, 64px) * 1.5) 0 var(--spacing-lg, 40px);
           background: linear-gradient(135deg, #084F55 0%, #0A6C74 100%);
@@ -517,7 +500,7 @@ export default function Shop({ initialProducts }) {
           }
         }
       `}</style>
-    </>
+    </Layout>
   );
 }
 
