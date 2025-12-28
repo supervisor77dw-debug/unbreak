@@ -1,0 +1,21 @@
+﻿{
+  "dev": "next dev",
+  "dev:clean": "npm run clean:next && next dev",
+  "build": "node scripts/inject-env.js && next build",
+  "start": "next start",
+  "clean:next": "rimraf .next",
+  "clean:all": "rimraf .next node_modules package-lock.json",
+  "reinstall": "npm run clean:all && npm install",
+  "healthcheck": "node scripts/healthcheck.mjs",
+  "seed": "node scripts/seed-products.js",
+  "test": "playwright test",
+  "test:ui": "playwright test --ui",
+  "test:headed": "playwright test --headed",
+  "serve": "python -m http.server 8000",
+  "inject-env": "node scripts/inject-env.js",
+  "db:setup": "echo Run database/auth-setup.sql in Supabase Dashboard SQL Editor",
+  "db:catalog": "echo Run database/catalog-setup.sql in Supabase Dashboard SQL Editor",
+  "db:bootstrap": "tsx scripts/bootstrap-db.ts",
+  "db:check": "tsx scripts/check-db.ts",
+  "test:auth": "node test-auth-setup.js"
+}
