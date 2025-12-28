@@ -13,6 +13,17 @@ export default function Shop({ initialProducts }) {
     if (!initialProducts || initialProducts.length === 0) {
       loadProducts();
     }
+    
+    // Re-initialize checkout buttons after products render
+    // (checkout.js auto-inits on DOMContentLoaded, but we need to re-init after dynamic render)
+    const timer = setTimeout(() => {
+      if (window.initCheckoutButtons) {
+        window.initCheckoutButtons();
+        console.log('[Shop] Re-initialized checkout buttons after product render');
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [initialProducts]);
 
   async function loadProducts() {
@@ -31,6 +42,14 @@ export default function Shop({ initialProducts }) {
       if (fetchError) throw fetchError;
       setProducts(data || []);
       setError(null);
+      
+      // Re-init checkout buttons after products loaded
+      setTimeout(() => {
+        if (window.initCheckoutButtons) {
+          window.initCheckoutButtons();
+          console.log('[Shop] Re-initialized checkout buttons after loadProducts');
+        }
+      }, 100);
     } catch (err) {
       console.error('Error loading products:', err);
       setError(err.message);

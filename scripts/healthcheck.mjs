@@ -114,16 +114,22 @@ function checkHardcodedUrls() {
     try {
       // Use git grep if available (faster), otherwise skip
       const result = execSync(
-        `git grep -n "${pattern}" -- "*.js" "*.jsx" "*.ts" "*.tsx" "*.mjs" || exit 0`,
+        `git grep -n "${pattern}" -- "*.js" "*.jsx" "*.ts" "*.tsx" "*.mjs" "*.html" ":!scripts/healthcheck.mjs" || exit 0`,
         { cwd: ROOT, encoding: 'utf8' }
       ).trim();
       
       if (result) {
-        log(`   ${checkMark(false)} Found "${pattern}":`, 'red');
-        result.split('\n').forEach(line => {
-          if (line) log(`      ${line}`, 'red');
-        });
-        foundIssues = true;
+        // Filter out .md files (documentation)
+        const codeMatches = result.split('\n').filter(line => !line.includes('.md:'));
+        if (codeMatches.length > 0) {
+          log(`   ${checkMark(false)} Found "${pattern}" in code:`, 'red');
+          codeMatches.forEach(line => {
+            if (line) log(`      ${line}`, 'red');
+          });
+          foundIssues = true;
+        } else {
+          log(`   ${checkMark(true)} No "${pattern}" found in code (only in docs)`, 'green');
+        }
       } else {
         log(`   ${checkMark(true)} No "${pattern}" found`, 'green');
       }
@@ -132,6 +138,16 @@ function checkHardcodedUrls() {
       log(`   ⚠️  Could not search for "${pattern}" (git not available)`, 'yellow');
     }
   });
+  
+  // Additional check: /shop route integrity
+  log('\n   Checking /shop route integrity...', 'blue');
+  const shopRoutePath = join(ROOT, 'pages', 'shop.js');
+  if (existsSync(shopRoutePath)) {
+    log(`   ${checkMark(true)} pages/shop.js exists (Dynamic SSR)`, 'green');
+  } else {
+    log(`   ${checkMark(false)} pages/shop.js NOT FOUND!`, 'red');
+    foundIssues = true;
+  }
   
   return !foundIssues;
 }

@@ -307,6 +307,9 @@ if (typeof document !== 'undefined') {
     // DOM already loaded
     initCheckoutButtons();
   }
+  
+  // Make available globally for manual re-init (e.g., after dynamic product render)
+  window.initCheckoutButtons = initCheckoutButtons;
 }
 
 // Export für manuelle Initialisierung
