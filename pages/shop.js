@@ -369,20 +369,44 @@ export default function Shop({ initialProducts }) {
 
 // Server-Side Rendering: Fetch products on server
 export async function getServerSideProps() {
+  // Always return valid props - never crash
   try {
+    // Validate environment variables exist
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.warn('⚠️ SSR: Missing Supabase environment variables');
+      return {
+        props: {
+          initialProducts: [],
+        },
+      };
+    }
+
     // Create Supabase client on server-side
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: products, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('active', true)
-      .order('sort_order', { ascending: true });
+    // Fetch products with timeout protection
+    const { data: products, error } = await Promise.race([
+      supabase
+        .from('products')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      ),
+    ]);
 
-    if (error) throw error;
+    if (error) {
+      console.warn('⚠️ SSR: Supabase query error:', error.message);
+      return {
+        props: {
+          initialProducts: [],
+        },
+      };
+    }
 
     return {
       props: {
@@ -390,7 +414,8 @@ export async function getServerSideProps() {
       },
     };
   } catch (error) {
-    console.error('SSR error loading products:', error);
+    // Catch ALL errors - never let SSR crash
+    console.error('❌ SSR error loading products:', error.message || error);
     return {
       props: {
         initialProducts: [],
