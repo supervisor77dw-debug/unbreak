@@ -14,7 +14,7 @@
  * 7. Return checkout_url
  */
 
-import { supabaseAdmin } from '../../../lib/supabase';
+import { getSupabaseAdmin } from '../../../lib/supabase';
 import { stripe } from '../../../lib/stripe';
 import { calculatePrice, calculateShipping, calculateTax } from '../../../lib/pricing';
 
@@ -47,6 +47,8 @@ function generateOrderNumber() {
 }
 
 export default async function handler(req, res) {
+  const supabaseAdmin = getSupabaseAdmin();
+  
   // Only POST allowed
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });

@@ -15,7 +15,7 @@
 
 import { buffer } from 'micro';
 import { stripe, stripeWebhookSecret } from '../../../lib/stripe';
-import { supabaseAdmin } from '../../../lib/supabase';
+import { getSupabaseAdmin } from '../../../lib/supabase';
 
 // Disable body parsing - we need raw body for signature verification
 export const config = {
@@ -256,6 +256,8 @@ async function handleChargeRefunded(charge) {
  * Main webhook handler
  */
 export default async function handler(req, res) {
+  const supabaseAdmin = getSupabaseAdmin();
+  
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
