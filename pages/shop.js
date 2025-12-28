@@ -79,7 +79,6 @@ export default function Shop({ initialProducts }) {
 
       <main className="page-content">
         <section className="shop-hero">
-        <section className="shop-hero">
           <div className="container">
             <h1 data-i18n="shop.title">Shop</h1>
             <p data-i18n="shop.subtitle">
