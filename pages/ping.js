@@ -1,3 +1,3 @@
-export default function Ping() {
-  return <div>pong</div>;
+﻿export default function Ping() {
+  return <pre>pong</pre>;
 }
