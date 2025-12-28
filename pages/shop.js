@@ -65,6 +65,33 @@ export default function Shop({ initialProducts }) {
     }).format(cents / 100);
   }
 
+  // Fallback images based on product name/SKU
+  function getProductImage(product) {
+    // If image_url exists in database, use it
+    if (product.image_url) {
+      return product.image_url;
+    }
+
+    // Fallback based on product name or SKU
+    const name = (product.name || '').toLowerCase();
+    const sku = (product.sku || '').toLowerCase();
+
+    if (name.includes('weinglas') || name.includes('glass') || sku.includes('glass')) {
+      return '/images/products/glass-holder.jpg';
+    }
+    
+    if (name.includes('flasche') || name.includes('bottle') || sku.includes('bottle')) {
+      return '/images/products/bottle-holder.jpg';
+    }
+    
+    if (name.includes('set') || name.includes('premium') || name.includes('bundle')) {
+      return '/images/products/premium-set.jpg';
+    }
+
+    // Default fallback
+    return '/images/products/glass-holder.jpg';
+  }
+
   return (
     <Layout>
       <Head>
@@ -117,15 +144,13 @@ export default function Shop({ initialProducts }) {
               <div className="shop-grid">
                 {products.map((product) => (
                   <div key={product.id} className="product-card glass-card">
-                    {product.image_url && (
-                      <div className="product-image-wrapper">
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="product-image"
-                        />
-                      </div>
-                    )}
+                    <div className="product-image-wrapper">
+                      <img
+                        src={getProductImage(product)}
+                        alt={product.name}
+                        className="product-image"
+                      />
+                    </div>
 
                     <div className="product-content">
                       <h3 className="product-title">{product.name}</h3>
