@@ -11,6 +11,11 @@
 const fs = require('fs');
 const path = require('path');
 
+// Load .env.local if running locally (not on Vercel/CI)
+if (!process.env.VERCEL && !process.env.CI) {
+  require('dotenv').config({ path: path.join(process.cwd(), '.env.local') });
+}
+
 // Files to process
 const files = [
   'public/login.html',

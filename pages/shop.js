@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import Head from 'next/head';
+import Script from 'next/script';
 import { useEffect, useState } from 'react';
 import { startCheckout } from '../lib/checkout-utils';
 
@@ -156,9 +157,9 @@ export default function Shop({ initialProducts }) {
       <div id="footer-container"></div>
 
       {/* Load header/footer components */}
-      <script src="/components/header.js" defer></script>
-      <script src="/components/footer.js" defer></script>
-      <script src="/components/page-wrapper.js" defer></script>
+      <Script src="/components/header.js" strategy="afterInteractive" />
+      <Script src="/components/footer.js" strategy="afterInteractive" />
+      <Script src="/components/page-wrapper.js" strategy="afterInteractive" />
 
       <style jsx>{`
         .shop-hero {
@@ -369,7 +370,11 @@ export default function Shop({ initialProducts }) {
 // Server-Side Rendering: Fetch products on server
 export async function getServerSideProps() {
   try {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // Create Supabase client on server-side
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    );
 
     const { data: products, error } = await supabase
       .from('products')
