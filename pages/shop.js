@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
-import { getSupabasePublic } from '../lib/supabase';
+import { getSupabasePublic, getSupabaseAdmin } from '../lib/supabase';
 
 export default function Shop({ initialProducts }) {
   const [products, setProducts] = useState(initialProducts || []);
@@ -28,7 +28,7 @@ export default function Shop({ initialProducts }) {
 
   async function loadProducts() {
     try {
-      const supabase = getSupabasePublic();
+      const supabase = getSupabaseAdmin() || getSupabasePublic();
       if (!supabase) {
         throw new Error('Supabase client not available');
       }
@@ -524,7 +524,7 @@ export default function Shop({ initialProducts }) {
 // Server-Side Rendering: Fetch products on server
 export async function getServerSideProps() {
   try {
-    const supabase = getSupabasePublic();
+    const supabase = getSupabaseAdmin() || getSupabasePublic();
 
     // If no client available, return empty (client will retry)
     if (!supabase) {
