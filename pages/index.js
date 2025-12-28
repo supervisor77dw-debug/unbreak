@@ -1,10 +1,12 @@
-﻿import { useEffect } from 'react';
-
-export default function Home() {
-  useEffect(() => {
-    // Redirect to index.html (served from public/)
-    window.location.href = '/index.html';
-  }, []);
-
+﻿export default function Home() {
   return null;
+}
+
+export async function getServerSideProps() {
+  return {
+    redirect: {
+      destination: '/index.html',
+      permanent: false,
+    },
+  };
 }
