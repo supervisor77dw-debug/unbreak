@@ -135,7 +135,7 @@ export default function MyProducts() {
   return (
     <Layout>
       <Head>
-        <title>My Products | UNBREAK ONE</title>
+        <title>Meine Produkte | UNBREAK ONE</title>
       </Head>
 
       <main className="page-content" style={{ padding: '120px 20px 60px' }}>
