@@ -6,10 +6,9 @@
  * Only accessible with valid service role key
  */
 
-import { NextApiRequest, NextApiResponse } from 'next';
 import { bootstrapDatabase, checkTablesExist, seedAdminUser } from '../../../lib/supabase-bootstrap';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req, res) {
   // Only POST allowed
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -24,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const action = req.query.action as string || 'full';
+    const action = req.query.action || 'full';
 
     switch (action) {
       case 'check':
@@ -40,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const result = await bootstrapDatabase();
         return res.status(200).json(result);
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Bootstrap error:', error);
     return res.status(500).json({ 
       error: 'Bootstrap failed', 
