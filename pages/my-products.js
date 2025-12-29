@@ -3,6 +3,11 @@ export default function MyProducts() {
   return <div>TEST WORKS</div>;
 }
 
+// SSR Function - vielleicht braucht Vercel das?
+export async function getServerSideProps() {
+  return { props: {} };
+}
+
 /* ORIGINAL CODE - COMMENTED OUT FOR TEST
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
