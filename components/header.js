@@ -85,9 +85,11 @@ function initHeader() {
   }
 }
 
-// Automatisch beim Laden initialisieren
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initHeader);
-} else {
-  initHeader();
+// Automatisch beim Laden initialisieren (nur im Browser)
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHeader);
+  } else {
+    initHeader();
+  }
 }
