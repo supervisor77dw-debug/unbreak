@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:clean": "npm run clean:next && next dev",
-    "build": "node scripts/inject-env.js && next build",
+    "build": "node scripts/generate-config.js && next build",
     "start": "next start",
     "clean:next": "rimraf .next",
     "clean:all": "rimraf .next node_modules package-lock.json",

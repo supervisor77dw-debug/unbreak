@@ -318,10 +318,12 @@
   <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <!-- Load Supabase config -->
+  <script src="/config.js"></script>
+  
   <script>
-    // Initialize Supabase - values injected at build time
-    const supabaseUrl = 'YOUR_SUPABASE_URL';
-    const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+    // Initialize Supabase from generated config
+    const { url: supabaseUrl, anonKey: supabaseAnonKey } = window.SUPABASE_CONFIG;
     const { createClient } = supabase;
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 

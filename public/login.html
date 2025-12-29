@@ -207,13 +207,14 @@
             </div>
         </div>
     </div>
+    <!-- Load Supabase config -->
+    <script src="/config.js"></script>
     
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
         
-        // Supabase client setup - values injected at build time
-        const supabaseUrl = 'YOUR_SUPABASE_URL';
-        const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+        // Supabase client setup from generated config
+        const { url: supabaseUrl, anonKey: supabaseAnonKey } = window.SUPABASE_CONFIG;
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
         
         const loginForm = document.getElementById('loginForm');
