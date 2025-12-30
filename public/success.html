@@ -177,28 +177,59 @@
     </div>
   </div>
   
-  <script>
-    // Extract order_number from URL query params
+  <script type="module">
+    import { getCart } from '../lib/cart.js';
+
+    // Extract session_id from URL
     const urlParams = new URLSearchParams(window.location.search);
-    const orderNumber = urlParams.get('order_number');
     const sessionId = urlParams.get('session_id');
     
-    if (orderNumber) {
-      document.getElementById('order-number').textContent = orderNumber;
-    } else {
-      document.getElementById('order-number').textContent = 'Wird geladen...';
-    }
+    const orderNumberEl = document.getElementById('order-number');
     
-    // Optional: Fetch order details via API for confirmation
-    // if (sessionId) {
-    //   fetch(`/api/orders/verify?session_id=${sessionId}`)
-    //     .then(res => res.json())
-    //     .then(data => {
-    //       if (data.order_number) {
-    //         document.getElementById('order-number').textContent = data.order_number;
-    //       }
-    //     });
-    // }
+    if (sessionId) {
+      // Fetch order details from backend
+      fetch(`/api/orders/verify?session_id=${sessionId}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to verify order');
+          return res.json();
+        })
+        .then(data => {
+          if (data.order_id) {
+            orderNumberEl.textContent = data.order_id.substring(0, 8).toUpperCase();
+            
+            // Show order details
+            if (data.items && data.items.length > 0) {
+              const itemsHtml = data.items.map(item => 
+                `<li>${item.quantity}x ${item.name} (€${(item.unit_price_cents / 100).toFixed(2)})</li>`
+              ).join('');
+              
+              const detailsHtml = `
+                <div style="margin-top: 20px; text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                  <h4 style="margin-top: 0;">Bestellte Artikel:</h4>
+                  <ul style="margin: 10px 0;">${itemsHtml}</ul>
+                  <p style="font-weight: bold; margin: 10px 0 0 0;">
+                    Gesamt: €${(data.total_amount_cents / 100).toFixed(2)}
+                  </p>
+                </div>
+              `;
+              
+              document.querySelector('.order-info').insertAdjacentHTML('afterend', detailsHtml);
+            }
+            
+            // Clear cart after successful order
+            const cart = getCart();
+            cart.clear();
+          } else {
+            orderNumberEl.textContent = 'Nicht verfügbar';
+          }
+        })
+        .catch(error => {
+          console.error('Order verification error:', error);
+          orderNumberEl.textContent = 'Bestellung wird verarbeitet...';
+        });
+    } else {
+      orderNumberEl.textContent = 'Keine Session-ID';
+    }
   </script>
 </body>
 </html>

@@ -1,0 +1,277 @@
+import { useEffect, useState } from 'react';
+import { getCart, formatPrice } from '../lib/cart';
+import { supabase } from '../lib/supabase';
+
+export default function CartPage() {
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const cart = getCart();
+
+  // Load cart items on mount
+  useEffect(() => {
+    setCartItems(cart.getItems());
+
+    // Listen for cart changes
+    const unsubscribe = cart.onChange((items) => {
+      setCartItems(items);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const handleQuantityChange = (productId, newQuantity) => {
+    if (cart.updateQuantity(productId, newQuantity)) {
+      setCartItems(cart.getItems());
+    }
+  };
+
+  const handleRemoveItem = (productId) => {
+    cart.removeItem(productId);
+    setCartItems(cart.getItems());
+  };
+
+  const handleCheckout = async () => {
+    if (cart.isEmpty()) {
+      setError('Warenkorb ist leer');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Get current user (optional)
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const payload = {
+        items: cart.getCheckoutPayload(),
+        email: session?.user?.email || null,
+      };
+
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/checkout/standard', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Checkout failed');
+      }
+
+      // Redirect to Stripe
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+
+    } catch (err) {
+      console.error('Checkout error:', err);
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  const subtotal = cart.getTotal();
+  const shipping = 0; // TODO: calculate shipping
+  const total = subtotal + shipping;
+
+  if (cartItems.length === 0) {
+    return (
+      <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
+        <h1>Warenkorb</h1>
+        <p>Ihr Warenkorb ist leer.</p>
+        <a href="/" style={{ color: '#007bff', textDecoration: 'underline' }}>
+          Weiter einkaufen
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
+      <h1>Warenkorb</h1>
+
+      {error && (
+        <div style={{ 
+          padding: '15px', 
+          marginBottom: '20px', 
+          backgroundColor: '#f8d7da', 
+          color: '#721c24',
+          borderRadius: '4px'
+        }}>
+          {error}
+        </div>
+      )}
+
+      <div style={{ marginBottom: '30px' }}>
+        {cartItems.map((item) => (
+          <div
+            key={item.product_id}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '20px',
+              borderBottom: '1px solid #e0e0e0',
+              gap: '20px'
+            }}
+          >
+            {/* Image */}
+            {item.image_url && (
+              <img
+                src={item.image_url}
+                alt={item.name}
+                style={{
+                  width: '80px',
+                  height: '80px',
+                  objectFit: 'cover',
+                  borderRadius: '4px'
+                }}
+              />
+            )}
+
+            {/* Product Info */}
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: '0 0 5px 0' }}>{item.name}</h3>
+              <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
+                SKU: {item.sku}
+              </p>
+              <p style={{ margin: '5px 0 0 0', fontWeight: 'bold' }}>
+                €{formatPrice(item.price)}
+              </p>
+            </div>
+
+            {/* Quantity Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button
+                onClick={() => handleQuantityChange(item.product_id, item.quantity - 1)}
+                disabled={item.quantity <= 1}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: '16px',
+                  border: '1px solid #ccc',
+                  backgroundColor: item.quantity <= 1 ? '#f0f0f0' : 'white',
+                  cursor: item.quantity <= 1 ? 'not-allowed' : 'pointer',
+                  borderRadius: '4px'
+                }}
+              >
+                −
+              </button>
+
+              <input
+                type="number"
+                min="1"
+                max="99"
+                value={item.quantity}
+                onChange={(e) => handleQuantityChange(item.product_id, e.target.value)}
+                style={{
+                  width: '60px',
+                  padding: '5px',
+                  textAlign: 'center',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px'
+                }}
+              />
+
+              <button
+                onClick={() => handleQuantityChange(item.product_id, item.quantity + 1)}
+                disabled={item.quantity >= 99}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: '16px',
+                  border: '1px solid #ccc',
+                  backgroundColor: item.quantity >= 99 ? '#f0f0f0' : 'white',
+                  cursor: item.quantity >= 99 ? 'not-allowed' : 'pointer',
+                  borderRadius: '4px'
+                }}
+              >
+                +
+              </button>
+            </div>
+
+            {/* Subtotal */}
+            <div style={{ minWidth: '100px', textAlign: 'right' }}>
+              <p style={{ margin: 0, fontWeight: 'bold', fontSize: '18px' }}>
+                €{formatPrice(item.price * item.quantity)}
+              </p>
+            </div>
+
+            {/* Remove Button */}
+            <button
+              onClick={() => handleRemoveItem(item.product_id)}
+              style={{
+                padding: '8px 12px',
+                color: '#dc3545',
+                border: '1px solid #dc3545',
+                backgroundColor: 'white',
+                cursor: 'pointer',
+                borderRadius: '4px'
+              }}
+            >
+              Entfernen
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Cart Summary */}
+      <div style={{ 
+        padding: '20px', 
+        backgroundColor: '#f8f9fa', 
+        borderRadius: '4px',
+        marginBottom: '20px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <span>Zwischensumme:</span>
+          <span>€{formatPrice(subtotal)}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <span>Versand:</span>
+          <span>{shipping === 0 ? 'Kostenlos' : `€${formatPrice(shipping)}`}</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          paddingTop: '10px',
+          borderTop: '2px solid #dee2e6',
+          fontSize: '20px',
+          fontWeight: 'bold'
+        }}>
+          <span>Gesamt:</span>
+          <span>€{formatPrice(total)}</span>
+        </div>
+      </div>
+
+      {/* Checkout Button */}
+      <button
+        onClick={handleCheckout}
+        disabled={loading}
+        style={{
+          width: '100%',
+          padding: '15px',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          color: 'white',
+          backgroundColor: loading ? '#6c757d' : '#28a745',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: loading ? 'not-allowed' : 'pointer'
+        }}
+      >
+        {loading ? 'Weiterleitung zu Stripe...' : 'Zur Kasse'}
+      </button>
+    </div>
+  );
+}

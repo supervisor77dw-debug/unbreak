@@ -43,40 +43,106 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Server configuration error: Supabase credentials missing' });
     }
 
-    const { sku, email } = req.body;
-    console.log('📦 [Checkout] SKU:', sku);
-    console.log('📧 [Checkout] Email:', email);
+    // Support both single product (legacy) and cart items (new)
+    const { sku, email, items } = req.body;
+    console.log('📦 [Checkout] Request:', { sku, email, items: items?.length });
 
-    if (!sku) {
-      console.error('❌ [Checkout] Missing SKU in request');
-      return res.status(400).json({ error: 'SKU is required' });
+    // Validate input
+    if (!items && !sku) {
+      console.error('❌ [Checkout] Missing items or sku');
+      return res.status(400).json({ error: 'Either items array or sku is required' });
     }
 
-    // 1. Fetch product from database
-    console.log('🔍 [Checkout] Fetching product:', sku);
-    const { data: product, error: productError } = await supabase
-      .from('products')
-      .select('*')
-      .eq('sku', sku)
-      .eq('active', true)
-      .single();
-
-    if (productError) {
-      console.error('❌ [Checkout] Product fetch error:', productError);
-      return res.status(404).json({ error: 'Product not found', details: productError.message });
-    }
-    
-    if (!product) {
-      console.error('❌ [Checkout] Product not found or inactive:', sku);
-      return res.status(404).json({ error: 'Product not found or inactive' });
+    if (items && (!Array.isArray(items) || items.length === 0)) {
+      console.error('❌ [Checkout] Invalid items array');
+      return res.status(400).json({ error: 'Items must be a non-empty array' });
     }
 
-    console.log('✅ [Checkout] Product found:', {
-      sku: product.sku,
-      name: product.title_de,
-      price: product.base_price_cents,
-      active: product.active
-    });
+    // 1. Fetch and validate products
+    let cartItems = [];
+    let totalAmount = 0;
+
+    if (items) {
+      // New cart flow: multiple items with quantities
+      console.log('🛒 [Checkout] Processing cart with', items.length, 'items');
+
+      for (const item of items) {
+        if (!item.product_id || !item.quantity || item.quantity < 1) {
+          console.error('❌ [Checkout] Invalid item:', item);
+          return res.status(400).json({ 
+            error: 'Each item must have product_id and quantity >= 1',
+            invalid_item: item
+          });
+        }
+
+        // Fetch product from database (server-side price validation)
+        const { data: product, error: productError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', item.product_id)
+          .eq('active', true)
+          .single();
+
+        if (productError || !product) {
+          console.error('❌ [Checkout] Product not found:', item.product_id);
+          return res.status(404).json({ 
+            error: 'Product not found or inactive',
+            product_id: item.product_id 
+          });
+        }
+
+        const itemTotal = product.base_price_cents * item.quantity;
+        totalAmount += itemTotal;
+
+        cartItems.push({
+          product_id: product.id,
+          sku: product.sku,
+          name: product.title_de || product.name || product.sku,
+          unit_price_cents: product.base_price_cents,
+          quantity: item.quantity,
+          image_url: product.image_url || null,
+        });
+
+        console.log('✅ [Checkout] Item validated:', {
+          sku: product.sku,
+          quantity: item.quantity,
+          unit_price: product.base_price_cents,
+          subtotal: itemTotal
+        });
+      }
+
+      console.log('💰 [Checkout] Total amount:', totalAmount, 'cents');
+
+    } else {
+      // Legacy flow: single product
+      console.log('🔍 [Checkout] Fetching single product:', sku);
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('sku', sku)
+        .eq('active', true)
+        .single();
+
+      if (productError || !product) {
+        console.error('❌ [Checkout] Product not found:', sku);
+        return res.status(404).json({ error: 'Product not found or inactive' });
+      }
+
+      totalAmount = product.base_price_cents;
+      cartItems = [{
+        product_id: product.id,
+        sku: product.sku,
+        name: product.title_de || product.name || product.sku,
+        unit_price_cents: product.base_price_cents,
+        quantity: 1,
+        image_url: product.image_url || null,
+      }];
+
+      console.log('✅ [Checkout] Product found:', {
+        sku: product.sku,
+        price: product.base_price_cents
+      });
+    }
 
     // 2. Get user from session (if logged in)
     let userId = null;
@@ -108,13 +174,20 @@ export default async function handler(req, res) {
     const orderData = {
       customer_user_id: userId,
       customer_email: customerEmail,
-      product_sku: product.sku,
-      quantity: 1,
-      total_amount_cents: product.base_price_cents,
+      items: cartItems, // JSON array of cart items
+      total_amount_cents: totalAmount,
+      currency: 'EUR',
       status: 'pending',
       order_type: 'standard',
+      // Legacy fields for backwards compatibility
+      product_sku: cartItems[0]?.sku || null,
+      quantity: items ? items.reduce((sum, item) => sum + item.quantity, 0) : 1,
     };
-    console.log('📝 [Checkout] Order data:', orderData);
+    console.log('📝 [Checkout] Order data:', {
+      items: orderData.items.length,
+      total: orderData.total_amount_cents,
+      customer: orderData.customer_email
+    });
 
     const { data: order, error: orderError } = await supabase
       .from('simple_orders')
@@ -143,36 +216,37 @@ export default async function handler(req, res) {
     const origin = getOrigin(req);
     console.log('🌐 [Checkout] Origin:', origin);
 
+    // Build line_items from cart
+    const lineItems = cartItems.map(item => ({
+      price_data: {
+        currency: 'eur',
+        product_data: {
+          name: item.name,
+          images: item.image_url ? [item.image_url] : undefined,
+        },
+        unit_amount: item.unit_price_cents,
+      },
+      quantity: item.quantity,
+    }));
+
     const sessionData = {
       payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: product.title_de || product.sku,
-              description: product.description_de || undefined,
-              images: product.image_url ? [product.image_url] : undefined,
-            },
-            unit_amount: product.base_price_cents,
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       mode: 'payment',
       success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cancel.html`,
       customer_email: customerEmail || undefined,
       metadata: {
         order_id: order.id,
-        product_sku: product.sku,
         type: 'standard',
         user_id: userId || 'guest',
+        item_count: cartItems.length,
       },
     };
     console.log('💳 [Checkout] Stripe session data:', {
       mode: sessionData.mode,
       line_items: sessionData.line_items.length,
+      total_items: cartItems.reduce((sum, item) => sum + item.quantity, 0),
       success_url: sessionData.success_url,
       customer_email: sessionData.customer_email
     });
