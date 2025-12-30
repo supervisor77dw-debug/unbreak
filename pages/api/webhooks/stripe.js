@@ -15,11 +15,18 @@ export const config = {
 };
 
 export default async function handler(req, res) {
+  // === DIAGNOSTIC LOGGING ===
+  console.log('🪝 [WEBHOOK HIT] Method:', req.method);
+  console.log('🪝 [WEBHOOK HIT] Has stripe-signature:', !!req.headers['stripe-signature']);
+  console.log('🪝 [ENV CHECK] STRIPE_SECRET_KEY present:', !!process.env.STRIPE_SECRET_KEY);
+  console.log('🪝 [ENV CHECK] STRIPE_WEBHOOK_SECRET present:', !!process.env.STRIPE_WEBHOOK_SECRET);
+  console.log('🪝 [ENV CHECK] SUPABASE_URL present:', !!process.env.SUPABASE_URL);
+  console.log('🪝 [ENV CHECK] SUPABASE_SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+
   if (req.method !== 'POST') {
+    console.log('⚠️ [Webhook] Non-POST request received:', req.method);
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
-  console.log('🪝 [Webhook] Stripe webhook received');
 
   try {
     // 1. Get raw body for signature verification
@@ -39,9 +46,11 @@ export default async function handler(req, res) {
         sig,
         process.env.STRIPE_WEBHOOK_SECRET
       );
-      console.log('✅ [Webhook] Signature verified:', event.type);
+      console.log('✅ [SIGNATURE] Verified OK');
+      console.log('📥 [EVENT] Type:', event.type);
+      console.log('📥 [EVENT] ID:', event.id);
     } catch (err) {
-      console.error('❌ [Webhook] Signature verification failed:', err.message);
+      console.error('❌ [SIGNATURE] Verification FAILED:', err.message);
       return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
     }
 
@@ -69,12 +78,15 @@ export default async function handler(req, res) {
 }
 
 async function handleCheckoutSessionCompleted(session) {
-  console.log('💳 [Webhook] Handling checkout.session.completed');
-  console.log('💳 [Webhook] Session ID:', session.id);
-  console.log('💳 [Webhook] Payment status:', session.payment_status);
+  console.log('💳 [SESSION] ID:', session.id);
+  console.log('💳 [SESSION] Payment status:', session.payment_status);
+  console.log('💳 [SESSION] Amount total:', session.amount_total);
+  console.log('💳 [SESSION] Customer email:', session.customer_email || session.customer_details?.email);
 
   try {
     // 1. Find order by stripe_session_id
+    console.log('🔍 [DB QUERY] Looking for stripe_session_id:', session.id);
+    
     const { data: order, error: fetchError } = await supabase
       .from('simple_orders')
       .select('*')
@@ -82,21 +94,25 @@ async function handleCheckoutSessionCompleted(session) {
       .single();
 
     if (fetchError) {
-      console.error('❌ [Webhook] Order lookup failed:', fetchError);
+      console.error('❌ [DB QUERY] Failed:', fetchError.message);
+      console.error('❌ [DB QUERY] Code:', fetchError.code);
+      console.error('❌ [DB QUERY] Details:', fetchError.details);
       throw new Error(`Order lookup failed: ${fetchError.message}`);
     }
 
     if (!order) {
-      console.error('❌ [Webhook] No order found for session:', session.id);
+      console.error('❌ [DB QUERY] No order found for session:', session.id);
+      console.error('❌ [DB QUERY] Check if stripe_session_id was saved during checkout');
       throw new Error(`No order found for session: ${session.id}`);
     }
 
-    console.log('📦 [Webhook] Order found:', order.id);
-    console.log('📦 [Webhook] Current status:', order.status);
+    console.log('✅ [DB QUERY] Order found - ID:', order.id);
+    console.log('📊 [ORDER] Current status:', order.status);
+    console.log('📊 [ORDER] Created at:', order.created_at);
 
     // 2. Check if already paid (idempotency)
     if (order.status === 'paid') {
-      console.log('✅ [Webhook] Order already paid - idempotent skip');
+      console.log('✅ [IDEMPOTENT] Order already paid - skipping');
       return;
     }
 
@@ -104,25 +120,29 @@ async function handleCheckoutSessionCompleted(session) {
     const updateData = {
       status: 'paid',
       stripe_payment_intent_id: session.payment_intent,
+      paid_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    // Add paid_at timestamp if column exists
-    updateData.paid_at = new Date().toISOString();
+    console.log('📝 [DB UPDATE] Updating order to paid...');
+    console.log('📝 [DB UPDATE] Data:', updateData);
 
-    console.log('📝 [Webhook] Updating order to paid:', updateData);
-
-    const { error: updateError } = await supabase
+    const { data: updatedOrder, error: updateError } = await supabase
       .from('simple_orders')
       .update(updateData)
-      .eq('id', order.id);
+      .eq('id', order.id)
+      .select();
 
     if (updateError) {
-      console.error('❌ [Webhook] Order update failed:', updateError);
+      console.error('❌ [DB UPDATE] Failed:', updateError.message);
+      console.error('❌ [DB UPDATE] Code:', updateError.code);
+      console.error('❌ [DB UPDATE] Details:', updateError.details);
       throw new Error(`Order update failed: ${updateError.message}`);
     }
 
-    console.log('✅ [Webhook] Order marked as paid:', order.id);
+    console.log('✅ [DB UPDATE] Success - Rows affected:', updatedOrder?.length || 0);
+    console.log('✅ [DB UPDATE] Updated order:', updatedOrder?.[0]?.id, 'Status:', updatedOrder?.[0]?.status);
+    console.log('✅ [WEBHOOK] Order marked as paid:', order.id);
 
   } catch (error) {
     console.error('❌ [Webhook] handleCheckoutSessionCompleted failed:', error);
