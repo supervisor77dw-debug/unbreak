@@ -180,13 +180,40 @@
   <script type="module">
     import { getCart } from '../lib/cart.js';
 
+    // CRITICAL: Clear cart immediately on success page load
+    // This ensures cart is emptied even if verify API fails
+    console.log('🧹 [CART_CLEAR] Success page loaded - clearing cart');
+    
     // Extract session_id from URL
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get('session_id');
     
     const orderNumberEl = document.getElementById('order-number');
     
+    // Function to clear cart completely
+    function clearCartCompletely() {
+      try {
+        const cart = getCart();
+        cart.clear();
+        console.log('✅ [CART_CLEAR] Cart cleared via cart.clear()');
+      } catch (err) {
+        console.error('⚠️ [CART_CLEAR] cart.clear() failed:', err);
+      }
+      
+      // Fallback: Direct localStorage clear
+      try {
+        localStorage.removeItem('unbreak_cart');
+        localStorage.removeItem('checkout_in_progress');
+        localStorage.removeItem('stripe_session_id');
+        console.log('✅ [CART_CLEAR] localStorage cart keys removed');
+      } catch (err) {
+        console.error('⚠️ [CART_CLEAR] localStorage.removeItem failed:', err);
+      }
+    }
+    
     if (sessionId) {
+      console.log('🔍 [SUCCESS] Verifying session:', sessionId);
+      
       // Fetch order details from backend
       fetch(`/api/orders/verify?session_id=${sessionId}`)
         .then(res => {
@@ -194,6 +221,8 @@
           return res.json();
         })
         .then(data => {
+          console.log('✅ [SUCCESS] Order verified:', data.order_id, 'Status:', data.status);
+          
           if (data.order_id) {
             orderNumberEl.textContent = data.order_id.substring(0, 8).toUpperCase();
             
@@ -216,19 +245,33 @@
               document.querySelector('.order-info').insertAdjacentHTML('afterend', detailsHtml);
             }
             
-            // Clear cart after successful order
-            const cart = getCart();
-            cart.clear();
+            // Only clear cart if order is verified (paid or pending)
+            if (data.status === 'paid' || data.status === 'pending') {
+              console.log('🧹 [CART_CLEAR] Order verified paid/pending - clearing cart');
+              clearCartCompletely();
+            } else {
+              console.warn('⚠️ [CART_CLEAR] Order status not paid:', data.status, '- NOT clearing cart');
+            }
           } else {
             orderNumberEl.textContent = 'Nicht verfügbar';
+            // Still clear cart - user reached success page
+            console.log('🧹 [CART_CLEAR] No order_id but success page reached - clearing cart anyway');
+            clearCartCompletely();
           }
         })
         .catch(error => {
-          console.error('Order verification error:', error);
+          console.error('❌ [SUCCESS] Order verification error:', error);
           orderNumberEl.textContent = 'Bestellung wird verarbeitet...';
+          
+          // Even on error, clear cart - user reached success page from Stripe
+          console.log('🧹 [CART_CLEAR] Verify failed but success page reached - clearing cart anyway');
+          clearCartCompletely();
         });
     } else {
+      // No session_id means direct access - don't clear cart
+      console.warn('⚠️ [SUCCESS] No session_id in URL - user accessed success page directly');
       orderNumberEl.textContent = 'Keine Session-ID';
+      // DO NOT clear cart - this is likely a direct page visit, not after checkout
     }
   </script>
 </body>
