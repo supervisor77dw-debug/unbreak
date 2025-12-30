@@ -1,4 +1,4 @@
-import { IncomingForm } from 'formidable';
+import formidable from 'formidable';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     // Ensure upload directory exists
     await fs.mkdir(UPLOAD_DIR, { recursive: true });
 
-    const form = new IncomingForm({
+    const form = formidable({
       uploadDir: UPLOAD_DIR,
       keepExtensions: true,
       maxFileSize: MAX_FILE_SIZE,
@@ -68,6 +68,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid file type. Only JPEG, PNG, WebP allowed.' });
     }
 
-    res.status(500).json({ error: 'Upload failed' });
+    res.status(500).json({ error: 'Upload failed: ' + error.message });
   }
 }
