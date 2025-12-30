@@ -92,7 +92,7 @@ export default function AdminProducts() {
       if (error) throw error;
 
       alert('Product approved!');
-      loadProducts();
+      await loadProducts();
     } catch (error) {
       console.error('Error approving product:', error);
       alert('Failed to approve product: ' + error.message);
@@ -113,7 +113,7 @@ export default function AdminProducts() {
       if (error) throw error;
 
       alert('Product rejected.');
-      loadProducts();
+      await loadProducts();
     } catch (error) {
       console.error('Error rejecting product:', error);
       alert('Failed to reject product: ' + error.message);
