@@ -232,37 +232,9 @@
         }
         
         async function redirectUser(userId) {
-            try {
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', userId)
-                    .single();
-                
-                // If no profile exists, create one with default 'user' role
-                if (error && error.code === 'PGRST116') {
-                    // Profile not found - redirect to home (default user)
-                    const redirect = new URLSearchParams(window.location.search).get('redirect');
-                    window.location.href = redirect || '/';
-                    return;
-                }
-                
-                if (error) throw error;
-                
-                // Redirect based on role
-                const redirect = new URLSearchParams(window.location.search).get('redirect');
-                
-                if (profile.role === 'admin') {
-                    window.location.href = redirect || '/admin.html';
-                } else {
-                    window.location.href = redirect || '/';
-                }
-            } catch (err) {
-                console.error('Profile fetch error:', err);
-                // On error, redirect to home as fallback
-                const redirect = new URLSearchParams(window.location.search).get('redirect');
-                window.location.href = redirect || '/';
-            }
+            // Unified redirect - always go to /backend after successful login
+            const redirect = new URLSearchParams(window.location.search).get('redirect');
+            window.location.href = redirect || '/backend';
         }
         
         loginForm.addEventListener('submit', async (e) => {
