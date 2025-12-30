@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { getCart, formatPrice } from '../lib/cart';
-import { supabase } from '../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Client-side Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState([]);
