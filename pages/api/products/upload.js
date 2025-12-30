@@ -64,6 +64,7 @@ export default async function handler(req, res) {
     // Generate unique filename
     const timestamp = Date.now();
     const ext = path.extname(file.originalFilename || file.newFilename);
+    const filename = `product-${timestamp}${ext}`;
 
     // Upload using shared storage config
     try {
@@ -113,7 +114,6 @@ export default async function handler(req, res) {
       }
       
       throw uploadError;
-    }
     res.status(200).json({ imageUrl: publicUrl });
   } catch (error) {
     console.error('Upload error:', error);
