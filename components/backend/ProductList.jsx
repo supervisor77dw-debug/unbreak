@@ -45,9 +45,22 @@ export default function ProductList({ products, onEdit, onDelete, onApprove, onR
           <div key={product.id} style={styles.card}>
             <div style={styles.cardContent}>
               {/* Image */}
-              {product.image_url && (
+              {product.image_url ? (
                 <div style={styles.imageContainer}>
-                  <img src={product.image_url} alt={product.name} style={styles.image} />
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name} 
+                    style={styles.image}
+                    onError={(e) => {
+                      console.error('❌ Image load failed:', product.image_url);
+                      e.target.style.display = 'none';
+                    }}
+                    onLoad={() => console.log('✅ Image loaded:', product.image_url)}
+                  />
+                </div>
+              ) : (
+                <div style={styles.imageContainer}>
+                  <div style={styles.placeholder}>Kein Bild</div>
                 </div>
               )}
 
@@ -150,11 +163,19 @@ const styles = {
     borderRadius: '8px',
     overflow: 'hidden',
     background: 'rgba(0, 0, 0, 0.2)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   image: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
+  },
+  placeholder: {
+    fontSize: '12px',
+    color: 'rgba(255, 255, 255, 0.3)',
+    textAlign: 'center',
   },
   info: {
     flex: 1,

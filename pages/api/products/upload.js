@@ -79,6 +79,11 @@ export default async function handler(req, res) {
       .from('product-images')
       .getPublicUrl(filePath);
 
+    console.log('✅ Upload successful:');
+    console.log('  - File path:', filePath);
+    console.log('  - Public URL:', publicUrl);
+    console.log('  - Bucket:', 'product-images');
+
     res.status(200).json({ imageUrl: publicUrl });
   } catch (error) {
     console.error('Upload error:', error);

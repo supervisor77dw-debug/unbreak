@@ -92,13 +92,16 @@ export default function Products() {
         if (error) throw error;
       } else {
         // Create new product with status 'pending_review'
+        const dataToInsert = {
+          ...productData,
+          status: 'pending_review',
+          created_by: auth.user.id,
+        };
+        console.log('💾 Saving product to DB:', dataToInsert);
+        
         const { error } = await supabase
           .from('products')
-          .insert([{
-            ...productData,
-            status: 'pending_review',
-            created_by: auth.user.id,
-          }]);
+          .insert([dataToInsert]);
 
         if (error) throw error;
       }

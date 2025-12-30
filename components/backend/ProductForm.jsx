@@ -66,6 +66,7 @@ export default function ProductForm({ product, onSave, onCancel }) {
       }
 
       const { imageUrl } = await response.json();
+      console.log('✅ Image uploaded, URL:', imageUrl);
       return imageUrl;
     } catch (err) {
       console.error('Upload error:', err);

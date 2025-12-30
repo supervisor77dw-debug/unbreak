@@ -2,6 +2,20 @@
 const nextConfig = {
   reactStrictMode: true,
   
+  // Allow images from Supabase Storage
+  images: {
+    domains: [
+      'qnzsdytdghfukrqpscsg.supabase.co',
+    ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
+  
   // Rewrite rules: Root → index.html, /shop → pages/shop.js (dynamic), etc.
   async rewrites() {
     return [
