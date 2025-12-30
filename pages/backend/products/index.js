@@ -98,6 +98,7 @@ export default function Products() {
           created_by: auth.user.id,
         };
         console.log('💾 Saving product to DB:', dataToInsert);
+        console.log('   image_url being saved:', dataToInsert.image_url);
         
         const { error } = await supabase
           .from('products')

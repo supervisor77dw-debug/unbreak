@@ -53,9 +53,14 @@ export default function ProductList({ products, onEdit, onDelete, onApprove, onR
                     style={styles.image}
                     onError={(e) => {
                       console.error('❌ Image load failed:', product.image_url);
+                      console.error('   Product SKU:', product.sku);
+                      console.error('   Check URL in browser:', product.image_url);
                       e.target.style.display = 'none';
                     }}
-                    onLoad={() => console.log('✅ Image loaded:', product.image_url)}
+                    onLoad={() => {
+                      console.log('✅ Image loaded:', product.image_url);
+                      console.log('   Product SKU:', product.sku);
+                    }}
                   />
                 </div>
               ) : (
