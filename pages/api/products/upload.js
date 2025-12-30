@@ -2,6 +2,7 @@ import formidable from 'formidable';
 import { createClient } from '@supabase/supabase-js';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { uploadProductImage, listProductImages } from '../../../lib/storage-config';
 
 // Disable body parser for file uploads
 export const config = {
@@ -63,51 +64,56 @@ export default async function handler(req, res) {
     // Generate unique filename
     const timestamp = Date.now();
     const ext = path.extname(file.originalFilename || file.newFilename);
-    const filename = `product-${timestamp}${ext}`;
-    const filePath = `products/${filename}`;
 
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('product-images')
-      .upload(filePath, fileBuffer, {
-        contentType: file.mimetype,
-        cacheControl: '3600',
-        upsert: false
-      });
+    // Upload using shared storage config
+    try {
+      const { path: uploadedPath, url: publicUrl } = await uploadProductImage(
+        supabase,
+        fileBuffer,
+        filename,
+        file.mimetype
+      );
 
-    // Clean up temp file
-    await fs.unlink(file.filepath).catch(() => {});
+      // Clean up temp file
+      await fs.unlink(file.filepath).catch(() => {});
 
-    if (uploadError) {
-      console.error('❌ Supabase upload error:', uploadError);
-      
+      // VERIFY: List files in bucket to confirm upload
+      const files = await listProductImages(supabase);
+      const uploadedFile = files.find(f => f.name === filename);
+
+      console.log('✅ Upload successful:');
+      console.log('  - File path:', uploadedPath);
+      console.log('  - Filename:', filename);
+      console.log('  - Public URL:', publicUrl);
+      console.log('  - File verified in bucket:', !!uploadedFile);
+      console.log('  - File size:', uploadedFile?.metadata?.size || 'unknown');
+
+      if (!uploadedFile) {
+        console.warn('⚠️ File uploaded but not found in bucket list - may take a moment to appear');
+      }
+
+      res.status(200).json({ imageUrl: publicUrl });
+
+    } catch (uploadError) {
+      // Clean up temp file even on error
+      await fs.unlink(file.filepath).catch(() => {});
+
+      console.error('❌ Upload error:', uploadError);
+
       // Specific error messages
       if (uploadError.message?.includes('Bucket not found')) {
-        throw new Error('Storage Bucket existiert nicht. Bitte storage-setup.sql in Supabase ausführen!');
+        return res.status(500).json({ 
+          error: 'Storage Bucket existiert nicht. Bitte EXECUTE-NOW.sql in Supabase ausführen!' 
+        });
       }
       if (uploadError.message?.includes('new row violates row-level security')) {
-        throw new Error('Storage Policies fehlen. Bitte storage-setup.sql ausführen!');
+        return res.status(500).json({ 
+          error: 'Storage Policies fehlen. Bitte EXECUTE-NOW.sql ausführen!' 
+        });
       }
       
-      throw new Error('Upload fehlgeschlagen: ' + uploadError.message);
+      throw uploadError;
     }
-
-    if (!uploadData || !uploadData.path) {
-      console.error('❌ Upload returned no data:', uploadData);
-      throw new Error('Upload fehlgeschlagen: Keine Daten zurückgegeben');
-    }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(filePath);
-
-    console.log('✅ Upload successful:');
-    console.log('  - File path:', filePath);
-    console.log('  - Upload data:', uploadData);
-    console.log('  - Public URL:', publicUrl);
-    console.log('  - Bucket:', 'product-images');
-
     res.status(200).json({ imageUrl: publicUrl });
   } catch (error) {
     console.error('Upload error:', error);
