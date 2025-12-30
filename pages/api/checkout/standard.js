@@ -102,7 +102,64 @@ export default async function handler(req, res) {
     }
 
     console.log('👤 [Checkout] Customer email:', customerEmail || 'none provided');
-origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+
+    // 3. Create order record
+    console.log('📝 [Checkout] Creating order record');
+    const orderData = {
+      customer_user_id: userId,
+      product_sku: product.sku,
+      quantity: 1,
+      total_amount_cents: product.base_price_cents,
+      status: 'pending',
+      order_type: 'standard',
+    };
+    console.log('📝 [Checkout] Order data:', orderData);
+
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert(orderData)
+      .select()
+      .single();
+
+    if (orderError) {
+      console.error('❌ [Checkout] Order creation failed:', orderError);
+      return res.status(500).json({ 
+        error: 'Failed to create order', 
+        details: orderError.message,
+        hint: orderError.hint 
+      });
+    }
+    
+    if (!order) {
+      console.error('❌ [Checkout] Order created but not returned');
+      return res.status(500).json({ error: 'Order creation returned no data' });
+    }
+
+    console.log('✅ [Checkout] Order created:', order.id);
+
+    // 4. Create Stripe Checkout Session
+    console.log('💳 [Checkout] Creating Stripe session');
+    const origin = getOrigin(req);
+    console.log('🌐 [Checkout] Origin:', origin);
+
+    const sessionData = {
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'eur',
+            product_data: {
+              name: product.title_de || product.sku,
+              description: product.description_de || undefined,
+              images: product.image_url ? [product.image_url] : undefined,
+            },
+            unit_amount: product.base_price_cents,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cancel.html`,
       customer_email: customerEmail || undefined,
       metadata: {
@@ -167,65 +224,7 @@ origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
     res.status(500).json({ 
       error: 'Checkout failed',
       message: error.message || 'Internal server error',
-      type: error.type || 'UnknownEr creation returned no data' });
-    }
-
-    console.log('✅ [Checkout] Order created:', order.id);
-
-    // 4. Create Stripe Checkout Session
-    console.log('💳 [Checkout] Creating Stripe session');
-    const origin = getOrigin(req);
-    console.log('🌐 [Checkout] Origin:', origin);
-
-    const sessionData = {
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: product.title_de || product.sku,
-              description: product.description_de || undefined,
-              images: product.image_url ? [product.image_url] : undefined,
-            },
-            unit_amount: product.base_price_cents,
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${getOrigin(req)}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${getOrigin(req)}/cancel.html`,
-      customer_email: customerEmail || undefined,
-      metadata: {
-        order_id: order.id,
-        product_sku: product.sku,
-        type: 'standard',
-        user_id: userId || 'guest',
-      },
-    });
-
-    // 5. Update order with Stripe session ID
-    await supabase
-      .from('orders')
-      .update({ 
-        stripe_session_id: session.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', order.id);
-
-    // 6. Return checkout URL
-    res.status(200).json({ 
-      url: session.url,
-      session_id: session.id,
-      order_id: order.id,
-    });
-
-  } catch (error) {
-    console.error('Checkout error:', error);
-    res.status(500).json({ 
-      error: error.message || 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      type: error.type || 'UnknownError',
     });
   }
 }
