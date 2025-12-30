@@ -42,11 +42,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Initialize Supabase client
+    // Initialize Supabase client with SERVICE ROLE KEY (required for storage)
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ SUPABASE_SERVICE_ROLE_KEY not set!');
+      return res.status(500).json({ 
+        error: 'Server-Konfigurationsfehler: SUPABASE_SERVICE_ROLE_KEY fehlt in Vercel Environment Variables' 
+      });
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
+
+    console.log('🔑 Using SERVICE_ROLE_KEY for upload (required for storage bypass RLS)');
 
     // Read file from /tmp
     const fileBuffer = await fs.readFile(file.filepath);
