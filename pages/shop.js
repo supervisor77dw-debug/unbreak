@@ -2,28 +2,32 @@
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
 import { getSupabasePublic, getSupabaseAdmin } from '../lib/supabase';
+import { getCart } from '../lib/cart';
 import Layout from '../components/Layout';
 
 export default function Shop({ initialProducts }) {
   const [products, setProducts] = useState(initialProducts || []);
   const [loading, setLoading] = useState(!initialProducts);
   const [error, setError] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
+  const cart = typeof window !== 'undefined' ? getCart() : null;
+
+  useEffect(() => {
+    // Update cart count on mount and when cart changes
+    if (cart) {
+      setCartCount(cart.getItemCount());
+      const unsubscribe = cart.onChange(() => {
+        setCartCount(cart.getItemCount());
+      });
+      return unsubscribe;
+    }
+  }, []);
 
   useEffect(() => {
     // If no SSR data, fetch client-side
     if (!initialProducts || initialProducts.length === 0) {
       loadProducts();
     }
-
-    // Re-initialize checkout buttons after products render
-    const timer = setTimeout(() => {
-      if (window.initCheckoutButtons) {
-        window.initCheckoutButtons();
-        console.log('[Shop] Re-initialized checkout buttons after product render');
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
   }, [initialProducts]);
 
   async function loadProducts() {
@@ -42,19 +46,21 @@ export default function Shop({ initialProducts }) {
       if (fetchError) throw fetchError;
       setProducts(data || []);
       setError(null);
-
-      // Re-init checkout buttons after products loaded
-      setTimeout(() => {
-        if (window.initCheckoutButtons) {
-          window.initCheckoutButtons();
-          console.log('[Shop] Re-initialized checkout buttons after loadProducts');
-        }
-      }, 100);
     } catch (err) {
       console.error('Error loading products:', err);
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function handleAddToCart(product) {
+    if (!cart) return;
+    
+    const success = cart.addItem(product);
+    if (success) {
+      // Show feedback (you could add a toast notification here)
+      console.log('Added to cart:', product.name);
     }
   }
 
@@ -95,7 +101,7 @@ export default function Shop({ initialProducts }) {
   return (
     <Layout>
       <Head>
-        <title>Shop  UNBREAK ONE | Magnetische Halter kaufen</title>
+        <title>Shop – UNBREAK ONE | Magnetische Halter kaufen</title>
         <meta
           name="description"
           content="UNBREAK ONE Shop: Professionelle magnetische Weinglashalter und Flaschenhalter. Jetzt online kaufen."
@@ -104,12 +110,19 @@ export default function Shop({ initialProducts }) {
       </Head>
 
       <main className="page-content">
+        {/* Cart Badge in Header */}
+        {cartCount > 0 && (
+          <a href="/cart" className="cart-badge-float">
+            🛒 {cartCount}
+          </a>
+        )}
+
         {/* Hero Section */}
         <section className="shop-hero">
           <div className="container">
             <h1 data-i18n="shop.title">Shop</h1>
             <p data-i18n="shop.subtitle">
-              Magnetische Halter für Gläser & Flaschen  Einzelprodukte,
+              Magnetische Halter für Gläser & Flaschen – Einzelprodukte,
               Bundles und vorkonfigurierte Sets
             </p>
           </div>
@@ -165,10 +178,9 @@ export default function Shop({ initialProducts }) {
 
                         <button
                           className="btn-buy"
-                          data-checkout="standard"
-                          data-sku={product.sku}
+                          onClick={() => handleAddToCart(product)}
                         >
-                          Kaufen
+                          In den Warenkorb
                         </button>
                       </div>
                     </div>
@@ -193,8 +205,25 @@ export default function Shop({ initialProducts }) {
         </section>
       </main>
 
-      {/* Checkout Integration */}
-      <Script src="/lib/checkout.js" strategy="afterInteractive" type="module" />
+      <style jsx>{`
+        .cart-badge-float {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #ff6b35;
+          color: white;
+          padding: 10px 16px;
+          border-radius: 50px;
+          font-weight: 600;
+          text-decoration: none;
+          box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+          z-index: 1000;
+          transition: transform 0.2s;
+        }
+        .cart-badge-float:hover {
+          transform: scale(1.05);
+        }
+      `}</style>
     </Layout>
   );
 }

@@ -83,6 +83,15 @@ async function handleCheckoutSessionCompleted(session) {
   console.log('💳 [SESSION] Amount total:', session.amount_total);
   console.log('💳 [SESSION] Customer email:', session.customer_email || session.customer_details?.email);
 
+  let logData = {
+    event_type: 'checkout.session.completed',
+    stripe_session_id: session.id,
+    status: 'processing',
+    error_message: null,
+    order_id: null,
+    rows_affected: 0
+  };
+
   try {
     // 1. Find order by stripe_session_id
     console.log('🔍 [DB QUERY] Looking for stripe_session_id:', session.id);
@@ -97,12 +106,18 @@ async function handleCheckoutSessionCompleted(session) {
       console.error('❌ [DB QUERY] Failed:', fetchError.message);
       console.error('❌ [DB QUERY] Code:', fetchError.code);
       console.error('❌ [DB QUERY] Details:', fetchError.details);
+      logData.status = 'error';
+      logData.error_message = `Order lookup failed: ${fetchError.message}`;
+      await logWebhookEvent(logData);
       throw new Error(`Order lookup failed: ${fetchError.message}`);
     }
 
     if (!order) {
       console.error('❌ [DB QUERY] No order found for session:', session.id);
       console.error('❌ [DB QUERY] Check if stripe_session_id was saved during checkout');
+      logData.status = 'error';
+      logData.error_message = `No order found for session: ${session.id}`;
+      await logWebhookEvent(logData);
       throw new Error(`No order found for session: ${session.id}`);
     }
 
@@ -112,9 +127,14 @@ async function handleCheckoutSessionCompleted(session) {
     console.log('📊 [ORDER BEFORE UPDATE] status:', order.status);
     console.log('📊 [ORDER BEFORE UPDATE] created_at:', order.created_at);
 
+    logData.order_id = order.id;
+
     // 2. Check if already paid (idempotency)
     if (order.status === 'paid') {
       console.log('✅ [IDEMPOTENT] Order already paid - skipping');
+      logData.status = 'skipped';
+      logData.error_message = 'Order already paid (idempotent)';
+      await logWebhookEvent(logData);
       return;
     }
 
@@ -152,8 +172,14 @@ async function handleCheckoutSessionCompleted(session) {
       console.error('❌ [DB UPDATE] Order ID:', order.id);
       console.error('❌ [DB UPDATE] Session ID:', session.id);
       console.error('❌ [DB UPDATE] This means WHERE clause matched nothing');
+      logData.status = 'error';
+      logData.error_message = `Update affected 0 rows for order ${order.id}`;
+      logData.rows_affected = 0;
+      await logWebhookEvent(logData);
       throw new Error(`Update affected 0 rows for order ${order.id}`);
     }
+
+    logData.rows_affected = rowCount;
 
     if (rowCount > 0 && updatedRows[0]) {
       console.log('✅ [DB UPDATE] Updated order ID:', updatedRows[0].id);
@@ -162,9 +188,39 @@ async function handleCheckoutSessionCompleted(session) {
     }
 
     console.log('✅ [WEBHOOK] Order successfully marked as paid:', order.id);
+    logData.status = 'success';
+    await logWebhookEvent(logData);
 
   } catch (error) {
     console.error('❌ [Webhook] handleCheckoutSessionCompleted failed:', error);
+    if (logData.status !== 'error') {
+      logData.status = 'error';
+      logData.error_message = error.message;
+      await logWebhookEvent(logData);
+    }
     throw error; // Re-throw to trigger retry in Stripe
+  }
+}
+
+async function logWebhookEvent(logData) {
+  try {
+    const { error } = await supabase
+      .from('webhook_logs')
+      .insert({
+        event_type: logData.event_type,
+        stripe_session_id: logData.stripe_session_id,
+        status: logData.status,
+        error_message: logData.error_message,
+        order_id: logData.order_id,
+        rows_affected: logData.rows_affected
+      });
+
+    if (error) {
+      console.error('❌ [WEBHOOK LOG] Failed to log event:', error.message);
+    } else {
+      console.log('✅ [WEBHOOK LOG] Event logged successfully');
+    }
+  } catch (err) {
+    console.error('❌ [WEBHOOK LOG] Exception:', err.message);
   }
 }
