@@ -38,6 +38,25 @@ export default async function handler(req, res) {
       console.error('❌ [Checkout] STRIPE_SECRET_KEY not set');
       return res.status(500).json({ error: 'Server configuration error: STRIPE_SECRET_KEY missing' });
     }
+
+    // STRIPE ACCOUNT VERIFICATION
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    const keyPrefix = secretKey.substring(0, 8); // sk_test_ or sk_live_
+    const isTestMode = keyPrefix.includes('test');
+    
+    console.log('🔑 [STRIPE ACCOUNT] Key prefix:', keyPrefix);
+    console.log('🔑 [STRIPE ACCOUNT] Mode:', isTestMode ? 'TEST' : 'LIVE');
+    
+    // Get Stripe account ID
+    try {
+      const account = await stripe.accounts.retrieve();
+      console.log('🔑 [STRIPE ACCOUNT] Account ID:', account.id);
+      console.log('🔑 [STRIPE ACCOUNT] Email:', account.email || 'N/A');
+      console.log('🔑 [STRIPE ACCOUNT] Country:', account.country);
+    } catch (accError) {
+      console.warn('⚠️ [STRIPE ACCOUNT] Could not retrieve account:', accError.message);
+    }
+
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('❌ [Checkout] Supabase credentials missing');
       return res.status(500).json({ error: 'Server configuration error: Supabase credentials missing' });
@@ -252,7 +271,18 @@ export default async function handler(req, res) {
     });
 
     const session = await stripe.checkout.sessions.create(sessionData);
+    
     console.log('✅ [Checkout] Stripe session created:', session.id);
+    console.log('🔍 [SESSION CREATED] ID:', session.id);
+    console.log('🔍 [SESSION CREATED] Mode:', session.mode);
+    console.log('🔍 [SESSION CREATED] URL:', session.url);
+    console.log('🔍 [SESSION CREATED] Amount total:', session.amount_total);
+    console.log('🔍 [SESSION CREATED] Currency:', session.currency);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📋 [ACTION REQUIRED] Search for this Session ID in Stripe Dashboard:');
+    console.log('📋 Session ID:', session.id);
+    console.log('📋 If NOT found in your dashboard → Wrong Stripe account/key!');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // 5. Update order with Stripe session ID
     console.log('📝 [Checkout] Updating order with session ID');
