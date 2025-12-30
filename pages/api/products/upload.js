@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     const filePath = `products/${filename}`;
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('product-images')
       .upload(filePath, fileBuffer, {
         contentType: file.mimetype,
@@ -69,9 +69,23 @@ export default async function handler(req, res) {
     // Clean up temp file
     await fs.unlink(file.filepath).catch(() => {});
 
-    if (error) {
-      console.error('Supabase upload error:', error);
-      throw new Error(error.message);
+    if (uploadError) {
+      console.error('❌ Supabase upload error:', uploadError);
+      
+      // Specific error messages
+      if (uploadError.message?.includes('Bucket not found')) {
+        throw new Error('Storage Bucket existiert nicht. Bitte storage-setup.sql in Supabase ausführen!');
+      }
+      if (uploadError.message?.includes('new row violates row-level security')) {
+        throw new Error('Storage Policies fehlen. Bitte storage-setup.sql ausführen!');
+      }
+      
+      throw new Error('Upload fehlgeschlagen: ' + uploadError.message);
+    }
+
+    if (!uploadData || !uploadData.path) {
+      console.error('❌ Upload returned no data:', uploadData);
+      throw new Error('Upload fehlgeschlagen: Keine Daten zurückgegeben');
     }
 
     // Get public URL
@@ -81,6 +95,7 @@ export default async function handler(req, res) {
 
     console.log('✅ Upload successful:');
     console.log('  - File path:', filePath);
+    console.log('  - Upload data:', uploadData);
     console.log('  - Public URL:', publicUrl);
     console.log('  - Bucket:', 'product-images');
 
