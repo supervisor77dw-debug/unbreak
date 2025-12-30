@@ -3,7 +3,6 @@ export default function ProductList({ products, onEdit, onDelete, onApprove, onR
   function getStatusBadge(status) {
     const badges = {
       draft: { color: '#999', text: 'Entwurf' },
-      pending: { color: '#ff9800', text: 'Ausstehend' },
       pending_review: { color: '#ff9800', text: 'Ausstehend' },
       approved: { color: '#4caf50', text: 'Freigegeben' },
       rejected: { color: '#f44336', text: 'Abgelehnt' }
@@ -40,7 +39,7 @@ export default function ProductList({ products, onEdit, onDelete, onApprove, onR
       {products.map(product => {
         const isOwner = product.created_by === currentUserId;
         const canEdit = isAdmin || isOwner;
-        const canApprove = isAdmin && (product.status === 'pending' || product.status === 'pending_review');
+        const canApprove = isAdmin && product.status === 'pending_review';
 
         return (
           <div key={product.id} style={styles.card}>

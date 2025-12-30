@@ -57,7 +57,7 @@ export default function Products() {
 
       // Filter by status
       if (filter === 'pending') {
-        query = query.in('status', ['pending', 'pending_review']);
+        query = query.eq('status', 'pending_review');
       } else if (filter !== 'all') {
         query = query.eq('status', filter);
       }
@@ -91,12 +91,12 @@ export default function Products() {
 
         if (error) throw error;
       } else {
-        // Create new product with status 'pending'
+        // Create new product with status 'pending_review'
         const { error } = await supabase
           .from('products')
           .insert([{
             ...productData,
-            status: 'pending',
+            status: 'pending_review',
             created_by: auth.user.id,
           }]);
 
