@@ -1,4 +1,5 @@
 import formidable from 'formidable';
+import { createClient } from '@supabase/supabase-js';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -9,7 +10,6 @@ export const config = {
   },
 };
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads', 'products');
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
 
@@ -19,11 +19,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Ensure upload directory exists
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
-
+    // Parse multipart form data to /tmp (only writable dir on Vercel)
     const form = formidable({
-      uploadDir: UPLOAD_DIR,
+      uploadDir: '/tmp',
       keepExtensions: true,
       maxFileSize: MAX_FILE_SIZE,
       filter: function ({ mimetype }) {
@@ -44,19 +42,44 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    // Initialize Supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    );
+
+    // Read file from /tmp
+    const fileBuffer = await fs.readFile(file.filepath);
+    
     // Generate unique filename
     const timestamp = Date.now();
     const ext = path.extname(file.originalFilename || file.newFilename);
     const filename = `product-${timestamp}${ext}`;
-    const newPath = path.join(UPLOAD_DIR, filename);
+    const filePath = `products/${filename}`;
 
-    // Rename file to unique name
-    await fs.rename(file.filepath, newPath);
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, fileBuffer, {
+        contentType: file.mimetype,
+        cacheControl: '3600',
+        upsert: false
+      });
 
-    // Return relative URL
-    const imageUrl = `/uploads/products/${filename}`;
+    // Clean up temp file
+    await fs.unlink(file.filepath).catch(() => {});
 
-    res.status(200).json({ imageUrl });
+    if (error) {
+      console.error('Supabase upload error:', error);
+      throw new Error(error.message);
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath);
+
+    res.status(200).json({ imageUrl: publicUrl });
   } catch (error) {
     console.error('Upload error:', error);
     
