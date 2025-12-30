@@ -107,6 +107,7 @@ export default async function handler(req, res) {
     console.log('📝 [Checkout] Creating order record');
     const orderData = {
       customer_user_id: userId,
+      customer_email: customerEmail,
       product_sku: product.sku,
       quantity: 1,
       total_amount_cents: product.base_price_cents,
@@ -116,7 +117,7 @@ export default async function handler(req, res) {
     console.log('📝 [Checkout] Order data:', orderData);
 
     const { data: order, error: orderError } = await supabase
-      .from('orders')
+      .from('simple_orders')
       .insert(orderData)
       .select()
       .single();
@@ -182,7 +183,7 @@ export default async function handler(req, res) {
     // 5. Update order with Stripe session ID
     console.log('📝 [Checkout] Updating order with session ID');
     const { error: updateError } = await supabase
-      .from('orders')
+      .from('simple_orders')
       .update({ 
         stripe_session_id: session.id,
         updated_at: new Date().toISOString(),
