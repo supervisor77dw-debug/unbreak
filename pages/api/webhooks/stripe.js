@@ -107,8 +107,10 @@ async function handleCheckoutSessionCompleted(session) {
     }
 
     console.log('✅ [DB QUERY] Order found - ID:', order.id);
-    console.log('📊 [ORDER] Current status:', order.status);
-    console.log('📊 [ORDER] Created at:', order.created_at);
+    console.log('📊 [ORDER BEFORE UPDATE] ID:', order.id);
+    console.log('📊 [ORDER BEFORE UPDATE] stripe_session_id:', order.stripe_session_id);
+    console.log('📊 [ORDER BEFORE UPDATE] status:', order.status);
+    console.log('📊 [ORDER BEFORE UPDATE] created_at:', order.created_at);
 
     // 2. Check if already paid (idempotency)
     if (order.status === 'paid') {
@@ -124,10 +126,11 @@ async function handleCheckoutSessionCompleted(session) {
       updated_at: new Date().toISOString(),
     };
 
-    console.log('📝 [DB UPDATE] Updating order to paid...');
-    console.log('📝 [DB UPDATE] Data:', updateData);
+    console.log('📝 [DB UPDATE] Attempting update...');
+    console.log('📝 [DB UPDATE] WHERE order.id =', order.id);
+    console.log('📝 [DB UPDATE] SET data:', JSON.stringify(updateData));
 
-    const { data: updatedOrder, error: updateError } = await supabase
+    const { data: updatedRows, error: updateError } = await supabase
       .from('simple_orders')
       .update(updateData)
       .eq('id', order.id)
@@ -137,12 +140,28 @@ async function handleCheckoutSessionCompleted(session) {
       console.error('❌ [DB UPDATE] Failed:', updateError.message);
       console.error('❌ [DB UPDATE] Code:', updateError.code);
       console.error('❌ [DB UPDATE] Details:', updateError.details);
+      console.error('❌ [DB UPDATE] Hint:', updateError.hint);
       throw new Error(`Order update failed: ${updateError.message}`);
     }
 
-    console.log('✅ [DB UPDATE] Success - Rows affected:', updatedOrder?.length || 0);
-    console.log('✅ [DB UPDATE] Updated order:', updatedOrder?.[0]?.id, 'Status:', updatedOrder?.[0]?.status);
-    console.log('✅ [WEBHOOK] Order marked as paid:', order.id);
+    const rowCount = updatedRows?.length || 0;
+    console.log('✅ [DB UPDATE] Complete - Rows affected:', rowCount);
+
+    if (rowCount === 0) {
+      console.error('❌ [DB UPDATE] WARNING: 0 rows affected!');
+      console.error('❌ [DB UPDATE] Order ID:', order.id);
+      console.error('❌ [DB UPDATE] Session ID:', session.id);
+      console.error('❌ [DB UPDATE] This means WHERE clause matched nothing');
+      throw new Error(`Update affected 0 rows for order ${order.id}`);
+    }
+
+    if (rowCount > 0 && updatedRows[0]) {
+      console.log('✅ [DB UPDATE] Updated order ID:', updatedRows[0].id);
+      console.log('✅ [DB UPDATE] New status:', updatedRows[0].status);
+      console.log('✅ [DB UPDATE] Paid at:', updatedRows[0].paid_at);
+    }
+
+    console.log('✅ [WEBHOOK] Order successfully marked as paid:', order.id);
 
   } catch (error) {
     console.error('❌ [Webhook] handleCheckoutSessionCompleted failed:', error);
