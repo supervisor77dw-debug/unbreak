@@ -60,8 +60,9 @@ export default function ProductForm({ product, onSave, onCancel }) {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Upload fehlgeschlagen');
+        const errorData = await response.json();
+        console.error('Upload error response:', errorData);
+        throw new Error(errorData.error || 'Upload fehlgeschlagen');
       }
 
       const { imageUrl } = await response.json();
