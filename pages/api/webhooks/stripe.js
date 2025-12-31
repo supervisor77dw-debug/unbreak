@@ -191,10 +191,10 @@ async function handleCheckoutSessionCompleted(session) {
     console.log('✅ [WEBHOOK] Order successfully marked as paid:', order.id);
     logData.status = 'success';
     await logWebhookEvent(logData);
-YNC TO PRISMA (ADMIN SYSTEM) ===
+
+    // === SYNC TO PRISMA (ADMIN SYSTEM) ===
     await syncOrderToPrisma(session, order);
 
-    // === S
     // === SEND ORDER CONFIRMATION EMAIL ===
     await sendOrderConfirmationEmail(session, order);
 
