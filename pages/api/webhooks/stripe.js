@@ -484,11 +484,6 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         });
       }
       console.log(`✅ [PRISMA SYNC] Created ${items.length} order items`);
-          unitPrice: supabaseOrder.subtotal_cents,
-          totalPrice: supabaseOrder.subtotal_cents,
-        },
-      });
-      console.log('✅ [PRISMA SYNC] Created order item');
     } else {
       console.log('ℹ️ [PRISMA SYNC] Order items already exist - skipping');
     }
