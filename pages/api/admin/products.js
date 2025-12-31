@@ -9,11 +9,15 @@ const supabase = createClient(
 export default async function handler(req, res) {
   const user = await requireAuth(req, res);
   if (!user) {
+    console.error('❌ [ADMIN PRODUCTS] No user authenticated');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  console.log('✅ [ADMIN PRODUCTS] User authenticated:', user.email, 'Role:', user.role);
+
   // Only ADMIN can access products
   if (user.role !== 'ADMIN') {
+    console.error('❌ [ADMIN PRODUCTS] Access denied for role:', user.role);
     return res.status(403).json({ error: 'Forbidden - ADMIN role required' });
   }
 

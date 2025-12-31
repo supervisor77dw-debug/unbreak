@@ -11,6 +11,12 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Debug: Check if prisma is loaded
+  if (!prisma) {
+    console.error('❌ [ADMIN STATS] Prisma client is undefined!');
+    return res.status(500).json({ error: 'Database client not initialized' });
+  }
+
   try {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
