@@ -53,49 +53,73 @@ export default async function handler(req, res) {
   };
 
   try {
-    // Call the email API
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000';
+    // Import and call email sending logic directly (avoid fetch to protected URL)
+    const { Resend } = require('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
-    console.log('🧪 [EMAIL TEST] Calling:', `${baseUrl}/api/email/order`);
-    console.log('🧪 [EMAIL TEST] Payload:', JSON.stringify(testOrderData, null, 2));
+    console.log('🧪 [EMAIL TEST] Sending test email directly...');
+    console.log('🧪 [EMAIL TEST] To:', testOrderData.customerEmail);
+    console.log('🧪 [EMAIL TEST] Language:', testOrderData.language);
 
-    const emailResponse = await fetch(`${baseUrl}/api/email/order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(testOrderData)
+    // Build email HTML (simplified inline version)
+    const emailSubject = testOrderData.language === 'de' 
+      ? `Bestellbestätigung - Bestellung #${testOrderData.orderNumber}`
+      : `Order Confirmation - Order #${testOrderData.orderNumber}`;
+
+    const itemsHtml = testOrderData.items.map(item => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.name}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">€${(item.price_cents / 100).toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h1 style="color: #0a4d4d; text-align: center;">UNBREAK ONE - ${emailSubject}</h1>
+  <p>Testbestellung #${testOrderData.orderNumber}</p>
+  <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+    <thead>
+      <tr style="background: #f5f5f5;">
+        <th style="padding: 12px; text-align: left;">Produkt</th>
+        <th style="padding: 12px; text-align: center;">Anzahl</th>
+        <th style="padding: 12px; text-align: right;">Preis</th>
+      </tr>
+    </thead>
+    <tbody>${itemsHtml}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2" style="padding: 15px; text-align: right; font-weight: bold;">Gesamt:</td>
+        <td style="padding: 15px; text-align: right; font-weight: bold; color: #0a4d4d;">€${(testOrderData.totalAmount / 100).toFixed(2)}</td>
+      </tr>
+    </tfoot>
+  </table>
+  <p style="color: #666; font-size: 14px;">Dies ist eine Test-Email von der Resend-Integration.</p>
+</body>
+</html>
+    `;
+
+    // Send email
+    const emailResult = await resend.emails.send({
+      from: process.env.RESEND_FROM,
+      to: testOrderData.customerEmail,
+      subject: emailSubject,
+      html: emailHtml,
     });
 
-    const responseText = await emailResponse.text();
-    let responseData;
-
-    try {
-      responseData = JSON.parse(responseText);
-    } catch (e) {
-      responseData = { raw: responseText };
-    }
-
-    console.log('🧪 [EMAIL TEST] Response status:', emailResponse.status);
-    console.log('🧪 [EMAIL TEST] Response data:', responseData);
-
-    if (!emailResponse.ok) {
-      return res.status(emailResponse.status).json({
-        success: false,
-        error: 'Email API returned error',
-        status: emailResponse.status,
-        response: responseData,
-        testData: testOrderData,
-        envCheck
-      });
-    }
+    console.log('✅ [EMAIL TEST] Email sent successfully:', emailResult.id);
 
     return res.status(200).json({
       success: true,
       message: 'Test email sent successfully',
-      emailResult: responseData,
+      emailResult: {
+        id: emailResult.id,
+        to: testOrderData.customerEmail,
+        subject: emailSubject
+      },
       testData: testOrderData,
       envCheck,
       instructions: {
