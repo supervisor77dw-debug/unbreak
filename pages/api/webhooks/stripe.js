@@ -94,28 +94,41 @@ async function handleCheckoutSessionCompleted(session) {
   };
 
   try {
-    // 1. Find order by stripe_checkout_session_id
-    console.log('🔍 [DB QUERY] Looking for stripe_checkout_session_id:', session.id);
+    // 1. Try to find order - check both tables (configurator vs standard shop)
+    console.log('🔍 [DB QUERY] Looking for order with session:', session.id);
     
-    const { data: order, error: fetchError } = await supabase
+    let order = null;
+    let orderSource = null;
+    
+    // First try: Configurator orders (orders table)
+    const { data: configuratorOrder } = await supabase
       .from('orders')
       .select('*')
       .eq('stripe_checkout_session_id', session.id)
-      .single();
-
-    if (fetchError) {
-      console.error('❌ [DB QUERY] Failed:', fetchError.message);
-      console.error('❌ [DB QUERY] Code:', fetchError.code);
-      console.error('❌ [DB QUERY] Details:', fetchError.details);
-      logData.status = 'error';
-      logData.error_message = `Order lookup failed: ${fetchError.message}`;
-      await logWebhookEvent(logData);
-      throw new Error(`Order lookup failed: ${fetchError.message}`);
+      .maybeSingle();
+    
+    if (configuratorOrder) {
+      order = configuratorOrder;
+      orderSource = 'configurator';
+      console.log('✅ [DB QUERY] Found in CONFIGURATOR orders table');
+    } else {
+      // Second try: Standard shop orders (simple_orders table)
+      const { data: shopOrder } = await supabase
+        .from('simple_orders')
+        .select('*')
+        .eq('stripe_session_id', session.id)
+        .maybeSingle();
+      
+      if (shopOrder) {
+        order = shopOrder;
+        orderSource = 'simple_orders';
+        console.log('✅ [DB QUERY] Found in SIMPLE_ORDERS table (standard shop)');
+      }
     }
 
     if (!order) {
-      console.error('❌ [DB QUERY] No order found for session:', session.id);
-      console.error('❌ [DB QUERY] Check if stripe_checkout_session_id was saved during checkout');
+      console.error('❌ [DB QUERY] No order found in any table for session:', session.id);
+      console.error('❌ [DB QUERY] Checked: orders (configurator) and simple_orders (shop)');
       logData.status = 'error';
       logData.error_message = `No order found for session: ${session.id}`;
       await logWebhookEvent(logData);
@@ -123,9 +136,9 @@ async function handleCheckoutSessionCompleted(session) {
     }
 
     console.log('✅ [DB QUERY] Order found - ID:', order.id);
+    console.log('✅ [DB QUERY] Source:', orderSource);
     console.log('📊 [ORDER BEFORE UPDATE] ID:', order.id);
-    console.log('📊 [ORDER BEFORE UPDATE] order_number:', order.order_number);
-    console.log('📊 [ORDER BEFORE UPDATE] stripe_checkout_session_id:', order.stripe_checkout_session_id);
+    if (order.order_number) console.log('📊 [ORDER BEFORE UPDATE] order_number:', order.order_number);
     console.log('📊 [ORDER BEFORE UPDATE] status:', order.status);
     console.log('📊 [ORDER BEFORE UPDATE] created_at:', order.created_at);
 
@@ -140,20 +153,21 @@ async function handleCheckoutSessionCompleted(session) {
       return;
     }
 
-    // 3. Update order to paid
+    // 3. Update order to paid in the appropriate table
     const updateData = {
       status: 'paid',
       stripe_payment_intent_id: session.payment_intent,
-      paid_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
 
-    console.log('📝 [DB UPDATE] Attempting update...');
+    console.log('📝 [DB UPDATE] Attempting update in', orderSource, 'table...');
     console.log('📝 [DB UPDATE] WHERE order.id =', order.id);
     console.log('📝 [DB UPDATE] SET data:', JSON.stringify(updateData));
 
+    const tableName = orderSource === 'configurator' ? 'orders' : 'simple_orders';
+    
     const { data: updatedRows, error: updateError } = await supabase
-      .from('orders')
+      .from(tableName)
       .update(updateData)
       .eq('id', order.id)
       .select();
@@ -194,7 +208,7 @@ async function handleCheckoutSessionCompleted(session) {
     await logWebhookEvent(logData);
 
     // === SYNC TO PRISMA (ADMIN SYSTEM) ===
-    await syncOrderToPrisma(session, order);
+    await syncOrderToPrisma(session, order, orderSource);
 
     // === SEND ORDER CONFIRMATION EMAIL ===
     await sendOrderConfirmationEmail(session, order);
@@ -310,70 +324,124 @@ async function sendOrderConfirmationEmail(session, order) {
     // Log but don't throw - email failure shouldn't block webhook processing
     console.error('❌ [EMAIL] Failed to send order confirmation:', error.message);
 
-async function syncOrderToPrisma(session, supabaseOrder) {
+async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
   try {
     console.log('💾 [PRISMA SYNC] Starting order sync...');
     console.log('💾 [PRISMA SYNC] Session ID:', session.id);
     console.log('💾 [PRISMA SYNC] Order ID:', supabaseOrder.id);
-    console.log('💾 [PRISMA SYNC] Order Number:', supabaseOrder.order_number);
+    console.log('💾 [PRISMA SYNC] Order Source:', orderSource);
 
-    // 1. Get customer email from customers table
-    const { data: customerData, error: customerError } = await supabase
-      .from('customers')
-      .select('email, name')
-      .eq('id', supabaseOrder.customer_id)
-      .single();
+    let customerEmail, customerName;
+    let items = [];
+    let amountTotal, amountShipping = 0, amountTax = 0;
 
-    if (customerError || !customerData) {
-      console.error('❌ [PRISMA SYNC] Failed to get customer:', customerError?.message);
-      return;
+    // Handle different order formats
+    if (orderSource === 'configurator') {
+      // Orders table format (configurator)
+      console.log('💾 [PRISMA SYNC] Processing CONFIGURATOR order:', supabaseOrder.order_number);
+      
+      // Get customer from customers table
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('email, name')
+        .eq('id', supabaseOrder.customer_id)
+        .single();
+
+      if (customerError || !customerData) {
+        console.error('❌ [PRISMA SYNC] Failed to get customer:', customerError?.message);
+        return;
+      }
+
+      customerEmail = customerData.email;
+      customerName = customerData.name;
+      amountTotal = supabaseOrder.total_cents;
+      amountShipping = supabaseOrder.shipping_cents || 0;
+      amountTax = supabaseOrder.tax_cents || 0;
+
+      // Get product from configuration
+      if (supabaseOrder.configuration_id) {
+        const { data: config } = await supabase
+          .from('configurations')
+          .select('product_id, config_json, price_cents')
+          .eq('id', supabaseOrder.configuration_id)
+          .single();
+        
+        if (config?.product_id) {
+          const { data: product } = await supabase
+            .from('products')
+            .select('name, sku')
+            .eq('id', config.product_id)
+            .single();
+          
+          if (product) {
+            items.push({
+              sku: product.sku,
+              name: product.name,
+              variant: `Configured (${supabaseOrder.order_number})`,
+              qty: 1,
+              unitPrice: supabaseOrder.subtotal_cents || config.price_cents,
+              totalPrice: supabaseOrder.subtotal_cents || config.price_cents,
+            });
+          }
+        }
+      }
+    } else {
+      // simple_orders table format (standard shop)
+      console.log('💾 [PRISMA SYNC] Processing SHOP order');
+      
+      customerEmail = session.customer_details?.email || session.customer_email;
+      customerName = session.customer_details?.name || null;
+      
+      if (!customerEmail) {
+        console.warn('⚠️ [PRISMA SYNC] No customer email - skipping');
+        return;
+      }
+
+      amountTotal = session.amount_total || supabaseOrder.total_amount_cents || 0;
+      amountShipping = session.total_details?.amount_shipping || 0;
+      amountTax = session.total_details?.amount_tax || 0;
+
+      // Parse items from simple_orders JSON
+      try {
+        const parsedItems = typeof supabaseOrder.items === 'string' 
+          ? JSON.parse(supabaseOrder.items) 
+          : supabaseOrder.items || [];
+        
+        for (const item of parsedItems) {
+          items.push({
+            sku: item.sku || item.product_id,
+            name: item.name || 'Product',
+            variant: item.variant || null,
+            qty: item.quantity || 1,
+            unitPrice: item.unit_price_cents || 0,
+            totalPrice: (item.quantity || 1) * (item.unit_price_cents || 0),
+          });
+        }
+      } catch (err) {
+        console.error('❌ [PRISMA SYNC] Failed to parse items:', err.message);
+      }
     }
 
-    const customerEmail = customerData.email;
     console.log('✅ [PRISMA SYNC] Customer email:', customerEmail);
+    console.log('✅ [PRISMA SYNC] Items:', items.length);
 
     // 2. Upsert customer in admin system
     const customer = await prisma.customer.upsert({
       where: { email: customerEmail },
       update: {
-        name: customerData.name,
+        name: customerName,
         lastOrderAt: new Date(),
       },
       create: {
         email: customerEmail,
-        name: customerData.name,
+        name: customerName,
         locale: session.locale || 'de',
       },
     });
 
     console.log('✅ [PRISMA SYNC] Admin customer:', customer.id);
 
-    // 3. Get product info from configuration
-    let productName = 'Configured Product';
-    let productSku = null;
-    
-    if (supabaseOrder.configuration_id) {
-      const { data: config } = await supabase
-        .from('configurations')
-        .select('product_id, config_json, price_cents')
-        .eq('id', supabaseOrder.configuration_id)
-        .single();
-      
-      if (config?.product_id) {
-        const { data: product } = await supabase
-          .from('products')
-          .select('name, sku')
-          .eq('id', config.product_id)
-          .single();
-        
-        if (product) {
-          productName = product.name;
-          productSku = product.sku;
-        }
-      }
-    }
-
-    // 4. Create or update order in admin system
+    // 3. Create or update order in admin system
     const order = await prisma.order.upsert({
       where: { stripeCheckoutSessionId: session.id },
       update: {
@@ -387,13 +455,13 @@ async function syncOrderToPrisma(session, supabaseOrder) {
         stripePaymentIntentId: session.payment_intent,
         statusPayment: 'PAID',
         statusFulfillment: 'NEW',
-        currency: supabaseOrder.currency.toUpperCase(),
-        amountTotal: supabaseOrder.total_cents,
-        amountShipping: supabaseOrder.shipping_cents || 0,
-        amountTax: supabaseOrder.tax_cents || 0,
+        currency: (session.currency || supabaseOrder.currency || 'EUR').toUpperCase(),
+        amountTotal: amountTotal,
+        amountShipping: amountShipping,
+        amountTax: amountTax,
         email: customerEmail,
-        shippingName: customerData.name,
-        shippingAddress: supabaseOrder.shipping_address || null,
+        shippingName: customerName || session.shipping_details?.name,
+        shippingAddress: session.shipping_details?.address || supabaseOrder.shipping_address || null,
         customerId: customer.id,
         paidAt: new Date(),
       },
@@ -401,19 +469,21 @@ async function syncOrderToPrisma(session, supabaseOrder) {
 
     console.log('✅ [PRISMA SYNC] Admin order:', order.id);
 
-    // 5. Create order item (configured product)
+    // 4. Create order items
     const existingItems = await prisma.orderItem.count({
       where: { orderId: order.id }
     });
 
-    if (existingItems === 0) {
-      await prisma.orderItem.create({
-        data: {
-          orderId: order.id,
-          sku: productSku || supabaseOrder.order_number,
-          name: productName,
-          variant: `Configured (${supabaseOrder.order_number})`,
-          qty: 1,
+    if (existingItems === 0 && items.length > 0) {
+      for (const item of items) {
+        await prisma.orderItem.create({
+          data: {
+            orderId: order.id,
+            ...item
+          },
+        });
+      }
+      console.log(`✅ [PRISMA SYNC] Created ${items.length} order items`);
           unitPrice: supabaseOrder.subtotal_cents,
           totalPrice: supabaseOrder.subtotal_cents,
         },
