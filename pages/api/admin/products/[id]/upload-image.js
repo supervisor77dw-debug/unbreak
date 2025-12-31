@@ -30,13 +30,13 @@ export default async function handler(req, res) {
   try {
     // 1. Authenticate & authorize
     const authData = await requireAuth(req, res);
-    if (!authData) {
-      console.log('[upload-image] Auth failed');
-      return;
+    if (!authData || !authData.user) {
+      console.log('[upload-image] Auth failed - no authData or user');
+      return res.status(401).json({ error: 'Nicht authentifiziert' });
     }
 
     if (authData.user.role !== 'ADMIN') {
-      console.log('[upload-image] Access denied - not ADMIN');
+      console.log('[upload-image] Access denied - not ADMIN. Role:', authData.user.role);
       return res.status(403).json({ error: 'Zugriff verweigert. Nur Administratoren können Bilder hochladen.' });
     }
 
