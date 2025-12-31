@@ -23,7 +23,7 @@ CREATE POLICY "Users can read own profile"
   ON profiles FOR SELECT
   USING (auth.uid() = id);
 
--- Admins can read all profiles (uses helper function to avoid recursion)
+-- Admins can read all profiles (uses helper function to av
 CREATE POLICY "Admins can read all profiles"
   ON profiles FOR SELECT
   USING (public.is_admin());
