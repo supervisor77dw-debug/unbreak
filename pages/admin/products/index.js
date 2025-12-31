@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import AdminLayout from '../../../components/AdminLayout';
+import { getProductImageUrl } from '../../../lib/storage-utils';
 
 export async function getServerSideProps() {
   return { props: {} };
@@ -165,17 +166,15 @@ export default function ProductsPage() {
                 <tr key={product.id}>
                   <td>
                     <div className="product-image">
-                      {product.image_url ? (
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name}
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div className="no-image" style={{ display: product.image_url ? 'none' : 'flex' }}>
+                      <img 
+                        src={getProductImageUrl(product.image_path, product.image_url)} 
+                        alt={product.name}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div className="no-image" style={{ display: 'none' }}>
                         📦
                       </div>
                     </div>
