@@ -79,32 +79,47 @@ export default async function handler(req, res) {
     // 5. Read file buffer
     const fileBuffer = fs.readFileSync(uploadedFile.filepath);
     
-    // 6. Generate storage path: products/<SKU>/main.<ext>
+    // 6. Generate storage path: products/product-<timestamp>.<ext> (historisches Pattern)
     const ext = path.extname(uploadedFile.originalFilename || uploadedFile.newFilename);
-    const storagePath = `products/${product.sku}/main${ext}`;
+    const timestamp = Date.now();
+    const storagePath = `products/product-${timestamp}${ext}`;
 
-    // 7. Upload to Supabase Storage (upsert = replace if exists)
+    console.log('[upload-image] Uploading to product-images bucket:', storagePath);
+
+    // 7. Upload to Supabase Storage (product-images bucket, upsert = replace)
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('products')
+      .from('product-images')
       .upload(storagePath, fileBuffer, {
         contentType: uploadedFile.mimetype,
-        upsert: true, // Replace existing file
+        upsert: true,
       });
 
     if (uploadError) {
-      console.error('Supabase upload error:', uploadError);
+      console.error('[upload-image] Supabase error:', {
+        message: uploadError.message,
+        statusCode: uploadError.statusCode,
+        error: uploadError.error,
+        bucket: 'product-images',
+        path: storagePath,
+      });
       return res.status(500).json({ 
         error: 'Upload fehlgeschlagen', 
-        details: uploadError.message 
+        details: uploadError.message,
+        bucket: 'product-images',
+        path: storagePath,
       });
     }
 
+    console.log('[upload-image] Upload success:', uploadData);
+
     // 8. Get public URL
     const { data: urlData } = supabase.storage
-      .from('products')
+      .from('product-images')
       .getPublicUrl(storagePath);
 
     const publicUrl = urlData.publicUrl;
+
+    console.log('[upload-image] Public URL:', publicUrl);
 
     // 9. Update database (image_path + image_url)
     const updatedProduct = await prisma.product.update({
@@ -135,10 +150,15 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Upload API error:', error);
+    console.error('[upload-image] Unhandled error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     return res.status(500).json({ 
       error: 'Interner Serverfehler', 
-      message: error.message 
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 }

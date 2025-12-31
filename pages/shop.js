@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getSupabasePublic, getSupabaseAdmin } from '../lib/supabase';
 import { getCart } from '../lib/cart';
 import Layout from '../components/Layout';
+import { getProductImageUrl } from '../lib/storage-utils';
 
 export default function Shop({ initialProducts }) {
   const [products, setProducts] = useState(initialProducts || []);
@@ -84,31 +85,35 @@ export default function Shop({ initialProducts }) {
     }).format(cents / 100);
   }
 
-  // Fallback images based on product name/SKU
+  // Get product image URL using central storage utility
   function getProductImage(product) {
-    // If image_url exists in database, use it
-    if (product.image_url) {
-      return product.image_url;
-    }
+    // Use central storage utility with fallback chain:
+    // 1. image_path → Public URL from product-images bucket
+    // 2. image_url → Legacy URL
+    // 3. Fallback based on SKU/name
+    const storageUrl = getProductImageUrl(product.image_path, product.image_url);
+    
+    // If storage utility returned placeholder, try SKU-based fallback
+    if (storageUrl === '/images/placeholder-product.jpg') {
+      const name = (product.name || '').toLowerCase();
+      const sku = (product.sku || '').toLowerCase();
 
-    // Fallback based on product name or SKU
-    const name = (product.name || '').toLowerCase();
-    const sku = (product.sku || '').toLowerCase();
+      if (name.includes('weinglas') || name.includes('glass') || sku.includes('glass')) {
+        return '/images/products/glass-holder.jpg';
+      }
+      
+      if (name.includes('flasche') || name.includes('bottle') || sku.includes('bottle')) {
+        return '/images/products/bottle-holder.jpg';
+      }
+      
+      if (name.includes('set') || name.includes('premium') || name.includes('bundle')) {
+        return '/images/products/premium-set.jpg';
+      }
 
-    if (name.includes('weinglas') || name.includes('glass') || sku.includes('glass')) {
       return '/images/products/glass-holder.jpg';
     }
-    
-    if (name.includes('flasche') || name.includes('bottle') || sku.includes('bottle')) {
-      return '/images/products/bottle-holder.jpg';
-    }
-    
-    if (name.includes('set') || name.includes('premium') || name.includes('bundle')) {
-      return '/images/products/premium-set.jpg';
-    }
 
-    // Default fallback
-    return '/images/products/glass-holder.jpg';
+    return storageUrl;
   }
 
   return (

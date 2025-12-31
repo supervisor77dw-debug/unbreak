@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Head from 'next/head';
 import AdminLayout from '../../../components/AdminLayout';
+import { getProductImageUrl } from '../../../lib/storage-utils';
 
 export default function ProductDetail() {
   const router = useRouter();
@@ -149,28 +150,41 @@ export default function ProductDetail() {
     }
 
     setUploading(true);
+    setError(null); // Clear previous errors
 
     try {
-      const formData = new FormData();
-      formData.append('image', file);
+      const formDataUpload = new FormData();
+      formDataUpload.append('image', file);
+
+      console.log('[Admin] Uploading image for product', id);
 
       const res = await fetch(`/api/admin/products/${id}/upload-image`, {
         method: 'POST',
-        body: formData,
+        body: formDataUpload,
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Upload fehlgeschlagen');
+        console.error('[Admin] Upload failed:', {
+          status: res.status,
+          error: data.error,
+          details: data.details,
+          bucket: data.bucket,
+          path: data.path,
+        });
+        throw new Error(data.error || data.details || 'Upload fehlgeschlagen');
       }
 
-      const data = await res.json();
+      console.log('[Admin] Upload success:', data);
       
+      // Update form state with new image URL
       setFormData(prev => ({
         ...prev,
         image_url: data.imageUrl,
       }));
       
+      // Update product state
       setProduct(prev => ({
         ...prev,
         image_url: data.imageUrl,
@@ -179,6 +193,8 @@ export default function ProductDetail() {
 
       alert('Bild erfolgreich hochgeladen!');
     } catch (err) {
+      console.error('[Admin] Upload error:', err);
+      setError('Upload-Fehler: ' + err.message);
       alert('Upload-Fehler: ' + err.message);
     } finally {
       setUploading(false);
@@ -325,10 +341,10 @@ export default function ProductDetail() {
                       <div className="spinner"></div>
                       <p>Bild wird hochgeladen...</p>
                     </div>
-                  ) : formData.image_url ? (
+                  ) : (formData.image_url || product?.image_path) ? (
                     <div className="image-preview-large">
                       <img 
-                        src={formData.image_url} 
+                        src={getProductImageUrl(product?.image_path, formData.image_url)} 
                         alt={formData.name}
                         onError={(e) => {
                           e.target.style.display = 'none';
