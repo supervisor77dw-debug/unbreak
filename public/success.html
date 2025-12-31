@@ -190,27 +190,14 @@
     
     // Function to clear cart completely
     function clearCartCompletely() {
-      try {
-        // Try to import and use cart module
-        import('../lib/cart.js').then(module => {
-          const cart = module.getCart();
-          cart.clear();
-          console.log('✅ [CART_CLEAR] Cart cleared via cart.clear()');
-        }).catch(err => {
-          console.warn('⚠️ [CART_CLEAR] Could not import cart.js:', err.message);
-        });
-      } catch (err) {
-        console.error('⚠️ [CART_CLEAR] cart.clear() failed:', err);
-      }
-      
-      // Direct localStorage clear (always works)
+      // Direct localStorage + sessionStorage clear (reliable for static HTML)
       try {
         localStorage.removeItem('unbreak_cart');
         localStorage.removeItem('checkout_in_progress');
         localStorage.removeItem('stripe_session_id');
         localStorage.removeItem('cart_id');
         
-        // Also try sessionStorage
+        // Also clear sessionStorage
         sessionStorage.removeItem('unbreak_cart');
         sessionStorage.removeItem('checkout_in_progress');
         
@@ -220,7 +207,7 @@
         window.dispatchEvent(new CustomEvent('cart:cleared'));
         console.log('✅ [CART_CLEAR] cart:cleared event dispatched');
       } catch (err) {
-        console.error('⚠️ [CART_CLEAR] localStorage.removeItem failed:', err);
+        console.error('⚠️ [CART_CLEAR] Storage clear failed:', err);
       }
     }
     
