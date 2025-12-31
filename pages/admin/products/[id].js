@@ -20,6 +20,7 @@ export default function ProductDetail() {
     sku: '',
     base_price_cents: 0,
     active: true,
+    image_url: '',
   });
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function ProductDetail() {
           sku: data.sku || '',
           base_price_cents: data.base_price_cents || 0,
           active: data.active ?? true,
+          image_url: data.image_url || '',
         });
       } catch (err) {
         setError(err.message);
@@ -186,6 +188,40 @@ export default function ProductDetail() {
                 <small style={{ color: '#888', fontSize: '12px' }}>Änderungen betreffen nur neue Bestellungen</small>
               </div>
             </div>
+          </div>
+
+          <div className="form-section">
+            <h2>Produktbild</h2>
+            
+            <div className="form-group">
+              <label>Bild-URL</label>
+              <input
+                type="url"
+                value={formData.image_url}
+                onChange={(e) => handleChange('image_url', e.target.value)}
+                placeholder="https://... oder Supabase Storage URL"
+              />
+              <small style={{ color: '#888', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                Tipp: Lade Bilder in Supabase Storage hoch oder nutze externe URLs
+              </small>
+            </div>
+
+            {formData.image_url && (
+              <div className="image-preview">
+                <label>Vorschau:</label>
+                <img 
+                  src={formData.image_url} 
+                  alt={formData.name || 'Produktbild'}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'block';
+                  }}
+                />
+                <div className="image-error" style={{ display: 'none', padding: '20px', background: '#2a2a2a', borderRadius: '8px', textAlign: 'center', color: '#888' }}>
+                  ❌ Bild konnte nicht geladen werden
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="form-section">
@@ -378,6 +414,32 @@ export default function ProductDetail() {
         .btn-save:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+
+        .image-preview {
+          margin-top: 16px;
+          padding: 16px;
+          background: #1a1a1a;
+          border-radius: 8px;
+          border: 1px solid #333;
+        }
+
+        .image-preview label {
+          display: block;
+          margin-bottom: 12px;
+          color: #d4f1f1;
+          font-weight: 500;
+        }
+
+        .image-preview img {
+          max-width: 100%;
+          max-height: 300px;
+          border-radius: 8px;
+          display: block;
+          margin: 0 auto;
+          object-fit: contain;
+          background: #0f0f0f;
+          border: 1px solid #333;
         }
 
         .loading,

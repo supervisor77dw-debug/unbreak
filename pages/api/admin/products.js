@@ -58,6 +58,7 @@ export default async function handler(req, res) {
         sku,
         base_price_cents,
         active,
+        image_url,
       } = req.body;
 
       if (!name || !sku) {
@@ -70,6 +71,7 @@ export default async function handler(req, res) {
         sku,
         base_price_cents: base_price_cents || 0,
         active: active ?? true,
+        image_url: image_url || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

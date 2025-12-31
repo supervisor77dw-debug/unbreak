@@ -20,6 +20,7 @@ CREATE TABLE products (
   description TEXT,
   base_price_cents INTEGER NOT NULL CHECK (base_price_cents >= 0),
   currency TEXT NOT NULL DEFAULT 'EUR',
+  image_url TEXT,
   active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

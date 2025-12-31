@@ -151,6 +151,7 @@ export default function ProductsPage() {
           <table className="admin-table">
             <thead>
               <tr>
+                <th>Bild</th>
                 <th>Name</th>
                 <th>SKU</th>
                 <th>Beschreibung</th>
@@ -162,6 +163,23 @@ export default function ProductsPage() {
             <tbody>
               {products.map((product) => (
                 <tr key={product.id}>
+                  <td>
+                    <div className="product-image">
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div className="no-image" style={{ display: product.image_url ? 'none' : 'flex' }}>
+                        📦
+                      </div>
+                    </div>
+                  </td>
                   <td>
                     <div className="product-name">{product.name}</div>
                   </td>
@@ -392,6 +410,34 @@ export default function ProductsPage() {
 
         .status-toggle:hover {
           opacity: 0.8;
+        }
+
+        .product-image {
+          width: 60px;
+          height: 60px;
+          border-radius: 6px;
+          overflow: hidden;
+          background: #1a1a1a;
+          border: 1px solid #333;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .product-image img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .no-image {
+          font-size: 24px;
+          color: #555;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
         }
 
         .action-link {
