@@ -53,57 +53,57 @@ export default function AdminDashboard() {
       <AdminLayout>
         <div className="admin-header">
           <h1>Dashboard</h1>
-          <p>Welcome back, {session.user.name || session.user.email}</p>
+          <p>Willkommen zurück, {session.user.name || session.user.email}</p>
         </div>
 
         {loading ? (
-          <div className="admin-loading">Loading stats...</div>
+          <div className="admin-loading">Übersicht wird geladen...</div>
         ) : stats ? (
           <div className="admin-stats-grid">
             <div className="admin-stat-card">
-              <div className="stat-label">Today's Orders</div>
+              <div className="stat-label">Bestellungen Heute</div>
               <div className="stat-value">{stats.ordersToday || 0}</div>
-              <div className="stat-change positive">+{stats.ordersChange || 0}% from yesterday</div>
+              <div className="stat-change positive">+{stats.ordersChange || 0}% gegenüber gestern</div>
             </div>
 
             <div className="admin-stat-card">
-              <div className="stat-label">Open Tickets</div>
+              <div className="stat-label">Offene Tickets</div>
               <div className="stat-value">{stats.openTickets || 0}</div>
-              <div className="stat-change">{stats.ticketsChange || 0} new today</div>
+              <div className="stat-change">{stats.ticketsChange || 0} heute neu</div>
             </div>
 
             <div className="admin-stat-card">
-              <div className="stat-label">Revenue (Today)</div>
+              <div className="stat-label">Umsatz (Heute)</div>
               <div className="stat-value">€{((stats.revenueToday || 0) / 100).toFixed(2)}</div>
               <div className="stat-change positive">+{stats.revenueChange || 0}%</div>
             </div>
 
             <div className="admin-stat-card">
-              <div className="stat-label">Pending Orders</div>
+              <div className="stat-label">Offene Bestellungen</div>
               <div className="stat-value">{stats.pendingOrders || 0}</div>
-              <div className="stat-change neutral">Needs processing</div>
+              <div className="stat-change neutral">Bearbeitung erforderlich</div>
             </div>
           </div>
         ) : (
           <div className="admin-empty">
-            <p>Unable to load statistics</p>
+            <p>Statistiken konnten nicht geladen werden</p>
           </div>
         )}
 
         <div className="admin-quick-actions">
-          <h2>Quick Actions</h2>
+          <h2>Schnellaktionen</h2>
           <div className="action-buttons">
             <Link href="/admin/orders?fulfillment=NEW" className="action-button">
               <span className="icon">⚡</span>
-              <span>Process New Orders</span>
+              <span>Neue Bestellungen bearbeiten</span>
             </Link>
             <Link href="/admin/tickets?status=OPEN" className="action-button">
               <span className="icon">💬</span>
-              <span>View Open Tickets</span>
+              <span>Offene Tickets anzeigen</span>
             </Link>
             <Link href="/admin/orders?fulfillment=PROCESSING" className="action-button">
               <span className="icon">📮</span>
-              <span>Ready to Ship</span>
+              <span>Versandbereit</span>
             </Link>
           </div>
         </div>

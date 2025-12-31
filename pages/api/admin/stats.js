@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     yesterdayStart.setDate(yesterdayStart.getDate() - 1);
 
     // Orders today
-    const ordersToday = await prisma.order.count({
+    const ordersToday = await prisma.adminOrder.count({
       where: {
         createdAt: {
           gte: todayStart
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     });
 
     // Orders yesterday
-    const ordersYesterday = await prisma.order.count({
+    const ordersYesterday = await prisma.adminOrder.count({
       where: {
         createdAt: {
           gte: yesterdayStart,
@@ -37,25 +37,32 @@ export default async function handler(req, res) {
     });
 
     // Open tickets
-    const openTickets = await prisma.ticket.count({
-      where: {
-        status: {
-          in: ['OPEN', 'IN_PROGRESS']
+    let openTickets = 0;
+    let newTicketsToday = 0;
+    try {
+      openTickets = await prisma.adminTicket.count({
+        where: {
+          status: {
+            in: ['OPEN', 'IN_PROGRESS']
+          }
         }
-      }
-    });
+      });
 
-    // New tickets today
-    const newTicketsToday = await prisma.ticket.count({
-      where: {
-        createdAt: {
-          gte: todayStart
+      // New tickets today
+      newTicketsToday = await prisma.adminTicket.count({
+        where: {
+          createdAt: {
+            gte: todayStart
+          }
         }
-      }
-    });
+      });
+    } catch (err) {
+      // Tickets table might not exist yet
+      console.log('Tickets table not available');
+    }
 
     // Revenue today
-    const revenueOrders = await prisma.order.findMany({
+    const revenueOrders = await prisma.adminOrder.findMany({
       where: {
         createdAt: {
           gte: todayStart
@@ -69,7 +76,7 @@ export default async function handler(req, res) {
     const revenueToday = revenueOrders.reduce((sum, order) => sum + order.amountTotal, 0);
 
     // Revenue yesterday
-    const revenueOrdersYesterday = await prisma.order.findMany({
+    const revenueOrdersYesterday = await prisma.adminOrder.findMany({
       where: {
         createdAt: {
           gte: yesterdayStart,
@@ -84,7 +91,7 @@ export default async function handler(req, res) {
     const revenueYesterday = revenueOrdersYesterday.reduce((sum, order) => sum + order.amountTotal, 0);
 
     // Pending orders
-    const pendingOrders = await prisma.order.count({
+    const pendingOrders = await prisma.adminOrder.count({
       where: {
         statusFulfillment: {
           in: ['NEW', 'PROCESSING']

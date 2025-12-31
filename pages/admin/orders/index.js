@@ -24,6 +24,8 @@ export default function AdminOrders() {
     total: 0,
     totalPages: 0,
   });
+  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [bulkAction, setBulkAction] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -58,6 +60,59 @@ export default function AdminOrders() {
       console.error('Failed to fetch orders:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    window.location.href = '/api/admin/orders/export?format=csv';
+  };
+
+  const toggleSelectOrder = (orderId) => {
+    setSelectedOrders((prev) =>
+      prev.includes(orderId)
+        ? prev.filter((id) => id !== orderId)
+        : [...prev, orderId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.length === orders.length) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(orders.map((o) => o.id));
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (!bulkAction || selectedOrders.length === 0) {
+      return;
+    }
+
+    const confirmMsg = `${selectedOrders.length} Bestellung(en) auf "${bulkAction}" setzen?`;
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+
+    try {
+      const promises = selectedOrders.map((orderId) =>
+        fetch(`/api/admin/orders/${orderId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            statusFulfillment: bulkAction,
+          }),
+        })
+      );
+
+      await Promise.all(promises);
+      
+      // Refresh orders
+      fetchOrders();
+      setSelectedOrders([]);
+      setBulkAction('');
+      alert('Bestellungen erfolgreich aktualisiert');
+    } catch (err) {
+      alert('Fehler beim Aktualisieren: ' + err.message);
     }
   };
 
@@ -98,18 +153,23 @@ export default function AdminOrders() {
   return (
     <>
       <Head>
-        <title>Orders - Admin - UNBREAK ONE</title>
+        <title>Bestellungen - Admin - UNBREAK ONE</title>
       </Head>
       <AdminLayout>
         <div className="admin-page-header">
-          <h1>Orders</h1>
-          <p>Manage customer orders and fulfillment</p>
+          <div>
+            <h1>Bestellungen</h1>
+            <p>Kundenbestellungen und Versand verwalten</p>
+          </div>
+          <button onClick={handleExport} className="export-button">
+            📥 Als CSV exportieren
+          </button>
         </div>
 
         <div className="admin-filters">
           <input
             type="text"
-            placeholder="Search by email, order ID..."
+            placeholder="Suche nach E-Mail, Bestellnummer..."
             value={filters.search}
             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
             className="admin-search-input"
@@ -120,11 +180,11 @@ export default function AdminOrders() {
             onChange={(e) => setFilters({ ...filters, statusPayment: e.target.value })}
             className="admin-filter-select"
           >
-            <option value="">All Payment Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="PAID">Paid</option>
-            <option value="FAILED">Failed</option>
-            <option value="REFUNDED">Refunded</option>
+            <option value="">Alle Zahlungsstatus</option>
+            <option value="PENDING">Ausstehend</option>
+            <option value="PAID">Bezahlt</option>
+            <option value="FAILED">Fehlgeschlagen</option>
+            <option value="REFUNDED">Erstattet</option>
           </select>
 
           <select
@@ -132,20 +192,40 @@ export default function AdminOrders() {
             onChange={(e) => setFilters({ ...filters, statusFulfillment: e.target.value })}
             className="admin-filter-select"
           >
-            <option value="">All Fulfillment Status</option>
-            <option value="NEW">New</option>
-            <option value="PROCESSING">Processing</option>
-            <option value="SHIPPED">Shipped</option>
-            <option value="DONE">Done</option>
-            <option value="CANCELED">Canceled</option>
+            <option value="">Alle Versandstatus</option>
+            <option value="NEW">Neu</option>
+            <option value="PROCESSING">In Bearbeitung</option>
+            <option value="SHIPPED">Versandt</option>
+            <option value="DONE">Abgeschlossen</option>
+            <option value="CANCELED">Storniert</option>
           </select>
         </div>
 
+        {selectedOrders.length > 0 && (
+          <div className="bulk-actions">
+            <span className="bulk-count">{selectedOrders.length} ausgewählt</span>
+            <select
+              value={bulkAction}
+              onChange={(e) => setBulkAction(e.target.value)}
+              className="bulk-select"
+            >
+              <option value="">Aktion wählen...</option>
+              <option value="PROCESSING">→ In Bearbeitung</option>
+              <option value="SHIPPED">→ Versandt</option>
+              <option value="DONE">→ Abgeschlossen</option>
+              <option value="CANCELED">→ Stornieren</option>
+            </select>
+            <button onClick={handleBulkAction} className="bulk-button" disabled={!bulkAction}>
+              Anwenden
+            </button>
+          </div>
+        )}
+
         {loading ? (
-          <div className="admin-loading">Loading orders...</div>
+          <div className="admin-loading">Bestellungen werden geladen...</div>
         ) : orders.length === 0 ? (
           <div className="admin-empty">
-            <p>No orders found</p>
+            <p>Keine Bestellungen gefunden</p>
           </div>
         ) : (
           <>
@@ -153,19 +233,33 @@ export default function AdminOrders() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Order ID</th>
-                    <th>Customer</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Payment</th>
-                    <th>Fulfillment</th>
-                    <th>Date</th>
-                    <th>Actions</th>
+                    <th>
+                      <input
+                        type="checkbox"
+                        checked={selectedOrders.length === orders.length && orders.length > 0}
+                        onChange={toggleSelectAll}
+                      />
+                    </th>
+                    <th>Bestellnr.</th>
+                    <th>Kunde</th>
+                    <th>Artikel</th>
+                    <th>Gesamt</th>
+                    <th>Zahlung</th>
+                    <th>Versand</th>
+                    <th>Datum</th>
+                    <th>Aktionen</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map((order) => (
                     <tr key={order.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedOrders.includes(order.id)}
+                          onChange={() => toggleSelectOrder(order.id)}
+                        />
+                      </td>
                       <td>
                         <Link href={`/admin/orders/${order.id}`} className="order-id-link">
                           {order.id.substring(0, 8)}...
@@ -177,14 +271,14 @@ export default function AdminOrders() {
                           <div className="customer-email">{order.customer.email}</div>
                         </div>
                       </td>
-                      <td>{order.items.length} item(s)</td>
+                      <td>{order.items.length} Artikel</td>
                       <td className="amount-cell">{formatPrice(order.amountTotal)}</td>
                       <td>
                         <span
                           className="status-badge"
                           style={{ backgroundColor: getStatusBadge(order.statusPayment, 'payment') }}
                         >
-                          {order.statusPayment}
+                          {order.statusPayment === 'PENDING' ? 'Ausstehend' : order.statusPayment === 'PAID' ? 'Bezahlt' : order.statusPayment === 'FAILED' ? 'Fehlgeschlagen' : order.statusPayment === 'REFUNDED' ? 'Erstattet' : order.statusPayment}
                         </span>
                       </td>
                       <td>
@@ -192,13 +286,13 @@ export default function AdminOrders() {
                           className="status-badge"
                           style={{ backgroundColor: getStatusBadge(order.statusFulfillment, 'fulfillment') }}
                         >
-                          {order.statusFulfillment}
+                          {order.statusFulfillment === 'NEW' ? 'Neu' : order.statusFulfillment === 'PROCESSING' ? 'In Bearbeitung' : order.statusFulfillment === 'SHIPPED' ? 'Versandt' : order.statusFulfillment === 'DONE' ? 'Abgeschlossen' : order.statusFulfillment === 'CANCELED' ? 'Storniert' : order.statusFulfillment}
                         </span>
                       </td>
                       <td className="date-cell">{formatDate(order.createdAt)}</td>
                       <td>
                         <Link href={`/admin/orders/${order.id}`} className="action-link">
-                          View →
+                          Ansehen →
                         </Link>
                       </td>
                     </tr>
@@ -214,17 +308,17 @@ export default function AdminOrders() {
                   disabled={pagination.page === 1}
                   className="pagination-button"
                 >
-                  ← Previous
+                  ← Zurück
                 </button>
                 <span className="pagination-info">
-                  Page {pagination.page} of {pagination.totalPages} ({pagination.total} total)
+                  Seite {pagination.page} von {pagination.totalPages} ({pagination.total} gesamt)
                 </span>
                 <button
                   onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
                   disabled={pagination.page >= pagination.totalPages}
                   className="pagination-button"
                 >
-                  Next →
+                  Weiter →
                 </button>
               </div>
             )}
@@ -234,6 +328,10 @@ export default function AdminOrders() {
         <style jsx>{`
           .admin-page-header {
             margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
           }
 
           .admin-page-header h1 {
@@ -246,6 +344,24 @@ export default function AdminOrders() {
           .admin-page-header p {
             color: #666;
             margin: 0;
+          }
+
+          .export-button {
+            background: #0a4d4d;
+            color: #d4f1f1;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+          }
+
+          .export-button:hover {
+            background: #0d6666;
+            transform: translateY(-1px);
           }
 
           .admin-filters {
@@ -278,6 +394,54 @@ export default function AdminOrders() {
           .admin-filter-select:focus {
             outline: none;
             border-color: #0a4d4d;
+          }
+
+          .bulk-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+          }
+
+          .bulk-count {
+            color: #0a4d4d;
+            font-weight: 600;
+            font-size: 14px;
+          }
+
+          .bulk-select {
+            background: #222;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            padding: 8px 12px;
+            min-width: 200px;
+          }
+
+          .bulk-button {
+            background: #0a4d4d;
+            color: #d4f1f1;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+          }
+
+          .bulk-button:hover:not(:disabled) {
+            background: #0d6666;
+          }
+
+          .bulk-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
           }
 
           .admin-table-container {

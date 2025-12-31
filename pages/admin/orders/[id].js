@@ -63,7 +63,7 @@ export default function OrderDetail() {
   if (status === 'loading' || loading) {
     return (
       <AdminLayout>
-        <div className="loading">Loading order...</div>
+        <div className="loading">Bestellung wird geladen...</div>
       </AdminLayout>
     );
   }
@@ -72,9 +72,9 @@ export default function OrderDetail() {
     return (
       <AdminLayout>
         <div className="error-state">
-          <h2>Error</h2>
+          <h2>Fehler</h2>
           <p>{error}</p>
-          <button onClick={() => router.push('/admin/orders')}>← Back to Orders</button>
+          <button onClick={() => router.push('/admin/orders')}>← Zurück zu Bestellungen</button>
         </div>
       </AdminLayout>
     );
@@ -84,8 +84,8 @@ export default function OrderDetail() {
     return (
       <AdminLayout>
         <div className="error-state">
-          <h2>Order not found</h2>
-          <button onClick={() => router.push('/admin/orders')}>← Back to Orders</button>
+          <h2>Bestellung nicht gefunden</h2>
+          <button onClick={() => router.push('/admin/orders')}>← Zurück zu Bestellungen</button>
         </div>
       </AdminLayout>
     );
@@ -155,10 +155,10 @@ export default function OrderDetail() {
       <div className="order-detail">
         <div className="header">
           <button className="back-btn" onClick={() => router.push('/admin/orders')}>
-            ← Back
+            ← Zurück
           </button>
           <div className="title-section">
-            <h1>Order Details</h1>
+            <h1>Bestelldetails</h1>
             <div className="order-id">ID: {order.id.substring(0, 8)}...</div>
           </div>
         </div>
@@ -167,41 +167,41 @@ export default function OrderDetail() {
           {/* Status Cards */}
           <div className="status-section">
             <div className="status-card">
-              <label>Payment Status</label>
+              <label>Zahlungsstatus</label>
               <select
                 value={order.statusPayment}
                 onChange={(e) => updateStatus('statusPayment', e.target.value)}
                 disabled={updating}
               >
-                <option value="PENDING">PENDING</option>
-                <option value="PAID">PAID</option>
-                <option value="FAILED">FAILED</option>
-                <option value="REFUNDED">REFUNDED</option>
+                <option value="PENDING">Ausstehend</option>
+                <option value="PAID">Bezahlt</option>
+                <option value="FAILED">Fehlgeschlagen</option>
+                <option value="REFUNDED">Erstattet</option>
               </select>
             </div>
 
             <div className="status-card">
-              <label>Fulfillment Status</label>
+              <label>Versandstatus</label>
               <select
                 value={order.statusFulfillment}
                 onChange={(e) => updateStatus('statusFulfillment', e.target.value)}
                 disabled={updating}
               >
-                <option value="NEW">NEW</option>
-                <option value="PROCESSING">PROCESSING</option>
-                <option value="SHIPPED">SHIPPED</option>
-                <option value="DONE">DONE</option>
-                <option value="CANCELED">CANCELED</option>
+                <option value="NEW">Neu</option>
+                <option value="PROCESSING">In Bearbeitung</option>
+                <option value="SHIPPED">Versandt</option>
+                <option value="DONE">Abgeschlossen</option>
+                <option value="CANCELED">Storniert</option>
               </select>
             </div>
           </div>
 
           {/* Customer Info */}
           <div className="info-card">
-            <h2>Customer</h2>
+            <h2>Kunde</h2>
             <div className="info-grid">
               <div>
-                <strong>Email:</strong>
+                <strong>E-Mail:</strong>
                 <span>{order.email}</span>
               </div>
               {order.shippingName && (
@@ -212,7 +212,7 @@ export default function OrderDetail() {
               )}
               {order.customer && (
                 <div>
-                  <strong>Customer ID:</strong>
+                  <strong>Kunden-ID:</strong>
                   <span>{order.customer.id.substring(0, 8)}...</span>
                 </div>
               )}
@@ -222,7 +222,7 @@ export default function OrderDetail() {
           {/* Shipping Address */}
           {order.shippingAddress && (
             <div className="info-card">
-              <h2>Shipping Address</h2>
+              <h2>Lieferadresse</h2>
               <div className="address">
                 {order.shippingAddress.line1}<br />
                 {order.shippingAddress.line2 && <>{order.shippingAddress.line2}<br /></>}
@@ -235,15 +235,15 @@ export default function OrderDetail() {
 
           {/* Order Items */}
           <div className="info-card">
-            <h2>Items</h2>
+            <h2>Artikel</h2>
             <table className="items-table">
               <thead>
                 <tr>
-                  <th>Product</th>
+                  <th>Produkt</th>
                   <th>SKU</th>
-                  <th>Qty</th>
-                  <th>Unit Price</th>
-                  <th>Total</th>
+                  <th>Menge</th>
+                  <th>Einzelpreis</th>
+                  <th>Gesamt</th>
                 </tr>
               </thead>
               <tbody>
@@ -265,22 +265,22 @@ export default function OrderDetail() {
 
           {/* Totals */}
           <div className="info-card">
-            <h2>Totals</h2>
+            <h2>Summen</h2>
             <div className="totals">
               <div className="total-row">
-                <span>Subtotal:</span>
+                <span>Zwischensumme:</span>
                 <span>{formatCurrency(order.amountTotal - order.amountShipping - order.amountTax)}</span>
               </div>
               <div className="total-row">
-                <span>Shipping:</span>
+                <span>Versand:</span>
                 <span>{formatCurrency(order.amountShipping)}</span>
               </div>
               <div className="total-row">
-                <span>Tax:</span>
+                <span>MwSt.:</span>
                 <span>{formatCurrency(order.amountTax)}</span>
               </div>
               <div className="total-row total">
-                <span>Total:</span>
+                <span>Gesamt:</span>
                 <span>{formatCurrency(order.amountTotal)}</span>
               </div>
             </div>
@@ -288,26 +288,26 @@ export default function OrderDetail() {
 
           {/* Payment Info */}
           <div className="info-card">
-            <h2>Payment Details</h2>
+            <h2>Zahlungsdetails</h2>
             <div className="info-grid">
               <div>
-                <strong>Stripe Session:</strong>
+                <strong>Stripe-Sitzung:</strong>
                 <span className="mono">{order.stripeCheckoutSessionId}</span>
               </div>
               {order.stripePaymentIntentId && (
                 <div>
-                  <strong>Payment Intent:</strong>
+                  <strong>Zahlungs-ID:</strong>
                   <span className="mono">{order.stripePaymentIntentId}</span>
                 </div>
               )}
               {order.paidAt && (
                 <div>
-                  <strong>Paid At:</strong>
+                  <strong>Bezahlt am:</strong>
                   <span>{formatDate(order.paidAt)}</span>
                 </div>
               )}
               <div>
-                <strong>Created:</strong>
+                <strong>Erstellt am:</strong>
                 <span>{formatDate(order.createdAt)}</span>
               </div>
             </div>
@@ -316,7 +316,7 @@ export default function OrderDetail() {
           {/* Order Events */}
           {order.events && order.events.length > 0 && (
             <div className="info-card">
-              <h2>Activity Log</h2>
+              <h2>Aktivitätsprotokoll</h2>
               <div className="events">
                 {order.events.map((event) => (
                   <div key={event.id} className="event">
@@ -324,10 +324,10 @@ export default function OrderDetail() {
                       <span className="event-type">{event.type}</span>
                       <span className="event-time">{formatDate(event.createdAt)}</span>
                     </div>
-                    <div className="event-source">Source: {event.source}</div>
+                    <div className="event-source">Quelle: {event.source}</div>
                     {event.payload && (
                       <details className="event-payload">
-                        <summary>View details</summary>
+                        <summary>Details anzeigen</summary>
                         <pre>{JSON.stringify(event.payload, null, 2)}</pre>
                       </details>
                     )}
@@ -339,9 +339,9 @@ export default function OrderDetail() {
 
           {/* Notes */}
           <div className="info-card">
-            <h2>Internal Notes</h2>
+            <h2>Interne Notizen</h2>
             <textarea
-              placeholder="Add notes about this order..."
+              placeholder="Notizen zu dieser Bestellung hinzufügen..."
               value={order.notes || ''}
               onChange={(e) => updateStatus('notes', e.target.value)}
               disabled={updating}
