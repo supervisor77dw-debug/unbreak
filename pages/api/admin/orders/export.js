@@ -1,5 +1,5 @@
-import { requireAuth } from '../../../lib/auth-helpers';
-import prisma from '../../../lib/prisma';
+import { requireAuth } from '../../../../lib/auth-helpers';
+import prisma from '../../../../lib/prisma';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
