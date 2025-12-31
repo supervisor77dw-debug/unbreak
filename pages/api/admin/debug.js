@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   const dbUrlParsed = dbUrl ? {
     hasPassword: dbUrl.includes(':') && dbUrl.split(':').length > 2,
     host: dbUrl.match(/@([^:\/]+)/)?.[1] || 'unknown',
-    port: dbUrl.match(/:(\d+)\//)?.[[1] || 'unknown',
+    port: dbUrl.match(/:(\d+)\//)?.[[1]] || 'unknown',
     database: dbUrl.match(/\/([^?]+)/)?.[1] || 'unknown',
     isPooler: dbUrl.includes('6543') || dbUrl.includes('pooler'),
     isDirect: dbUrl.includes('5432') || dbUrl.includes('direct'),
