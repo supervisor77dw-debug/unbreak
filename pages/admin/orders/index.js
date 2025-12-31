@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import AdminLayout from '../../components/AdminLayout.jsx';
+import AdminLayout from '../../../components/AdminLayout';
 
 export async function getServerSideProps() {
   return { props: {} };

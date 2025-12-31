@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { buffer } from 'micro';
-import prisma from '../../../lib/prisma.js';
+import prisma from '../../../lib/prisma';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseUrl = process.env.SUPABASE_URL;
