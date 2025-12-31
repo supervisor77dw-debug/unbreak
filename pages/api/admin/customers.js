@@ -31,7 +31,7 @@ export default async function handler(req, res) {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        created_at: 'desc',
       },
       take: 100,
     });
