@@ -17,6 +17,8 @@ enum Role {
   ADMIN      // Full access: products, system, users
   STAFF      // Orders, fulfillment, refunds
   SUPPORT    // Tickets, communication, notes
+
+
 }
 
 model User {
@@ -31,7 +33,11 @@ model User {
 
   ticketMessages TicketMessage[]
 
+
+
   @@map("admin_users")
+
+
 }
 
 // =====================================================
@@ -51,7 +57,11 @@ model Customer {
   orders  Order[]
   tickets Ticket[]
 
+
+
   @@map("admin_customers")
+
+
 }
 
 // =====================================================
@@ -64,6 +74,8 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   PARTIALLY_REFUNDED
+
+
 }
 
 enum FulfillmentStatus {
@@ -72,6 +84,8 @@ enum FulfillmentStatus {
   SHIPPED
   DONE
   CANCELED
+
+
 }
 
 model Order {
@@ -101,11 +115,15 @@ model Order {
   tickets  Ticket[]
   refunds  Refund[]
 
+
+
   @@index([customerId])
   @@index([statusPayment])
   @@index([statusFulfillment])
   @@index([createdAt])
   @@map("admin_orders")
+
+
 }
 
 model OrderItem {
@@ -120,8 +138,12 @@ model OrderItem {
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
+
+
   @@index([orderId])
   @@map("admin_order_items")
+
+
 }
 
 // =====================================================
@@ -134,6 +156,8 @@ enum EventType {
   STATUS_CHANGE
   NOTE_ADDED
   ERROR
+
+
 }
 
 model OrderEvent {
@@ -146,10 +170,14 @@ model OrderEvent {
 
   order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
+
+
   @@index([orderId])
   @@index([type])
   @@index([createdAt])
   @@map("admin_order_events")
+
+
 }
 
 // =====================================================
@@ -161,6 +189,8 @@ enum TicketType {
   RETURN
   QUESTION
   OTHER
+
+
 }
 
 enum TicketStatus {
@@ -169,6 +199,8 @@ enum TicketStatus {
   WAITING_CUSTOMER
   RESOLVED
   CLOSED
+
+
 }
 
 enum TicketPriority {
@@ -176,6 +208,8 @@ enum TicketPriority {
   NORMAL
   HIGH
   URGENT
+
+
 }
 
 model Ticket {
@@ -194,11 +228,15 @@ model Ticket {
   customer Customer        @relation(fields: [customerId], references: [id])
   messages TicketMessage[]
 
+
+
   @@index([customerId])
   @@index([orderId])
   @@index([status])
   @@index([priority])
   @@map("admin_tickets")
+
+
 }
 
 model TicketMessage {
@@ -212,8 +250,12 @@ model TicketMessage {
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   author User?  @relation(fields: [authorUserId], references: [id])
 
+
+
   @@index([ticketId])
   @@map("admin_ticket_messages")
+
+
 }
 
 // =====================================================
@@ -225,6 +267,8 @@ enum RefundStatus {
   SUBMITTED
   SUCCEEDED
   FAILED
+
+
 }
 
 model Refund {
@@ -239,7 +283,11 @@ model Refund {
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
+
+
   @@index([orderId])
   @@index([status])
   @@map("admin_refunds")
+
+
 }

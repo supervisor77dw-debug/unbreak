@@ -33,3 +33,6 @@ build/
 dist/
 
 /lib/generated/prisma
+
+.vercel
+.env*.local

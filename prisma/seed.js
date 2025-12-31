@@ -1,8 +1,8 @@
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
-require('dotenv').config();
+require('dotenv').config({ path: '.env.local' });
 
-const prisma = new PrismaClient();
+// Use existing Prisma client singleton from lib/prisma.js
+const prisma = require('../lib/prisma.js').default;
 
 async function main() {
   console.log('🌱 Seeding admin user...');
