@@ -17,11 +17,28 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Database client not initialized' });
   }
 
+  // Check database connection
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('[ADMIN STATS] Database connection OK');
+  } catch (dbError) {
+    console.error('❌ [ADMIN STATS] Database connection failed:', {
+      message: dbError.message,
+      code: dbError.code,
+    });
+    return res.status(500).json({ 
+      error: 'Database connection failed',
+      message: dbError.message 
+    });
+  }
+
   try {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterdayStart = new Date(todayStart);
     yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+    console.log('[ADMIN STATS] Fetching statistics...');
 
     // Orders today
     const ordersToday = await prisma.order.count({
@@ -31,6 +48,7 @@ export default async function handler(req, res) {
         }
       }
     });
+    console.log('[ADMIN STATS] Orders today:', ordersToday);
 
     // Orders yesterday
     const ordersYesterday = await prisma.order.count({
@@ -41,6 +59,7 @@ export default async function handler(req, res) {
         }
       }
     });
+    console.log('[ADMIN STATS] Orders yesterday:', ordersYesterday);
 
     // Open tickets
     let openTickets = 0;
@@ -62,9 +81,10 @@ export default async function handler(req, res) {
           }
         }
       });
+      console.log('[ADMIN STATS] Tickets - open:', openTickets, 'new today:', newTicketsToday);
     } catch (err) {
       // Tickets table might not exist yet
-      console.log('Tickets table not available');
+      console.log('[ADMIN STATS] Tickets table not available:', err.message);
     }
 
     // Revenue today
@@ -80,6 +100,7 @@ export default async function handler(req, res) {
       }
     });
     const revenueToday = revenueOrders.reduce((sum, order) => sum + order.amountTotal, 0);
+    console.log('[ADMIN STATS] Revenue today:', revenueToday);
 
     // Revenue yesterday
     const revenueOrdersYesterday = await prisma.order.findMany({
@@ -95,6 +116,7 @@ export default async function handler(req, res) {
       }
     });
     const revenueYesterday = revenueOrdersYesterday.reduce((sum, order) => sum + order.amountTotal, 0);
+    console.log('[ADMIN STATS] Revenue yesterday:', revenueYesterday);
 
     // Pending orders
     const pendingOrders = await prisma.order.count({
@@ -104,6 +126,7 @@ export default async function handler(req, res) {
         }
       }
     });
+    console.log('[ADMIN STATS] Pending orders:', pendingOrders);
 
     // Calculate changes
     const ordersChange = ordersYesterday > 0 
@@ -113,6 +136,8 @@ export default async function handler(req, res) {
     const revenueChange = revenueYesterday > 0
       ? Math.round(((revenueToday - revenueYesterday) / revenueYesterday) * 100)
       : 0;
+
+    console.log('[ADMIN STATS] Success - returning stats');
 
     res.status(200).json({
       ordersToday,
@@ -125,7 +150,16 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('❌ [ADMIN STATS] Error:', error);
-    res.status(500).json({ error: 'Failed to fetch statistics' });
+    console.error('❌ [ADMIN STATS] Error:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      meta: error.meta,
+    });
+    res.status(500).json({ 
+      error: 'Failed to fetch statistics',
+      message: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
