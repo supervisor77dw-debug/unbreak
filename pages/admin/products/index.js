@@ -151,11 +151,10 @@ export default function ProductsPage() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Bild</th>
                 <th>Name</th>
                 <th>SKU</th>
+                <th>Beschreibung</th>
                 <th>Preis</th>
-                <th>Lagerbestand</th>
                 <th>Status</th>
                 <th>Aktionen</th>
               </tr>
@@ -164,27 +163,15 @@ export default function ProductsPage() {
               {products.map((product) => (
                 <tr key={product.id}>
                   <td>
-                    <div className="product-image">
-                      {product.image_url ? (
-                        <img src={product.image_url} alt={product.name_de} />
-                      ) : (
-                        <div className="no-image">📦</div>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="product-name">{product.name_de || product.name_en}</div>
-                    {product.description_de && (
-                      <div className="product-desc">{product.description_de.substring(0, 60)}...</div>
-                    )}
+                    <div className="product-name">{product.name}</div>
                   </td>
                   <td className="mono">{product.sku || '—'}</td>
-                  <td className="price-cell">{formatPrice(product.base_price_cents)}</td>
                   <td>
-                    <span className={`stock-badge ${product.stock_quantity <= 0 ? 'out' : product.stock_quantity < 10 ? 'low' : 'ok'}`}>
-                      {product.stock_quantity || 0} Stk.
-                    </span>
+                    {product.description && (
+                      <div className="product-desc">{product.description.substring(0, 80)}...</div>
+                    )}
                   </td>
+                  <td className="price-cell">{formatPrice(product.base_price_cents)}</td>
                   <td>
                     <button
                       onClick={() => toggleActive(product.id, product.active)}

@@ -15,15 +15,11 @@ export default function ProductDetail() {
   const [saving, setSaving] = useState(false);
   
   const [formData, setFormData] = useState({
-    name_de: '',
-    name_en: '',
-    description_de: '',
-    description_en: '',
+    name: '',
+    description: '',
     sku: '',
     base_price_cents: 0,
-    stock_quantity: 0,
     active: true,
-    image_url: '',
   });
 
   useEffect(() => {
@@ -44,15 +40,11 @@ export default function ProductDetail() {
         const data = await res.json();
         setProduct(data);
         setFormData({
-          name_de: data.name_de || '',
-          name_en: data.name_en || '',
-          description_de: data.description_de || '',
-          description_en: data.description_en || '',
+          name: data.name || '',
+          description: data.description || '',
           sku: data.sku || '',
           base_price_cents: data.base_price_cents || 0,
-          stock_quantity: data.stock_quantity || 0,
           active: data.active ?? true,
-          image_url: data.image_url || '',
         });
       } catch (err) {
         setError(err.message);
@@ -141,58 +133,45 @@ export default function ProductDetail() {
           <div className="form-section">
             <h2>Grundinformationen</h2>
             
-            <div className="form-row">
-              <div className="form-group">
-                <label>Produktname (Deutsch) *</label>
-                <input
-                  type="text"
-                  value={formData.name_de}
-                  onChange={(e) => handleChange('name_de', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Produktname (Englisch)</label>
-                <input
-                  type="text"
-                  value={formData.name_en}
-                  onChange={(e) => handleChange('name_en', e.target.value)}
-                />
-              </div>
-            </div>
-
             <div className="form-group">
-              <label>Beschreibung (Deutsch)</label>
-              <textarea
-                value={formData.description_de}
-                onChange={(e) => handleChange('description_de', e.target.value)}
-                rows={4}
+              <label>Produktname *</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="z.B. Weinglashalter"
+                required
               />
             </div>
 
             <div className="form-group">
-              <label>Beschreibung (Englisch)</label>
+              <label>Beschreibung</label>
               <textarea
-                value={formData.description_en}
-                onChange={(e) => handleChange('description_en', e.target.value)}
+                value={formData.description}
+                onChange={(e) => handleChange('description', e.target.value)}
+                placeholder="Produktbeschreibung..."
                 rows={4}
               />
             </div>
           </div>
 
           <div className="form-section">
-            <h2>Preis & Lagerbestand</h2>
+            <h2>Preis & SKU</h2>
             
             <div className="form-row">
               <div className="form-group">
-                <label>SKU</label>
+                <label>SKU *</label>
                 <input
                   type="text"
                   value={formData.sku}
                   onChange={(e) => handleChange('sku', e.target.value)}
-                  placeholder="z.B. UNB-001"
+                  placeholder="z.B. UNBREAK-WEIN-01"
+                  required
+                  disabled={id !== 'new'}
                 />
+                {id !== 'new' && (
+                  <small style={{ color: '#888', fontSize: '12px' }}>SKU kann nach Erstellung nicht geändert werden</small>
+                )}
               </div>
 
               <div className="form-group">
@@ -204,35 +183,8 @@ export default function ProductDetail() {
                   onChange={(e) => handleChange('base_price_cents', Math.round(parseFloat(e.target.value) * 100))}
                   required
                 />
+                <small style={{ color: '#888', fontSize: '12px' }}>Änderungen betreffen nur neue Bestellungen</small>
               </div>
-
-              <div className="form-group">
-                <label>Lagerbestand</label>
-                <input
-                  type="number"
-                  value={formData.stock_quantity}
-                  onChange={(e) => handleChange('stock_quantity', parseInt(e.target.value) || 0)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="form-section">
-            <h2>Medien</h2>
-            
-            <div className="form-group">
-              <label>Bild-URL</label>
-              <input
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => handleChange('image_url', e.target.value)}
-                placeholder="https://..."
-              />
-              {formData.image_url && (
-                <div className="image-preview">
-                  <img src={formData.image_url} alt="Vorschau" />
-                </div>
-              )}
             </div>
           </div>
 

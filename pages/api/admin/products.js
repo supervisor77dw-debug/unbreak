@@ -26,13 +26,13 @@ export default async function handler(req, res) {
       const { search, active } = req.query;
 
       let query = supabase
-        .from('shop_products')
+        .from('products')
         .select('*')
         .order('created_at', { ascending: false });
 
       // Filter by search
       if (search) {
-        query = query.or(`name_de.ilike.%${search}%,name_en.ilike.%${search}%,sku.ilike.%${search}%`);
+        query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
       }
 
       // Filter by active status
@@ -43,24 +43,8 @@ export default async function handler(req, res) {
       const { data: products, error } = await query;
 
       if (error) {
-        console.error('❌ [ADMIN PRODUCTS] Supabase Error:', JSON.stringify(error, null, 2));
-        console.error('❌ [ADMIN PRODUCTS] Error details:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
-        });
-        
-        // If table doesn't exist, return empty array for now
-        if (error.code === '42P01' || error.message?.includes('does not exist')) {
-          console.log('⚠️ [ADMIN PRODUCTS] Table shop_products does not exist, returning empty array');
-          return res.status(200).json({ products: [] });
-        }
-        
-        return res.status(500).json({ 
-          error: 'Failed to fetch products',
-          details: error.message 
-        });
+        console.error('❌ [ADMIN PRODUCTS] Error:', error);
+        return res.status(500).json({ error: 'Failed to fetch products' });
       }
 
       return res.status(200).json({ products: products || [] });
@@ -69,37 +53,29 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       // Create new product
       const {
-        name_de,
-        name_en,
-        description_de,
-        description_en,
+        name,
+        description,
         sku,
         base_price_cents,
-        stock_quantity,
         active,
-        image_url,
       } = req.body;
 
-      if (!name_de) {
-        return res.status(400).json({ error: 'name_de is required' });
+      if (!name || !sku) {
+        return res.status(400).json({ error: 'name and sku are required' });
       }
 
       const newProduct = {
-        name_de,
-        name_en: name_en || null,
-        description_de: description_de || null,
-        description_en: description_en || null,
-        sku: sku || null,
+        name,
+        description: description || null,
+        sku,
         base_price_cents: base_price_cents || 0,
-        stock_quantity: stock_quantity || 0,
         active: active ?? true,
-        image_url: image_url || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
 
       const { data: product, error } = await supabase
-        .from('shop_products')
+        .from('products')
         .insert(newProduct)
         .select()
         .single();
