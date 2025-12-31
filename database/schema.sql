@@ -20,7 +20,16 @@ CREATE TABLE products (
   description TEXT,
   base_price_cents INTEGER NOT NULL CHECK (base_price_cents >= 0),
   currency TEXT NOT NULL DEFAULT 'EUR',
-  image_url TEXT,
+  
+  -- Media
+  image_path TEXT,              -- Storage path: products/<sku>/main.jpg
+  image_url TEXT,               -- Public URL (cached or generated)
+  
+  -- Shop Display
+  badge_label TEXT,             -- e.g. "Gastro Edition", "Bestseller"
+  shipping_text TEXT,           -- e.g. "Versand 3–5 Tage"
+  highlights JSONB,             -- Array of 3 USPs: ["Made in Germany", "Magnetisch", "Sicherer Halt"]
+  
   active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

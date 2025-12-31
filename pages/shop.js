@@ -188,18 +188,32 @@ export default function Shop({ initialProducts }) {
             ) : (
               <div className="shop-grid">
                 {products.map((product) => {
-                  const isGastro = product.sku?.toLowerCase().includes('gastro') || 
-                                   product.name?.toLowerCase().includes('gastro');
+                  // Parse highlights from JSONB
+                  let highlights = [];
+                  if (product.highlights) {
+                    try {
+                      highlights = typeof product.highlights === 'string' 
+                        ? JSON.parse(product.highlights) 
+                        : product.highlights;
+                    } catch (e) {
+                      console.warn('Failed to parse highlights:', e);
+                    }
+                  }
                   
                   return (
-                    <div key={product.id} className={`product-card ${isGastro ? 'product-card-featured' : ''}`}>
-                      {isGastro && <div className="product-badge">Gastro Edition</div>}
+                    <div key={product.id} className="product-card">
+                      {product.badge_label && (
+                        <div className="product-badge">{product.badge_label}</div>
+                      )}
                       
                       <div className="product-image-wrapper">
                         <img
                           src={getProductImage(product)}
                           alt={product.name}
                           className="product-image"
+                          onError={(e) => {
+                            e.target.src = '/images/placeholder-product.jpg';
+                          }}
                         />
                       </div>
 
@@ -209,6 +223,14 @@ export default function Shop({ initialProducts }) {
                           {product.short_description_de || product.description || 'Professioneller magnetischer Halter'}
                         </p>
 
+                        {Array.isArray(highlights) && highlights.length > 0 && (
+                          <ul className="product-highlights">
+                            {highlights.slice(0, 3).map((highlight, index) => (
+                              <li key={index}>{highlight}</li>
+                            ))}
+                          </ul>
+                        )}
+
                         <div className="product-price-section">
                           <div className="price-wrapper">
                             <span className="product-price">
@@ -217,7 +239,7 @@ export default function Shop({ initialProducts }) {
                             <span className="price-label">inkl. MwSt.</span>
                           </div>
                           <div className="product-trust">
-                            <span className="trust-icon-small">🚚</span> Versand 3–5 Tage
+                            <span className="trust-icon-small">🚚</span> {product.shipping_text || 'Versand 3–5 Tage'}
                           </div>
                         </div>
 
@@ -441,8 +463,31 @@ export default function Shop({ initialProducts }) {
           font-size: clamp(0.95rem, 1.5vw, 1.05rem);
           color: #666;
           line-height: 1.6;
+          margin: 0 0 1rem 0;
+        }
+
+        /* Product Highlights/USPs */
+        .product-highlights {
+          list-style: none;
+          padding: 0;
           margin: 0 0 1.5rem 0;
-          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .product-highlights li {
+          font-size: 0.9rem;
+          color: #0A6C74;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .product-highlights li::before {
+          content: '✓';
+          font-weight: bold;
+          color: #0A6C74;
         }
 
         /* Price Section */

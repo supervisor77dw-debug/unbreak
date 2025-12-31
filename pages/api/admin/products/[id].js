@@ -45,6 +45,9 @@ export default async function handler(req, res) {
         base_price_cents,
         active,
         image_url,
+        badge_label,
+        shipping_text,
+        highlights,
       } = req.body;
 
       const updates = {
@@ -57,6 +60,9 @@ export default async function handler(req, res) {
       if (base_price_cents !== undefined) updates.base_price_cents = base_price_cents;
       if (active !== undefined) updates.active = active;
       if (image_url !== undefined) updates.image_url = image_url;
+      if (badge_label !== undefined) updates.badge_label = badge_label;
+      if (shipping_text !== undefined) updates.shipping_text = shipping_text;
+      if (highlights !== undefined) updates.highlights = highlights;
 
       const { data: updated, error } = await supabase
         .from('products')
