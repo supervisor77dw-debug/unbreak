@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     // Orders today
     const ordersToday = await prisma.adminOrder.count({
       where: {
-        createdAt: {
+        created_at: {
           gte: todayStart
         }
       }
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     // Orders yesterday
     const ordersYesterday = await prisma.adminOrder.count({
       where: {
-        createdAt: {
+        created_at: {
           gte: yesterdayStart,
           lt: todayStart
         }
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
       // New tickets today
       newTicketsToday = await prisma.adminTicket.count({
         where: {
-          createdAt: {
+          created_at: {
             gte: todayStart
           }
         }
@@ -64,36 +64,36 @@ export default async function handler(req, res) {
     // Revenue today
     const revenueOrders = await prisma.adminOrder.findMany({
       where: {
-        createdAt: {
+        created_at: {
           gte: todayStart
         },
-        statusPayment: 'PAID'
+        status_payment: 'PAID'
       },
       select: {
-        amountTotal: true
+        amount_total: true
       }
     });
-    const revenueToday = revenueOrders.reduce((sum, order) => sum + order.amountTotal, 0);
+    const revenueToday = revenueOrders.reduce((sum, order) => sum + order.amount_total, 0);
 
     // Revenue yesterday
     const revenueOrdersYesterday = await prisma.adminOrder.findMany({
       where: {
-        createdAt: {
+        created_at: {
           gte: yesterdayStart,
           lt: todayStart
         },
-        statusPayment: 'PAID'
+        status_payment: 'PAID'
       },
       select: {
-        amountTotal: true
+        amount_total: true
       }
     });
-    const revenueYesterday = revenueOrdersYesterday.reduce((sum, order) => sum + order.amountTotal, 0);
+    const revenueYesterday = revenueOrdersYesterday.reduce((sum, order) => sum + order.amount_total, 0);
 
     // Pending orders
     const pendingOrders = await prisma.adminOrder.count({
       where: {
-        statusFulfillment: {
+        status_fulfillment: {
           in: ['NEW', 'PROCESSING']
         }
       }
