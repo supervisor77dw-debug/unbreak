@@ -43,8 +43,24 @@ export default async function handler(req, res) {
       const { data: products, error } = await query;
 
       if (error) {
-        console.error('❌ [ADMIN PRODUCTS] Error:', error);
-        return res.status(500).json({ error: 'Failed to fetch products' });
+        console.error('❌ [ADMIN PRODUCTS] Supabase Error:', JSON.stringify(error, null, 2));
+        console.error('❌ [ADMIN PRODUCTS] Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        
+        // If table doesn't exist, return empty array for now
+        if (error.code === '42P01' || error.message?.includes('does not exist')) {
+          console.log('⚠️ [ADMIN PRODUCTS] Table shop_products does not exist, returning empty array');
+          return res.status(200).json({ products: [] });
+        }
+        
+        return res.status(500).json({ 
+          error: 'Failed to fetch products',
+          details: error.message 
+        });
       }
 
       return res.status(200).json({ products: products || [] });
