@@ -28,9 +28,20 @@ export default async function handler(req, res) {
   };
 
   // 4. Check Database URL
+  const dbUrl = process.env.DATABASE_URL || '';
+  const dbUrlParsed = dbUrl ? {
+    hasPassword: dbUrl.includes(':') && dbUrl.split(':').length > 2,
+    host: dbUrl.match(/@([^:\/]+)/)?.[1] || 'unknown',
+    port: dbUrl.match(/:(\d+)\//)?.[[1] || 'unknown',
+    database: dbUrl.match(/\/([^?]+)/)?.[1] || 'unknown',
+    isPooler: dbUrl.includes('6543') || dbUrl.includes('pooler'),
+    isDirect: dbUrl.includes('5432') || dbUrl.includes('direct'),
+  } : {};
+  
   checks.checks.databaseUrl = {
     set: !!process.env.DATABASE_URL,
-    value: process.env.DATABASE_URL ? 'Set' : 'Missing',
+    info: dbUrlParsed,
+    warning: dbUrlParsed.isPooler ? 'Using pooler connection - may cause issues with Prisma' : null,
   };
 
   // 5. Check Prisma
@@ -44,6 +55,14 @@ export default async function handler(req, res) {
     checks.checks.prismaConnection = {
       status: 'FAILED',
       error: err.message,
+      code: err.code,
+      hint: err.code === 'P1001' 
+        ? 'Cannot reach database - check DATABASE_URL host/port'
+        : err.code === 'P1000'
+        ? 'Authentication failed - check DATABASE_URL password'
+        : err.message.includes('password authentication failed')
+        ? 'Wrong password or user not authorized - verify DATABASE_URL in Vercel Environment Variables'
+        : 'Check Prisma connection string and database status',
     };
   }
 
