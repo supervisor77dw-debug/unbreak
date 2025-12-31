@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { buffer } from 'micro';
+import prisma from '../../../lib/prisma';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -190,7 +191,10 @@ async function handleCheckoutSessionCompleted(session) {
     console.log('✅ [WEBHOOK] Order successfully marked as paid:', order.id);
     logData.status = 'success';
     await logWebhookEvent(logData);
+YNC TO PRISMA (ADMIN SYSTEM) ===
+    await syncOrderToPrisma(session, order);
 
+    // === S
     // === SEND ORDER CONFIRMATION EMAIL ===
     await sendOrderConfirmationEmail(session, order);
 
@@ -304,6 +308,123 @@ async function sendOrderConfirmationEmail(session, order) {
   } catch (error) {
     // Log but don't throw - email failure shouldn't block webhook processing
     console.error('❌ [EMAIL] Failed to send order confirmation:', error.message);
+
+async function syncOrderToPrisma(session, supabaseOrder) {
+  try {
+    console.log('💾 [PRISMA SYNC] Starting order sync...');
+    console.log('💾 [PRISMA SYNC] Session ID:', session.id);
+    console.log('💾 [PRISMA SYNC] Customer email:', session.customer_details?.email);
+
+    // 1. Get or create customer
+    const customerEmail = session.customer_details?.email || session.customer_email;
+    if (!customerEmail) {
+      console.warn('⚠️ [PRISMA SYNC] No customer email - skipping');
+      return;
+    }
+
+    const customer = await prisma.customer.upsert({
+      where: { email: customerEmail },
+      update: {
+        name: session.customer_details?.name,
+        lastOrderAt: new Date(),
+      },
+      create: {
+        email: customerEmail,
+        name: session.customer_details?.name,
+        locale: session.locale || 'de',
+      },
+    });
+
+    console.log('✅ [PRISMA SYNC] Customer:', customer.id);
+
+    // 2. Parse items from Supabase order
+    let items = [];
+    try {
+      items = typeof supabaseOrder.items === 'string' 
+        ? JSON.parse(supabaseOrder.items) 
+        : supabaseOrder.items || [];
+    } catch (err) {
+      console.error('❌ [PRISMA SYNC] Failed to parse items:', err.message);
+      items = [];
+    }
+
+    // 3. Create or update order
+    const order = await prisma.order.upsert({
+      where: { stripeCheckoutSessionId: session.id },
+      update: {
+        statusPayment: 'PAID',
+        stripePaymentIntentId: session.payment_intent,
+        paidAt: new Date(),
+        updatedAt: new Date(),
+      },
+      create: {
+        stripeCheckoutSessionId: session.id,
+        stripePaymentIntentId: session.payment_intent,
+        statusPayment: 'PAID',
+        statusFulfillment: 'NEW',
+        currency: (session.currency || 'EUR').toUpperCase(),
+        amountTotal: session.amount_total || supabaseOrder.total_amount_cents || 0,
+        amountShipping: session.total_details?.amount_shipping || 0,
+        amountTax: session.total_details?.amount_tax || 0,
+        email: customerEmail,
+        shippingName: session.shipping_details?.name || session.customer_details?.name,
+        shippingAddress: session.shipping_details?.address || null,
+        billingAddress: session.customer_details?.address || null,
+        customerId: customer.id,
+        paidAt: new Date(),
+      },
+    });
+
+    console.log('✅ [PRISMA SYNC] Order:', order.id);
+
+    // 4. Create order items (only if new order)
+    if (items.length > 0) {
+      // Check if items already exist
+      const existingItems = await prisma.orderItem.count({
+        where: { orderId: order.id }
+      });
+
+      if (existingItems === 0) {
+        for (const item of items) {
+          await prisma.orderItem.create({
+            data: {
+              orderId: order.id,
+              name: item.name || item.product_name || 'Product',
+              qty: item.quantity || 1,
+              unitPrice: item.price_cents || 0,
+              totalPrice: (item.quantity || 1) * (item.price_cents || 0),
+            },
+          });
+        }
+        console.log('✅ [PRISMA SYNC] Created', items.length, 'order items');
+      } else {
+        console.log('ℹ️ [PRISMA SYNC] Order items already exist - skipping');
+      }
+    }
+
+    // 5. Log event
+    await prisma.orderEvent.create({
+      data: {
+        orderId: order.id,
+        type: 'STRIPE_WEBHOOK',
+        source: 'stripe',
+        payload: {
+          event: 'checkout.session.completed',
+          session_id: session.id,
+          payment_intent: session.payment_intent,
+          amount_total: session.amount_total,
+        },
+      },
+    });
+
+    console.log('✅ [PRISMA SYNC] Complete - Order synced to admin system');
+
+  } catch (error) {
+    // Don't throw - Prisma sync failure shouldn't block webhook
+    console.error('❌ [PRISMA SYNC] Failed:', error.message);
+    console.error('❌ [PRISMA SYNC] Stack:', error.stack);
+  }
+}
     console.error('❌ [EMAIL] Stack:', error.stack);
   }
 }
