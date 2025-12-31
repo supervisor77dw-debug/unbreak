@@ -30,26 +30,36 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  console.log('[upload-image] Request received');
+
   try {
     // 1. Authenticate & authorize
     const authData = await requireAuth(req, res);
-    if (!authData) return;
+    if (!authData) {
+      console.log('[upload-image] Auth failed');
+      return;
+    }
 
     if (authData.user.role !== 'ADMIN') {
+      console.log('[upload-image] Access denied - not ADMIN');
       return res.status(403).json({ error: 'Zugriff verweigert. Nur Administratoren können Bilder hochladen.' });
     }
 
-    const { id } = req.query; // Product ID
+    const { id } = req.query; // Product ID (UUID)
+    console.log('[upload-image] Product ID:', id);
 
     // 2. Verify product exists
     const product = await prisma.product.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
       select: { id: true, sku: true },
     });
 
     if (!product) {
+      console.log('[upload-image] Product not found:', id);
       return res.status(404).json({ error: 'Produkt nicht gefunden' });
     }
+
+    console.log('[upload-image] Product found:', product.sku);
 
     // 3. Parse multipart form data
     const form = formidable({
