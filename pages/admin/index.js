@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 
+// Prevent static generation - admin pages must be dynamic
+export async function getServerSideProps() {
+  return { props: {} };
+}
+
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
