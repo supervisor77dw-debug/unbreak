@@ -16,10 +16,23 @@ export default function Shop({ initialProducts }) {
     // Update cart count on mount and when cart changes
     if (cart) {
       setCartCount(cart.getItemCount());
+      
+      // Listen for cart cleared event (from success page)
+      const handleCartCleared = () => {
+        console.log('🔄 [SHOP] Cart cleared event received - updating UI');
+        setCartCount(0);
+      };
+      
+      window.addEventListener('cart:cleared', handleCartCleared);
+      
       const unsubscribe = cart.onChange(() => {
         setCartCount(cart.getItemCount());
       });
-      return unsubscribe;
+      
+      return () => {
+        window.removeEventListener('cart:cleared', handleCartCleared);
+        unsubscribe();
+      };
     }
   }, []);
 

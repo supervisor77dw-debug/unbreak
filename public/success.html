@@ -178,8 +178,6 @@
   </div>
   
   <script type="module">
-    import { getCart } from '../lib/cart.js';
-
     // CRITICAL: Clear cart immediately on success page load
     // This ensures cart is emptied even if verify API fails
     console.log('🧹 [CART_CLEAR] Success page loaded - clearing cart');
@@ -193,19 +191,34 @@
     // Function to clear cart completely
     function clearCartCompletely() {
       try {
-        const cart = getCart();
-        cart.clear();
-        console.log('✅ [CART_CLEAR] Cart cleared via cart.clear()');
+        // Try to import and use cart module
+        import('../lib/cart.js').then(module => {
+          const cart = module.getCart();
+          cart.clear();
+          console.log('✅ [CART_CLEAR] Cart cleared via cart.clear()');
+        }).catch(err => {
+          console.warn('⚠️ [CART_CLEAR] Could not import cart.js:', err.message);
+        });
       } catch (err) {
         console.error('⚠️ [CART_CLEAR] cart.clear() failed:', err);
       }
       
-      // Fallback: Direct localStorage clear
+      // Direct localStorage clear (always works)
       try {
         localStorage.removeItem('unbreak_cart');
         localStorage.removeItem('checkout_in_progress');
         localStorage.removeItem('stripe_session_id');
-        console.log('✅ [CART_CLEAR] localStorage cart keys removed');
+        localStorage.removeItem('cart_id');
+        
+        // Also try sessionStorage
+        sessionStorage.removeItem('unbreak_cart');
+        sessionStorage.removeItem('checkout_in_progress');
+        
+        console.log('✅ [CART_CLEAR] localStorage + sessionStorage cart keys removed');
+        
+        // Broadcast cart cleared event for other tabs/components
+        window.dispatchEvent(new CustomEvent('cart:cleared'));
+        console.log('✅ [CART_CLEAR] cart:cleared event dispatched');
       } catch (err) {
         console.error('⚠️ [CART_CLEAR] localStorage.removeItem failed:', err);
       }
@@ -213,6 +226,10 @@
     
     if (sessionId) {
       console.log('🔍 [SUCCESS] Verifying session:', sessionId);
+      
+      // Clear cart immediately when session_id present (user came from Stripe)
+      console.log('🧹 [CART_CLEAR] Session ID found - clearing cart immediately');
+      clearCartCompletely();
       
       // Fetch order details from backend
       fetch(`/api/orders/verify?session_id=${sessionId}`)
@@ -224,7 +241,13 @@
           console.log('✅ [SUCCESS] Order verified:', data.order_id, 'Status:', data.status);
           
           if (data.order_id) {
-            orderNumberEl.textContent = data.order_id.substring(0, 8).toUpperCase();
+            // Show formatted order number (first 8 + last 4 chars with ...)
+            const orderId = data.order_id;
+            const displayId = orderId.length > 12 
+              ? `${orderId.substring(0, 8).toUpperCase()}...${orderId.substring(orderId.length - 4).toUpperCase()}`
+              : orderId.toUpperCase();
+            orderNumberEl.textContent = displayId;
+            orderNumberEl.title = orderId; // Full ID on hover
             
             // Show order details
             if (data.items && data.items.length > 0) {
@@ -245,13 +268,8 @@
               document.querySelector('.order-info').insertAdjacentHTML('afterend', detailsHtml);
             }
             
-            // Only clear cart if order is verified (paid or pending)
-            if (data.status === 'paid' || data.status === 'pending') {
-              console.log('🧹 [CART_CLEAR] Order verified paid/pending - clearing cart');
-              clearCartCompletely();
-            } else {
-              console.warn('⚠️ [CART_CLEAR] Order status not paid:', data.status, '- NOT clearing cart');
-            }
+            // Cart already cleared above
+            console.log('✅ [CART_CLEAR] Order verified - cart already cleared');
           } else {
             orderNumberEl.textContent = 'Nicht verfügbar';
             // Still clear cart - user reached success page
@@ -263,9 +281,8 @@
           console.error('❌ [SUCCESS] Order verification error:', error);
           orderNumberEl.textContent = 'Bestellung wird verarbeitet...';
           
-          // Even on error, clear cart - user reached success page from Stripe
-          console.log('🧹 [CART_CLEAR] Verify failed but success page reached - clearing cart anyway');
-          clearCartCompletely();
+          // Cart already cleared above when session_id was found
+          console.log('✅ [CART_CLEAR] Verify failed but cart already cleared');
         });
     } else {
       // No session_id means direct access - don't clear cart
