@@ -133,11 +133,30 @@ export default function Shop({ initialProducts }) {
         {/* Hero Section */}
         <section className="shop-hero">
           <div className="container">
-            <h1 data-i18n="shop.title">Shop</h1>
-            <p data-i18n="shop.subtitle">
-              Magnetische Halter für Gläser & Flaschen – Einzelprodukte,
-              Bundles und vorkonfigurierte Sets
+            <h1>UNBREAK ONE Shop</h1>
+            <p className="hero-subtitle">
+              Magnetische Halter für Gläser & Flaschen – Professionelle Qualität Made in Germany
             </p>
+            
+            {/* Trust Bar */}
+            <div className="trust-bar">
+              <div className="trust-item">
+                <span className="trust-icon">✓</span>
+                <span>Sicherer Checkout</span>
+              </div>
+              <div className="trust-item">
+                <span className="trust-icon">🚚</span>
+                <span>Versand 3–5 Tage</span>
+              </div>
+              <div className="trust-item">
+                <span className="trust-icon">🇩🇪</span>
+                <span>Made in Germany</span>
+              </div>
+              <div className="trust-item">
+                <span className="trust-icon">💬</span>
+                <span>Premium Support</span>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -168,73 +187,520 @@ export default function Shop({ initialProducts }) {
               </div>
             ) : (
               <div className="shop-grid">
-                {products.map((product) => (
-                  <div key={product.id} className="product-card glass-card">
-                    <div className="product-image-wrapper">
-                      <img
-                        src={getProductImage(product)}
-                        alt={product.name}
-                        className="product-image"
-                      />
-                    </div>
+                {products.map((product) => {
+                  const isGastro = product.sku?.toLowerCase().includes('gastro') || 
+                                   product.name?.toLowerCase().includes('gastro');
+                  
+                  return (
+                    <div key={product.id} className={`product-card ${isGastro ? 'product-card-featured' : ''}`}>
+                      {isGastro && <div className="product-badge">Gastro Edition</div>}
+                      
+                      <div className="product-image-wrapper">
+                        <img
+                          src={getProductImage(product)}
+                          alt={product.name}
+                          className="product-image"
+                        />
+                      </div>
 
-                    <div className="product-content">
-                      <h3 className="product-title">{product.name}</h3>
-                      <p className="product-description">
-                        {product.short_description_de || product.description}
-                      </p>
+                      <div className="product-content">
+                        <h3 className="product-title">{product.name}</h3>
+                        <p className="product-description">
+                          {product.short_description_de || product.description || 'Professioneller magnetischer Halter'}
+                        </p>
 
-                      <div className="product-footer">
-                        <span className="product-price">
-                          {formatPrice(product.base_price_cents)}
-                        </span>
+                        <div className="product-price-section">
+                          <div className="price-wrapper">
+                            <span className="product-price">
+                              {formatPrice(product.base_price_cents)} €
+                            </span>
+                            <span className="price-label">inkl. MwSt.</span>
+                          </div>
+                          <div className="product-trust">
+                            <span className="trust-icon-small">🚚</span> Versand 3–5 Tage
+                          </div>
+                        </div>
 
                         <button
-                          className="btn-buy"
+                          className="btn-add-to-cart"
                           onClick={() => handleAddToCart(product)}
                         >
                           In den Warenkorb
                         </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="cta-section">
+        {/* CTA Section - Premium Configurator Block */}
+        <section className="configurator-cta-section">
           <div className="container">
-            <h2>Individuelle Konfiguration gewünscht?</h2>
-            <p>
-              Gestalte deinen eigenen UNBREAK ONE mit unserem 3D-Konfigurator
-            </p>
-            <a href="/configurator.html" className="btn-cta-secondary">
-              Zum Konfigurator
-            </a>
+            <div className="configurator-block">
+              <div className="configurator-content">
+                <span className="configurator-badge">Individuell</span>
+                <h2>Gestalte deinen eigenen UNBREAK ONE</h2>
+                <p>
+                  Wähle Farbe, Material und Größe in unserem 3D-Konfigurator.
+                  Perfekt abgestimmt auf deine Einrichtung.
+                </p>
+                <div className="configurator-actions">
+                  <a href="/configurator.html" className="btn-configurator-primary">
+                    Jetzt gestalten
+                  </a>
+                  <a href="#products" className="btn-configurator-secondary">
+                    Welche Varianten gibt es?
+                  </a>
+                </div>
+              </div>
+              <div className="configurator-visual">
+                <div className="configurator-preview">
+                  <span className="preview-label">Live 3D Preview</span>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
       </main>
 
       <style jsx>{`
+        /* ============================================
+           SHOP PAGE - PREMIUM DESIGN
+           ============================================ */
+        
+        /* Cart Badge */
         .cart-badge-float {
           position: fixed;
           top: 20px;
           right: 20px;
-          background: #ff6b35;
+          background: linear-gradient(135deg, #0A6C74, #084F55);
           color: white;
-          padding: 10px 16px;
+          padding: 12px 20px;
           border-radius: 50px;
           font-weight: 600;
           text-decoration: none;
-          box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+          box-shadow: 0 4px 16px rgba(10, 108, 116, 0.4);
           z-index: 1000;
-          transition: transform 0.2s;
+          transition: all 0.3s ease;
+          font-size: 16px;
         }
         .cart-badge-float:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 24px rgba(10, 108, 116, 0.5);
+        }
+
+        /* Hero Section */
+        .shop-hero {
+          background: linear-gradient(135deg, #0A6C74 0%, #1A1A1A 100%);
+          color: white;
+          padding: clamp(60px, 10vh, 100px) 0 clamp(50px, 8vh, 80px);
+          text-align: center;
+        }
+        
+        .shop-hero h1 {
+          font-size: clamp(2.5rem, 5vw, 3.5rem);
+          font-weight: 700;
+          margin-bottom: 1rem;
+          letter-spacing: -0.02em;
+        }
+        
+        .hero-subtitle {
+          font-size: clamp(1.1rem, 2vw, 1.3rem);
+          opacity: 0.95;
+          max-width: 700px;
+          margin: 0 auto 3rem;
+          line-height: 1.6;
+        }
+
+        /* Trust Bar */
+        .trust-bar {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: clamp(1.5rem, 4vw, 3rem);
+          margin-top: 3rem;
+        }
+        
+        .trust-item {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: clamp(0.9rem, 1.5vw, 1rem);
+          font-weight: 500;
+        }
+        
+        .trust-icon {
+          font-size: 1.2em;
+        }
+
+        /* Products Section */
+        .products-section {
+          padding: clamp(60px, 10vh, 100px) 0;
+          background: #F8F9FA;
+        }
+
+        /* Shop Grid - Responsive */
+        .shop-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+          gap: clamp(1.5rem, 3vw, 2.5rem);
+          margin-top: 2rem;
+        }
+
+        @media (min-width: 768px) {
+          .shop-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (min-width: 1200px) {
+          .shop-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+
+        /* Product Card */
+        .product-card {
+          background: white;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          transition: all 0.3s ease;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+        }
+
+        .product-card:hover {
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+          transform: translateY(-4px);
+        }
+
+        /* Featured Product (Gastro) */
+        .product-card-featured {
+          border: 2px solid #0A6C74;
+        }
+
+        .product-badge {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background: linear-gradient(135deg, #0A6C74, #084F55);
+          color: white;
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          z-index: 10;
+          box-shadow: 0 2px 8px rgba(10, 108, 116, 0.3);
+        }
+
+        /* Product Image */
+        .product-image-wrapper {
+          position: relative;
+          width: 100%;
+          padding-top: 75%; /* 4:3 aspect ratio */
+          background: #F5F5F5;
+          overflow: hidden;
+        }
+
+        .product-image {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.4s ease;
+        }
+
+        .product-card:hover .product-image {
           transform: scale(1.05);
+        }
+
+        /* Product Content */
+        .product-content {
+          padding: clamp(1.25rem, 3vw, 1.75rem);
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+        }
+
+        .product-title {
+          font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+          font-weight: 700;
+          color: #1A1A1A;
+          margin: 0 0 0.75rem 0;
+          line-height: 1.3;
+        }
+
+        .product-description {
+          font-size: clamp(0.95rem, 1.5vw, 1.05rem);
+          color: #666;
+          line-height: 1.6;
+          margin: 0 0 1.5rem 0;
+          flex: 1;
+        }
+
+        /* Price Section */
+        .product-price-section {
+          margin-bottom: 1.25rem;
+        }
+
+        .price-wrapper {
+          display: flex;
+          align-items: baseline;
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .product-price {
+          font-size: clamp(1.75rem, 3vw, 2rem);
+          font-weight: 700;
+          color: #0A6C74;
+        }
+
+        .price-label {
+          font-size: 0.85rem;
+          color: #999;
+        }
+
+        .product-trust {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          font-size: 0.9rem;
+          color: #666;
+        }
+
+        .trust-icon-small {
+          font-size: 1.1em;
+        }
+
+        /* Add to Cart Button */
+        .btn-add-to-cart {
+          width: 100%;
+          padding: clamp(14px, 2vw, 16px) clamp(24px, 4vw, 32px);
+          background: linear-gradient(135deg, #0A6C74, #084F55);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: clamp(1rem, 2vw, 1.1rem);
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 8px rgba(10, 108, 116, 0.2);
+        }
+
+        .btn-add-to-cart:hover {
+          background: linear-gradient(135deg, #084F55, #063D43);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(10, 108, 116, 0.3);
+        }
+
+        .btn-add-to-cart:active {
+          transform: translateY(0);
+        }
+
+        /* Loading State */
+        .loading-state {
+          text-align: center;
+          padding: 4rem 2rem;
+        }
+
+        .spinner {
+          border: 4px solid #f3f3f3;
+          border-top: 4px solid #0A6C74;
+          border-radius: 50%;
+          width: 48px;
+          height: 48px;
+          animation: spin 1s linear infinite;
+          margin: 0 auto 1.5rem;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        /* Empty/Error States */
+        .empty-state, .error-state {
+          text-align: center;
+          padding: 4rem 2rem;
+        }
+
+        .empty-state h2, .error-state .error-message {
+          font-size: clamp(1.5rem, 3vw, 2rem);
+          margin-bottom: 1rem;
+          color: #1A1A1A;
+        }
+
+        .btn-retry, .btn-primary {
+          padding: 14px 32px;
+          background: linear-gradient(135deg, #0A6C74, #084F55);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 1.05rem;
+          font-weight: 600;
+          cursor: pointer;
+          text-decoration: none;
+          display: inline-block;
+          transition: all 0.3s ease;
+        }
+
+        .btn-retry:hover, .btn-primary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(10, 108, 116, 0.3);
+        }
+
+        /* Configurator CTA Section */
+        .configurator-cta-section {
+          padding: clamp(80px, 12vh, 120px) 0;
+          background: linear-gradient(135deg, #F8F9FA 0%, #E8EDF2 100%);
+        }
+
+        .configurator-block {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 3rem;
+          background: white;
+          border-radius: 16px;
+          padding: clamp(2rem, 5vw, 3rem);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        @media (min-width: 768px) {
+          .configurator-block {
+            grid-template-columns: 1.2fr 1fr;
+            align-items: center;
+          }
+        }
+
+        .configurator-badge {
+          display: inline-block;
+          background: linear-gradient(135deg, #0A6C74, #084F55);
+          color: white;
+          padding: 6px 16px;
+          border-radius: 20px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          margin-bottom: 1rem;
+        }
+
+        .configurator-content h2 {
+          font-size: clamp(1.75rem, 4vw, 2.5rem);
+          font-weight: 700;
+          color: #1A1A1A;
+          margin: 0 0 1rem 0;
+          line-height: 1.2;
+        }
+
+        .configurator-content p {
+          font-size: clamp(1rem, 2vw, 1.15rem);
+          color: #666;
+          line-height: 1.7;
+          margin-bottom: 2rem;
+        }
+
+        .configurator-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+
+        .btn-configurator-primary {
+          padding: clamp(14px, 2vw, 16px) clamp(28px, 4vw, 40px);
+          background: linear-gradient(135deg, #0A6C74, #084F55);
+          color: white;
+          text-decoration: none;
+          border-radius: 8px;
+          font-size: clamp(1rem, 2vw, 1.1rem);
+          font-weight: 600;
+          transition: all 0.3s ease;
+          display: inline-block;
+          box-shadow: 0 4px 16px rgba(10, 108, 116, 0.2);
+        }
+
+        .btn-configurator-primary:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 24px rgba(10, 108, 116, 0.3);
+        }
+
+        .btn-configurator-secondary {
+          padding: clamp(14px, 2vw, 16px) clamp(28px, 4vw, 40px);
+          background: transparent;
+          color: #0A6C74;
+          text-decoration: none;
+          border: 2px solid #0A6C74;
+          border-radius: 8px;
+          font-size: clamp(1rem, 2vw, 1.1rem);
+          font-weight: 600;
+          transition: all 0.3s ease;
+          display: inline-block;
+        }
+
+        .btn-configurator-secondary:hover {
+          background: #0A6C74;
+          color: white;
+        }
+
+        .configurator-visual {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .configurator-preview {
+          width: 100%;
+          max-width: 400px;
+          aspect-ratio: 1;
+          background: linear-gradient(135deg, #E8EDF2, #F8F9FA);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px dashed #0A6C74;
+        }
+
+        .preview-label {
+          color: #0A6C74;
+          font-weight: 600;
+          font-size: 1.1rem;
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 767px) {
+          .trust-bar {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+          }
+          
+          .trust-item {
+            justify-content: center;
+            font-size: 0.9rem;
+          }
+
+          .configurator-actions {
+            flex-direction: column;
+          }
+
+          .btn-configurator-primary,
+          .btn-configurator-secondary {
+            width: 100%;
+            text-align: center;
+          }
+        }
+
+        /* Accessibility */
+        .btn-add-to-cart:focus,
+        .btn-configurator-primary:focus,
+        .btn-configurator-secondary:focus {
+          outline: 3px solid #0A6C74;
+          outline-offset: 2px;
         }
       `}</style>
     </Layout>
