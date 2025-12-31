@@ -191,6 +191,9 @@ async function handleCheckoutSessionCompleted(session) {
     logData.status = 'success';
     await logWebhookEvent(logData);
 
+    // === SEND ORDER CONFIRMATION EMAIL ===
+    await sendOrderConfirmationEmail(session, order);
+
   } catch (error) {
     console.error('❌ [Webhook] handleCheckoutSessionCompleted failed:', error);
     if (logData.status !== 'error') {
@@ -222,5 +225,85 @@ async function logWebhookEvent(logData) {
     }
   } catch (err) {
     console.error('❌ [WEBHOOK LOG] Exception:', err.message);
+  }
+}
+
+async function sendOrderConfirmationEmail(session, order) {
+  try {
+    console.log('📧 [EMAIL] Preparing to send order confirmation...');
+
+    // Extract customer data from Stripe session
+    const customerEmail = session.customer_details?.email || session.customer_email;
+    const customerName = session.customer_details?.name;
+    const shippingAddress = session.shipping_details?.address;
+
+    if (!customerEmail) {
+      console.warn('⚠️ [EMAIL] No customer email found in session - skipping email');
+      return;
+    }
+
+    // Parse items from order
+    let items = [];
+    try {
+      items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+    } catch (err) {
+      console.error('❌ [EMAIL] Failed to parse order items:', err.message);
+      items = [{ name: 'Order', quantity: 1, price_cents: order.total_amount_cents }];
+    }
+
+    // Detect language from customer data (default to German)
+    let language = 'de';
+    if (session.locale) {
+      language = session.locale.startsWith('en') ? 'en' : 'de';
+    } else if (shippingAddress?.country) {
+      // English for UK, US, etc.
+      language = ['GB', 'US', 'CA', 'AU', 'NZ'].includes(shippingAddress.country) ? 'en' : 'de';
+    }
+
+    const emailPayload = {
+      orderId: order.id,
+      orderNumber: order.id.substring(0, 8).toUpperCase(),
+      customerEmail,
+      customerName,
+      items,
+      totalAmount: order.total_amount_cents,
+      language,
+      shippingAddress
+    };
+
+    console.log('📧 [EMAIL] Calling email API with payload:', JSON.stringify({
+      orderId: emailPayload.orderId,
+      customerEmail: emailPayload.customerEmail,
+      language: emailPayload.language,
+      itemCount: items.length
+    }));
+
+    // Call internal email API
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000';
+
+    const emailResponse = await fetch(`${baseUrl}/api/email/order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(emailPayload)
+    });
+
+    if (!emailResponse.ok) {
+      const errorText = await emailResponse.text();
+      console.error('❌ [EMAIL] API returned error:', emailResponse.status, errorText);
+      // Don't throw - email failure shouldn't block webhook
+      return;
+    }
+
+    const emailResult = await emailResponse.json();
+    console.log('✅ [EMAIL] Order confirmation sent successfully:', emailResult.emailId);
+
+  } catch (error) {
+    // Log but don't throw - email failure shouldn't block webhook processing
+    console.error('❌ [EMAIL] Failed to send order confirmation:', error.message);
+    console.error('❌ [EMAIL] Stack:', error.stack);
   }
 }
