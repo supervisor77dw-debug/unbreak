@@ -94,13 +94,13 @@ async function handleCheckoutSessionCompleted(session) {
   };
 
   try {
-    // 1. Find order by stripe_session_id
-    console.log('🔍 [DB QUERY] Looking for stripe_session_id:', session.id);
+    // 1. Find order by stripe_checkout_session_id
+    console.log('🔍 [DB QUERY] Looking for stripe_checkout_session_id:', session.id);
     
     const { data: order, error: fetchError } = await supabase
-      .from('simple_orders')
+      .from('orders')
       .select('*')
-      .eq('stripe_session_id', session.id)
+      .eq('stripe_checkout_session_id', session.id)
       .single();
 
     if (fetchError) {
@@ -115,7 +115,7 @@ async function handleCheckoutSessionCompleted(session) {
 
     if (!order) {
       console.error('❌ [DB QUERY] No order found for session:', session.id);
-      console.error('❌ [DB QUERY] Check if stripe_session_id was saved during checkout');
+      console.error('❌ [DB QUERY] Check if stripe_checkout_session_id was saved during checkout');
       logData.status = 'error';
       logData.error_message = `No order found for session: ${session.id}`;
       await logWebhookEvent(logData);
@@ -124,14 +124,15 @@ async function handleCheckoutSessionCompleted(session) {
 
     console.log('✅ [DB QUERY] Order found - ID:', order.id);
     console.log('📊 [ORDER BEFORE UPDATE] ID:', order.id);
-    console.log('📊 [ORDER BEFORE UPDATE] stripe_session_id:', order.stripe_session_id);
+    console.log('📊 [ORDER BEFORE UPDATE] order_number:', order.order_number);
+    console.log('📊 [ORDER BEFORE UPDATE] stripe_checkout_session_id:', order.stripe_checkout_session_id);
     console.log('📊 [ORDER BEFORE UPDATE] status:', order.status);
     console.log('📊 [ORDER BEFORE UPDATE] created_at:', order.created_at);
 
     logData.order_id = order.id;
 
     // 2. Check if already paid (idempotency)
-    if (order.status === 'paid') {
+    if (order.status === 'paid' || order.status === 'completed') {
       console.log('✅ [IDEMPOTENT] Order already paid - skipping');
       logData.status = 'skipped';
       logData.error_message = 'Order already paid (idempotent)';
@@ -152,7 +153,7 @@ async function handleCheckoutSessionCompleted(session) {
     console.log('📝 [DB UPDATE] SET data:', JSON.stringify(updateData));
 
     const { data: updatedRows, error: updateError } = await supabase
-      .from('simple_orders')
+      .from('orders')
       .update(updateData)
       .eq('id', order.id)
       .select();
@@ -313,42 +314,66 @@ async function syncOrderToPrisma(session, supabaseOrder) {
   try {
     console.log('💾 [PRISMA SYNC] Starting order sync...');
     console.log('💾 [PRISMA SYNC] Session ID:', session.id);
-    console.log('💾 [PRISMA SYNC] Customer email:', session.customer_details?.email);
+    console.log('💾 [PRISMA SYNC] Order ID:', supabaseOrder.id);
+    console.log('💾 [PRISMA SYNC] Order Number:', supabaseOrder.order_number);
 
-    // 1. Get or create customer
-    const customerEmail = session.customer_details?.email || session.customer_email;
-    if (!customerEmail) {
-      console.warn('⚠️ [PRISMA SYNC] No customer email - skipping');
+    // 1. Get customer email from customers table
+    const { data: customerData, error: customerError } = await supabase
+      .from('customers')
+      .select('email, name')
+      .eq('id', supabaseOrder.customer_id)
+      .single();
+
+    if (customerError || !customerData) {
+      console.error('❌ [PRISMA SYNC] Failed to get customer:', customerError?.message);
       return;
     }
 
+    const customerEmail = customerData.email;
+    console.log('✅ [PRISMA SYNC] Customer email:', customerEmail);
+
+    // 2. Upsert customer in admin system
     const customer = await prisma.customer.upsert({
       where: { email: customerEmail },
       update: {
-        name: session.customer_details?.name,
+        name: customerData.name,
         lastOrderAt: new Date(),
       },
       create: {
         email: customerEmail,
-        name: session.customer_details?.name,
+        name: customerData.name,
         locale: session.locale || 'de',
       },
     });
 
-    console.log('✅ [PRISMA SYNC] Customer:', customer.id);
+    console.log('✅ [PRISMA SYNC] Admin customer:', customer.id);
 
-    // 2. Parse items from Supabase order
-    let items = [];
-    try {
-      items = typeof supabaseOrder.items === 'string' 
-        ? JSON.parse(supabaseOrder.items) 
-        : supabaseOrder.items || [];
-    } catch (err) {
-      console.error('❌ [PRISMA SYNC] Failed to parse items:', err.message);
-      items = [];
+    // 3. Get product info from configuration
+    let productName = 'Configured Product';
+    let productSku = null;
+    
+    if (supabaseOrder.configuration_id) {
+      const { data: config } = await supabase
+        .from('configurations')
+        .select('product_id, config_json, price_cents')
+        .eq('id', supabaseOrder.configuration_id)
+        .single();
+      
+      if (config?.product_id) {
+        const { data: product } = await supabase
+          .from('products')
+          .select('name, sku')
+          .eq('id', config.product_id)
+          .single();
+        
+        if (product) {
+          productName = product.name;
+          productSku = product.sku;
+        }
+      }
     }
 
-    // 3. Create or update order
+    // 4. Create or update order in admin system
     const order = await prisma.order.upsert({
       where: { stripeCheckoutSessionId: session.id },
       update: {
@@ -362,47 +387,43 @@ async function syncOrderToPrisma(session, supabaseOrder) {
         stripePaymentIntentId: session.payment_intent,
         statusPayment: 'PAID',
         statusFulfillment: 'NEW',
-        currency: (session.currency || 'EUR').toUpperCase(),
-        amountTotal: session.amount_total || supabaseOrder.total_amount_cents || 0,
-        amountShipping: session.total_details?.amount_shipping || 0,
-        amountTax: session.total_details?.amount_tax || 0,
+        currency: supabaseOrder.currency.toUpperCase(),
+        amountTotal: supabaseOrder.total_cents,
+        amountShipping: supabaseOrder.shipping_cents || 0,
+        amountTax: supabaseOrder.tax_cents || 0,
         email: customerEmail,
-        shippingName: session.shipping_details?.name || session.customer_details?.name,
-        shippingAddress: session.shipping_details?.address || null,
-        billingAddress: session.customer_details?.address || null,
+        shippingName: customerData.name,
+        shippingAddress: supabaseOrder.shipping_address || null,
         customerId: customer.id,
         paidAt: new Date(),
       },
     });
 
-    console.log('✅ [PRISMA SYNC] Order:', order.id);
+    console.log('✅ [PRISMA SYNC] Admin order:', order.id);
 
-    // 4. Create order items (only if new order)
-    if (items.length > 0) {
-      // Check if items already exist
-      const existingItems = await prisma.orderItem.count({
-        where: { orderId: order.id }
+    // 5. Create order item (configured product)
+    const existingItems = await prisma.orderItem.count({
+      where: { orderId: order.id }
+    });
+
+    if (existingItems === 0) {
+      await prisma.orderItem.create({
+        data: {
+          orderId: order.id,
+          sku: productSku || supabaseOrder.order_number,
+          name: productName,
+          variant: `Configured (${supabaseOrder.order_number})`,
+          qty: 1,
+          unitPrice: supabaseOrder.subtotal_cents,
+          totalPrice: supabaseOrder.subtotal_cents,
+        },
       });
-
-      if (existingItems === 0) {
-        for (const item of items) {
-          await prisma.orderItem.create({
-            data: {
-              orderId: order.id,
-              name: item.name || item.product_name || 'Product',
-              qty: item.quantity || 1,
-              unitPrice: item.price_cents || 0,
-              totalPrice: (item.quantity || 1) * (item.price_cents || 0),
-            },
-          });
-        }
-        console.log('✅ [PRISMA SYNC] Created', items.length, 'order items');
-      } else {
-        console.log('ℹ️ [PRISMA SYNC] Order items already exist - skipping');
-      }
+      console.log('✅ [PRISMA SYNC] Created order item');
+    } else {
+      console.log('ℹ️ [PRISMA SYNC] Order items already exist - skipping');
     }
 
-    // 5. Log event
+    // 6. Log event
     await prisma.orderEvent.create({
       data: {
         orderId: order.id,
@@ -412,7 +433,8 @@ async function syncOrderToPrisma(session, supabaseOrder) {
           event: 'checkout.session.completed',
           session_id: session.id,
           payment_intent: session.payment_intent,
-          amount_total: session.amount_total,
+          order_number: supabaseOrder.order_number,
+          amount_total: supabaseOrder.total_cents,
         },
       },
     });
