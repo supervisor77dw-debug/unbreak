@@ -162,23 +162,46 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {products.map((product) => (
-                <tr key={product.id}>
-                  <td>
-                    <div className="product-image">
-                      <img 
-                        src={getProductImageUrl(product.image_path, product.image_url)} 
-                        alt={product.name}
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                      />
-                      <div className="no-image" style={{ display: 'none' }}>
-                        📦
+              {products.map((product) => {
+                const imageUrl = getProductImageUrl(product.image_path, product.image_url);
+                
+                return (
+                  <tr key={product.id}>
+                    <td>
+                      <div className="product-image" title={`Image: ${product.image_path || product.image_url || 'none'}\nURL: ${imageUrl}`}>
+                        <img 
+                          src={imageUrl}
+                          alt={product.name}
+                          loading="lazy"
+                          onError={(e) => {
+                            console.warn('[ProductImage] Load failed:', {
+                              productId: product.id,
+                              sku: product.sku,
+                              attemptedUrl: e.target.src,
+                              imagePath: product.image_path,
+                              imageUrl: product.image_url,
+                            });
+                            // Fallback zu Placeholder
+                            if (e.target.src !== window.location.origin + '/images/product-weinglashalter.jpg') {
+                              e.target.src = '/images/product-weinglashalter.jpg';
+                            } else {
+                              // Auch Placeholder failed → zeige Icon
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }
+                          }}
+                          onLoad={(e) => {
+                            // Erfolgreich geladen - verstecke Fallback Icon
+                            if (e.target.nextSibling) {
+                              e.target.nextSibling.style.display = 'none';
+                            }
+                          }}
+                        />
+                        <div className="no-image" style={{ display: 'none' }}>
+                          📦
+                        </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
                   <td>
                     <div className="product-name">{product.name}</div>
                   </td>
@@ -203,7 +226,8 @@ export default function ProductsPage() {
                     </Link>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
@@ -330,16 +354,21 @@ export default function ProductsPage() {
           display: flex;
           align-items: center;
           justify-content: center;
+          position: relative;
+          border: 1px solid #333;
         }
 
         .product-image img {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          display: block;
         }
 
         .no-image {
           font-size: 24px;
+          position: absolute;
+          color: #666;
         }
 
         .product-name {
