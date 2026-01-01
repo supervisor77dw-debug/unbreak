@@ -133,9 +133,6 @@ export default function ProductImage({
     onCropChange({ scale, x: newX, y: newY });
   };
 
-  // Transform calculation
-  const transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${scale})`;
-
   return (
     <div
       ref={containerRef}
