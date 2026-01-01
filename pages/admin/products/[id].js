@@ -13,6 +13,7 @@ import {
   calculateCoverScale, 
   clampCropState, 
   sanitizeCropState, 
+  getDefaultCrop,
   isValidSize,
   isValidCropState 
 } from '../../../lib/crop-utils';
@@ -196,7 +197,13 @@ export default function ProductDetail() {
   };
 
   const handleResetCrop = () => {
-    handleCropChange({ scale: 1.0, x: 0, y: 0 });
+    // WICHTIG: Reset auf coverScaleMin (nicht hardcoded 1.0!)
+    const defaultCrop = imageSize && containerSize
+      ? getDefaultCrop(imageSize, containerSize)
+      : { scale: 1.0, x: 0, y: 0 };
+    
+    console.log('[Admin] Reset crop to default:', defaultCrop);
+    handleCropChange(defaultCrop);
   };
 
   const handleSubmit = async (e) => {
