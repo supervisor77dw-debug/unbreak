@@ -410,19 +410,25 @@ export default function ProductsPage() {
           justify-content: center;
           position: relative;
           border: 1px solid #333;
+          isolation: isolate;
         }
 
         .product-image img {
+          position: absolute;
+          inset: 0;
           width: 100%;
           height: 100%;
           object-fit: cover;
           display: block;
+          z-index: 2;
         }
 
         .no-image {
           font-size: 24px;
           position: absolute;
           color: #666;
+          z-index: 1;
+          pointer-events: none;
         }
 
         .product-name {
