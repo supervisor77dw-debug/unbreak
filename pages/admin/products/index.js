@@ -214,7 +214,7 @@ export default function ProductsPage() {
                             x: product.imageCropX || product.image_crop_x || 0,
                             y: product.imageCropY || product.image_crop_y || 0,
                           }}
-                          variant="admin-list"
+                          variant="adminList"
                         />
                       </div>
                     </td>

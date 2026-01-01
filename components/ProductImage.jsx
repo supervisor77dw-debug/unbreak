@@ -54,14 +54,16 @@ export default function ProductImage({
   // Variant-specific sizes
   const sizeClasses = {
     card: '',
-    adminList: 'w-[72px]',
+    adminList: '', // Größe wird vom Parent-Container bestimmt (60x75px)
     adminPreview: 'max-w-[400px]',
+    'admin-editor': 'max-w-[400px]',
   };
 
   const radiusClasses = {
     card: 'rounded-xl',
     adminList: 'rounded-lg',
     adminPreview: 'rounded-xl',
+    'admin-editor': 'rounded-xl',
   };
 
   // Drag handlers mit Debug
