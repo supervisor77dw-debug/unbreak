@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Head from 'next/head';
 import AdminLayout from '../../../components/AdminLayout';
+import ProductImage from '../../../components/ProductImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
 
 export default function ProductDetail() {
@@ -28,6 +29,9 @@ export default function ProductDetail() {
     base_price_cents: 0,
     active: true,
     image_url: '',
+    image_path: '',
+    image_fit: 'cover',
+    image_position: '50% 50%',
     badge_label: '',
     shipping_text: 'Versand 3–5 Tage',
     highlights: ['', '', ''],
@@ -73,6 +77,9 @@ export default function ProductDetail() {
           base_price_cents: data.base_price_cents || 0,
           active: data.active ?? true,
           image_url: data.image_url || '',
+          image_path: data.image_path || '',
+          image_fit: data.imageFit || data.image_fit || 'cover',
+          image_position: data.imagePosition || data.image_position || '50% 50%',
           badge_label: data.badge_label || '',
           shipping_text: data.shipping_text || 'Versand 3–5 Tage',
           highlights: highlightsArray,
@@ -330,6 +337,7 @@ export default function ProductDetail() {
               </div>
             ) : (
               <div className="image-upload-section">
+                {/* Upload Dropzone */}
                 <div 
                   className={`dropzone ${dragActive ? 'active' : ''} ${uploading ? 'uploading' : ''}`}
                   onDragEnter={handleDrag}
@@ -342,46 +350,21 @@ export default function ProductDetail() {
                       <div className="spinner"></div>
                       <p>Bild wird hochgeladen...</p>
                     </div>
-                  ) : (formData.image_url || formData.image_path || product?.image_path || product?.image_url) ? (
-                    <div className="image-preview-large">
-                      <img 
-                        src={getProductImageUrl(formData.image_path || product?.image_path, formData.image_url || product?.image_url)} 
-                        alt={formData.name}
-                        onError={(e) => {
-                          console.error('[ProductImage] Preview load failed:', {
-                            src: e.target.src,
-                            formData: { image_path: formData.image_path, image_url: formData.image_url },
-                            product: { image_path: product?.image_path, image_url: product?.image_url },
-                          });
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
-                        onLoad={() => {
-                          console.log('[ProductImage] Preview loaded successfully');
-                        }}
-                      />
-                      <div className="image-placeholder" style={{ display: 'none' }}>
-                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                          <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                          <polyline points="21 15 16 10 5 21"></polyline>
-                        </svg>
-                      </div>
-                      <div className="image-actions">
-                        <label className="replace-btn">
-                          Bild ersetzen
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/jpg,image/png,image/webp"
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files[0]) {
-                                handleImageUpload(e.target.files[0]);
-                              }
-                            }}
-                            style={{ display: 'none' }}
-                          />
-                        </label>
-                      </div>
+                  ) : (formData.image_url || formData.image_path) ? (
+                    <div className="image-uploaded">
+                      <label className="replace-btn">
+                        ✓ Bild hochgeladen - Ersetzen
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleImageUpload(e.target.files[0]);
+                            }
+                          }}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
                     </div>
                   ) : (
                     <div className="dropzone-content">
@@ -409,6 +392,56 @@ export default function ProductDetail() {
                     </div>
                   )}
                 </div>
+
+                {/* LIVE PREVIEW mit Fokus-Steuerung */}
+                {(formData.image_url || formData.image_path) && (
+                  <div className="image-control-panel">
+                    <h3>Shop-Vorschau (4:3) & Bild-Fokus</h3>
+                    
+                    <div className="preview-and-focus">
+                      {/* 4:3 Preview - EXAKT wie im Shop */}
+                      <div className="preview-container">
+                        <label>So sieht der Kunde das Bild:</label>
+                        <ProductImage
+                          src={getProductImageUrl(formData.image_path, formData.image_url)}
+                          alt={formData.name}
+                          aspect="4/3"
+                          fit={formData.image_fit}
+                          position={formData.image_position}
+                        />
+                      </div>
+
+                      {/* 9-Punkt Fokus-Steuerung */}
+                      <div className="focus-control">
+                        <label>Bild-Fokus (Welcher Bereich soll sichtbar sein?)</label>
+                        <div className="focus-grid">
+                          {[
+                            { label: '↖️', pos: '0% 0%' },
+                            { label: '⬆️', pos: '50% 0%' },
+                            { label: '↗️', pos: '100% 0%' },
+                            { label: '⬅️', pos: '0% 50%' },
+                            { label: '🎯', pos: '50% 50%' },
+                            { label: '➡️', pos: '100% 50%' },
+                            { label: '↙️', pos: '0% 100%' },
+                            { label: '⬇️', pos: '50% 100%' },
+                            { label: '↘️', pos: '100% 100%' },
+                          ].map((point) => (
+                            <button
+                              key={point.pos}
+                              type="button"
+                              className={`focus-btn ${formData.image_position === point.pos ? 'active' : ''}`}
+                              onClick={() => handleChange('image_position', point.pos)}
+                              title={point.pos}
+                            >
+                              {point.label}
+                            </button>
+                          ))}
+                        </div>
+                        <small>Klicken Sie den gewünschten Fokuspunkt - Vorschau wird sofort aktualisiert</small>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -551,6 +584,28 @@ export default function ProductDetail() {
         .replace-btn { display: inline-block; padding: 8px 16px; background: #334155; color: #f8fafc; 
           border-radius: 6px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
         .replace-btn:hover { background: #475569; }
+        
+        .image-uploaded { display: flex; justify-content: center; align-items: center; padding: 20px; }
+        
+        /* FOKUS-STEUERUNG & PREVIEW */
+        .image-control-panel { margin-top: 24px; padding: 24px; background: #0f172a; border-radius: 12px; border: 1px solid #1e293b; }
+        .image-control-panel h3 { font-size: 16px; color: #f8fafc; margin: 0 0 20px 0; }
+        .preview-and-focus { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+        
+        .preview-container label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 12px; font-weight: 500; }
+        
+        .focus-control label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 12px; font-weight: 500; }
+        .focus-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+        .focus-btn { padding: 16px; background: #1e293b; border: 2px solid #334155; border-radius: 8px; 
+          font-size: 24px; cursor: pointer; transition: all 0.2s; }
+        .focus-btn:hover { background: #334155; border-color: #0ea5e9; }
+        .focus-btn.active { background: #0ea5e9; border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2); }
+        .focus-control small { color: #64748b; font-size: 12px; }
+        
+        @media (max-width: 768px) { 
+          .form-row { grid-template-columns: 1fr; } 
+          .preview-and-focus { grid-template-columns: 1fr; }
+        }
         
         .badge-preview { margin-top: 12px; }
         .badge-pill { display: inline-block; padding: 4px 12px; background: linear-gradient(135deg, #0ea5e9, #3b82f6); 

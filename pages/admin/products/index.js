@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import AdminLayout from '../../../components/AdminLayout';
+import ProductImage from '../../../components/ProductImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
 
 export async function getServerSideProps() {
@@ -199,45 +200,13 @@ export default function ProductsPage() {
                 return (
                   <tr key={product.id}>
                     <td>
-                      <div className="product-image" title={`Image: ${product.image_path || product.image_url || 'none'}\nURL: ${imageUrl}`}>
-                        <img 
-                          src={imageUrl}
-                          alt={product.name}
-                          loading="lazy"
-                          onError={(e) => {
-                            console.error('[ProductsList] Image load failed:', {
-                              productId: product.id,
-                              sku: product.sku,
-                              attemptedUrl: e.target.src,
-                              imagePath: product.image_path,
-                              imageUrl: product.image_url,
-                            });
-                            // Fallback zu Placeholder
-                            if (e.target.src !== window.location.origin + '/images/product-weinglashalter.jpg') {
-                              e.target.src = '/images/product-weinglashalter.jpg';
-                            } else {
-                              // Auch Placeholder failed → zeige Icon
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'flex';
-                            }
-                          }}
-                          onLoad={(e) => {
-                            console.log('[ProductsList] Image loaded successfully:', {
-                              src: e.target.src,
-                              naturalWidth: e.target.naturalWidth,
-                              naturalHeight: e.target.naturalHeight,
-                            });
-                            // Erfolgreich geladen - zeige Bild, verstecke Fallback Icon
-                            e.target.style.display = 'block';
-                            if (e.target.nextSibling) {
-                              e.target.nextSibling.style.display = 'none';
-                            }
-                          }}
-                        />
-                        <div className="no-image" style={{ display: 'none' }}>
-                          📦
-                        </div>
-                      </div>
+                      <ProductImage
+                        src={imageUrl}
+                        alt={product.name}
+                        aspect="1/1"
+                        fit={product.imageFit || product.image_fit || 'cover'}
+                        position={product.imagePosition || product.image_position || '50% 50%'}
+                      />
                     </td>
                   <td>
                     <div className="product-name">{product.name}</div>
@@ -402,38 +371,6 @@ export default function ProductsPage() {
 
         .admin-table tbody tr:hover {
           background: #222;
-        }
-
-        .product-image {
-          width: 100px;
-          height: 100px;
-          border-radius: 8px;
-          overflow: hidden;
-          background: #222;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-          border: 1px solid #333;
-          isolation: isolate;
-        }
-
-        .product-image img {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          z-index: 2;
-        }
-
-        .no-image {
-          font-size: 24px;
-          position: absolute;
-          color: #666;
-          z-index: 1;
-          pointer-events: none;
         }
 
         .product-name {
