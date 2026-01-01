@@ -30,6 +30,19 @@ export default function ProductsPage() {
     }
   }, [session, search, filter]);
 
+  // Auto-refresh wenn man zur Seite zurückkehrt (z.B. nach Upload)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && session) {
+        console.log('[ProductsList] Page visible again - refreshing...');
+        fetchProducts();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [session]);
+
   const fetchProducts = async () => {
     setLoading(true);
     try {
@@ -139,6 +152,17 @@ export default function ProductsPage() {
           <option value="active">Nur Aktive</option>
           <option value="inactive">Nur Inaktive</option>
         </select>
+
+        <button 
+          onClick={() => {
+            console.log('[ProductsList] Manual refresh triggered');
+            fetchProducts();
+          }}
+          className="reload-button"
+          title="Produktliste neu laden"
+        >
+          ↻ Aktualisieren
+        </button>
       </div>
 
       {loading ? (
@@ -290,6 +314,23 @@ export default function ProductsPage() {
           color: #fff;
           font-size: 14px;
           padding: 10px 14px;
+        }
+
+        .reload-button {
+          background: #1a1a1a;
+          border: 1px solid #2a2a2a;
+          border-radius: 6px;
+          color: #d4f1f1;
+          font-size: 14px;
+          padding: 10px 16px;
+          cursor: pointer;
+          transition: all 0.2s;
+          white-space: nowrap;
+        }
+
+        .reload-button:hover {
+          background: #2a2a2a;
+          border-color: #0a4d4d;
         }
 
         .admin-filter-select {
