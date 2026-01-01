@@ -20,7 +20,15 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { calculateCoverScale, clampCropState, generateTransform, getDefaultCrop } from '../lib/crop-utils';
+import { 
+  calculateCoverScale, 
+  clampCropState, 
+  generateTransform, 
+  getDefaultCrop,
+  sanitizeCropState,
+  isValidSize,
+  isValidCropState
+} from '../lib/crop-utils';
 
 export default function ProductImage({
   src,
@@ -36,16 +44,27 @@ export default function ProductImage({
   // --- STATE ---
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [localCrop, setLocalCrop] = useState(crop);
+  const [localCrop, setLocalCrop] = useState(() => sanitizeCropState(crop));
   const [imageSize, setImageSize] = useState(null);
   const [containerSize, setContainerSize] = useState(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const containerRef = useRef(null);
   const imageRef = useRef(null);
 
   // --- CROP-PROPS SYNCHRONISIEREN ---
   useEffect(() => {
-    setLocalCrop(crop);
-  }, [crop]);
+    const safeCrop = sanitizeCropState(crop);
+    setLocalCrop(safeCrop);
+    
+    // WARN wenn NaN reinkam
+    if (!isValidCropState(crop)) {
+      console.warn('[ProductImage] Invalid crop prop received, sanitized:', { 
+        original: crop, 
+        sanitized: safeCrop,
+        src: src?.substring(0, 60)
+      });
+    }
+  }, [crop, src]);
 
   // --- CONTAINER-GRÖßE MESSEN ---
   useEffect(() => {
@@ -66,23 +85,47 @@ export default function ProductImage({
   // --- BILD-GRÖßE BEIM LADEN MESSEN ---
   const handleImageLoad = (e) => {
     const img = e.target;
-    setImageSize({
+    const newSize = {
       width: img.naturalWidth,
       height: img.naturalHeight
-    });
+    };
+    
+    setImageSize(newSize);
+    setImageLoaded(true);
+    
+    // DEBUG: Log Image-Load mit coverScaleMin
+    if (containerSize && isValidSize(newSize) && isValidSize(containerSize)) {
+      const coverScaleMin = calculateCoverScale(newSize, containerSize);
+      console.log('[ProductImage] Image loaded:', {
+        variant,
+        src: src?.substring(0, 60),
+        naturalW: newSize.width,
+        naturalH: newSize.height,
+        containerW: containerSize.width,
+        containerH: containerSize.height,
+        coverScaleMin,
+        currentCrop: localCrop
+      });
+    }
+    
     onLoad?.(e);
   };
 
   // --- DETERMINISTISCHE CROP-BERECHNUNG ---
+  // WICHTIG: Nur berechnen wenn Image geladen UND Sizes valid!
+  const canCalculate = imageLoaded 
+    && isValidSize(imageSize) 
+    && isValidSize(containerSize);
+
   // coverScaleMin: minimales Scale damit Bild Container füllt (mathematisch exakt)
-  const coverScaleMin = imageSize && containerSize 
+  const coverScaleMin = canCalculate
     ? calculateCoverScale(imageSize, containerSize)
     : 1.0;
 
   // Crop clampen damit Container IMMER gefüllt bleibt (keine leeren Bereiche)
-  const clampedCrop = imageSize && containerSize
+  const clampedCrop = canCalculate
     ? clampCropState(localCrop, imageSize, containerSize)
-    : localCrop;
+    : sanitizeCropState(localCrop);
 
   // Transform-String generieren (CSS-ready)
   const transform = generateTransform(clampedCrop);
@@ -118,7 +161,12 @@ export default function ProductImage({
 
   // --- DRAG HANDLERS ---
   const handleMouseDown = (e) => {
-    if (!interactive || !onCropChange) return;
+    if (!interactive || !onCropChange || !canCalculate) {
+      if (interactive && !canCalculate) {
+        console.log('[ProductImage] Drag disabled - waiting for image load');
+      }
+      return;
+    }
     e.preventDefault();
     setIsDragging(true);
     setDragStart({ 
@@ -128,7 +176,7 @@ export default function ProductImage({
   };
 
   const handleMouseMove = (e) => {
-    if (!isDragging || !onCropChange || !imageSize || !containerSize) return;
+    if (!isDragging || !onCropChange || !canCalculate) return;
     e.preventDefault();
     
     const newCrop = {
@@ -150,7 +198,7 @@ export default function ProductImage({
 
   // --- TOUCH SUPPORT ---
   const handleTouchStart = (e) => {
-    if (!interactive || !onCropChange) return;
+    if (!interactive || !onCropChange || !canCalculate) return;
     const touch = e.touches[0];
     setIsDragging(true);
     setDragStart({ 
@@ -160,7 +208,7 @@ export default function ProductImage({
   };
 
   const handleTouchMove = (e) => {
-    if (!isDragging || !onCropChange || !imageSize || !containerSize) return;
+    if (!isDragging || !onCropChange || !canCalculate) return;
     const touch = e.touches[0];
     
     const newCrop = {

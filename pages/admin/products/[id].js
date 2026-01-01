@@ -9,7 +9,13 @@ import Head from 'next/head';
 import AdminLayout from '../../../components/AdminLayout';
 import ProductImage from '../../../components/ProductImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
-import { calculateCoverScale, clampCropState } from '../../../lib/crop-utils';
+import { 
+  calculateCoverScale, 
+  clampCropState, 
+  sanitizeCropState, 
+  isValidSize,
+  isValidCropState 
+} from '../../../lib/crop-utils';
 
 export default function ProductDetail() {
   const router = useRouter();
@@ -89,6 +95,23 @@ export default function ProductDetail() {
           }
         }
         
+        // GUARD: Sanitize crop values (kann null/""/NaN aus DB sein!)
+        const rawCrop = {
+          scale: data.imageCropScale || data.image_crop_scale,
+          x: data.imageCropX || data.image_crop_x,
+          y: data.imageCropY || data.image_crop_y
+        };
+        const safeCrop = sanitizeCropState(rawCrop);
+        
+        // DEBUG: Warn wenn DB NaN hatte
+        if (!isValidCropState(rawCrop)) {
+          console.warn('[Admin] Invalid crop from DB, sanitized:', {
+            productId: id,
+            raw: rawCrop,
+            sanitized: safeCrop
+          });
+        }
+        
         setFormData({
           name: data.name || '',
           description: data.description || '',
@@ -97,9 +120,9 @@ export default function ProductDetail() {
           active: data.active ?? true,
           image_url: data.image_url || '',
           image_path: data.image_path || '',
-          image_crop_scale: data.imageCropScale || data.image_crop_scale || 1.0,
-          image_crop_x: data.imageCropX || data.image_crop_x || 0,
-          image_crop_y: data.imageCropY || data.image_crop_y || 0,
+          image_crop_scale: safeCrop.scale,
+          image_crop_x: safeCrop.x,
+          image_crop_y: safeCrop.y,
           badge_label: data.badge_label || '',
           shipping_text: data.shipping_text || 'Versand 3–5 Tage',
           highlights: highlightsArray,
@@ -125,12 +148,18 @@ export default function ProductDetail() {
   };
 
   const handleCropChange = (newCrop) => {
+    // GUARD: Validate incoming crop
+    if (!isValidCropState(newCrop)) {
+      console.error('[Admin] handleCropChange: INVALID CROP REJECTED!', newCrop);
+      return;
+    }
+    
     console.log('[Admin] Crop changed:', newCrop);
     
     // Optional: Clamping falls imageSize bekannt (ProductImage macht das auch intern)
     const finalCrop = imageSize && containerSize
       ? clampCropState(newCrop, imageSize, containerSize)
-      : newCrop;
+      : sanitizeCropState(newCrop);
     
     setFormData(prev => ({
       ...prev,
@@ -480,15 +509,47 @@ export default function ProductDetail() {
                           onCropChange={handleCropChange}
                           onLoad={(e) => {
                             const img = e.target;
-                            setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
-                            console.log('[Admin] Image loaded:', { 
+                            const newImageSize = { 
                               width: img.naturalWidth, 
-                              height: img.naturalHeight,
-                              coverScaleMin: calculateCoverScale(
-                                { width: img.naturalWidth, height: img.naturalHeight },
+                              height: img.naturalHeight 
+                            };
+                            setImageSize(newImageSize);
+                            
+                            // DEBUG: Umfassende Crop-Diagnose
+                            if (isValidSize(newImageSize) && isValidSize(containerSize)) {
+                              const coverScaleMin = calculateCoverScale(newImageSize, containerSize);
+                              const currentCrop = {
+                                scale: formData.image_crop_scale,
+                                x: formData.image_crop_x,
+                                y: formData.image_crop_y
+                              };
+                              
+                              console.log('🔍 [Admin Editor] IMAGE LOADED - CROP DEBUG:', {
+                                productId: id,
+                                productName: formData.name,
+                                naturalWidth: newImageSize.width,
+                                naturalHeight: newImageSize.height,
+                                containerWidth: containerSize.width,
+                                containerHeight: containerSize.height,
+                                coverScaleMin,
+                                currentCrop,
+                                cropIsValid: isValidCropState(currentCrop),
+                                scaleInRange: currentCrop.scale >= coverScaleMin && currentCrop.scale <= 2.5
+                              });
+                              
+                              // WARN wenn Crop außerhalb bounds
+                              if (currentCrop.scale < coverScaleMin) {
+                                console.warn('⚠️ [Admin] Scale TOO LOW! Image will not fill container:', {
+                                  scale: currentCrop.scale,
+                                  min: coverScaleMin
+                                });
+                              }
+                            } else {
+                              console.error('❌ [Admin] INVALID SIZE! Cannot calculate crop:', {
+                                imageSize: newImageSize,
                                 containerSize
-                              )
-                            });
+                              });
+                            }
                           }}
                           variant="admin-editor"
                         />
@@ -500,40 +561,49 @@ export default function ProductDetail() {
                         <label>🔍 Zoom:</label>
                         <input
                           type="range"
-                          min={imageSize && containerSize 
+                          min={imageSize && containerSize && isValidSize(imageSize) && isValidSize(containerSize)
                             ? calculateCoverScale(imageSize, containerSize).toFixed(2)
                             : "1.0"
                           }
                           max="2.5"
                           step="0.1"
-                          value={formData.image_crop_scale}
+                          value={isFinite(formData.image_crop_scale) ? formData.image_crop_scale : 1.0}
                           onChange={handleZoomChange}
                           className="zoom-slider"
+                          disabled={!imageSize}
                         />
                         <div className="zoom-value">
-                          {formData.image_crop_scale.toFixed(1)}x
-                          {imageSize && containerSize && (
+                          {isFinite(formData.image_crop_scale) 
+                            ? `${formData.image_crop_scale.toFixed(1)}x` 
+                            : 'NaN (FEHLER!)'}
+                          {imageSize && containerSize && isValidSize(imageSize) && isValidSize(containerSize) && (
                             <small style={{display: 'block', fontSize: '11px', opacity: 0.7}}>
                               (Min: {calculateCoverScale(imageSize, containerSize).toFixed(2)}x)
+                            </small>
+                          )}
+                          {!imageSize && (
+                            <small style={{display: 'block', fontSize: '11px', color: '#999'}}>
+                              Warte auf Bild...
                             </small>
                           )}
                         </div>
 
                         <label style={{marginTop: '16px'}}>🎯 Position (Feintuning):</label>
                         <div className="arrow-controls">
-                          <button type="button" onClick={() => handleArrowMove(0, -1)} className="arrow-btn">⬆️</button>
+                          <button type="button" onClick={() => handleArrowMove(0, -1)} className="arrow-btn" disabled={!imageSize}>⬆️</button>
                           <div className="arrow-row">
-                            <button type="button" onClick={() => handleArrowMove(-1, 0)} className="arrow-btn">⬅️</button>
+                            <button type="button" onClick={() => handleArrowMove(-1, 0)} className="arrow-btn" disabled={!imageSize}>⬅️</button>
                             <button type="button" onClick={handleResetCrop} className="reset-btn" title="Zurücksetzen">🎯</button>
-                            <button type="button" onClick={() => handleArrowMove(1, 0)} className="arrow-btn">➡️</button>
+                            <button type="button" onClick={() => handleArrowMove(1, 0)} className="arrow-btn" disabled={!imageSize}>➡️</button>
                           </div>
-                          <button type="button" onClick={() => handleArrowMove(0, 1)} className="arrow-btn">⬇️</button>
+                          <button type="button" onClick={() => handleArrowMove(0, 1)} className="arrow-btn" disabled={!imageSize}>⬇️</button>
                         </div>
-                        <small>Pfeile verschieben um 10px</small>
+                        <small>Pfeile verschieben um 10px{!imageSize && ' (warte auf Bild...)'}</small>
 
                         <div className="crop-info">
                           <strong>Aktuelle Position:</strong><br/>
-                          X: {formData.image_crop_x}px | Y: {formData.image_crop_y}px
+                          X: {isFinite(formData.image_crop_x) ? `${formData.image_crop_x}px` : 'NaN (FEHLER!)'} | 
+                          Y: {isFinite(formData.image_crop_y) ? `${formData.image_crop_y}px` : 'NaN (FEHLER!)'}
                         </div>
                       </div>
                     </div>
