@@ -1,11 +1,17 @@
 ﻿import Head from 'next/head';
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import { getSupabasePublic, getSupabaseAdmin } from '../lib/supabase';
 import { getCart } from '../lib/cart';
 import Layout from '../components/Layout';
 import ProductImage from '../components/ProductImage';
 import { getProductImageUrl } from '../lib/storage-utils';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export default function Shop({ initialProducts }) {
   const [products, setProducts] = useState(initialProducts || []);
@@ -88,6 +94,16 @@ export default function Shop({ initialProducts }) {
 
   // Get product image URL using central storage utility
   function getProductImage(product) {
+    // PRIORITY: Server-generierte Shop-Images (800x1000, 4:5, mit Crop)
+    if (product.shop_image_path || product.shopImagePath) {
+      const shopPath = product.shop_image_path || product.shopImagePath;
+      const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
+      if (data?.publicUrl) {
+        return data.publicUrl;
+      }
+    }
+    
+    // FALLBACK: Original mit Crop (via ProductImage Component)
     // Use central storage utility with fallback chain:
     // 1. image_path → Public URL from product-images bucket (+ Cache-Buster)
     // 2. image_url → Legacy URL

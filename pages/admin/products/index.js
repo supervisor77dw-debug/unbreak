@@ -3,9 +3,15 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
 import AdminLayout from '../../../components/AdminLayout';
 import ProductImage from '../../../components/ProductImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export async function getServerSideProps() {
   return { props: {} };
@@ -188,17 +194,31 @@ export default function ProductsPage() {
             </thead>
             <tbody>
               {products.map((product) => {
-                const imageUrl = getProductImageUrl(
-                  product.image_path, 
-                  product.image_url,
-                  product.image_updated_at || product.imageUpdatedAt
-                );
+                // PRIORITY: Server-generiertes Thumbnail (240x300, 4:5, mit Crop)
+                let imageUrl;
+                if (product.thumb_path || product.thumbPath) {
+                  const thumbPath = product.thumb_path || product.thumbPath;
+                  const { data } = supabase.storage.from('product-images').getPublicUrl(thumbPath);
+                  imageUrl = data?.publicUrl || getProductImageUrl(
+                    product.image_path, 
+                    product.image_url,
+                    product.image_updated_at || product.imageUpdatedAt
+                  );
+                } else {
+                  // FALLBACK: Original mit Crop (via ProductImage Component)
+                  imageUrl = getProductImageUrl(
+                    product.image_path, 
+                    product.image_url,
+                    product.image_updated_at || product.imageUpdatedAt
+                  );
+                }
                 
                 // Debug: Log crop values per product
                 if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
                   console.log('[ProductsList] Product:', {
                     id: product.id,
                     sku: product.sku,
+                    thumbPath: product.thumb_path,
                     imagePath: product.image_path,
                     imageUrl: imageUrl,
                     crop: {

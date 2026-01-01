@@ -82,6 +82,36 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to update product' });
       }
 
+      // Wenn Crop geändert wurde UND Bild existiert → regenerate Thumbnails
+      if ((image_crop_scale !== undefined || image_crop_x !== undefined || image_crop_y !== undefined) && updated.image_path) {
+        console.log('[ADMIN PRODUCT] Crop changed - regenerating thumbnails...');
+        
+        const crop = {
+          scale: image_crop_scale !== undefined ? image_crop_scale : updated.image_crop_scale,
+          x: image_crop_x !== undefined ? image_crop_x : updated.image_crop_x,
+          y: image_crop_y !== undefined ? image_crop_y : updated.image_crop_y,
+        };
+
+        // Regenerate thumbnails asynchronously (don't block response)
+        ['thumb', 'shop'].forEach(async (size) => {
+          try {
+            await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/products/generate-thumbnail`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                productId: updated.id,
+                imagePath: updated.image_path,
+                crop,
+                size,
+              }),
+            });
+            console.log(`[ADMIN PRODUCT] Thumbnail ${size} regenerated`);
+          } catch (err) {
+            console.error(`[ADMIN PRODUCT] Thumbnail ${size} error:`, err);
+          }
+        });
+      }
+
       return res.status(200).json(updated);
     }
 

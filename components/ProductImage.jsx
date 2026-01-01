@@ -25,6 +25,7 @@ import {
   clampCropState, 
   generateTransform, 
   getDefaultCrop,
+  computeCoverTransform,
   sanitizeCropState,
   isValidSize,
   isValidCropState
@@ -117,32 +118,42 @@ export default function ProductImage({
     && isValidSize(imageSize) 
     && isValidSize(containerSize);
 
-  // coverScaleMin: minimales Scale damit Bild Container füllt (mathematisch exakt)
+  // SINGLE SOURCE OF TRUTH: computeCoverTransform
+  const transformData = canCalculate
+    ? computeCoverTransform({
+        imgW: imageSize.width,
+        imgH: imageSize.height,
+        frameW: containerSize.width,
+        frameH: containerSize.height,
+        scale: localCrop.scale,
+        x: localCrop.x,
+        y: localCrop.y
+      })
+    : { transform: generateTransform(sanitizeCropState(localCrop)), baseScale: 1, effectiveScale: 1 };
+
+  const transform = transformData.transform;
+  
+  // coverScaleMin für Editor-UI (Slider min)
   const coverScaleMin = canCalculate
     ? calculateCoverScale(imageSize, containerSize)
     : 1.0;
 
-  // Crop clampen damit Container IMMER gefüllt bleibt (keine leeren Bereiche)
+  // Crop clampen damit Container IMMER gefüllt bleibt (für Drag-Handlers)
   const clampedCrop = canCalculate
     ? clampCropState(localCrop, imageSize, containerSize)
     : sanitizeCropState(localCrop);
 
-  // Transform-String generieren (CSS-ready)
-  const transform = generateTransform(clampedCrop);
-
   // --- DEBUG (nur Development) ---
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
+    if (typeof window !== 'undefined' && window.location?.hostname === 'localhost' && canCalculate) {
       console.log(`[ProductImage ${variant}] Render:`, {
         src: src?.substring(0, 60),
         crop: clampedCrop,
         coverScaleMin,
-        imageSize,
-        containerSize,
-        transform,
+        transformDebug: transformData.debug,
       });
     }
-  }, [src, clampedCrop, coverScaleMin, variant, transform, imageSize, containerSize]);
+  }, [src, clampedCrop, coverScaleMin, variant, canCalculate, transformData]);
 
   // --- VARIANT-SPECIFIC STYLES ---
   const sizeClasses = {

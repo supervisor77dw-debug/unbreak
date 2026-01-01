@@ -182,13 +182,54 @@ export default async function handler(req, res) {
 
       console.log('[upload-image] Product updated in DB');
 
-      // 11. Success response
+      // 11. Generate Thumbnails (thumb + shop)
+      console.log('[upload-image] Generating thumbnails...');
+      
+      const thumbnailPromises = ['thumb', 'shop'].map(async (size) => {
+        try {
+          const thumbRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/products/generate-thumbnail`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              productId: product.id,
+              imagePath: uploadedPath,
+              crop: { scale: 1.0, x: 0, y: 0 }, // Default crop (user kann später anpassen)
+              size,
+            }),
+          });
+
+          if (!thumbRes.ok) {
+            const error = await thumbRes.json();
+            console.error(`[upload-image] Thumbnail ${size} generation failed:`, error);
+            return null;
+          }
+
+          const thumbData = await thumbRes.json();
+          console.log(`[upload-image] Thumbnail ${size} generated:`, thumbData.thumbPath);
+          return { size, ...thumbData };
+        } catch (err) {
+          console.error(`[upload-image] Thumbnail ${size} error:`, err);
+          return null;
+        }
+      });
+
+      const thumbnails = await Promise.all(thumbnailPromises);
+      const thumbPaths = thumbnails.filter(Boolean).reduce((acc, t) => {
+        acc[`${t.size}Path`] = t.thumbPath;
+        acc[`${t.size}Url`] = t.url;
+        return acc;
+      }, {});
+
+      console.log('[upload-image] Thumbnails generated:', thumbPaths);
+
+      // 12. Success response
       return res.status(200).json({
         success: true,
         message: 'Bild erfolgreich hochgeladen',
         product: updatedProduct,
         imageUrl: publicUrl,
         imagePath: uploadedPath,
+        thumbnails: thumbPaths,
       });
 
     } catch (uploadError) {

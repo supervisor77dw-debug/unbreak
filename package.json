@@ -42,6 +42,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "resend": "^6.6.0",
+    "sharp": "^0.34.5",
     "stripe": "^14.25.0"
   },
   "devDependencies": {

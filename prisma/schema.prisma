@@ -303,9 +303,11 @@ model Product {
   description     String?
   basePriceCents  Int       @map("base_price_cents")
   active          Boolean   @default(true)
-  imagePath       String?   @map("image_path")      // Supabase Storage: products/<sku>/main.jpg
-  imageUrl        String?   @map("image_url")       // Public URL (cached)
+  imagePath       String?   @map("image_path")      // Supabase Storage: products/<sku>/main.jpg (Original)
+  imageUrl        String?   @map("image_url")       // Public URL (cached, Original)
   imageUpdatedAt  DateTime? @map("image_updated_at") // Cache-Buster: Timestamp des letzten Image-Uploads
+  thumbPath       String?   @map("thumb_path")      // Server-generated Thumbnail (240x300, 4:5, mit Crop)
+  shopImagePath   String?   @map("shop_image_path") // Server-generated Shop Image (800x1000, 4:5, mit Crop)
   imageCropScale  Float?    @default(1.0) @map("image_crop_scale") // Zoom: 1.0 - 2.5
   imageCropX      Int?      @default(0) @map("image_crop_x")       // X offset: -200 to +200
   imageCropY      Int?      @default(0) @map("image_crop_y")       // Y offset: -200 to +200
