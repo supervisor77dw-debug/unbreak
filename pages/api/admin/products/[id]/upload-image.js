@@ -126,12 +126,18 @@ export default async function handler(req, res) {
       // 9. Clean up temp file
       await fs.unlink(uploadedFile.filepath).catch(() => {});
 
-      // 10. Update database (image_path + image_url)
+      // 10. Update database (image_path + image_url + image_updated_at)
+      const now = new Date();
       const updatedProduct = await prisma.product.update({
         where: { id: product.id },
         data: {
           imagePath: uploadedPath,
           imageUrl: publicUrl,
+          imageUpdatedAt: now,
+          // Reset crop when new image is uploaded
+          imageCropScale: 1.0,
+          imageCropX: 0,
+          imageCropY: 0,
         },
         select: {
           id: true,
@@ -139,6 +145,7 @@ export default async function handler(req, res) {
           name: true,
           imagePath: true,
           imageUrl: true,
+          imageUpdatedAt: true,
         },
       });
 

@@ -297,22 +297,23 @@ model Refund {
 // =====================================================
 
 model Product {
-  id             String    @id @default(uuid())
-  sku            String    @unique
-  name           String
-  description    String?
-  basePriceCents Int       @map("base_price_cents")
-  active         Boolean   @default(true)
-  imagePath      String?   @map("image_path")      // Supabase Storage: products/<sku>/main.jpg
-  imageUrl       String?   @map("image_url")       // Public URL (cached)
-  imageCropScale Float?    @default(1.0) @map("image_crop_scale") // Zoom: 1.0 - 2.5
-  imageCropX     Int?      @default(0) @map("image_crop_x")       // X offset: -200 to +200
-  imageCropY     Int?      @default(0) @map("image_crop_y")       // Y offset: -200 to +200
-  badgeLabel     String?   @map("badge_label")     // e.g. "Gastro Edition" (max 20 chars)
-  shippingText   String?   @map("shipping_text")   // e.g. "Versand 3–5 Tage"
-  highlights     Json?                              // JSONB array of USPs
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  id              String    @id @default(uuid())
+  sku             String    @unique
+  name            String
+  description     String?
+  basePriceCents  Int       @map("base_price_cents")
+  active          Boolean   @default(true)
+  imagePath       String?   @map("image_path")      // Supabase Storage: products/<sku>/main.jpg
+  imageUrl        String?   @map("image_url")       // Public URL (cached)
+  imageUpdatedAt  DateTime? @map("image_updated_at") // Cache-Buster: Timestamp des letzten Image-Uploads
+  imageCropScale  Float?    @default(1.0) @map("image_crop_scale") // Zoom: 1.0 - 2.5
+  imageCropX      Int?      @default(0) @map("image_crop_x")       // X offset: -200 to +200
+  imageCropY      Int?      @default(0) @map("image_crop_y")       // Y offset: -200 to +200
+  badgeLabel      String?   @map("badge_label")     // e.g. "Gastro Edition" (max 20 chars)
+  shippingText    String?   @map("shipping_text")   // e.g. "Versand 3–5 Tage"
+  highlights      Json?                              // JSONB array of USPs
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@map("products")
 }

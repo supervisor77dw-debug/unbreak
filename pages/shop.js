@@ -89,10 +89,14 @@ export default function Shop({ initialProducts }) {
   // Get product image URL using central storage utility
   function getProductImage(product) {
     // Use central storage utility with fallback chain:
-    // 1. image_path → Public URL from product-images bucket
+    // 1. image_path → Public URL from product-images bucket (+ Cache-Buster)
     // 2. image_url → Legacy URL
     // 3. Fallback based on SKU/name
-    const storageUrl = getProductImageUrl(product.image_path, product.image_url);
+    const storageUrl = getProductImageUrl(
+      product.image_path, 
+      product.image_url,
+      product.image_updated_at || product.imageUpdatedAt
+    );
     
     // If storage utility returned placeholder, try SKU-based fallback
     if (storageUrl === '/images/placeholder-product.jpg') {

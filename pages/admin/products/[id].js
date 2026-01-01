@@ -44,6 +44,19 @@ export default function ProductDetail() {
     }
   }, [status, router]);
 
+  // Reset crop when image changes (wichtig für Cache-Busting)
+  useEffect(() => {
+    if (product?.image_path !== formData.image_path && formData.image_path) {
+      console.log('[Admin] Image changed - resetting crop to defaults');
+      setFormData(prev => ({
+        ...prev,
+        image_crop_scale: 1.0,
+        image_crop_x: 0,
+        image_crop_y: 0,
+      }));
+    }
+  }, [product?.image_path]);
+
   useEffect(() => {
     if (!id || id === 'new') return;
     
@@ -433,7 +446,7 @@ export default function ProductDetail() {
                       <div className="crop-editor-container">
                         <label>✋ Ziehen & Zoomen:</label>
                         <ProductImage
-                          src={getProductImageUrl(formData.image_path, formData.image_url)}
+                          src={getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at)}
                           alt={formData.name}
                           crop={{
                             scale: formData.image_crop_scale,
@@ -484,7 +497,7 @@ export default function ProductDetail() {
                     <div className="shop-preview">
                       <label>👀 So sieht's im Shop aus (4:5):</label>
                       <ProductImage
-                        src={getProductImageUrl(formData.image_path, formData.image_url)}
+                        src={getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at)}
                         alt={formData.name}
                         crop={{
                           scale: formData.image_crop_scale,

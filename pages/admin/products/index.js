@@ -188,12 +188,17 @@ export default function ProductsPage() {
             </thead>
             <tbody>
               {products.map((product) => {
-                const imageUrl = getProductImageUrl(product.image_path, product.image_url);
+                const imageUrl = getProductImageUrl(
+                  product.image_path, 
+                  product.image_url,
+                  product.image_updated_at || product.imageUpdatedAt
+                );
                 console.log('[ProductsList] Rendering product:', {
                   id: product.id,
                   sku: product.sku,
                   image_path: product.image_path,
                   image_url: product.image_url,
+                  image_updated_at: product.image_updated_at,
                   resolvedUrl: imageUrl,
                 });
                 
