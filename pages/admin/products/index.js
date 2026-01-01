@@ -200,16 +200,18 @@ export default function ProductsPage() {
                 return (
                   <tr key={product.id}>
                     <td>
-                      <ProductImage
-                        src={imageUrl}
-                        alt={product.name}
-                        crop={{
-                          scale: product.imageCropScale || product.image_crop_scale || 1.0,
-                          x: product.imageCropX || product.image_crop_x || 0,
-                          y: product.imageCropY || product.image_crop_y || 0,
-                        }}
-                        variant="admin-list"
-                      />
+                      <div className="product-image-thumbnail">
+                        <ProductImage
+                          src={imageUrl}
+                          alt={product.name}
+                          crop={{
+                            scale: product.imageCropScale || product.image_crop_scale || 1.0,
+                            x: product.imageCropX || product.image_crop_x || 0,
+                            y: product.imageCropY || product.image_crop_y || 0,
+                          }}
+                          variant="admin-list"
+                        />
+                      </div>
                     </td>
                   <td>
                     <div className="product-name">{product.name}</div>
@@ -443,7 +445,16 @@ export default function ProductsPage() {
 
         .status-toggle:hover {
           opacity: 0.8;
+        }-thumbnail {
+          width: 60px;
+          height: 75px;
+          border-radius: 6px;
+          overflow: hidden;
+          background: #1a1a1a;
+          border: 1px solid #333;
         }
+
+        .product-image
 
         .product-image {
           width: 60px;
