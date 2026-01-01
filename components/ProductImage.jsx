@@ -163,10 +163,14 @@ export default function ProductImage({
           position: absolute;
           left: 50%;
           top: 50%;
-          width: 100%;
-          height: 100%;
+          min-width: 100%;
+          min-height: 100%;
+          width: auto;
+          height: auto;
+          max-width: none;
+          max-height: none;
           object-fit: cover;
-          transform-origin: center;
+          transform-origin: center center;
           transform: ${transform};
           display: block;
           pointer-events: none; /* Bild selbst soll Events nicht fangen */
