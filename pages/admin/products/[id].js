@@ -178,13 +178,14 @@ export default function ProductDetail() {
 
       console.log('[Admin] Upload success:', data);
       
-      // Update form state with new image URL
+      // Update form state with new image data (API returns camelCase from Prisma)
       setFormData(prev => ({
         ...prev,
         image_url: data.imageUrl,
+        image_path: data.imagePath,
       }));
       
-      // Update product state
+      // Update product state (convert to snake_case for consistency with Supabase fetch)
       setProduct(prev => ({
         ...prev,
         image_url: data.imageUrl,
@@ -341,14 +342,22 @@ export default function ProductDetail() {
                       <div className="spinner"></div>
                       <p>Bild wird hochgeladen...</p>
                     </div>
-                  ) : (formData.image_url || product?.image_path) ? (
+                  ) : (formData.image_url || formData.image_path || product?.image_path || product?.image_url) ? (
                     <div className="image-preview-large">
                       <img 
-                        src={getProductImageUrl(product?.image_path, formData.image_url)} 
+                        src={getProductImageUrl(formData.image_path || product?.image_path, formData.image_url || product?.image_url)} 
                         alt={formData.name}
                         onError={(e) => {
+                          console.error('[ProductImage] Preview load failed:', {
+                            src: e.target.src,
+                            formData: { image_path: formData.image_path, image_url: formData.image_url },
+                            product: { image_path: product?.image_path, image_url: product?.image_url },
+                          });
                           e.target.style.display = 'none';
                           e.target.nextSibling.style.display = 'flex';
+                        }}
+                        onLoad={() => {
+                          console.log('[ProductImage] Preview loaded successfully');
                         }}
                       />
                       <div className="image-placeholder" style={{ display: 'none' }}>
