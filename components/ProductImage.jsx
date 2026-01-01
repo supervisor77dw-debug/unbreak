@@ -51,6 +51,21 @@ export default function ProductImage({
   const x = Math.max(-200, Math.min(200, crop?.x || 0));
   const y = Math.max(-200, Math.min(200, crop?.y || 0));
 
+  // Transform calculation
+  const transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${scale})`;
+
+  // Debug logging (nur in Development)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
+      console.log(`[ProductImage ${variant}] Render:`, {
+        src: src?.substring(0, 60),
+        crop: { scale, x, y },
+        transform,
+        interactive,
+      });
+    }
+  }, [src, scale, x, y, variant, transform, interactive]);
+
   // Variant-specific sizes
   const sizeClasses = {
     card: '',
@@ -169,7 +184,7 @@ export default function ProductImage({
           height: auto;
           max-width: none;
           max-height: none;
-          object-fit: cover;
+          /* KEIN object-fit: cover! Das würde mit transform doppelt skalieren */
           transform-origin: center center;
           transform: ${transform};
           display: block;

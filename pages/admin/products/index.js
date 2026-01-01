@@ -193,17 +193,24 @@ export default function ProductsPage() {
                   product.image_url,
                   product.image_updated_at || product.imageUpdatedAt
                 );
-                console.log('[ProductsList] Rendering product:', {
-                  id: product.id,
-                  sku: product.sku,
-                  image_path: product.image_path,
-                  image_url: product.image_url,
-                  image_updated_at: product.image_updated_at,
-                  resolvedUrl: imageUrl,
-                });
+                
+                // Debug: Log crop values per product
+                if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
+                  console.log('[ProductsList] Product:', {
+                    id: product.id,
+                    sku: product.sku,
+                    imagePath: product.image_path,
+                    imageUrl: imageUrl,
+                    crop: {
+                      scale: product.imageCropScale || product.image_crop_scale,
+                      x: product.imageCropX || product.image_crop_x,
+                      y: product.imageCropY || product.image_crop_y,
+                    },
+                  });
+                }
                 
                 return (
-                  <tr key={product.id}>
+                  <tr key={product.id}>{/* WICHTIG: product.id als Key, nicht index! */}
                     <td>
                       <div className="product-image-thumbnail">
                         <ProductImage
