@@ -20,7 +20,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { calculateCoverScale, clampCropState, generateTransform, getDefaultCrop } from '../lib/crop-utils';
+import { calculateCoverScale, clampCropState, generateTransform } from '../lib/crop-utils';
 
 export default function ProductImage({
   src,
@@ -33,144 +33,106 @@ export default function ProductImage({
   interactive = false,
   onCropChange,
 }) {
-  // --- STATE ---
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [localCrop, setLocalCrop] = useState(crop);
-  const [imageSize, setImageSize] = useState(null);
-  const [containerSize, setContainerSize] = useState(null);
   const containerRef = useRef(null);
-  const imageRef = useRef(null);
 
-  // --- CROP-PROPS SYNCHRONISIEREN ---
+  // Debug on mount
   useEffect(() => {
-    setLocalCrop(crop);
-  }, [crop]);
-
-  // --- CONTAINER-GRÖßE MESSEN ---
-  useEffect(() => {
-    if (!containerRef.current) return;
-    
-    const updateSize = () => {
-      const rect = containerRef.current.getBoundingClientRect();
-      setContainerSize({ width: rect.width, height: rect.height });
-    };
-
-    updateSize();
-    const resizeObserver = new ResizeObserver(updateSize);
-    resizeObserver.observe(containerRef.current);
-
-    return () => resizeObserver.disconnect();
+    if (interactive) {
+      console.log('✅ ProductImage INTERACTIVE mounted:', { 
+        variant, 
+        hasCallback: !!onCropChange,
+        src: src?.substring(0, 50)
+      });
+    }
   }, []);
 
-  // --- BILD-GRÖßE BEIM LADEN MESSEN ---
-  const handleImageLoad = (e) => {
-    const img = e.target;
-    setImageSize({
-      width: img.naturalWidth,
-      height: img.naturalHeight
-    });
-    onLoad?.(e);
-  };
+  // Normalize crop values
+  const scale = Math.max(1.0, Math.min(2.5, crop?.scale || 1.0));
+  const x = Math.max(-200, Math.min(200, crop?.x || 0));
+  const y = Math.max(-200, Math.min(200, crop?.y || 0));
 
-  // --- DETERMINISTISCHE CROP-BERECHNUNG ---
-  // coverScaleMin: minimales Scale damit Bild Container füllt (mathematisch exakt)
-  const coverScaleMin = imageSize && containerSize 
-    ? calculateCoverScale(imageSize, containerSize)
-    : 1.0;
+  // Transform calculation
+  const transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${scale})`;
 
-  // Crop clampen damit Container IMMER gefüllt bleibt (keine leeren Bereiche)
-  const clampedCrop = imageSize && containerSize
-    ? clampCropState(localCrop, imageSize, containerSize)
-    : localCrop;
-
-  // Transform-String generieren (CSS-ready)
-  const transform = generateTransform(clampedCrop);
-
-  // --- DEBUG (nur Development) ---
+  // Debug logging (nur in Development)
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
       console.log(`[ProductImage ${variant}] Render:`, {
         src: src?.substring(0, 60),
-        crop: clampedCrop,
-        coverScaleMin,
-        imageSize,
-        containerSize,
+        crop: { scale, x, y },
         transform,
+        interactive,
       });
     }
-  }, [src, clampedCrop, coverScaleMin, variant, transform, imageSize, containerSize]);
+  }, [src, scale, x, y, variant, transform, interactive]);
 
-  // --- VARIANT-SPECIFIC STYLES ---
+  // Variant-specific sizes
   const sizeClasses = {
     card: '',
-    shop: '', // Shop-Cards nutzen variant="shop" (identisch zu card)
     adminList: '', // Größe wird vom Parent-Container bestimmt (60x75px)
+    adminPreview: 'max-w-[400px]',
     'admin-editor': 'max-w-[400px]',
   };
 
   const radiusClasses = {
     card: 'rounded-xl',
-    shop: 'rounded-xl',
     adminList: 'rounded-lg',
+    adminPreview: 'rounded-xl',
     'admin-editor': 'rounded-xl',
   };
 
-  // --- DRAG HANDLERS ---
+  // Drag handlers mit Debug
   const handleMouseDown = (e) => {
-    if (!interactive || !onCropChange) return;
+    if (!interactive || !onCropChange) {
+      console.log('🚫 Drag disabled:', { 
+        interactive, 
+        hasCallback: !!onCropChange,
+        variant,
+        src: src?.substring(0, 50)
+      });
+      return;
+    }
     e.preventDefault();
+    console.log('🖱️ Drag START:', { x, y, scale });
     setIsDragging(true);
-    setDragStart({ 
-      x: e.clientX - clampedCrop.x, 
-      y: e.clientY - clampedCrop.y 
-    });
+    setDragStart({ x: e.clientX - x, y: e.clientY - y });
   };
 
   const handleMouseMove = (e) => {
-    if (!isDragging || !onCropChange || !imageSize || !containerSize) return;
+    if (!isDragging || !onCropChange) return;
     e.preventDefault();
-    
-    const newCrop = {
-      scale: clampedCrop.scale,
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    };
-
-    // Clamp und propagieren
-    const clamped = clampCropState(newCrop, imageSize, containerSize);
-    onCropChange(clamped);
+    const newX = Math.max(-200, Math.min(200, e.clientX - dragStart.x));
+    const newY = Math.max(-200, Math.min(200, e.clientY - dragStart.y));
+    console.log('🖱️ Drag MOVE:', { newX, newY });
+    onCropChange({ scale, x: newX, y: newY });
   };
 
   const handleMouseUp = () => {
     if (isDragging) {
+      console.log('🖱️ Drag END');
       setIsDragging(false);
     }
   };
 
-  // --- TOUCH SUPPORT ---
+  // Touch support
   const handleTouchStart = (e) => {
     if (!interactive || !onCropChange) return;
+    e.preventDefault();
     const touch = e.touches[0];
+    console.log('👆 Touch START:', { x, y });
     setIsDragging(true);
-    setDragStart({ 
-      x: touch.clientX - clampedCrop.x, 
-      y: touch.clientY - clampedCrop.y 
-    });
+    setDragStart({ x: touch.clientX - x, y: touch.clientY - y });
   };
 
   const handleTouchMove = (e) => {
-    if (!isDragging || !onCropChange || !imageSize || !containerSize) return;
+    if (!isDragging || !onCropChange) return;
+    e.preventDefault();
     const touch = e.touches[0];
-    
-    const newCrop = {
-      scale: clampedCrop.scale,
-      x: touch.clientX - dragStart.x,
-      y: touch.clientY - dragStart.y
-    };
-
-    const clamped = clampCropState(newCrop, imageSize, containerSize);
-    onCropChange(clamped);
+    const newX = Math.max(-200, Math.min(200, touch.clientX - dragStart.x));
+    const newY = Math.max(-200, Math.min(200, touch.clientY - dragStart.y));
+    onCropChange({ scale, x: newX, y: newY });
   };
 
   return (
@@ -189,46 +151,49 @@ export default function ProductImage({
       }}
     >
       <img
-        ref={imageRef}
         src={src || '/images/placeholder-product.jpg'}
         alt={alt}
-        onLoad={handleImageLoad}
+        onLoad={onLoad}
         onError={(e) => {
           e.target.src = '/images/placeholder-product.jpg';
           if (onError) onError(e);
         }}
-        style={{ transform }}
-        draggable="false"
+        loading="lazy"
+        draggable={false}
       />
-
+      
       <style jsx>{`
         .product-image-container {
           position: relative;
           width: 100%;
-          aspect-ratio: 4 / 5;
+          aspect-ratio: 4 / 5; /* HARD RULE: IMMER 4:5 */
           overflow: hidden;
-          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+          background: rgba(0, 0, 0, 0.05);
           user-select: none;
+          touch-action: none; /* Wichtig für Touch-Drag */
         }
 
         .product-image-container img {
           position: absolute;
-          top: 50%;
           left: 50%;
+          top: 50%;
           min-width: 100%;
           min-height: 100%;
           width: auto;
           height: auto;
+          max-width: none;
+          max-height: none;
+          /* KEIN object-fit: cover! Das würde mit transform doppelt skalieren */
           transform-origin: center center;
-          transition: transform 0.1s ease-out;
+          transform: ${transform};
+          display: block;
+          pointer-events: none; /* Bild selbst soll Events nicht fangen */
         }
 
-        .product-image-container img[draggable="false"] {
-          -webkit-user-drag: none;
-          -khtml-user-drag: none;
-          -moz-user-drag: none;
-          -o-user-drag: none;
-          user-drag: none;
+        /* Hover-Effekt nur wenn NICHT interactive */
+        .product-image-container:not([style*="cursor: grab"]):hover img {
+          transition: transform 0.4s ease;
+          transform: ${transform} scale(1.05);
         }
       `}</style>
     </div>

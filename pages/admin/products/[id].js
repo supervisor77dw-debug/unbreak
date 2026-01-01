@@ -9,6 +9,7 @@ import Head from 'next/head';
 import AdminLayout from '../../../components/AdminLayout';
 import ProductImage from '../../../components/ProductImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
+import { calculateCoverScale, clampCropState } from '../../../lib/crop-utils';
 
 export default function ProductDetail() {
   const router = useRouter();
@@ -21,6 +22,10 @@ export default function ProductDetail() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  
+  // NEUE: Track Image + Container Size für coverScaleMin-Berechnung
+  const [imageSize, setImageSize] = useState(null);
+  const [containerSize, setContainerSize] = useState({ width: 400, height: 500 }); // Default 4:5
   
   const [formData, setFormData] = useState({
     name: '',
@@ -121,26 +126,44 @@ export default function ProductDetail() {
 
   const handleCropChange = (newCrop) => {
     console.log('[Admin] Crop changed:', newCrop);
+    
+    // Optional: Clamping falls imageSize bekannt (ProductImage macht das auch intern)
+    const finalCrop = imageSize && containerSize
+      ? clampCropState(newCrop, imageSize, containerSize)
+      : newCrop;
+    
     setFormData(prev => ({
       ...prev,
-      image_crop_scale: newCrop.scale,
-      image_crop_x: newCrop.x,
-      image_crop_y: newCrop.y,
+      image_crop_scale: finalCrop.scale,
+      image_crop_x: finalCrop.x,
+      image_crop_y: finalCrop.y,
     }));
   };
 
   const handleZoomChange = (e) => {
     const newScale = parseFloat(e.target.value);
-    handleCropChange({ scale: newScale, x: formData.image_crop_x, y: formData.image_crop_y });
+    
+    const newCrop = { 
+      scale: newScale, 
+      x: formData.image_crop_x, 
+      y: formData.image_crop_y 
+    };
+    
+    // Clamp damit Position bei Zoom-Out nicht zu leeren Bereichen führt
+    handleCropChange(newCrop);
   };
 
   const handleArrowMove = (dx, dy) => {
     const step = 10;
-    handleCropChange({
+    
+    const newCrop = {
       scale: formData.image_crop_scale,
-      x: Math.max(-200, Math.min(200, formData.image_crop_x + dx * step)),
-      y: Math.max(-200, Math.min(200, formData.image_crop_y + dy * step)),
-    });
+      x: formData.image_crop_x + dx * step,
+      y: formData.image_crop_y + dy * step,
+    };
+    
+    // Clamp automatisch (keine hardcoded -200/+200 mehr!)
+    handleCropChange(newCrop);
   };
 
   const handleResetCrop = () => {
@@ -455,6 +478,18 @@ export default function ProductDetail() {
                           }}
                           interactive={true}
                           onCropChange={handleCropChange}
+                          onLoad={(e) => {
+                            const img = e.target;
+                            setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
+                            console.log('[Admin] Image loaded:', { 
+                              width: img.naturalWidth, 
+                              height: img.naturalHeight,
+                              coverScaleMin: calculateCoverScale(
+                                { width: img.naturalWidth, height: img.naturalHeight },
+                                containerSize
+                              )
+                            });
+                          }}
                           variant="admin-editor"
                         />
                         <small>💡 Mit Maus ziehen oder Touch verwenden</small>
@@ -465,14 +500,24 @@ export default function ProductDetail() {
                         <label>🔍 Zoom:</label>
                         <input
                           type="range"
-                          min="1.0"
+                          min={imageSize && containerSize 
+                            ? calculateCoverScale(imageSize, containerSize).toFixed(2)
+                            : "1.0"
+                          }
                           max="2.5"
                           step="0.1"
                           value={formData.image_crop_scale}
                           onChange={handleZoomChange}
                           className="zoom-slider"
                         />
-                        <div className="zoom-value">{formData.image_crop_scale.toFixed(1)}x</div>
+                        <div className="zoom-value">
+                          {formData.image_crop_scale.toFixed(1)}x
+                          {imageSize && containerSize && (
+                            <small style={{display: 'block', fontSize: '11px', opacity: 0.7}}>
+                              (Min: {calculateCoverScale(imageSize, containerSize).toFixed(2)}x)
+                            </small>
+                          )}
+                        </div>
 
                         <label style={{marginTop: '16px'}}>🎯 Position (Feintuning):</label>
                         <div className="arrow-controls">
