@@ -18,7 +18,7 @@
  * - onCropChange: (crop) => void (für Drag-Updates)
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function ProductImage({
   src,
@@ -34,6 +34,17 @@ export default function ProductImage({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
+
+  // Debug on mount
+  useEffect(() => {
+    if (interactive) {
+      console.log('✅ ProductImage INTERACTIVE mounted:', { 
+        variant, 
+        hasCallback: !!onCropChange,
+        src: src?.substring(0, 50)
+      });
+    }
+  }, []);
 
   // Normalize crop values
   const scale = Math.max(1.0, Math.min(2.5, crop?.scale || 1.0));
@@ -56,11 +67,16 @@ export default function ProductImage({
   // Drag handlers mit Debug
   const handleMouseDown = (e) => {
     if (!interactive || !onCropChange) {
-      console.log('🚫 Drag disabled:', { interactive, hasCallback: !!onCropChange });
+      console.log('🚫 Drag disabled:', { 
+        interactive, 
+        hasCallback: !!onCropChange,
+        variant,
+        src: src?.substring(0, 50)
+      });
       return;
     }
     e.preventDefault();
-    console.log('🖱️ Drag START:', { x, y });
+    console.log('🖱️ Drag START:', { x, y, scale });
     setIsDragging(true);
     setDragStart({ x: e.clientX - x, y: e.clientY - y });
   };

@@ -30,8 +30,9 @@ export default function ProductDetail() {
     active: true,
     image_url: '',
     image_path: '',
-    image_fit: 'cover',
-    image_position: '50% 50%',
+    image_crop_scale: 1.0,
+    image_crop_x: 0,
+    image_crop_y: 0,
     badge_label: '',
     shipping_text: 'Versand 3–5 Tage',
     highlights: ['', '', ''],
@@ -78,8 +79,9 @@ export default function ProductDetail() {
           active: data.active ?? true,
           image_url: data.image_url || '',
           image_path: data.image_path || '',
-          image_fit: data.imageFit || data.image_fit || 'cover',
-          image_position: data.imagePosition || data.image_position || '50% 50%',
+          image_crop_scale: data.imageCropScale || data.image_crop_scale || 1.0,
+          image_crop_x: data.imageCropX || data.image_crop_x || 0,
+          image_crop_y: data.imageCropY || data.image_crop_y || 0,
           badge_label: data.badge_label || '',
           shipping_text: data.shipping_text || 'Versand 3–5 Tage',
           highlights: highlightsArray,
@@ -102,6 +104,34 @@ export default function ProductDetail() {
     const newHighlights = [...formData.highlights];
     newHighlights[index] = value;
     setFormData({ ...formData, highlights: newHighlights });
+  };
+
+  const handleCropChange = (newCrop) => {
+    console.log('[Admin] Crop changed:', newCrop);
+    setFormData(prev => ({
+      ...prev,
+      image_crop_scale: newCrop.scale,
+      image_crop_x: newCrop.x,
+      image_crop_y: newCrop.y,
+    }));
+  };
+
+  const handleZoomChange = (e) => {
+    const newScale = parseFloat(e.target.value);
+    handleCropChange({ scale: newScale, x: formData.image_crop_x, y: formData.image_crop_y });
+  };
+
+  const handleArrowMove = (dx, dy) => {
+    const step = 10;
+    handleCropChange({
+      scale: formData.image_crop_scale,
+      x: Math.max(-200, Math.min(200, formData.image_crop_x + dx * step)),
+      y: Math.max(-200, Math.min(200, formData.image_crop_y + dy * step)),
+    });
+  };
+
+  const handleResetCrop = () => {
+    handleCropChange({ scale: 1.0, x: 0, y: 0 });
   };
 
   const handleSubmit = async (e) => {
@@ -393,52 +423,76 @@ export default function ProductDetail() {
                   )}
                 </div>
 
-                {/* LIVE PREVIEW mit Fokus-Steuerung */}
+                {/* CROP EDITOR mit 4:5 Ratio */}
                 {(formData.image_url || formData.image_path) && (
                   <div className="image-control-panel">
-                    <h3>Shop-Vorschau (4:3) & Bild-Fokus</h3>
+                    <h3>🎨 Bildausschnitt bearbeiten (4:5 Format)</h3>
                     
-                    <div className="preview-and-focus">
-                      {/* 4:3 Preview - EXAKT wie im Shop */}
-                      <div className="preview-container">
-                        <label>So sieht der Kunde das Bild:</label>
+                    <div className="crop-editor-layout">
+                      {/* Interactive Crop Editor */}
+                      <div className="crop-editor-container">
+                        <label>✋ Ziehen & Zoomen:</label>
                         <ProductImage
                           src={getProductImageUrl(formData.image_path, formData.image_url)}
                           alt={formData.name}
-                          aspect="4/3"
-                          fit={formData.image_fit}
-                          position={formData.image_position}
+                          crop={{
+                            scale: formData.image_crop_scale,
+                            x: formData.image_crop_x,
+                            y: formData.image_crop_y,
+                          }}
+                          interactive={true}
+                          onCropChange={handleCropChange}
+                          variant="admin-editor"
                         />
+                        <small>💡 Mit Maus ziehen oder Touch verwenden</small>
                       </div>
 
-                      {/* 9-Punkt Fokus-Steuerung */}
-                      <div className="focus-control">
-                        <label>Bild-Fokus (Welcher Bereich soll sichtbar sein?)</label>
-                        <div className="focus-grid">
-                          {[
-                            { label: '↖️', pos: '0% 0%' },
-                            { label: '⬆️', pos: '50% 0%' },
-                            { label: '↗️', pos: '100% 0%' },
-                            { label: '⬅️', pos: '0% 50%' },
-                            { label: '🎯', pos: '50% 50%' },
-                            { label: '➡️', pos: '100% 50%' },
-                            { label: '↙️', pos: '0% 100%' },
-                            { label: '⬇️', pos: '50% 100%' },
-                            { label: '↘️', pos: '100% 100%' },
-                          ].map((point) => (
-                            <button
-                              key={point.pos}
-                              type="button"
-                              className={`focus-btn ${formData.image_position === point.pos ? 'active' : ''}`}
-                              onClick={() => handleChange('image_position', point.pos)}
-                              title={point.pos}
-                            >
-                              {point.label}
-                            </button>
-                          ))}
+                      {/* Crop Controls */}
+                      <div className="crop-controls">
+                        <label>🔍 Zoom:</label>
+                        <input
+                          type="range"
+                          min="1.0"
+                          max="2.5"
+                          step="0.1"
+                          value={formData.image_crop_scale}
+                          onChange={handleZoomChange}
+                          className="zoom-slider"
+                        />
+                        <div className="zoom-value">{formData.image_crop_scale.toFixed(1)}x</div>
+
+                        <label style={{marginTop: '16px'}}>🎯 Position (Feintuning):</label>
+                        <div className="arrow-controls">
+                          <button type="button" onClick={() => handleArrowMove(0, -1)} className="arrow-btn">⬆️</button>
+                          <div className="arrow-row">
+                            <button type="button" onClick={() => handleArrowMove(-1, 0)} className="arrow-btn">⬅️</button>
+                            <button type="button" onClick={handleResetCrop} className="reset-btn" title="Zurücksetzen">🎯</button>
+                            <button type="button" onClick={() => handleArrowMove(1, 0)} className="arrow-btn">➡️</button>
+                          </div>
+                          <button type="button" onClick={() => handleArrowMove(0, 1)} className="arrow-btn">⬇️</button>
                         </div>
-                        <small>Klicken Sie den gewünschten Fokuspunkt - Vorschau wird sofort aktualisiert</small>
+                        <small>Pfeile verschieben um 10px</small>
+
+                        <div className="crop-info">
+                          <strong>Aktuelle Position:</strong><br/>
+                          X: {formData.image_crop_x}px | Y: {formData.image_crop_y}px
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Shop Preview */}
+                    <div className="shop-preview">
+                      <label>👀 So sieht's im Shop aus (4:5):</label>
+                      <ProductImage
+                        src={getProductImageUrl(formData.image_path, formData.image_url)}
+                        alt={formData.name}
+                        crop={{
+                          scale: formData.image_crop_scale,
+                          x: formData.image_crop_x,
+                          y: formData.image_crop_y,
+                        }}
+                        variant="shop"
+                      />
                     </div>
                   </div>
                 )}
@@ -587,24 +641,41 @@ export default function ProductDetail() {
         
         .image-uploaded { display: flex; justify-content: center; align-items: center; padding: 20px; }
         
-        /* FOKUS-STEUERUNG & PREVIEW */
+        /* CROP EDITOR */
         .image-control-panel { margin-top: 24px; padding: 24px; background: #0f172a; border-radius: 12px; border: 1px solid #1e293b; }
         .image-control-panel h3 { font-size: 16px; color: #f8fafc; margin: 0 0 20px 0; }
-        .preview-and-focus { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
         
-        .preview-container label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 12px; font-weight: 500; }
+        .crop-editor-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; margin-bottom: 24px; }
         
-        .focus-control label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 12px; font-weight: 500; }
-        .focus-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
-        .focus-btn { padding: 16px; background: #1e293b; border: 2px solid #334155; border-radius: 8px; 
-          font-size: 24px; cursor: pointer; transition: all 0.2s; }
-        .focus-btn:hover { background: #334155; border-color: #0ea5e9; }
-        .focus-btn.active { background: #0ea5e9; border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2); }
-        .focus-control small { color: #64748b; font-size: 12px; }
+        .crop-editor-container label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 12px; font-weight: 500; }
+        .crop-editor-container small { display: block; margin-top: 8px; color: #64748b; font-size: 12px; }
+        
+        .crop-controls { display: flex; flex-direction: column; }
+        .crop-controls label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 8px; font-weight: 500; }
+        
+        .zoom-slider { width: 100%; height: 6px; border-radius: 3px; background: #1e293b; 
+          -webkit-appearance: none; appearance: none; outline: none; }
+        .zoom-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; 
+          border-radius: 50%; background: #0ea5e9; cursor: pointer; }
+        .zoom-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #0ea5e9; cursor: pointer; border: none; }
+        .zoom-value { text-align: center; color: #f8fafc; font-weight: 600; margin-top: 8px; font-size: 14px; }
+        
+        .arrow-controls { display: grid; grid-template-rows: auto auto auto; gap: 4px; justify-items: center; margin-top: 8px; }
+        .arrow-row { display: flex; gap: 4px; }
+        .arrow-btn, .reset-btn { width: 40px; height: 40px; background: #1e293b; border: 1px solid #334155; 
+          border-radius: 6px; cursor: pointer; font-size: 18px; transition: all 0.2s; }
+        .arrow-btn:hover, .reset-btn:hover { background: #334155; border-color: #0ea5e9; }
+        .reset-btn { background: #0ea5e9; border-color: #0ea5e9; }
+        .reset-btn:hover { background: #0284c7; }
+        
+        .crop-info { margin-top: 16px; padding: 12px; background: #1e293b; border-radius: 6px; font-size: 12px; color: #cbd5e1; }
+        
+        .shop-preview { margin-top: 16px; padding-top: 16px; border-top: 1px solid #1e293b; }
+        .shop-preview label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 12px; font-weight: 500; }
         
         @media (max-width: 768px) { 
           .form-row { grid-template-columns: 1fr; } 
-          .preview-and-focus { grid-template-columns: 1fr; }
+          .crop-editor-layout { grid-template-columns: 1fr; }
         }
         
         .badge-preview { margin-top: 12px; }

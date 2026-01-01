@@ -59,7 +59,11 @@ export default function ProductForm({ product, onSave, onCancel }) {
 
   // Crop handlers
   function handleCropChange(newCrop) {
-    console.log('📐 Crop changed:', newCrop);
+    console.log('📐 Crop changed:', newCrop, '→ Current state:', {
+      scale: formData.image_crop_scale,
+      x: formData.image_crop_x,
+      y: formData.image_crop_y
+    });
     setFormData(prev => ({
       ...prev,
       image_crop_scale: newCrop.scale,

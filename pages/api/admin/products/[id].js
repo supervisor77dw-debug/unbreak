@@ -45,6 +45,9 @@ export default async function handler(req, res) {
         base_price_cents,
         active,
         image_url,
+        image_crop_scale,
+        image_crop_x,
+        image_crop_y,
         badge_label,
         shipping_text,
         highlights,
@@ -60,6 +63,9 @@ export default async function handler(req, res) {
       if (base_price_cents !== undefined) updates.base_price_cents = base_price_cents;
       if (active !== undefined) updates.active = active;
       if (image_url !== undefined) updates.image_url = image_url;
+      if (image_crop_scale !== undefined) updates.image_crop_scale = image_crop_scale;
+      if (image_crop_x !== undefined) updates.image_crop_x = image_crop_x;
+      if (image_crop_y !== undefined) updates.image_crop_y = image_crop_y;
       if (badge_label !== undefined) updates.badge_label = badge_label;
       if (shipping_text !== undefined) updates.shipping_text = shipping_text;
       if (highlights !== undefined) updates.highlights = highlights;

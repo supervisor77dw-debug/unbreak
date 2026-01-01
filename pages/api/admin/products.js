@@ -72,6 +72,9 @@ export default async function handler(req, res) {
         base_price_cents: base_price_cents || 0,
         active: active ?? true,
         image_url: image_url || null,
+        image_crop_scale: 1.0,
+        image_crop_x: 0,
+        image_crop_y: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

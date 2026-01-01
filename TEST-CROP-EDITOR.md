@@ -15,7 +15,7 @@ node run-supabase-migration.js
 ### Warten auf Vercel Deploy:
 - https://vercel.com/dashboard
 - Warte bis "Ready" steht
-- Öffne: https://unbreak.vercel.app
+- Öffne: https://unbreak-one.vercel.app
 
 ---
 
@@ -38,7 +38,7 @@ node run-supabase-migration.js
 ## 3️⃣ Admin Edit öffnen
 
 ### URL:
-https://unbreak.vercel.app/backend/products
+https://unbreak-one.vercel.app/admin/products
 
 ### Login:
 - Email: (deine Admin-Email)
@@ -201,7 +201,7 @@ https://unbreak.vercel.app/backend/products
 ## 🔟 TEST G: Shop-Ansicht
 
 ### Schritt 1: Shop öffnen
-https://unbreak.vercel.app/shop
+https://unbreak-one.vercel.app/shop
 
 ### Erwartung:
 ✅ Produkt zeigt **gleichen Crop** wie im Admin
