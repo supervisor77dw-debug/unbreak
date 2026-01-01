@@ -84,6 +84,7 @@ export default async function handler(req, res) {
 
       // Wenn Crop geändert wurde UND Bild existiert → regenerate Thumbnails
       if ((image_crop_scale !== undefined || image_crop_x !== undefined || image_crop_y !== undefined) && updated.image_path) {
+        console.log('\n🔄 [PATCH] Crop changed for product:', updated.id, 'SKU:', updated.sku);
         console.log('[ADMIN PRODUCT] Crop changed - regenerating thumbnails...');
         
         const crop = {

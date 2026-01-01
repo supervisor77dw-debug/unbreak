@@ -235,19 +235,20 @@ export default function Shop({ initialProducts }) {
                       {/* SHOP: Nutzt NUR shop_image_path (server-generiert 900x1125, 4:5, mit Crop) */}
                       {/* KEIN Transform mehr - Bild ist bereits korrekt gecroppt! */}
                       <ProductImage
+                        key={`shop-${product.id}-${product.shop_image_path || product.image_path || 'noimg'}`}
                         src={(() => {
                           // PRIORITY: Server-generiertes Shop-Image
                           if (product.shop_image_path || product.shopImagePath) {
                             const shopPath = product.shop_image_path || product.shopImagePath;
                             const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
                             if (data?.publicUrl) {
-                              console.log('[Shop] Using server-generated shop image:', shopPath);
+                              console.log('🛒 [Shop] Product', product.id, 'using server-crop:', shopPath);
                               return data.publicUrl;
                             }
                           }
                           
                           // FALLBACK: Original (wird via ProductImage Transform gecroppt)
-                          console.warn('[Shop] No shop_image_path, using original with transform:', product.id);
+                          console.warn('⚠️ [Shop] Product', product.id, 'missing shop_image_path - using transform fallback');
                           return getProductImage(product);
                         })()}
                         alt={product.name}

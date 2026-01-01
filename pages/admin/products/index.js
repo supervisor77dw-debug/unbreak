@@ -215,10 +215,11 @@ export default function ProductsPage() {
                 
                 // Debug: Log crop values per product
                 if (typeof window !== 'undefined' && window.location?.hostname === 'localhost') {
-                  console.log('[ProductsList] Product:', {
+                  console.log('🔧 [Admin List] Product:', {
                     id: product.id,
                     sku: product.sku,
                     thumbPath: product.thumb_path,
+                    shopPath: product.shop_image_path,
                     imagePath: product.image_path,
                     imageUrl: imageUrl,
                     crop: {
@@ -236,6 +237,7 @@ export default function ProductsPage() {
                         {/* ADMIN LIST: Server-generiertes Thumbnail (240x300, bereits gecroppt) */}
                         {/* KEINE crop-Props mehr - Bild ist bereits final! */}
                         <ProductImage
+                          key={`admin-${product.id}-${product.thumb_path || product.image_path || 'noimg'}`}
                           src={imageUrl}
                           alt={product.name}
                           crop={

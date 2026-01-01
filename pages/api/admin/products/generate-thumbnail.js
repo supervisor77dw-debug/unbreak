@@ -27,9 +27,10 @@ const SIZES = {
 
 /**
  * Generiert Hash aus Crop-State für Cache-Busting
+ * WICHTIG: Inkludiert productId für Isolation zwischen Produkten
  */
-function generateCropHash(imagePath, crop) {
-  const cropString = `${imagePath}_${crop.scale}_${crop.x}_${crop.y}`;
+function generateCropHash(productId, imagePath, crop) {
+  const cropString = `${productId}_${imagePath}_${crop.scale}_${crop.x}_${crop.y}`;
   return crypto.createHash('md5').update(cropString).digest('hex').substring(0, 8);
 }
 
@@ -48,6 +49,14 @@ export default async function handler(req, res) {
     if (!SIZES[size]) {
       return res.status(400).json({ error: 'Invalid size. Use: thumb, shop' });
     }
+
+    console.log('\n🎨 [THUMBNAIL GEN] START:', {
+      productId,
+      imagePath,
+      size,
+      crop,
+      timestamp: new Date().toISOString(),
+    });
 
     const { width: targetW, height: targetH } = SIZES[size];
 
@@ -119,9 +128,10 @@ export default async function handler(req, res) {
       dimensions: `${targetW}x${targetH}`,
     });
 
-    // 5. Upload zu Supabase Storage (mit Hash im Filename - Cache-Busting!)
-    const cropHash = generateCropHash(imagePath, crop);
-    const thumbPath = `derived/${productId}/${size}_${cropHash}.webp`;
+    // 5. Upload zu Supabase Storage (mit Hash + Timestamp - absolute Uniqueness!)
+    const cropHash = generateCropHash(productId, imagePath, crop);
+    const timestamp = Date.now();
+    const thumbPath = `derived/${productId}/${size}_${cropHash}_${timestamp}.webp`;
     
     const { error: uploadError } = await supabase
       .storage
@@ -145,6 +155,15 @@ export default async function handler(req, res) {
     console.log('[Thumbnail] Success:', {
       thumbPath,
       url: urlData.publicUrl,
+    });
+
+    console.log('✅ [THUMBNAIL GEN] SUCCESS:', {
+      productId,
+      size,
+      thumbPath,
+      url: urlData.publicUrl,
+      cropHash,
+      timestamp,
     });
 
     return res.status(200).json({

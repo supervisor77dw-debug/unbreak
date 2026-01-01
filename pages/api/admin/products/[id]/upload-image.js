@@ -183,7 +183,7 @@ export default async function handler(req, res) {
       console.log('[upload-image] Product updated in DB');
 
       // 11. Generate Thumbnails (thumb + shop)
-      console.log('[upload-image] Generating thumbnails...');
+      console.log('\n🖼️ [UPLOAD] Generating thumbnails for product:', product.id);
       
       const thumbnailPromises = ['thumb', 'shop'].map(async (size) => {
         try {
