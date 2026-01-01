@@ -233,14 +233,21 @@ export default function ProductsPage() {
                   <tr key={product.id}>{/* WICHTIG: product.id als Key, nicht index! */}
                     <td>
                       <div className="product-image-thumbnail">
+                        {/* ADMIN LIST: Server-generiertes Thumbnail (240x300, bereits gecroppt) */}
+                        {/* KEINE crop-Props mehr - Bild ist bereits final! */}
                         <ProductImage
                           src={imageUrl}
                           alt={product.name}
-                          crop={{
-                            scale: product.imageCropScale || product.image_crop_scale || 1.0,
-                            x: product.imageCropX || product.image_crop_x || 0,
-                            y: product.imageCropY || product.image_crop_y || 0,
-                          }}
+                          crop={
+                            // NUR wenn kein thumb_path existiert → Fallback auf Transform
+                            (product.thumb_path || product.thumbPath) 
+                              ? { scale: 1.0, x: 0, y: 0 } // Thumbnail ist bereits gecroppt!
+                              : {
+                                  scale: product.imageCropScale || product.image_crop_scale || 1.0,
+                                  x: product.imageCropX || product.image_crop_x || 0,
+                                  y: product.imageCropY || product.image_crop_y || 0,
+                                }
+                          }
                           variant="adminList"
                         />
                       </div>

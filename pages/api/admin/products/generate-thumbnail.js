@@ -11,6 +11,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
+import crypto from 'crypto';
 import { computeCoverTransform } from '../../../../lib/crop-utils';
 
 const supabase = createClient(
@@ -21,8 +22,16 @@ const supabase = createClient(
 // Thumbnail Sizes (4:5 aspect ratio)
 const SIZES = {
   thumb: { width: 240, height: 300 },   // Admin List
-  shop: { width: 800, height: 1000 },   // Shop Cards
+  shop: { width: 900, height: 1125 },   // Shop Cards (hochauflösend für Retina)
 };
+
+/**
+ * Generiert Hash aus Crop-State für Cache-Busting
+ */
+function generateCropHash(imagePath, crop) {
+  const cropString = `${imagePath}_${crop.scale}_${crop.x}_${crop.y}`;
+  return crypto.createHash('md5').update(cropString).digest('hex').substring(0, 8);
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -110,14 +119,16 @@ export default async function handler(req, res) {
       dimensions: `${targetW}x${targetH}`,
     });
 
-    // 5. Upload zu Supabase Storage
-    const thumbPath = `derived/${productId}/${size}.webp`;
+    // 5. Upload zu Supabase Storage (mit Hash im Filename - Cache-Busting!)
+    const cropHash = generateCropHash(imagePath, crop);
+    const thumbPath = `derived/${productId}/${size}_${cropHash}.webp`;
+    
     const { error: uploadError } = await supabase
       .storage
       .from('product-images')
       .upload(thumbPath, thumbnail, {
         contentType: 'image/webp',
-        upsert: true, // Überschreibe falls existiert
+        upsert: true, // Überschreibe falls Hash identisch
       });
 
     if (uploadError) {

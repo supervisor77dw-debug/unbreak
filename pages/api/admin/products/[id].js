@@ -92,10 +92,12 @@ export default async function handler(req, res) {
           y: image_crop_y !== undefined ? image_crop_y : updated.image_crop_y,
         };
 
-        // Regenerate thumbnails asynchronously (don't block response)
-        ['thumb', 'shop'].forEach(async (size) => {
+        // Regenerate thumbnails + Update DB (synchron für korrekte Paths)
+        const thumbUpdates = {};
+        
+        for (const size of ['thumb', 'shop']) {
           try {
-            await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/products/generate-thumbnail`, {
+            const thumbRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/products/generate-thumbnail`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -105,11 +107,37 @@ export default async function handler(req, res) {
                 size,
               }),
             });
-            console.log(`[ADMIN PRODUCT] Thumbnail ${size} regenerated`);
+            
+            if (thumbRes.ok) {
+              const thumbData = await thumbRes.json();
+              console.log(`[ADMIN PRODUCT] Thumbnail ${size} regenerated:`, thumbData.thumbPath);
+              
+              // Sammle Paths für DB-Update
+              if (size === 'thumb') thumbUpdates.thumb_path = thumbData.thumbPath;
+              if (size === 'shop') thumbUpdates.shop_image_path = thumbData.thumbPath;
+            } else {
+              console.error(`[ADMIN PRODUCT] Thumbnail ${size} failed:`, await thumbRes.text());
+            }
           } catch (err) {
             console.error(`[ADMIN PRODUCT] Thumbnail ${size} error:`, err);
           }
-        });
+        }
+
+        // Update DB mit neuen Thumbnail-Paths
+        if (Object.keys(thumbUpdates).length > 0) {
+          const { error: thumbError } = await supabase
+            .from('products')
+            .update(thumbUpdates)
+            .eq('id', updated.id);
+          
+          if (thumbError) {
+            console.error('[ADMIN PRODUCT] Failed to update thumbnail paths:', thumbError);
+          } else {
+            console.log('[ADMIN PRODUCT] Thumbnail paths updated in DB:', thumbUpdates);
+            // Merge in response
+            Object.assign(updated, thumbUpdates);
+          }
+        }
       }
 
       return res.status(200).json(updated);

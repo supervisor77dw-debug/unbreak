@@ -222,7 +222,30 @@ export default async function handler(req, res) {
 
       console.log('[upload-image] Thumbnails generated:', thumbPaths);
 
-      // 12. Success response
+      // 12. Update DB mit Thumbnail-Paths (WICHTIG!)
+      try {
+        const thumbUpdate = {};
+        if (thumbPaths.thumbPath) thumbUpdate.thumbPath = thumbPaths.thumbPath;
+        if (thumbPaths.shopPath) thumbUpdate.shopImagePath = thumbPaths.shopPath;
+
+        if (Object.keys(thumbUpdate).length > 0) {
+          const updatedWithThumbs = await prisma.product.update({
+            where: { id: product.id },
+            data: thumbUpdate,
+            select: {
+              id: true,
+              thumbPath: true,
+              shopImagePath: true,
+            },
+          });
+          console.log('[upload-image] DB updated with thumbnail paths:', updatedWithThumbs);
+        }
+      } catch (dbError) {
+        console.error('[upload-image] Failed to update thumbnail paths in DB:', dbError);
+        // Non-critical: Thumbnails existieren in Storage, DB-Update kann später nachgeholt werden
+      }
+
+      // 13. Success response
       return res.status(200).json({
         success: true,
         message: 'Bild erfolgreich hochgeladen',

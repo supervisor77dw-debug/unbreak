@@ -232,14 +232,35 @@ export default function Shop({ initialProducts }) {
                         <div className="product-badge">{product.badge_label}</div>
                       )}
                       
+                      {/* SHOP: Nutzt NUR shop_image_path (server-generiert 900x1125, 4:5, mit Crop) */}
+                      {/* KEIN Transform mehr - Bild ist bereits korrekt gecroppt! */}
                       <ProductImage
-                        src={getProductImage(product)}
+                        src={(() => {
+                          // PRIORITY: Server-generiertes Shop-Image
+                          if (product.shop_image_path || product.shopImagePath) {
+                            const shopPath = product.shop_image_path || product.shopImagePath;
+                            const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
+                            if (data?.publicUrl) {
+                              console.log('[Shop] Using server-generated shop image:', shopPath);
+                              return data.publicUrl;
+                            }
+                          }
+                          
+                          // FALLBACK: Original (wird via ProductImage Transform gecroppt)
+                          console.warn('[Shop] No shop_image_path, using original with transform:', product.id);
+                          return getProductImage(product);
+                        })()}
                         alt={product.name}
-                        crop={{
-                          scale: product.image_crop_scale || 1.0,
-                          x: product.image_crop_x || 0,
-                          y: product.image_crop_y || 0,
-                        }}
+                        crop={
+                          // NUR wenn kein shop_image_path → Fallback auf Transform
+                          (product.shop_image_path || product.shopImagePath)
+                            ? { scale: 1.0, x: 0, y: 0 } // Shop-Image ist bereits gecroppt!
+                            : {
+                                scale: product.image_crop_scale || 1.0,
+                                x: product.image_crop_x || 0,
+                                y: product.image_crop_y || 0,
+                              }
+                        }
                         variant="card"
                       />
 
