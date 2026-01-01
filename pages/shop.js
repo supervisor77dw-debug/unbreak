@@ -233,37 +233,38 @@ export default function Shop({ initialProducts }) {
                       )}
                       
                       {/* SHOP: Nutzt NUR shop_image_path (server-generiert 900x1125, 4:5, mit Crop) */}
-                      {/* KEIN Transform mehr - Bild ist bereits korrekt gecroppt! */}
-                      <ProductImage
-                        key={`shop-${product.id}-${product.shop_image_path || product.image_path || 'noimg'}`}
-                        src={(() => {
-                          // PRIORITY: Server-generiertes Shop-Image
-                          if (product.shop_image_path || product.shopImagePath) {
-                            const shopPath = product.shop_image_path || product.shopImagePath;
-                            const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
-                            if (data?.publicUrl) {
-                              console.log('🛒 [Shop] Product', product.id, 'using server-crop:', shopPath);
-                              return data.publicUrl;
-                            }
-                          }
+                      {/* KEIN Transform/Fallback - Platzhalter wenn fehlend */}
+                      {(() => {
+                        const hasServerCrop = product.shop_image_path || product.shopImagePath;
+                        
+                        if (hasServerCrop) {
+                          const shopPath = product.shop_image_path || product.shopImagePath;
+                          const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
                           
-                          // FALLBACK: Original (wird via ProductImage Transform gecroppt)
-                          console.warn('⚠️ [Shop] Product', product.id, 'missing shop_image_path - using transform fallback');
-                          return getProductImage(product);
-                        })()}
-                        alt={product.name}
-                        crop={
-                          // NUR wenn kein shop_image_path → Fallback auf Transform
-                          (product.shop_image_path || product.shopImagePath)
-                            ? { scale: 1.0, x: 0, y: 0 } // Shop-Image ist bereits gecroppt!
-                            : {
-                                scale: product.image_crop_scale || 1.0,
-                                x: product.image_crop_x || 0,
-                                y: product.image_crop_y || 0,
-                              }
+                          if (data?.publicUrl) {
+                            console.log('🛒 [Shop] Product', product.id, 'using server-crop:', shopPath);
+                            return (
+                              <ProductImage
+                                key={`shop-${product.id}-${shopPath}`}
+                                src={data.publicUrl}
+                                alt={product.name}
+                                crop={{ scale: 1.0, x: 0, y: 0 }}
+                                variant="card"
+                              />
+                            );
+                          }
                         }
-                        variant="card"
-                      />
+                        
+                        // FEHLT shop_image_path → Platzhalter (KEIN TRANSFORM FALLBACK!)
+                        console.error('❌ [Shop] Product', product.id, 'SKU:', product.sku, 'MISSING shop_image_path - showing placeholder');
+                        return (
+                          <div className="product-image-placeholder">
+                            <div className="placeholder-icon">📷</div>
+                            <div className="placeholder-text">Bild fehlt</div>
+                            <div className="placeholder-hint">Bitte im Admin bearbeiten</div>
+                          </div>
+                        );
+                      })()}
 
                       <div className="product-content">
                         <h3 className="product-title">{product.name}</h3>
@@ -466,6 +467,34 @@ export default function Shop({ initialProducts }) {
           font-weight: 600;
           z-index: 10;
           box-shadow: 0 2px 8px rgba(10, 108, 116, 0.3);
+        }
+
+        /* Image Placeholder (when shop_image_path missing) */
+        .product-image-placeholder {
+          aspect-ratio: 4 / 5;
+          background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          color: #999;
+        }
+
+        .placeholder-icon {
+          font-size: 3rem;
+          opacity: 0.5;
+        }
+
+        .placeholder-text {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #666;
+        }
+
+        .placeholder-hint {
+          font-size: 0.85rem;
+          color: #999;
         }
 
         /* Product Content */

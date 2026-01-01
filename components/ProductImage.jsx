@@ -72,15 +72,34 @@ export default function ProductImage({
     if (!containerRef.current) return;
     
     const updateSize = () => {
+      // GUARD: Nur messen wenn ref noch existiert
+      if (!containerRef.current) return;
+      
       const rect = containerRef.current.getBoundingClientRect();
-      setContainerSize({ width: rect.width, height: rect.height });
+      
+      // GUARD: Nur State setzen wenn rect valid ist
+      if (rect && rect.width > 0 && rect.height > 0) {
+        setContainerSize({ width: rect.width, height: rect.height });
+      }
     };
 
     updateSize();
-    const resizeObserver = new ResizeObserver(updateSize);
+    
+    // GUARD: ResizeObserver nur wenn ref exists
+    if (!containerRef.current) return;
+    
+    const resizeObserver = new ResizeObserver(() => {
+      // Callback-Guard: Observer kann nach unmount noch feuern
+      if (containerRef.current) {
+        updateSize();
+      }
+    });
+    
     resizeObserver.observe(containerRef.current);
 
-    return () => resizeObserver.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+    };
   }, []);
 
   // --- BILD-GRÖßE BEIM LADEN MESSEN ---

@@ -82,10 +82,18 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Failed to update product' });
       }
 
-      // Wenn Crop geändert wurde UND Bild existiert → regenerate Thumbnails
-      if ((image_crop_scale !== undefined || image_crop_x !== undefined || image_crop_y !== undefined) && updated.image_path) {
-        console.log('\n🔄 [PATCH] Crop changed for product:', updated.id, 'SKU:', updated.sku);
-        console.log('[ADMIN PRODUCT] Crop changed - regenerating thumbnails...');
+      // KRITISCH: Wenn Crop geändert wurde ODER Bild existiert aber shop_image_path fehlt → regenerate Thumbnails
+      const cropChanged = (image_crop_scale !== undefined || image_crop_x !== undefined || image_crop_y !== undefined);
+      const needsRegeneration = cropChanged || (!updated.shop_image_path && updated.image_path);
+      
+      if (needsRegeneration && updated.image_path) {
+        console.log('\n🔄 [PATCH] Regenerating thumbnails for product:', updated.id, 'SKU:', updated.sku);
+        if (cropChanged) {
+          console.log('[ADMIN PRODUCT] Reason: Crop changed');
+        }
+        if (!updated.shop_image_path) {
+          console.log('[ADMIN PRODUCT] Reason: shop_image_path missing - backfilling');
+        }
         
         const crop = {
           scale: image_crop_scale !== undefined ? image_crop_scale : updated.image_crop_scale,
