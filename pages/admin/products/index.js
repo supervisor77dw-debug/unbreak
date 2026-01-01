@@ -445,16 +445,22 @@ export default function ProductsPage() {
 
         .status-toggle:hover {
           opacity: 0.8;
-        }-thumbnail {
+        }
+
+        .product-image-thumbnail {
           width: 60px;
           height: 75px;
           border-radius: 6px;
           overflow: hidden;
           background: #1a1a1a;
           border: 1px solid #333;
+          flex-shrink: 0;
         }
 
-        .product-image
+        .product-image-thumbnail :global(.product-image-container) {
+          width: 60px !important;
+          height: 75px !important;
+        }
 
         .product-image {
           width: 60px;
