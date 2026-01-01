@@ -188,6 +188,13 @@ export default function ProductsPage() {
             <tbody>
               {products.map((product) => {
                 const imageUrl = getProductImageUrl(product.image_path, product.image_url);
+                console.log('[ProductsList] Rendering product:', {
+                  id: product.id,
+                  sku: product.sku,
+                  image_path: product.image_path,
+                  image_url: product.image_url,
+                  resolvedUrl: imageUrl,
+                });
                 
                 return (
                   <tr key={product.id}>
@@ -198,7 +205,7 @@ export default function ProductsPage() {
                           alt={product.name}
                           loading="lazy"
                           onError={(e) => {
-                            console.warn('[ProductImage] Load failed:', {
+                            console.error('[ProductsList] Image load failed:', {
                               productId: product.id,
                               sku: product.sku,
                               attemptedUrl: e.target.src,
@@ -215,6 +222,11 @@ export default function ProductsPage() {
                             }
                           }}
                           onLoad={(e) => {
+                            console.log('[ProductsList] Image loaded successfully:', {
+                              src: e.target.src,
+                              naturalWidth: e.target.naturalWidth,
+                              naturalHeight: e.target.naturalHeight,
+                            });
                             // Erfolgreich geladen - verstecke Fallback Icon
                             if (e.target.nextSibling) {
                               e.target.nextSibling.style.display = 'none';
