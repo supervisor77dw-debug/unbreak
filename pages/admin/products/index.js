@@ -388,11 +388,16 @@ export default function ProductsPage() {
           letter-spacing: 0.5px;
         }
 
+        .admin-table th:first-child {
+          width: 120px;
+        }
+
         .admin-table td {
           color: #ddd;
           font-size: 14px;
           padding: 16px;
           border-top: 1px solid #2a2a2a;
+          vertical-align: middle;
         }
 
         .admin-table tbody tr:hover {
@@ -400,9 +405,9 @@ export default function ProductsPage() {
         }
 
         .product-image {
-          width: 60px;
-          height: 60px;
-          border-radius: 6px;
+          width: 100px;
+          height: 100px;
+          border-radius: 8px;
           overflow: hidden;
           background: #222;
           display: flex;
