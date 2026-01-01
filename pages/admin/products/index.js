@@ -203,9 +203,12 @@ export default function ProductsPage() {
                       <ProductImage
                         src={imageUrl}
                         alt={product.name}
-                        aspect="1/1"
-                        fit={product.imageFit || product.image_fit || 'cover'}
-                        position={product.imagePosition || product.image_position || '50% 50%'}
+                        crop={{
+                          scale: product.imageCropScale || product.image_crop_scale || 1.0,
+                          x: product.imageCropX || product.image_crop_x || 0,
+                          y: product.imageCropY || product.image_crop_y || 0,
+                        }}
+                        variant="admin-list"
                       />
                     </td>
                   <td>
