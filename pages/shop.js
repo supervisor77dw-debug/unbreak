@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getSupabasePublic, getSupabaseAdmin } from '../lib/supabase';
 import { getCart } from '../lib/cart';
 import Layout from '../components/Layout';
+import ProductImage from '../components/ProductImage';
 import { getProductImageUrl } from '../lib/storage-utils';
 
 export default function Shop({ initialProducts }) {
@@ -211,16 +212,16 @@ export default function Shop({ initialProducts }) {
                         <div className="product-badge">{product.badge_label}</div>
                       )}
                       
-                      <div className="product-image-wrapper">
-                        <img
-                          src={getProductImage(product)}
-                          alt={product.name}
-                          className="product-image"
-                          onError={(e) => {
-                            e.target.src = '/images/placeholder-product.jpg';
-                          }}
-                        />
-                      </div>
+                      <ProductImage
+                        src={getProductImage(product)}
+                        alt={product.name}
+                        crop={{
+                          scale: product.image_crop_scale || 1.0,
+                          x: product.image_crop_x || 0,
+                          y: product.image_crop_y || 0,
+                        }}
+                        variant="card"
+                      />
 
                       <div className="product-content">
                         <h3 className="product-title">{product.name}</h3>
@@ -423,29 +424,6 @@ export default function Shop({ initialProducts }) {
           font-weight: 600;
           z-index: 10;
           box-shadow: 0 2px 8px rgba(10, 108, 116, 0.3);
-        }
-
-        /* Product Image */
-        .product-image-wrapper {
-          position: relative;
-          width: 100%;
-          padding-top: 75%; /* 4:3 aspect ratio */
-          background: #F5F5F5;
-          overflow: hidden;
-        }
-
-        .product-image {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.4s ease;
-        }
-
-        .product-card:hover .product-image {
-          transform: scale(1.05);
         }
 
         /* Product Content */

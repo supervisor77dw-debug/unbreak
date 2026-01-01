@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ProductImage from '../ProductImage';
 
 export default function ProductForm({ product, onSave, onCancel }) {
   const [formData, setFormData] = useState({
@@ -7,6 +8,9 @@ export default function ProductForm({ product, onSave, onCancel }) {
     description: product?.description || '',
     base_price_cents: product?.base_price_cents ? product.base_price_cents / 100 : '',
     image_url: product?.image_url || '',
+    image_crop_scale: product?.image_crop_scale || 1.0,
+    image_crop_x: product?.image_crop_x || 0,
+    image_crop_y: product?.image_crop_y || 0,
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(product?.image_url || null);
@@ -42,8 +46,42 @@ export default function ProductForm({ product, onSave, onCancel }) {
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result);
+      // WICHTIG: Reset crop when new image is uploaded
+      setFormData(prev => ({
+        ...prev,
+        image_crop_scale: 1.0,
+        image_crop_x: 0,
+        image_crop_y: 0,
+      }));
     };
     reader.readAsDataURL(file);
+  }
+
+  // Crop handlers
+  function handleCropChange(newCrop) {
+    setFormData(prev => ({
+      ...prev,
+      image_crop_scale: newCrop.scale,
+      image_crop_x: newCrop.x,
+      image_crop_y: newCrop.y,
+    }));
+  }
+
+  function handleZoomChange(e) {
+    const scale = parseFloat(e.target.value);
+    setFormData(prev => ({
+      ...prev,
+      image_crop_scale: scale,
+    }));
+  }
+
+  function handleResetCrop() {
+    setFormData(prev => ({
+      ...prev,
+      image_crop_scale: 1.0,
+      image_crop_x: 0,
+      image_crop_y: 0,
+    }));
   }
 
   async function uploadImage() {
@@ -96,6 +134,9 @@ export default function ProductForm({ product, onSave, onCancel }) {
         description: formData.description || null,
         base_price_cents: Math.round(parseFloat(formData.base_price_cents) * 100),
         image_url: imageUrl || null,
+        image_crop_scale: formData.image_crop_scale,
+        image_crop_x: formData.image_crop_x,
+        image_crop_y: formData.image_crop_y,
       };
 
       await onSave(productData);
@@ -173,13 +214,74 @@ export default function ProductForm({ product, onSave, onCancel }) {
           onChange={handleImageChange}
           style={styles.fileInput}
         />
-        {imagePreview && (
-          <div style={styles.imagePreview}>
-            <img src={imagePreview} alt="Preview" style={styles.previewImg} />
-          </div>
-        )}
         <p style={styles.hint}>Max. 5MB, JPEG/PNG/WebP</p>
       </div>
+
+      {/* CROP EDITOR: Zoom + Drag + Reset */}
+      {imagePreview && (
+        <div style={styles.cropEditor}>
+          <label style={styles.label}>Bild-Anpassung (4:5 Hochformat)</label>
+          
+          {/* Live Preview mit Drag */}
+          <div style={styles.previewSection}>
+            <div style={styles.previewLabel}>
+              <span>Shop-Vorschau (4:5)</span>
+              <span style={styles.previewHint}>← Ziehen zum Verschieben</span>
+            </div>
+            <ProductImage
+              src={imagePreview}
+              alt="Preview"
+              crop={{
+                scale: formData.image_crop_scale,
+                x: formData.image_crop_x,
+                y: formData.image_crop_y,
+              }}
+              variant="adminPreview"
+              interactive={true}
+              onCropChange={handleCropChange}
+            />
+          </div>
+
+          {/* Zoom Slider */}
+          <div style={styles.controlGroup}>
+            <label style={styles.controlLabel}>
+              Zoom: {formData.image_crop_scale.toFixed(2)}x
+            </label>
+            <input
+              type="range"
+              min="1.0"
+              max="2.5"
+              step="0.01"
+              value={formData.image_crop_scale}
+              onChange={handleZoomChange}
+              style={styles.slider}
+            />
+            <div style={styles.sliderLabels}>
+              <span>1.0x</span>
+              <span>2.5x</span>
+            </div>
+          </div>
+
+          {/* Position Display */}
+          <div style={styles.controlGroup}>
+            <label style={styles.controlLabel}>
+              Position: X={formData.image_crop_x} Y={formData.image_crop_y}
+            </label>
+            <p style={styles.hint}>
+              Tipp: Direkt im Bild ziehen oder Zoom-Slider nutzen
+            </p>
+          </div>
+
+          {/* Reset Button */}
+          <button
+            type="button"
+            onClick={handleResetCrop}
+            style={styles.btnReset}
+          >
+            ↻ Zurücksetzen (Zoom & Position)
+          </button>
+        </div>
+      )}
 
       <div style={styles.actions}>
         <button
@@ -242,16 +344,65 @@ const styles = {
     color: '#fff',
     fontSize: '14px',
   },
-  imagePreview: {
-    marginTop: '12px',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    maxWidth: '200px',
+  cropEditor: {
+    marginTop: '24px',
+    padding: '20px',
+    background: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: '12px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
   },
-  previewImg: {
-    width: '100%',
-    height: 'auto',
+  previewSection: {
+    marginBottom: '20px',
+  },
+  previewLabel: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '12px',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  previewHint: {
+    fontSize: '12px',
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '400',
+  },
+  controlGroup: {
+    marginBottom: '16px',
+  },
+  controlLabel: {
     display: 'block',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: '8px',
+  },
+  slider: {
+    width: '100%',
+    height: '6px',
+    borderRadius: '3px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    outline: 'none',
+    cursor: 'pointer',
+  },
+  sliderLabels: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: '12px',
+    color: 'rgba(255, 255, 255, 0.5)',
+    marginTop: '4px',
+  },
+  btnReset: {
+    padding: '10px 20px',
+    background: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '8px',
+    color: 'rgba(255, 255, 255, 0.9)',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    width: '100%',
   },
   hint: {
     fontSize: '12px',

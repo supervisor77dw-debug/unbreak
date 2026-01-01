@@ -1,60 +1,137 @@
 /**
- * ProductImage - Zentrale Komponente für einheitliche Produktbild-Darstellung
+ * ProductImage - SINGLE SOURCE OF TRUTH für alle Produktbilder
  * 
- * Verwendet in:
- * - Shop Produktkarten (4:3)
- * - Admin Produktliste (1:1)
- * - Admin Produkt bearbeiten (4:3)
+ * TRANSFORM-BASIERTES CROP-SYSTEM:
+ * - Einheitliches 4:5 Hochformat ÜBERALL
+ * - Zoom via scale (1.0 - 2.5)
+ * - Position via x/y (-200 bis +200)
+ * - Identisch in: Shop Cards, Admin List, Admin Edit Preview
  * 
  * Props:
  * - src: Bild-URL
  * - alt: Alt-Text
- * - aspect: "4/3" | "1/1" (Seitenverhältnis)
- * - fit: "cover" | "contain" (default: "cover")
- * - position: "X% Y%" (default: "50% 50%")
- * - className: Optionale CSS-Klasse für Wrapper
- * - onLoad: Callback wenn Bild geladen
- * - onError: Callback bei Fehler
+ * - crop: { scale: number, x: number, y: number } (default: {scale:1, x:0, y:0})
+ * - variant: "card" | "adminList" | "adminPreview"
+ * - className: Optionale CSS-Klasse
+ * - onLoad, onError: Callbacks
+ * - interactive: boolean (für Drag im Admin)
+ * - onCropChange: (crop) => void (für Drag-Updates)
  */
+
+import { useState, useRef } from 'react';
 
 export default function ProductImage({
   src,
   alt = 'Produktbild',
-  aspect = '4/3',
-  fit = 'cover',
-  position = '50% 50%',
+  crop = { scale: 1.0, x: 0, y: 0 },
+  variant = 'card',
   className = '',
   onLoad,
   onError,
+  interactive = false,
+  onCropChange,
 }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const containerRef = useRef(null);
+
+  // Normalize crop values
+  const scale = Math.max(1.0, Math.min(2.5, crop?.scale || 1.0));
+  const x = Math.max(-200, Math.min(200, crop?.x || 0));
+  const y = Math.max(-200, Math.min(200, crop?.y || 0));
+
+  // Variant-specific sizes
+  const sizeClasses = {
+    card: '',
+    adminList: 'w-[72px]',
+    adminPreview: 'max-w-[400px]',
+  };
+
+  const radiusClasses = {
+    card: 'rounded-xl',
+    adminList: 'rounded-lg',
+    adminPreview: 'rounded-xl',
+  };
+
+  // Drag handlers
+  const handleMouseDown = (e) => {
+    if (!interactive || !onCropChange) return;
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - x, y: e.clientY - y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging || !onCropChange) return;
+    e.preventDefault();
+    const newX = Math.max(-200, Math.min(200, e.clientX - dragStart.x));
+    const newY = Math.max(-200, Math.min(200, e.clientY - dragStart.y));
+    onCropChange({ scale, x: newX, y: newY });
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging) {
+      setIsDragging(false);
+    }
+  };
+
+  // Transform calculation
+  const transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${scale})`;
+
   return (
-    <div className={`product-image-wrapper ${className}`}>
+    <div
+      ref={containerRef}
+      className={`product-image-container ${sizeClasses[variant]} ${radiusClasses[variant]} ${className} ${interactive ? 'cursor-move' : ''}`}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+    >
       <img
-        src={src}
+        src={src || '/images/placeholder-product.jpg'}
         alt={alt}
         onLoad={onLoad}
-        onError={onError}
+        onError={(e) => {
+          e.target.src = '/images/placeholder-product.jpg';
+          if (onError) onError(e);
+        }}
         loading="lazy"
+        draggable={false}
       />
       
       <style jsx>{`
-        .product-image-wrapper {
+        .product-image-container {
           position: relative;
           width: 100%;
-          aspect-ratio: ${aspect};
+          aspect-ratio: 4 / 5; /* HARD RULE: IMMER 4:5 */
           overflow: hidden;
-          background: #222;
-          border-radius: 8px;
+          background: rgba(0, 0, 0, 0.05);
+          user-select: none;
         }
 
-        .product-image-wrapper img {
+        .product-image-container img {
           position: absolute;
-          inset: 0;
+          left: 50%;
+          top: 50%;
           width: 100%;
           height: 100%;
-          object-fit: ${fit};
-          object-position: ${position};
+          object-fit: cover;
+          transform-origin: center;
+          transform: ${transform};
           display: block;
+          pointer-events: ${interactive ? 'none' : 'auto'};
+        }
+
+        .product-image-container:not(.cursor-move):hover img {
+          transition: transform 0.4s ease;
+        }
+
+        .product-image-container:not(.cursor-move):hover img:not(.dragging) {
+          transform: ${transform} scale(1.05);
+        }
+
+        .cursor-move {
+          cursor: ${isDragging ? 'grabbing' : 'grab'};
         }
       `}</style>
     </div>

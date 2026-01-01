@@ -1,3 +1,5 @@
+import ProductImage from '../ProductImage';
+
 export default function ProductList({ products, onEdit, onDelete, onApprove, onReject, isAdmin, currentUserId }) {
   
   function getStatusBadge(status) {
@@ -44,30 +46,19 @@ export default function ProductList({ products, onEdit, onDelete, onApprove, onR
         return (
           <div key={product.id} style={styles.card}>
             <div style={styles.cardContent}>
-              {/* Image */}
-              {product.image_url ? (
-                <div style={styles.imageContainer}>
-                  <img 
-                    src={product.image_url} 
-                    alt={product.name} 
-                    style={styles.image}
-                    onError={(e) => {
-                      console.error('❌ Image load failed:', product.image_url);
-                      console.error('   Product SKU:', product.sku);
-                      console.error('   Check URL in browser:', product.image_url);
-                      e.target.style.display = 'none';
-                    }}
-                    onLoad={() => {
-                      console.log('✅ Image loaded:', product.image_url);
-                      console.log('   Product SKU:', product.sku);
-                    }}
-                  />
-                </div>
-              ) : (
-                <div style={styles.imageContainer}>
-                  <div style={styles.placeholder}>Kein Bild</div>
-                </div>
-              )}
+              {/* Image with 4:5 format */}
+              <div style={styles.imageContainer}>
+                <ProductImage
+                  src={product.image_url}
+                  alt={product.name}
+                  crop={{
+                    scale: product.image_crop_scale || 1.0,
+                    x: product.image_crop_x || 0,
+                    y: product.image_crop_y || 0,
+                  }}
+                  variant="adminList"
+                />
+              </div>
 
               {/* Info */}
               <div style={styles.info}>
@@ -163,24 +154,8 @@ const styles = {
   },
   imageContainer: {
     width: '120px',
-    height: '120px',
     flexShrink: 0,
-    borderRadius: '8px',
-    overflow: 'hidden',
-    background: 'rgba(0, 0, 0, 0.2)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-  },
-  placeholder: {
-    fontSize: '12px',
-    color: 'rgba(255, 255, 255, 0.3)',
-    textAlign: 'center',
+    overflow: 'visible', // Let ProductImage handle its own styling
   },
   info: {
     flex: 1,
