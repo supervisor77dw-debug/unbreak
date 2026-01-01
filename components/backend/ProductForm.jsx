@@ -59,6 +59,7 @@ export default function ProductForm({ product, onSave, onCancel }) {
 
   // Crop handlers
   function handleCropChange(newCrop) {
+    console.log('📐 Crop changed:', newCrop);
     setFormData(prev => ({
       ...prev,
       image_crop_scale: newCrop.scale,
@@ -69,6 +70,7 @@ export default function ProductForm({ product, onSave, onCancel }) {
 
   function handleZoomChange(e) {
     const scale = parseFloat(e.target.value);
+    console.log('🔍 Zoom changed:', scale);
     setFormData(prev => ({
       ...prev,
       image_crop_scale: scale,
@@ -76,12 +78,32 @@ export default function ProductForm({ product, onSave, onCancel }) {
   }
 
   function handleResetCrop() {
+    console.log('↻ Reset crop');
     setFormData(prev => ({
       ...prev,
       image_crop_scale: 1.0,
       image_crop_x: 0,
       image_crop_y: 0,
     }));
+  }
+
+  // Pfeil-Buttons für Feintuning (10px Steps)
+  function handleArrowMove(direction) {
+    console.log('⬆️ Arrow move:', direction);
+    const step = 10;
+    setFormData(prev => {
+      let newX = prev.image_crop_x;
+      let newY = prev.image_crop_y;
+      
+      switch(direction) {
+        case 'up': newY = Math.max(-200, newY - step); break;
+        case 'down': newY = Math.min(200, newY + step); break;
+        case 'left': newX = Math.max(-200, newX - step); break;
+        case 'right': newX = Math.min(200, newX + step); break;
+      }
+      
+      return { ...prev, image_crop_x: newX, image_crop_y: newY };
+    });
   }
 
   async function uploadImage() {
@@ -262,13 +284,63 @@ export default function ProductForm({ product, onSave, onCancel }) {
             </div>
           </div>
 
-          {/* Position Display */}
+          {/* Position Display + Pfeil-Buttons */}
           <div style={styles.controlGroup}>
             <label style={styles.controlLabel}>
               Position: X={formData.image_crop_x} Y={formData.image_crop_y}
             </label>
+            
+            {/* Pfeil-Steuerung */}
+            <div style={styles.arrowControls}>
+              <div style={styles.arrowRow}>
+                <div style={styles.arrowSpacer}></div>
+                <button
+                  type="button"
+                  onClick={() => handleArrowMove('up')}
+                  style={styles.arrowBtn}
+                  title="Bild nach oben (10px)"
+                >
+                  ▲
+                </button>
+                <div style={styles.arrowSpacer}></div>
+              </div>
+              <div style={styles.arrowRow}>
+                <button
+                  type="button"
+                  onClick={() => handleArrowMove('left')}
+                  style={styles.arrowBtn}
+                  title="Bild nach links (10px)"
+                >
+                  ◀
+                </button>
+                <div style={styles.arrowCenter}>
+                  Feintuning
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleArrowMove('right')}
+                  style={styles.arrowBtn}
+                  title="Bild nach rechts (10px)"
+                >
+                  ▶
+                </button>
+              </div>
+              <div style={styles.arrowRow}>
+                <div style={styles.arrowSpacer}></div>
+                <button
+                  type="button"
+                  onClick={() => handleArrowMove('down')}
+                  style={styles.arrowBtn}
+                  title="Bild nach unten (10px)"
+                >
+                  ▼
+                </button>
+                <div style={styles.arrowSpacer}></div>
+              </div>
+            </div>
+            
             <p style={styles.hint}>
-              Tipp: Direkt im Bild ziehen oder Zoom-Slider nutzen
+              Tipp: Direkt im Bild ziehen oder Pfeile für Feintuning (10px Schritte)
             </p>
           </div>
 
@@ -403,6 +475,43 @@ const styles = {
     fontSize: '14px',
     fontWeight: '500',
     width: '100%',
+  },
+  arrowControls: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    marginTop: '12px',
+    marginBottom: '8px',
+  },
+  arrowRow: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '4px',
+  },
+  arrowSpacer: {
+    width: '36px',
+  },
+  arrowCenter: {
+    width: '80px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '11px',
+    color: 'rgba(255, 255, 255, 0.4)',
+  },
+  arrowBtn: {
+    width: '36px',
+    height: '36px',
+    background: 'rgba(255, 255, 255, 0.08)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '6px',
+    color: 'rgba(255, 255, 255, 0.9)',
+    cursor: 'pointer',
+    fontSize: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
   },
   hint: {
     fontSize: '12px',

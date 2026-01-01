@@ -53,10 +53,14 @@ export default function ProductImage({
     adminPreview: 'rounded-xl',
   };
 
-  // Drag handlers
+  // Drag handlers mit Debug
   const handleMouseDown = (e) => {
-    if (!interactive || !onCropChange) return;
+    if (!interactive || !onCropChange) {
+      console.log('🚫 Drag disabled:', { interactive, hasCallback: !!onCropChange });
+      return;
+    }
     e.preventDefault();
+    console.log('🖱️ Drag START:', { x, y });
     setIsDragging(true);
     setDragStart({ x: e.clientX - x, y: e.clientY - y });
   };
@@ -66,13 +70,34 @@ export default function ProductImage({
     e.preventDefault();
     const newX = Math.max(-200, Math.min(200, e.clientX - dragStart.x));
     const newY = Math.max(-200, Math.min(200, e.clientY - dragStart.y));
+    console.log('🖱️ Drag MOVE:', { newX, newY });
     onCropChange({ scale, x: newX, y: newY });
   };
 
   const handleMouseUp = () => {
     if (isDragging) {
+      console.log('🖱️ Drag END');
       setIsDragging(false);
     }
+  };
+
+  // Touch support
+  const handleTouchStart = (e) => {
+    if (!interactive || !onCropChange) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    console.log('👆 Touch START:', { x, y });
+    setIsDragging(true);
+    setDragStart({ x: touch.clientX - x, y: touch.clientY - y });
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || !onCropChange) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const newX = Math.max(-200, Math.min(200, touch.clientX - dragStart.x));
+    const newY = Math.max(-200, Math.min(200, touch.clientY - dragStart.y));
+    onCropChange({ scale, x: newX, y: newY });
   };
 
   // Transform calculation
@@ -81,11 +106,17 @@ export default function ProductImage({
   return (
     <div
       ref={containerRef}
-      className={`product-image-container ${sizeClasses[variant]} ${radiusClasses[variant]} ${className} ${interactive ? 'cursor-move' : ''}`}
+      className={`product-image-container ${sizeClasses[variant]} ${radiusClasses[variant]} ${className}`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleMouseUp}
+      style={{
+        cursor: interactive ? (isDragging ? 'grabbing' : 'grab') : 'default',
+      }}
     >
       <img
         src={src || '/images/placeholder-product.jpg'}
@@ -107,6 +138,7 @@ export default function ProductImage({
           overflow: hidden;
           background: rgba(0, 0, 0, 0.05);
           user-select: none;
+          touch-action: none; /* Wichtig für Touch-Drag */
         }
 
         .product-image-container img {
@@ -119,19 +151,13 @@ export default function ProductImage({
           transform-origin: center;
           transform: ${transform};
           display: block;
-          pointer-events: ${interactive ? 'none' : 'auto'};
+          pointer-events: none; /* Bild selbst soll Events nicht fangen */
         }
 
-        .product-image-container:not(.cursor-move):hover img {
+        /* Hover-Effekt nur wenn NICHT interactive */
+        .product-image-container:not([style*="cursor: grab"]):hover img {
           transition: transform 0.4s ease;
-        }
-
-        .product-image-container:not(.cursor-move):hover img:not(.dragging) {
           transform: ${transform} scale(1.05);
-        }
-
-        .cursor-move {
-          cursor: ${isDragging ? 'grabbing' : 'grab'};
         }
       `}</style>
     </div>
