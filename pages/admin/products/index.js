@@ -227,7 +227,8 @@ export default function ProductsPage() {
                               naturalWidth: e.target.naturalWidth,
                               naturalHeight: e.target.naturalHeight,
                             });
-                            // Erfolgreich geladen - verstecke Fallback Icon
+                            // Erfolgreich geladen - zeige Bild, verstecke Fallback Icon
+                            e.target.style.display = 'block';
                             if (e.target.nextSibling) {
                               e.target.nextSibling.style.display = 'none';
                             }
