@@ -128,26 +128,57 @@ export default async function handler(req, res) {
 
       // 10. Update database (image_path + image_url + image_updated_at)
       const now = new Date();
-      const updatedProduct = await prisma.product.update({
-        where: { id: product.id },
-        data: {
-          imagePath: uploadedPath,
-          imageUrl: publicUrl,
-          imageUpdatedAt: now,
-          // Reset crop when new image is uploaded
-          imageCropScale: 1.0,
-          imageCropX: 0,
-          imageCropY: 0,
-        },
-        select: {
-          id: true,
-          sku: true,
-          name: true,
-          imagePath: true,
-          imageUrl: true,
-          imageUpdatedAt: true,
-        },
-      });
+      
+      // Try to update with imageUpdatedAt (requires migration 006)
+      // Fallback to update without it if column doesn't exist yet
+      let updatedProduct;
+      try {
+        updatedProduct = await prisma.product.update({
+          where: { id: product.id },
+          data: {
+            imagePath: uploadedPath,
+            imageUrl: publicUrl,
+            imageUpdatedAt: now,
+            // Reset crop when new image is uploaded
+            imageCropScale: 1.0,
+            imageCropX: 0,
+            imageCropY: 0,
+          },
+          select: {
+            id: true,
+            sku: true,
+            name: true,
+            imagePath: true,
+            imageUrl: true,
+            imageUpdatedAt: true,
+          },
+        });
+      } catch (updateError) {
+        // Fallback: If imageUpdatedAt column doesn't exist yet, update without it
+        if (updateError.message?.includes('imageUpdatedAt') || updateError.message?.includes('image_updated_at')) {
+          console.warn('[upload-image] imageUpdatedAt column not found - updating without it (run migration 006)');
+          updatedProduct = await prisma.product.update({
+            where: { id: product.id },
+            data: {
+              imagePath: uploadedPath,
+              imageUrl: publicUrl,
+              // Reset crop when new image is uploaded
+              imageCropScale: 1.0,
+              imageCropX: 0,
+              imageCropY: 0,
+            },
+            select: {
+              id: true,
+              sku: true,
+              name: true,
+              imagePath: true,
+              imageUrl: true,
+            },
+          });
+        } else {
+          throw updateError;
+        }
+      }
 
       console.log('[upload-image] Product updated in DB');
 
