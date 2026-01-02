@@ -175,7 +175,12 @@ export default async function handler(req, res) {
     });
 
     // 4. Sharp: Resize + Crop
-    // Strategie: Resize auf effectiveScale, dann extract target area
+    // CRITICAL: Transform order must match UI!
+    // 1. baseScale (cover fit)
+    // 2. Apply offsets (in BASE coordinate space)
+    // 3. Apply user zoom
+    // 4. Calculate extract rect
+    
     const scaledW = Math.round(metadata.width * effectiveScale);
     const scaledH = Math.round(metadata.height * effectiveScale);
 
@@ -187,13 +192,18 @@ export default async function handler(req, res) {
       resizeScale: effectiveScale.toFixed(4),
     });
 
-    // Crop-Position: Center + Offsets
+    // CRITICAL: Offsets are in BASE coordinate space (frameW x frameH)
+    // They must be scaled by effectiveScale to match the resized image space
     const offsetX = crop?.x || 0;
     const offsetY = crop?.y || 0;
     
-    // Extract-Region (centered mit offset)
-    const left = Math.max(0, Math.round((scaledW - targetW) / 2 + offsetX));
-    const top = Math.max(0, Math.round((scaledH - targetH) / 2 + offsetY));
+    // Scale offsets from base coordinate space to resized image space
+    const scaledOffsetX = offsetX * effectiveScale;
+    const scaledOffsetY = offsetY * effectiveScale;
+    
+    // Extract-Region (centered + scaled offsets)
+    const left = Math.max(0, Math.round((scaledW - targetW) / 2 + scaledOffsetX));
+    const top = Math.max(0, Math.round((scaledH - targetH) / 2 + scaledOffsetY));
 
     // Clamp to ensure we don't exceed bounds
     const clampedLeft = Math.min(left, scaledW - targetW);
@@ -202,12 +212,14 @@ export default async function handler(req, res) {
     // ⚡ DEBUG PIPELINE EXTRACT
     console.log('✂️ [PIPELINE EXTRACT]', {
       productId,
+      offsetX_base: offsetX,
+      offsetY_base: offsetY,
+      offsetX_scaled: scaledOffsetX.toFixed(2),
+      offsetY_scaled: scaledOffsetY.toFixed(2),
       extractLeft: left,
       extractTop: top,
       extractW: targetW,
       extractH: targetH,
-      offsetX,
-      offsetY,
       centerBeforeOffset: {
         x: Math.round((scaledW - targetW) / 2),
         y: Math.round((scaledH - targetH) / 2),
@@ -217,6 +229,7 @@ export default async function handler(req, res) {
         clampedTop,
         wasClamped: clampedLeft !== left || clampedTop !== top,
       },
+      xyAppliedAfterZoom: false, // CORRECT: Applied in base space, then scaled
     });
 
     const thumbnail = await normalizedImage

@@ -440,12 +440,16 @@ export default function DebugImages({ buildInfo, serverRenderTime }) {
                   TARGET (Shop): 900x1125 (4:5){'\n'}
                   TARGET (Thumb): 240x300 (4:5){'\n'}
                   {'\n'}
-                  ⚠️ Note: Original image dimensions not in DB.{'\n'}
-                  Check browser console &gt; [PIPELINE START] for full math:{'\n'}
-                  - baseScale (min scale to cover 4:5){'\n'}
-                  - effectiveScale (baseScale * userScale){'\n'}
-                  - resized dimensions{'\n'}
-                  - extract coordinates
+                  ⚠️ Transform Order (CRITICAL):{'\n'}
+                  1. EXIF normalize (orientation = 1){'\n'}
+                  2. baseScale = cover-fit to 4:5{'\n'}
+                  3. X/Y offsets IN BASE SPACE (NOT zoomed!){'\n'}
+                  4. User zoom (scale * baseScale){'\n'}
+                  5. Extract crop rect{'\n'}
+                  {'\n'}
+                  Check server logs → [PIPELINE EXTRACT]:{'\n'}
+                  - offsetX_base vs offsetX_scaled{'\n'}
+                  - xyAppliedAfterZoom: false (MUST be false!)
                 </code>
               </div>
             </div>
