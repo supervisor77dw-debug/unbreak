@@ -22,15 +22,23 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
   useEffect(() => {
     if (!containerRef.current) return;
     
-    const observer = new ResizeObserver(() => {
-      if (containerRef.current) {
-        setContainerSize({
-          width: containerRef.current.offsetWidth,
-          height: containerRef.current.offsetHeight
-        });
+    const measureContainer = () => {
+      if (!containerRef.current) return;
+      const width = containerRef.current.offsetWidth;
+      const height = containerRef.current.offsetHeight;
+      
+      if (width > 0 && height > 0) {
+        console.log('[CroppedImage] Container measured:', { width, height });
+        setContainerSize({ width, height });
+      } else {
+        console.warn('[CroppedImage] Container has zero size!', { width, height });
       }
-    });
+    };
     
+    // Initial measurement
+    measureContainer();
+    
+    const observer = new ResizeObserver(measureContainer);
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
@@ -50,6 +58,23 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
     : { transform: 'none', debug: {} };
   
   const transform = transformResult.transform;
+
+  if (showDebug && !imageSize) {
+    console.log('[CroppedImage] Waiting for image to load...');
+  }
+  if (showDebug && !containerSize) {
+    console.log('[CroppedImage] Waiting for container measurement...');
+  }
+  if (showDebug && imageSize && containerSize) {
+    console.log('[CroppedImage] Transform computed:', {
+      imageSize,
+      containerSize,
+      crop,
+      dx,
+      dy,
+      transform
+    });
+  }
 
   // Drag handlers (only if interactive)
   const handleMouseDown = (e) => {
