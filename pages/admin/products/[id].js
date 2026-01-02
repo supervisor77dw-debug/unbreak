@@ -584,6 +584,7 @@ export default function ProductDetail() {
                           interactive={true}
                           onCropChange={handleCropChange}
                           onImageLoad={(size) => setImageSize(size)}
+                          showDebug={true}
                         />
                         <small>💡 Mit Maus ziehen oder Touch verwenden</small>
                       </div>
