@@ -12,7 +12,7 @@
 import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import crypto from 'crypto';
-import { computeCoverTransform, computeExtractRect } from '../../../../lib/crop-utils';
+import { computeCropRectOriginalPx } from '../../../../lib/crop-utils';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -57,8 +57,6 @@ export default async function handler(req, res) {
       crop,
       timestamp: new Date().toISOString(),
     });
-
-    const { width: targetW, height: targetH } = SIZES[size];
 
     // 1. Download Original von Supabase Storage
     console.log('[Thumbnail] Downloading original:', imagePath);
@@ -107,117 +105,67 @@ export default async function handler(req, res) {
       note: 'All crop math now uses THESE dimensions (post-rotation)',
     });
 
-    // 4. SINGLE SOURCE OF TRUTH: Use shared computeExtractRect
-    // This ensures UI and Server use IDENTICAL math
-    const extractRect = computeExtractRect({
-      origW: metadata.width,
-      origH: metadata.height,
-      targetW,
-      targetH,
-      scale: crop?.scale || 1.0,
-      x: crop?.x || 0,
-      y: crop?.y || 0,
-    });
+    // 4. ONE CROP RECT TO RULE THEM ALL
+    // Compute CropRect ONCE in original pixels - same for shop AND thumb!
+    const cropRect = computeCropRectOriginalPx(
+      metadata.width,
+      metadata.height,
+      0.8, // 4:5 aspect ratio (width/height = 0.8)
+      crop?.scale || 1.0,
+      crop?.x || 0,
+      crop?.y || 0
+    );
 
-    // Extract values from debug info for logging
-    const baseScale = parseFloat(extractRect.debug.baseScale);
-    const effectiveScale = parseFloat(extractRect.debug.effectiveScale);
-
-    // ⚡ DEBUG: UI CROP INPUT (B)
-    console.log('🎨 [PIPELINE UI CROP INPUT]', {
+    // ⚡ DEBUG: UI CROP INPUT
+    console.log('🎨 [CROP INPUT]', {
       productId,
       crop_scale: crop?.scale || 1.0,
       crop_x: crop?.x || 0,
       crop_y: crop?.y || 0,
-      CROP_BASE: { width: targetW, height: targetH },
-      note: 'Client-sent crop params (frame-relative)',
+      note: 'User crop params (x/y in 900×1125 reference space)',
     });
     
-    // ⚡ DEBUG PIPELINE START
-    console.log('🚀 [PIPELINE START]', {
+    // ⚡ DEBUG: ONE CROP RECT (computed ONCE)
+    console.log('✂️ [ONE CROP RECT - Original Pixels]', {
       productId,
-      sourceUsed: imagePath,
-      sourceW: metadata.width,
-      sourceH: metadata.height,
-      cropScale: crop?.scale || 1.0,
-      cropX: crop?.x || 0,
-      cropY: crop?.y || 0,
-      baseW: targetW,
-      baseH: targetH,
-      baseScale: baseScale.toFixed(4),
-      effectiveScale: effectiveScale.toFixed(4),
-      targetSize: size,
-    });
-
-    // ⚡ DEBUG: PIPELINE MATH (C)
-    console.log('📊 [PIPELINE MATH]', {
-      productId,
-      baseScale: baseScale.toFixed(4),
-      effectiveScale: effectiveScale.toFixed(4),
-      note: 'baseScale = min scale to cover 4:5, effectiveScale = baseScale * userScale',
-    });
-    
-    // DEBUG: Verify DERIVE_REFERENCE = UI_REFERENCE
-    console.log('🔍 [DERIVE SOURCE CHECK]', {
-      productId,
-      cropParams: { 
-        scale: crop?.scale || 1.0, 
-        x: crop?.x || 0, 
-        y: crop?.y || 0 
+      origSize: `${metadata.width}×${metadata.height}`,
+      cropRect: {
+        left: cropRect.left,
+        top: cropRect.top,
+        width: cropRect.width,
+        height: cropRect.height,
       },
-      sourceUsed: imagePath,
-      sourceW: metadata.width,
-      sourceH: metadata.height,
-      baseW: targetW,
-      baseH: targetH,
-      baseScale: baseScale.toFixed(4),
-      effectiveScale: effectiveScale.toFixed(4),
-      resultW: targetW,
-      resultH: targetH,
-      DERIVE_REFERENCE_EQ_UI_REFERENCE: true, // Both use computeExtractRect with same params
+      cropRectHash: cropRect.debug.hash,
+      debug: cropRect.debug,
+      note: 'THIS rect is used for BOTH shop and thumb - NO re-computation!',
     });
 
-    // ⚡ DEBUG PIPELINE EXTRACT (from shared function)
-    console.log('✂️ [PIPELINE EXTRACT] Using shared computeExtractRect:', {
-      productId,
-      ...extractRect.debug,
-      finalExtractRect: {
-        left: extractRect.left,
-        top: extractRect.top,
-        width: extractRect.width,
-        height: extractRect.height,
-      },
-    });
-
-    // 5. Sharp: Resize to effectiveScale, then extract
-    const scaledW = Math.round(metadata.width * effectiveScale);
-    const scaledH = Math.round(metadata.height * effectiveScale);
-
-    // ⚡ DEBUG PIPELINE RESIZE
-    console.log('📐 [PIPELINE RESIZE]', {
-      productId,
-      resizedW: scaledW,
-      resizedH: scaledH,
-      resizeScale: effectiveScale.toFixed(4),
-    });
+    // 5. Sharp Pipeline: Extract ONCE, then resize to target
+    // CRITICAL: Extract happens BEFORE resize, using original pixels
+    // This ensures shop and thumb have IDENTICAL composition
+    const { width: targetW, height: targetH } = SIZES[size];
 
     const thumbnail = await normalizedImage
-      .resize(scaledW, scaledH, {
-        fit: 'fill',
-        kernel: 'lanczos3',
-      })
       .extract({
-        left: extractRect.left,
-        top: extractRect.top,
-        width: extractRect.width,
-        height: extractRect.height,
+        left: cropRect.left,
+        top: cropRect.top,
+        width: cropRect.width,
+        height: cropRect.height,
+      })
+      .resize(targetW, targetH, {
+        fit: 'fill', // Should be exact since aspect is already 4:5
+        kernel: 'lanczos3',
       })
       .webp({ quality: 85 })
       .toBuffer();
 
-    console.log('[Thumbnail] Generated:', {
-      size: thumbnail.length,
-      dimensions: `${targetW}x${targetH}`,
+    console.log('📦 [PIPELINE OUTPUT]', {
+      productId,
+      size,
+      targetSize: `${targetW}×${targetH}`,
+      outputBytes: thumbnail.length,
+      usedCropRectHash: cropRect.debug.hash,
+      note: 'Extract from cropRect, then resize to target - composition LOCKED',
     });
 
     // 5. Upload zu Supabase Storage (mit Hash + Timestamp - absolute Uniqueness!)
