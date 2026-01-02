@@ -137,8 +137,14 @@ export default function ProductImage({
     && isValidSize(imageSize) 
     && isValidSize(containerSize);
 
-  // SINGLE SOURCE OF TRUTH: computeCoverTransform
-  const transformData = canCalculate
+  // CRITICAL: Detect derived images (already server-cropped)
+  // Derived images have crop={scale:1, x:0, y:0} and should NOT apply transforms
+  const isDerivedImage = localCrop.scale === 1.0 && localCrop.x === 0 && localCrop.y === 0;
+  const isShopVariant = variant === 'card' || variant === 'shop' || variant === 'adminList';
+  const skipTransform = isDerivedImage && isShopVariant;
+
+  // SINGLE SOURCE OF TRUTH: computeCoverTransform (only for non-derived images)
+  const transformData = !skipTransform && canCalculate
     ? computeCoverTransform({
         imgW: imageSize.width,
         imgH: imageSize.height,
@@ -148,9 +154,9 @@ export default function ProductImage({
         x: localCrop.x,
         y: localCrop.y
       })
-    : { transform: generateTransform(sanitizeCropState(localCrop)), baseScale: 1, effectiveScale: 1 };
+    : { transform: 'none', baseScale: 1, effectiveScale: 1 };
 
-  const transform = transformData.transform;
+  const transform = skipTransform ? 'none' : transformData.transform;
   
   // coverScaleMin für Editor-UI (Slider min)
   const coverScaleMin = canCalculate
@@ -275,7 +281,8 @@ export default function ProductImage({
           e.target.src = '/images/placeholder-product.jpg';
           if (onError) onError(e);
         }}
-        style={{ transform }}
+        style={{ transform: skipTransform ? 'none' : transform }}
+        data-derived={skipTransform ? 'true' : 'false'}
         draggable="false"
       />
 
@@ -293,7 +300,19 @@ export default function ProductImage({
           position: absolute;
           top: 50%;
           left: 50%;
-          min-width: 100%;
+         
+        
+        /* DERIVED IMAGES: Use object-fit instead of transform */
+        .product-image-container img[data-derived="true"] {
+          position: static;
+          width: 100%;
+          height: 100%;
+          min-width: unset;
+          min-height: unset;
+          object-fit: cover;
+          object-position: center;
+          transform: none !important;
+        } min-width: 100%;
           min-height: 100%;
           width: auto;
           height: auto;
