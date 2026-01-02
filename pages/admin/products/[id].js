@@ -165,13 +165,7 @@ export default function ProductDetail() {
   const handleCropChange = (newCrop) => {
     // GUARD: Validate incoming crop
     if (!isValidCropState(newCrop)) {
-      console.error('[Admin] handleCropChange: INVALID CROP REJECTED!', {
-        crop: newCrop,
-        reason: !newCrop ? 'null/undefined' :
-                !newCrop.scale ? 'missing scale' :
-                newCrop.scale <= 0 ? 'scale <= 0' :
-                newCrop.cropVersion === 2 ? 'V2 but nx/ny invalid' : 'V1 but x/y invalid'
-      });
+      console.error('[Admin] handleCropChange: INVALID CROP REJECTED!', newCrop);
       return;
     }
     
