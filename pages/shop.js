@@ -236,6 +236,7 @@ export default function Shop({ initialProducts }) {
                         
                         if (hasServerCrop) {
                           const shopPath = product.shop_image_path || product.shopImagePath;
+                          const supabase = getSupabasePublic();
                           const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
                           
                           if (data?.publicUrl) {
