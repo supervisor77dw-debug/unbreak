@@ -174,7 +174,16 @@ export default function ProductDetail() {
       ? clampCropState(newCrop, imageSize, containerSize)
       : sanitizeCropState(newCrop);
     
-    console.log('🎨 [draftCrop]', finalCrop);
+    // DEBUG: UI draftCrop tracking
+    console.log('🎨 [UI draftCrop]', {
+      scale: finalCrop.scale,
+      x: finalCrop.x,
+      y: finalCrop.y,
+      sourceImage: formData.image_path,
+      previewFrame: '4:5',
+      previewW: containerSize?.width || 'loading',
+      previewH: containerSize?.height || 'loading',
+    });
     
     // Update ONLY draftCrop (UI live state) - formData stays unchanged until Save
     setDraftCrop(finalCrop);
@@ -233,7 +242,16 @@ export default function ProductDetail() {
         image_crop_y: latestDraftRef.current.y,
       };
       
-      console.log('💾 [savePayload]', cropPayload);
+      // DEBUG: Save payload tracking
+      console.log('💾 [SAVE payload]', {
+        productId: id,
+        crop: {
+          scale: latestDraftRef.current.scale,
+          x: latestDraftRef.current.x,
+          y: latestDraftRef.current.y,
+        },
+        previewImagePath: formData.image_path,
+      });
 
       const res = await fetch(url, {
         method,
@@ -633,6 +651,17 @@ export default function ProductDetail() {
                       <small style={{color: '#10b981', fontSize: '0.85em', marginTop: '8px', display: 'block'}}>
                         ✓ Live Preview (reagiert sofort auf Änderungen)
                       </small>
+                      {(() => {
+                        const previewSrc = getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at);
+                        console.log('🔍 [PREVIEW SOURCE]', {
+                          image_path: formData.image_path,
+                          image_url: formData.image_url,
+                          image_updated_at: product?.image_updated_at,
+                          resolvedSrc: previewSrc,
+                          draftCrop: { scale: draftCrop.scale, x: draftCrop.x, y: draftCrop.y }
+                        });
+                        return null;
+                      })()}
                     </div>
                   </div>
                 )}

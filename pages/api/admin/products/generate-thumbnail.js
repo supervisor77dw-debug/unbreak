@@ -96,6 +96,22 @@ export default async function handler(req, res) {
 
     console.log('[Thumbnail] Transform debug:', debug);
     
+    // ⚡ DEBUG PIPELINE START
+    console.log('🚀 [PIPELINE START]', {
+      productId,
+      sourceUsed: imagePath,
+      sourceW: metadata.width,
+      sourceH: metadata.height,
+      cropScale: crop?.scale || 1.0,
+      cropX: crop?.x || 0,
+      cropY: crop?.y || 0,
+      baseW: targetW,
+      baseH: targetH,
+      baseScale: baseScale.toFixed(4),
+      effectiveScale: effectiveScale.toFixed(4),
+      targetSize: size,
+    });
+    
     // DEBUG: Verify DERIVE_REFERENCE = UI_REFERENCE
     console.log('🔍 [DERIVE SOURCE CHECK]', {
       productId,
@@ -121,6 +137,14 @@ export default async function handler(req, res) {
     const scaledW = Math.round(metadata.width * effectiveScale);
     const scaledH = Math.round(metadata.height * effectiveScale);
 
+    // ⚡ DEBUG PIPELINE RESIZE
+    console.log('📐 [PIPELINE RESIZE]', {
+      productId,
+      resizedW: scaledW,
+      resizedH: scaledH,
+      resizeScale: effectiveScale.toFixed(4),
+    });
+
     // Crop-Position: Center + Offsets
     const offsetX = crop?.x || 0;
     const offsetY = crop?.y || 0;
@@ -128,6 +152,21 @@ export default async function handler(req, res) {
     // Extract-Region (centered mit offset)
     const left = Math.max(0, Math.round((scaledW - targetW) / 2 + offsetX));
     const top = Math.max(0, Math.round((scaledH - targetH) / 2 + offsetY));
+
+    // ⚡ DEBUG PIPELINE EXTRACT
+    console.log('✂️ [PIPELINE EXTRACT]', {
+      productId,
+      extractLeft: left,
+      extractTop: top,
+      extractW: targetW,
+      extractH: targetH,
+      offsetX,
+      offsetY,
+      centerBeforeOffset: {
+        x: Math.round((scaledW - targetW) / 2),
+        y: Math.round((scaledH - targetH) / 2),
+      },
+    });
 
     const thumbnail = await image
       .resize(scaledW, scaledH, {
@@ -182,6 +221,20 @@ export default async function handler(req, res) {
       size,
       thumbPath,
       url: urlData.publicUrl,
+      cropHash,
+      timestamp,
+    });
+
+    // ⚡ DEBUG PIPELINE RESULT
+    console.log('🎉 [PIPELINE RESULT]', {
+      productId,
+      size,
+      shop_path: size === 'shop' ? thumbPath : null,
+      thumb_path: size === 'thumb' ? thumbPath : null,
+      outputUrl: urlData.publicUrl,
+      outputW: targetW,
+      outputH: targetH,
+      bufferSize: thumbnail.length,
       cropHash,
       timestamp,
     });

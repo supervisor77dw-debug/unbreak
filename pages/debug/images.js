@@ -1,12 +1,39 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { getSupabasePublic } from '../../lib/supabase';
+import { computeCoverTransform } from '../../lib/crop-utils';
 
-export default function DebugImages() {
+export async function getServerSideProps({ res }) {
+  // Set aggressive no-cache headers
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  // Load build info (generated at build time)
+  let buildInfo = null;
+  try {
+    const buildInfoResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/build-info.json`);
+    buildInfo = await buildInfoResponse.json();
+  } catch (err) {
+    console.warn('Could not load build-info.json:', err.message);
+    buildInfo = { gitShort: 'unknown', buildTime: 'unknown' };
+  }
+
+  return {
+    props: {
+      buildInfo,
+      serverRenderTime: new Date().toISOString(),
+    },
+  };
+}
+
+export default function DebugImages({ buildInfo, serverRenderTime }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [clientRenderTime, setClientRenderTime] = useState(null);
 
   useEffect(() => {
+    setClientRenderTime(new Date().toISOString());
     loadProducts();
   }, []);
 
@@ -53,9 +80,39 @@ export default function DebugImages() {
         fontFamily: 'monospace',
         fontSize: '13px',
       }}>
-        <h1 style={{ fontSize: '24px', marginBottom: '32px', color: '#0ea5e9' }}>
+        <h1 style={{ fontSize: '24px', marginBottom: '16px', color: '#0ea5e9' }}>
           🔍 Image Pipeline Debug Dashboard
         </h1>
+
+        {/* VERSION STAMP - CRITICAL FOR CACHE VERIFICATION */}
+        <div style={{ 
+          background: '#1a1a2a', 
+          border: '2px solid #7c3aed',
+          padding: '16px', 
+          borderRadius: '8px',
+          marginBottom: '32px',
+          fontSize: '12px',
+        }}>
+          <div style={{ color: '#c084fc', fontWeight: 'bold', marginBottom: '8px' }}>
+            🚀 DEBUG BUILD INFO
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 16px', color: '#e0e7ff' }}>
+            <strong>BUILD_SHA:</strong> 
+            <code style={{ color: '#fbbf24' }}>{buildInfo?.gitShort || 'unknown'}</code>
+            
+            <strong>BUILD_TIME:</strong> 
+            <code style={{ color: '#10b981' }}>{buildInfo?.buildTime || 'unknown'}</code>
+            
+            <strong>SERVER_RENDER:</strong> 
+            <code style={{ color: '#3b82f6' }}>{serverRenderTime}</code>
+            
+            <strong>CLIENT_RENDER:</strong> 
+            <code style={{ color: '#ec4899' }}>{clientRenderTime || 'loading...'}</code>
+          </div>
+          <div style={{ marginTop: '8px', fontSize: '10px', color: '#9ca3af' }}>
+            ⚡ This page uses getServerSideProps + no-cache headers. Every refresh = fresh data.
+          </div>
+        </div>
 
         <div style={{ marginBottom: '40px', background: '#1a1a1a', padding: '20px', borderRadius: '8px' }}>
           <h2 style={{ fontSize: '16px', marginBottom: '16px', color: '#fbbf24' }}>
@@ -152,6 +209,20 @@ export default function DebugImages() {
           const shopUrl = getPublicUrl(p.shop_image_path || p.shopImagePath);
           const thumbUrl = getPublicUrl(p.thumb_path || p.thumbPath);
 
+          // Compute Pipeline Math for Shop (900x1125)
+          const crop = {
+            scale: p.image_crop_scale || p.imageCropScale || 1.0,
+            x: p.image_crop_x || p.imageCropX || 0,
+            y: p.image_crop_y || p.imageCropY || 0,
+          };
+
+          // Note: We don't have original image dimensions here, so math overlay will be incomplete
+          // But we can show what crop params were used
+          const mathOverlay = {
+            crop,
+            note: 'Original dimensions not available in DB - check server logs for full pipeline math',
+          };
+
           return (
             <div 
               key={`preview-${p.id}`}
@@ -240,9 +311,9 @@ export default function DebugImages() {
               }}>
                 <strong>Product ID:</strong> <code style={{ color: '#888' }}>{p.id}</code><br/>
                 <strong>Crop:</strong> <code style={{ color: '#a78bfa' }}>
-                  scale={p.image_crop_scale || p.imageCropScale || 1.0}, 
-                  x={p.image_crop_x || p.imageCropX || 0}, 
-                  y={p.image_crop_y || p.imageCropY || 0}
+                  scale={crop.scale}, 
+                  x={crop.x}, 
+                  y={crop.y}
                 </code><br/>
                 <strong>Updated:</strong> {p.image_updated_at || p.imageUpdatedAt || 'N/A'}<br/>
                 <strong>Shop Path Contains ProductID:</strong> {
@@ -255,6 +326,30 @@ export default function DebugImages() {
                     ? <span style={{ color: '#10b981' }}>✓ YES</span>
                     : <span style={{ color: '#ef4444' }}>✗ NO</span>
                 }
+              </div>
+
+              {/* Pipeline Math Overlay */}
+              <div style={{ 
+                background: '#1a0a2a', 
+                padding: '12px', 
+                borderRadius: '4px',
+                fontSize: '10px',
+                marginTop: '12px',
+                border: '1px solid #7c3aed',
+              }}>
+                <strong style={{ color: '#c084fc' }}>🔬 PIPELINE DEBUG INFO:</strong><br/>
+                <code style={{ color: '#e0e7ff', display: 'block', marginTop: '6px', whiteSpace: 'pre-wrap' }}>
+                  CROP PARAMS: scale={crop.scale}, x={crop.x}px, y={crop.y}px{'\n'}
+                  TARGET (Shop): 900x1125 (4:5){'\n'}
+                  TARGET (Thumb): 240x300 (4:5){'\n'}
+                  {'\n'}
+                  ⚠️ Note: Original image dimensions not in DB.{'\n'}
+                  Check browser console &gt; [PIPELINE START] for full math:{'\n'}
+                  - baseScale (min scale to cover 4:5){'\n'}
+                  - effectiveScale (baseScale * userScale){'\n'}
+                  - resized dimensions{'\n'}
+                  - extract coordinates
+                </code>
               </div>
             </div>
           );

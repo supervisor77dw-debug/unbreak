@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:clean": "npm run clean:next && next dev",
+    "prebuild": "node scripts/generate-build-info.js",
     "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "clean:next": "rimraf .next",
