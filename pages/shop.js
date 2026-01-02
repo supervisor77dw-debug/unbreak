@@ -240,11 +240,19 @@ export default function Shop({ initialProducts }) {
                           const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
                           
                           if (data?.publicUrl) {
-                            console.log('🛒 [Shop] Product', product.id, 'using server-crop:', shopPath);
+                            // CACHE-BUSTING: Add ?v=updated_at to prevent stale images
+                            const cacheVersion = product.image_updated_at || product.imageUpdatedAt || Date.now();
+                            const cacheBustedUrl = `${data.publicUrl}?v=${cacheVersion}`;
+                            
+                            console.log('🛒 [Shop] Product', product.id, 'using server-crop:', {
+                              path: shopPath,
+                              version: cacheVersion,
+                            });
+                            
                             return (
                               <ProductImage
                                 key={`shop-${product.id}-${shopPath}`}
-                                src={data.publicUrl}
+                                src={cacheBustedUrl}
                                 alt={product.name}
                                 crop={{ scale: 1.0, x: 0, y: 0 }}
                                 variant="card"

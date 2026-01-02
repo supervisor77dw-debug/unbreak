@@ -195,11 +195,16 @@ export default function ProductsPage() {
                   const thumbPath = product.thumb_path || product.thumbPath;
                   const supabase = getSupabasePublic();
                   const { data } = supabase.storage.from('product-images').getPublicUrl(thumbPath);
-                  imageUrl = data?.publicUrl || getProductImageUrl(
-                    product.image_path, 
-                    product.image_url,
-                    product.image_updated_at || product.imageUpdatedAt
-                  );
+                  
+                  // CACHE-BUSTING: Add ?v=updated_at
+                  const cacheVersion = product.image_updated_at || product.imageUpdatedAt || Date.now();
+                  imageUrl = data?.publicUrl 
+                    ? `${data.publicUrl}?v=${cacheVersion}`
+                    : getProductImageUrl(
+                        product.image_path, 
+                        product.image_url,
+                        product.image_updated_at || product.imageUpdatedAt
+                      );
                 } else {
                   // FALLBACK: Original mit Crop (via ProductImage Component)
                   imageUrl = getProductImageUrl(

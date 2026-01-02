@@ -37,6 +37,12 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PATCH') {
+      const requestProductId = id; // CRITICAL: Lock productId from route params
+      console.log('\n🔧 [PATCH START]', {
+        productId: requestProductId,
+        timestamp: new Date().toISOString(),
+      });
+      
       // Update product
       const {
         name,
@@ -81,6 +87,36 @@ export default async function handler(req, res) {
         console.error('❌ [ADMIN PRODUCT] Update error:', error);
         return res.status(500).json({ error: 'Failed to update product' });
       }
+      
+      // VERIFY: Confirm we updated the correct product
+      if (updated.id !== requestProductId) {
+        console.error('🚨 [CRITICAL] Product ID MISMATCH!', {
+          expected: requestProductId,
+          actual: updated.id,
+        });
+        return res.status(500).json({ error: 'Product ID mismatch - data corruption prevented' });
+      }
+      
+      console.log('✅ [DB UPDATE] Product updated:', {
+        productId: updated.id,
+        sku: updated.sku,
+        name: updated.name,
+      });
+      
+      // VERIFY: Confirm we updated the correct product
+      if (updated.id !== requestProductId) {
+        console.error('🚨 [CRITICAL] Product ID MISMATCH!', {
+          expected: requestProductId,
+          actual: updated.id,
+        });
+        return res.status(500).json({ error: 'Product ID mismatch - data corruption prevented' });
+      }
+      
+      console.log('✅ [DB UPDATE] Product updated:', {
+        productId: updated.id,
+        sku: updated.sku,
+        name: updated.name,
+      });
 
       // KRITISCH: Wenn Crop geändert wurde ODER Bild existiert aber shop_image_path fehlt → regenerate Thumbnails
       const cropChanged = (image_crop_scale !== undefined || image_crop_x !== undefined || image_crop_y !== undefined);
@@ -107,11 +143,14 @@ export default async function handler(req, res) {
         
         for (const size of ['shop', 'thumb']) { // SHOP FIRST!
           try {
+            // CRITICAL: Use requestProductId (not closure/state)
+            console.log(`🖼️  [THUMBNAIL] Generating ${size} for productId:`, requestProductId);
+            
             const thumbRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/products/generate-thumbnail`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                productId: updated.id,
+                productId: requestProductId, // Use locked productId
                 imagePath: updated.image_path,
                 crop,
                 size,
@@ -120,7 +159,21 @@ export default async function handler(req, res) {
             
             if (thumbRes.ok) {
               const thumbData = await thumbRes.json();
-              console.log(`[ADMIN PRODUCT] Thumbnail ${size} regenerated:`, thumbData.thumbPath);
+              
+              // VERIFY: Path contains correct productId
+              const pathContainsProductId = thumbData.thumbPath.includes(`derived/${requestProductId}/`);
+              if (!pathContainsProductId) {
+                console.error('🚨 [CRITICAL] Thumbnail path does NOT contain productId!', {
+                  productId: requestProductId,
+                  path: thumbData.thumbPath,
+                });
+                throw new Error('Thumbnail path corruption');
+              }
+              
+              console.log(`✅ [THUMBNAIL] ${size} regenerated:`, {
+                productId: requestProductId,
+                path: thumbData.thumbPath,
+              });
               
               // Sammle Paths für DB-Update
               if (size === 'thumb') thumbUpdates.thumb_path = thumbData.thumbPath;
@@ -135,20 +188,54 @@ export default async function handler(req, res) {
 
         // Update DB mit neuen Thumbnail-Paths
         if (Object.keys(thumbUpdates).length > 0) {
-          const { error: thumbError } = await supabase
+          console.log('💾 [DB UPDATE] Saving thumbnail paths:', {
+            productId: requestProductId,
+            paths: thumbUpdates,
+          });
+          
+          const { data: thumbUpdateResult, error: thumbError } = await supabase
             .from('products')
             .update(thumbUpdates)
-            .eq('id', updated.id);
+            .eq('id', requestProductId) // Use locked productId
+            .select();
           
           if (thumbError) {
-            console.error('[ADMIN PRODUCT] Failed to update thumbnail paths:', thumbError);
+            console.error('❌ [DB UPDATE] Failed to update thumbnail paths:', thumbError);
+          } else if (!thumbUpdateResult || thumbUpdateResult.length === 0) {
+            console.error('🚨 [CRITICAL] Thumbnail update affected 0 rows!', {
+              productId: requestProductId,
+            });
           } else {
-            console.log('[ADMIN PRODUCT] Thumbnail paths updated in DB:', thumbUpdates);
+            // VERIFY: Updated correct product
+            const updatedProduct = thumbUpdateResult[0];
+            if (updatedProduct.id !== requestProductId) {
+              console.error('🚨 [CRITICAL] Thumbnail update hit WRONG product!', {
+                expected: requestProductId,
+                actual: updatedProduct.id,
+              });
+              throw new Error('Cross-product contamination detected');
+            }
+            
+            console.log('✅ [DB UPDATE] Thumbnail paths saved:', {
+              productId: updatedProduct.id,
+              rowsAffected: thumbUpdateResult.length,
+              paths: thumbUpdates,
+            });
+            
             // IMMUTABLE: Create new object instead of mutating
             updated = { ...updated, ...thumbUpdates };
           }
         }
       }
+      
+      // FINAL VERIFICATION: Ensure returned data matches request
+      console.log('🎉 [PATCH SUCCESS]', {
+        productId: updated.id,
+        requestedId: requestProductId,
+        match: updated.id === requestProductId,
+        hasShopImage: !!updated.shop_image_path,
+        hasThumb: !!updated.thumb_path,
+      });
 
       return res.status(200).json(updated);
     }
