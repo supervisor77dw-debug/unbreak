@@ -75,15 +75,39 @@ export default async function handler(req, res) {
     // 2. Buffer zu Sharp
     const buffer = Buffer.from(await fileData.arrayBuffer());
     const image = sharp(buffer);
-    const metadata = await image.metadata();
+    const metadataBefore = await image.metadata();
 
-    console.log('[Thumbnail] Original metadata:', {
-      width: metadata.width,
-      height: metadata.height,
-      format: metadata.format,
+    // ⚡ DEBUG: INPUT SOURCE (A)
+    console.log('📥 [PIPELINE INPUT SOURCE]', {
+      productId,
+      source_path: imagePath,
+      source_url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${imagePath}`,
+      format: metadataBefore.format,
+      hasAlpha: metadataBefore.hasAlpha,
+      density: metadataBefore.density,
+      metadata_BEFORE_rotate: {
+        width: metadataBefore.width,
+        height: metadataBefore.height,
+        orientation: metadataBefore.orientation,
+      },
     });
 
-    // 3. Berechne Crop-Transform (SINGLE SOURCE OF TRUTH!)
+    // 3. NORMALIZE: Rotate/Auto-Orient FIRST (respects EXIF for JPG, harmless for PNG)
+    const normalizedImage = sharp(buffer).rotate(); // Auto-rotates based on EXIF
+    const metadata = await normalizedImage.metadata();
+
+    // ⚡ DEBUG: AFTER NORMALIZATION
+    console.log('🔄 [PIPELINE AFTER NORMALIZE]', {
+      productId,
+      metadata_AFTER_rotate: {
+        width: metadata.width,
+        height: metadata.height,
+        orientation: metadata.orientation, // Should be 1 or undefined after rotate()
+      },
+      note: 'All crop math now uses THESE dimensions (post-rotation)',
+    });
+
+    // 4. Berechne Crop-Transform (SINGLE SOURCE OF TRUTH!)
     const { baseScale, effectiveScale, debug } = computeCoverTransform({
       imgW: metadata.width,
       imgH: metadata.height,
@@ -92,6 +116,16 @@ export default async function handler(req, res) {
       scale: crop?.scale || 1.0,
       x: crop?.x || 0,
       y: crop?.y || 0,
+    });
+
+    // ⚡ DEBUG: UI CROP INPUT (B)
+    console.log('🎨 [PIPELINE UI CROP INPUT]', {
+      productId,
+      crop_scale: crop?.scale || 1.0,
+      crop_x: crop?.x || 0,
+      crop_y: crop?.y || 0,
+      CROP_BASE: { width: targetW, height: targetH },
+      note: 'Client-sent crop params (frame-relative)',
     });
 
     console.log('[Thumbnail] Transform debug:', debug);
@@ -110,6 +144,14 @@ export default async function handler(req, res) {
       baseScale: baseScale.toFixed(4),
       effectiveScale: effectiveScale.toFixed(4),
       targetSize: size,
+    });
+
+    // ⚡ DEBUG: PIPELINE MATH (C)
+    console.log('📊 [PIPELINE MATH]', {
+      productId,
+      baseScale: baseScale.toFixed(4),
+      effectiveScale: effectiveScale.toFixed(4),
+      note: 'baseScale = min scale to cover 4:5, effectiveScale = baseScale * userScale',
     });
     
     // DEBUG: Verify DERIVE_REFERENCE = UI_REFERENCE
@@ -153,6 +195,10 @@ export default async function handler(req, res) {
     const left = Math.max(0, Math.round((scaledW - targetW) / 2 + offsetX));
     const top = Math.max(0, Math.round((scaledH - targetH) / 2 + offsetY));
 
+    // Clamp to ensure we don't exceed bounds
+    const clampedLeft = Math.min(left, scaledW - targetW);
+    const clampedTop = Math.min(top, scaledH - targetH);
+
     // ⚡ DEBUG PIPELINE EXTRACT
     console.log('✂️ [PIPELINE EXTRACT]', {
       productId,
@@ -166,16 +212,21 @@ export default async function handler(req, res) {
         x: Math.round((scaledW - targetW) / 2),
         y: Math.round((scaledH - targetH) / 2),
       },
+      clampResult: {
+        clampedLeft,
+        clampedTop,
+        wasClamped: clampedLeft !== left || clampedTop !== top,
+      },
     });
 
-    const thumbnail = await image
+    const thumbnail = await normalizedImage
       .resize(scaledW, scaledH, {
         fit: 'fill',
         kernel: 'lanczos3',
       })
       .extract({
-        left: Math.min(left, scaledW - targetW),
-        top: Math.min(top, scaledH - targetH),
+        left: clampedLeft,
+        top: clampedTop,
         width: targetW,
         height: targetH,
       })
@@ -211,38 +262,44 @@ export default async function handler(req, res) {
       .from('product-images')
       .getPublicUrl(thumbPath);
 
+    const finalUrl = urlData.publicUrl;
+
     console.log('[Thumbnail] Success:', {
       thumbPath,
-      url: urlData.publicUrl,
+      url: finalUrl,
     });
 
     console.log('✅ [THUMBNAIL GEN] SUCCESS:', {
       productId,
       size,
       thumbPath,
-      url: urlData.publicUrl,
+      url: finalUrl,
       cropHash,
       timestamp,
     });
 
-    // ⚡ DEBUG PIPELINE RESULT
-    console.log('🎉 [PIPELINE RESULT]', {
+    // ⚡ DEBUG PIPELINE RESULT (D)
+    console.log('🎉 [PIPELINE OUTPUT]', {
       productId,
       size,
+      final_shop_out_w: size === 'shop' ? targetW : null,
+      final_shop_out_h: size === 'shop' ? targetH : null,
+      final_thumb_out_w: size === 'thumb' ? targetW : null,
+      final_thumb_out_h: size === 'thumb' ? targetH : null,
       shop_path: size === 'shop' ? thumbPath : null,
       thumb_path: size === 'thumb' ? thumbPath : null,
-      outputUrl: urlData.publicUrl,
-      outputW: targetW,
-      outputH: targetH,
+      shop_url: size === 'shop' ? finalUrl : null,
+      thumb_url: size === 'thumb' ? finalUrl : null,
       bufferSize: thumbnail.length,
       cropHash,
       timestamp,
+      db_updated_at_will_be: new Date(timestamp).toISOString(),
     });
 
     return res.status(200).json({
       success: true,
       thumbPath,
-      url: urlData.publicUrl,
+      url: finalUrl,
       size: `${targetW}x${targetH}`,
     });
 

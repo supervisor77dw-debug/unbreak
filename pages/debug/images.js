@@ -237,6 +237,66 @@ export default function DebugImages({ buildInfo, serverRenderTime }) {
               <h3 style={{ fontSize: '14px', marginBottom: '16px', color: '#0ea5e9' }}>
                 {p.sku} - {p.name}
               </h3>
+
+              {/* Quick Links */}
+              <div style={{ 
+                display: 'flex', 
+                gap: '8px', 
+                marginBottom: '16px',
+                flexWrap: 'wrap',
+              }}>
+                {originalUrl && (
+                  <button
+                    onClick={() => window.open(originalUrl, '_blank')}
+                    style={{
+                      padding: '6px 12px',
+                      background: '#1e293b',
+                      color: '#60a5fa',
+                      border: '1px solid #3b82f6',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    🔗 Open Original
+                  </button>
+                )}
+                {shopUrl && (
+                  <button
+                    onClick={() => window.open(shopUrl, '_blank')}
+                    style={{
+                      padding: '6px 12px',
+                      background: '#1e293b',
+                      color: '#34d399',
+                      border: '1px solid #10b981',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    🔗 Open Shop (900x1125)
+                  </button>
+                )}
+                {thumbUrl && (
+                  <button
+                    onClick={() => window.open(thumbUrl, '_blank')}
+                    style={{
+                      padding: '6px 12px',
+                      background: '#1e293b',
+                      color: '#f59e0b',
+                      border: '1px solid #f59e0b',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    🔗 Open Thumb (240x300)
+                  </button>
+                )}
+              </div>
               
               <div style={{ 
                 display: 'grid', 
@@ -268,13 +328,32 @@ export default function DebugImages({ buildInfo, serverRenderTime }) {
                   <div style={labelStyle}>B) SHOP DERIVED (900x1125)</div>
                   {shopUrl ? (
                     <>
-                      <img 
-                        src={shopUrl} 
-                        alt="Shop"
-                        style={imgStyle}
-                      />
+                      <div style={{ position: 'relative' }}>
+                        <img 
+                          src={shopUrl} 
+                          alt="Shop"
+                          style={imgStyle}
+                        />
+                        {/* Extract Overlay (only visible in console logs, but we show crop params) */}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '4px',
+                          left: '4px',
+                          background: 'rgba(124, 58, 237, 0.9)',
+                          color: '#fff',
+                          padding: '4px 8px',
+                          fontSize: '9px',
+                          fontFamily: 'monospace',
+                          borderRadius: '3px',
+                        }}>
+                          Crop: s={crop.scale} x={crop.x} y={crop.y}
+                        </div>
+                      </div>
                       <div style={urlStyle}>
                         {(p.shop_image_path || p.shopImagePath)?.split('/').slice(-2).join('/')}
+                      </div>
+                      <div style={{ fontSize: '9px', color: '#7c3aed', marginTop: '4px' }}>
+                        ⚠️ Extract coords in server logs → [PIPELINE EXTRACT]
                       </div>
                     </>
                   ) : (
@@ -287,13 +366,31 @@ export default function DebugImages({ buildInfo, serverRenderTime }) {
                   <div style={labelStyle}>C) THUMB DERIVED (240x300)</div>
                   {thumbUrl ? (
                     <>
-                      <img 
-                        src={thumbUrl} 
-                        alt="Thumb"
-                        style={imgStyle}
-                      />
+                      <div style={{ position: 'relative' }}>
+                        <img 
+                          src={thumbUrl} 
+                          alt="Thumb"
+                          style={imgStyle}
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '4px',
+                          left: '4px',
+                          background: 'rgba(245, 158, 11, 0.9)',
+                          color: '#000',
+                          padding: '4px 8px',
+                          fontSize: '9px',
+                          fontFamily: 'monospace',
+                          borderRadius: '3px',
+                        }}>
+                          Same crop, 240x300
+                        </div>
+                      </div>
                       <div style={urlStyle}>
                         {(p.thumb_path || p.thumbPath)?.split('/').slice(-2).join('/')}
+                      </div>
+                      <div style={{ fontSize: '9px', color: '#f59e0b', marginTop: '4px' }}>
+                        ⚠️ Should match Shop composition (just smaller)
                       </div>
                     </>
                   ) : (
