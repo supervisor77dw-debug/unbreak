@@ -621,37 +621,17 @@ export default function ProductDetail() {
                       </div>
                     </div>
 
-                    {/* Shop Preview - SSOT: Uses shop_image_path after save */}
+                    {/* Shop Preview - LIVE: Always uses draftCrop for instant feedback */}
                     <div className="shop-preview">
                       <label>👀 So sieht's im Shop aus (4:5):</label>
-                      {product?.shop_image_path || product?.shopImagePath ? (
-                        <>
-                          <CroppedImage
-                            src={(() => {
-                              const shopPath = product.shop_image_path || product.shopImagePath;
-                              const supabase = getSupabasePublic();
-                              const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
-                              return `${data.publicUrl}?v=${imageVersion}`;
-                            })()}
-                            alt={formData.name}
-                            crop={{ scale: 1.0, x: 0, y: 0 }}
-                          />
-                          <small style={{color: '#666', fontSize: '0.85em', marginTop: '8px', display: 'block'}}>
-                            ✓ Server-generiert (exakt wie im Shop)
-                          </small>
-                        </>
-                      ) : (
-                        <>
-                          <CroppedImage
-                            src={getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at)}
-                            alt={formData.name}
-                            crop={draftCrop}
-                          />
-                          <small style={{color: '#ff9800', fontSize: '0.85em', marginTop: '8px', display: 'block'}}>
-                            ⚠️ Preview (zum Speichern um final zu sehen)
-                          </small>
-                        </>
-                      )}
+                      <CroppedImage
+                        src={getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at)}
+                        alt={formData.name}
+                        crop={draftCrop}
+                      />
+                      <small style={{color: '#10b981', fontSize: '0.85em', marginTop: '8px', display: 'block'}}>
+                        ✓ Live Preview (reagiert sofort auf Änderungen)
+                      </small>
                     </div>
                   </div>
                 )}

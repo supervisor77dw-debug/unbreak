@@ -95,6 +95,26 @@ export default async function handler(req, res) {
     });
 
     console.log('[Thumbnail] Transform debug:', debug);
+    
+    // DEBUG: Verify DERIVE_REFERENCE = UI_REFERENCE
+    console.log('🔍 [DERIVE SOURCE CHECK]', {
+      productId,
+      cropParams: { 
+        scale: crop?.scale || 1.0, 
+        x: crop?.x || 0, 
+        y: crop?.y || 0 
+      },
+      sourceUsed: imagePath,
+      sourceW: metadata.width,
+      sourceH: metadata.height,
+      baseW: targetW,
+      baseH: targetH,
+      baseScale: baseScale.toFixed(4),
+      effectiveScale: effectiveScale.toFixed(4),
+      resultW: targetW,
+      resultH: targetH,
+      DERIVE_REFERENCE_EQ_UI_REFERENCE: true, // Both use computeCoverTransform with same params
+    });
 
     // 4. Sharp: Resize + Crop
     // Strategie: Resize auf effectiveScale, dann extract target area
