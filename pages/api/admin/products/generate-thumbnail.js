@@ -207,6 +207,7 @@ export default async function handler(req, res) {
         SCALE_APPLIED: scaleApplied ? '✅ PASS' : '❌ FAIL - SCALE NOT APPLIED!',
       },
       cropRectHash: cropRect.debug.hash,
+    });
     
     // 🔥 CROP_SERVER_PIPELINE: Single-line JSON log (MANDATORY FORMAT)
     // MUST NOT contain: x, y, dx, dy, viewportW, viewportH, refW, refH
