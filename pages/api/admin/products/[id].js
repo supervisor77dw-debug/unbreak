@@ -195,9 +195,13 @@ export default async function handler(req, res) {
 
         // Update DB mit neuen Thumbnail-Paths
         if (Object.keys(thumbUpdates).length > 0) {
+          // CRITICAL: Update image_updated_at for cache-busting
+          thumbUpdates.image_updated_at = new Date().toISOString();
+          
           console.log('💾 [DB UPDATE] Saving thumbnail paths:', {
             productId: requestProductId,
             paths: thumbUpdates,
+            image_updated_at: thumbUpdates.image_updated_at,
           });
           
           const { data: thumbUpdateResult, error: thumbError } = await supabase
@@ -227,10 +231,12 @@ export default async function handler(req, res) {
               productId: updatedProduct.id,
               rowsAffected: thumbUpdateResult.length,
               paths: thumbUpdates,
+              newShopPath: updatedProduct.shop_image_path,
+              newThumbPath: updatedProduct.thumb_path,
             });
             
-            // IMMUTABLE: Create new object instead of mutating
-            updated = { ...updated, ...thumbUpdates };
+            // CRITICAL: Merge DB response (not request object) to get actual saved values
+            updated = { ...updated, ...updatedProduct };
           }
         }
       }
