@@ -585,12 +585,38 @@ function CropRectTestSection() {
       test.x, 
       test.y
     );
-    return { ...test, cropRect };
+    
+    // Calculate base rect (scale=1.0, no offset) for comparison
+    const baseCropRect = computeCropRectOriginalPx(
+      testImageW, 
+      testImageH, 
+      0.8,
+      1.0, 
+      0, 
+      0
+    );
+    
+    return { ...test, cropRect, baseCropRect };
   });
   
   // Check if hashes are all different
   const hashes = testResults.map(r => r.cropRect.debug.hash);
   const allUnique = new Set(hashes).size === hashes.length;
+  
+  // INVARIANT CHECKS
+  const invariantI = testResults[1] && testResults[0] 
+    ? Math.abs((testResults[1].cropRect.width / testResults[0].cropRect.width) - (1.0 / 1.7)) < 0.05
+    : false;
+  const invariantII = testResults[2] && testResults[1]
+    ? testResults[2].cropRect.width === testResults[1].cropRect.width && 
+      testResults[2].cropRect.height === testResults[1].cropRect.height
+    : false;
+  const invariantIII = testResults[2] && testResults[1]
+    ? testResults[2].cropRect.left < testResults[1].cropRect.left && // x=-60 → left should decrease
+      testResults[2].cropRect.top < testResults[1].cropRect.top       // y=-40 → top should decrease
+    : false;
+  
+  const allInvariantsPass = invariantI && invariantII && invariantIII;
   
   return (
     <div style={{ 
@@ -653,6 +679,19 @@ function CropRectTestSection() {
                 height = {result.cropRect.height}
               </div>
               
+              <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '8px' }}>
+                <strong>Base (scale=1.0):</strong><br/>
+                width = {result.baseCropRect.width}<br/>
+                height = {result.baseCropRect.height}
+              </div>
+              
+              <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '8px' }}>
+                <strong>Debug Info:</strong><br/>
+                {result.cropRect.debug.baseSize}<br/>
+                {result.cropRect.debug.zoomedSize}<br/>
+                offset: {result.cropRect.debug.offsetRef} → {result.cropRect.debug.offsetOrig}
+              </div>
+              
               <div style={{ 
                 background: '#000', 
                 padding: '8px', 
@@ -704,18 +743,30 @@ function CropRectTestSection() {
       <div style={{ 
         marginTop: '20px', 
         padding: '16px', 
-        background: allUnique ? '#065f46' : '#7f1d1d',
+        background: allUnique && allInvariantsPass ? '#065f46' : '#7f1d1d',
         borderRadius: '6px',
         color: '#fff',
       }}>
         <strong style={{ fontSize: '14px' }}>
-          {allUnique ? '✅ PASS' : '❌ FAIL'} - Hash Uniqueness Check
+          {allUnique && allInvariantsPass ? '✅ PASS' : '❌ FAIL'} - Validation Results
         </strong>
-        <div style={{ fontSize: '11px', marginTop: '8px', opacity: 0.9 }}>
-          {allUnique 
-            ? 'All three tests produce different cropRect hashes. Scale and offsets are working correctly!'
-            : 'CRITICAL BUG: Multiple tests produce identical cropRect! Scale/offset params are being ignored!'
-          }
+        <div style={{ fontSize: '11px', marginTop: '12px', opacity: 0.9 }}>
+          <div style={{ marginBottom: '6px' }}>
+            Hash Uniqueness: {allUnique ? '✅ PASS' : '❌ FAIL'} 
+            {!allUnique && ' - Multiple tests produce identical cropRect!'}
+          </div>
+          <div style={{ marginBottom: '6px' }}>
+            Invariant I (Zoom): {invariantI ? '✅ PASS' : '❌ FAIL'}
+            {!invariantI && ` - width_B should be ~${(testResults[0].cropRect.width / 1.7).toFixed(0)} but is ${testResults[1].cropRect.width}`}
+          </div>
+          <div style={{ marginBottom: '6px' }}>
+            Invariant II (Size): {invariantII ? '✅ PASS' : '❌ FAIL'}
+            {!invariantII && ' - B and C should have same width/height!'}
+          </div>
+          <div>
+            Invariant III (Direction): {invariantIII ? '✅ PASS' : '❌ FAIL'}
+            {!invariantIII && ' - Negative x/y should decrease left/top!'}
+          </div>
         </div>
       </div>
     </div>
