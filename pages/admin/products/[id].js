@@ -9,6 +9,7 @@ import Head from 'next/head';
 import { getSupabasePublic } from '../../../lib/supabase';
 import AdminLayout from '../../../components/AdminLayout';
 import ProductImage from '../../../components/ProductImage';
+import CroppedImage from '../../../components/CroppedImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
 import { 
   calculateCoverScale, 
@@ -558,53 +559,12 @@ export default function ProductDetail() {
                       {/* Interactive Crop Editor */}
                       <div className="crop-editor-container">
                         <label>✋ Ziehen & Zoomen:</label>
-                        <ProductImage
+                        <CroppedImage
                           src={getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at)}
                           alt={formData.name}
                           crop={draftCrop}
                           interactive={true}
                           onCropChange={handleCropChange}
-                          onLoad={(e) => {
-                            const img = e.target;
-                            const newImageSize = { 
-                              width: img.naturalWidth, 
-                              height: img.naturalHeight 
-                            };
-                            setImageSize(newImageSize);
-                            
-                            // DEBUG: Umfassende Crop-Diagnose
-                            if (isValidSize(newImageSize) && isValidSize(containerSize)) {
-                              const coverScaleMin = calculateCoverScale(newImageSize, containerSize);
-                              const currentCrop = draftCrop;
-                              
-                              console.log('🔍 [Admin Editor] IMAGE LOADED - CROP DEBUG:', {
-                                productId: id,
-                                productName: formData.name,
-                                naturalWidth: newImageSize.width,
-                                naturalHeight: newImageSize.height,
-                                containerWidth: containerSize.width,
-                                containerHeight: containerSize.height,
-                                coverScaleMin,
-                                currentCrop,
-                                cropIsValid: isValidCropState(currentCrop),
-                                scaleInRange: currentCrop.scale >= coverScaleMin && currentCrop.scale <= 2.5
-                              });
-                              
-                              // WARN wenn Crop außerhalb bounds
-                              if (currentCrop.scale < coverScaleMin) {
-                                console.warn('⚠️ [Admin] Scale TOO LOW! Image will not fill container:', {
-                                  scale: currentCrop.scale,
-                                  min: coverScaleMin
-                                });
-                              }
-                            } else {
-                              console.error('❌ [Admin] INVALID SIZE! Cannot calculate crop:', {
-                                imageSize: newImageSize,
-                                containerSize
-                              });
-                            }
-                          }}
-                          variant="admin-editor"
                         />
                         <small>💡 Mit Maus ziehen oder Touch verwenden</small>
                       </div>
@@ -666,7 +626,7 @@ export default function ProductDetail() {
                       <label>👀 So sieht's im Shop aus (4:5):</label>
                       {product?.shop_image_path || product?.shopImagePath ? (
                         <>
-                          <ProductImage
+                          <CroppedImage
                             src={(() => {
                               const shopPath = product.shop_image_path || product.shopImagePath;
                               const supabase = getSupabasePublic();
@@ -674,8 +634,7 @@ export default function ProductDetail() {
                               return `${data.publicUrl}?v=${imageVersion}`;
                             })()}
                             alt={formData.name}
-                            crop={{ scale: 1.0, x: 0, y: 0 }} // Already cropped!
-                            variant="shop"
+                            crop={{ scale: 1.0, x: 0, y: 0 }}
                           />
                           <small style={{color: '#666', fontSize: '0.85em', marginTop: '8px', display: 'block'}}>
                             ✓ Server-generiert (exakt wie im Shop)
@@ -683,11 +642,10 @@ export default function ProductDetail() {
                         </>
                       ) : (
                         <>
-                          <ProductImage
+                          <CroppedImage
                             src={getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at)}
                             alt={formData.name}
                             crop={draftCrop}
-                            variant="shop"
                           />
                           <small style={{color: '#ff9800', fontSize: '0.85em', marginTop: '8px', display: 'block'}}>
                             ⚠️ Preview (zum Speichern um final zu sehen)
