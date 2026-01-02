@@ -70,7 +70,7 @@ export default async function handler(req, res) {
       if (shipping_text !== undefined) updates.shipping_text = shipping_text;
       if (highlights !== undefined) updates.highlights = highlights;
 
-      const { data: updated, error } = await supabase
+      let { data: updated, error } = await supabase
         .from('products')
         .update(updates)
         .eq('id', id)
