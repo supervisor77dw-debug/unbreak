@@ -116,6 +116,70 @@ export default async function handler(req, res) {
       crop?.y || 0
     );
 
+    // ═══════════════════════════════════════════════════════════════════
+    // HARD ASSERTION: Verify scale is actually applied!
+    // ═══════════════════════════════════════════════════════════════════
+    
+    // Calculate expected values manually
+    const origAspect = metadata.width / metadata.height;
+    const targetAspect = 0.8; // 4:5
+    
+    let baseWidth, baseHeight;
+    if (origAspect > targetAspect) {
+      baseHeight = metadata.height;
+      baseWidth = baseHeight * targetAspect;
+    } else {
+      baseWidth = metadata.width;
+      baseHeight = baseWidth / targetAspect;
+    }
+    
+    const userScale = crop?.scale || 1.0;
+    const expectedWidth = Math.round(baseWidth / userScale);
+    const expectedHeight = Math.round(baseHeight / userScale);
+    
+    const widthMatches = cropRect.width === expectedWidth;
+    const heightMatches = cropRect.height === expectedHeight;
+    const scaleApplied = widthMatches && heightMatches;
+
+    // ⚡ CRITICAL ASSERTION LOG
+    console.log('🔥 [HARD ASSERTION - SCALE CHECK]', {
+      productId,
+      size,
+      inputCrop: {
+        scale: userScale,
+        x: crop?.x || 0,
+        y: crop?.y || 0,
+      },
+      baseRect: {
+        baseW: Math.round(baseWidth),
+        baseH: Math.round(baseHeight),
+      },
+      expectedCropRect: {
+        expectedWidth,
+        expectedHeight,
+        calculation: `baseWidth(${Math.round(baseWidth)}) / scale(${userScale}) = ${expectedWidth}`,
+      },
+      actualCropRect: {
+        left: cropRect.left,
+        top: cropRect.top,
+        width: cropRect.width,
+        height: cropRect.height,
+      },
+      assertion: {
+        widthMatches: widthMatches ? '✅' : `❌ Expected ${expectedWidth}, got ${cropRect.width}`,
+        heightMatches: heightMatches ? '✅' : `❌ Expected ${expectedHeight}, got ${cropRect.height}`,
+        SCALE_APPLIED: scaleApplied ? '✅ PASS' : '❌ FAIL - SCALE NOT APPLIED!',
+      },
+      cropRectHash: cropRect.debug.hash,
+    });
+    
+    // FAIL HARD if scale is not applied
+    if (!scaleApplied && userScale !== 1.0) {
+      console.error('❌❌❌ CRITICAL BUG: Scale param ignored in production pipeline! ❌❌❌');
+      console.error('Expected:', { expectedWidth, expectedHeight });
+      console.error('Got:', { width: cropRect.width, height: cropRect.height });
+    }
+
     // ⚡ DEBUG: UI CROP INPUT
     console.log('🎨 [CROP INPUT]', {
       productId,
@@ -138,6 +202,7 @@ export default async function handler(req, res) {
       cropRectHash: cropRect.debug.hash,
       debug: cropRect.debug,
       note: 'THIS rect is used for BOTH shop and thumb - NO re-computation!',
+      SINGLE_SOURCE_OF_TRUTH: 'computeCropRectOriginalPx()',
     });
 
     // 5. Sharp Pipeline: Extract ONCE, then resize to target
