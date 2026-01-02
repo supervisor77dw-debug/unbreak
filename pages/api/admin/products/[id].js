@@ -102,9 +102,10 @@ export default async function handler(req, res) {
         };
 
         // Regenerate thumbnails + Update DB (synchron für korrekte Paths)
+        // WICHTIG: 'shop' ZUERST generieren (für sofortige Preview im Admin)
         const thumbUpdates = {};
         
-        for (const size of ['thumb', 'shop']) {
+        for (const size of ['shop', 'thumb']) { // SHOP FIRST!
           try {
             const thumbRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/products/generate-thumbnail`, {
               method: 'POST',

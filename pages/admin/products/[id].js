@@ -3,9 +3,10 @@
 // Replace the entire existing file with this version
 
 import { useRouter } from 'next/router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import Head from 'next/head';
+import { createClient } from '@supabase/supabase-js';
 import AdminLayout from '../../../components/AdminLayout';
 import ProductImage from '../../../components/ProductImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
@@ -18,6 +19,11 @@ import {
   isValidCropState 
 } from '../../../lib/crop-utils';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
+
 export default function ProductDetail() {
   const router = useRouter();
   const { id } = router.query;
@@ -29,6 +35,10 @@ export default function ProductDetail() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [imageVersion, setImageVersion] = useState(Date.now()); // Cache-busting
+  
+  // CRITICAL: Ref for latest crop state (prevents stale state in save handler)
+  const latestCropRef = useRef({ scale: 1.0, x: 0, y: 0 });
   
   // NEUE: Track Image + Container Size für coverScaleMin-Berechnung
   const [imageSize, setImageSize] = useState(null);
@@ -162,6 +172,9 @@ export default function ProductDetail() {
       ? clampCropState(newCrop, imageSize, containerSize)
       : sanitizeCropState(newCrop);
     
+    // CRITICAL: Update ref immediately (prevents stale state in save)
+    latestCropRef.current = finalCrop;
+    
     setFormData(prev => ({
       ...prev,
       image_crop_scale: finalCrop.scale,
@@ -215,12 +228,22 @@ export default function ProductDetail() {
       const method = id === 'new' ? 'POST' : 'PATCH';
 
       const highlights = formData.highlights.filter(h => h.trim() !== '');
+      
+      // CRITICAL: Use latestCropRef to prevent stale state!
+      const cropPayload = {
+        image_crop_scale: latestCropRef.current.scale,
+        image_crop_x: latestCropRef.current.x,
+        image_crop_y: latestCropRef.current.y,
+      };
+      
+      console.log('💾 [Admin] Save payload crop:', cropPayload);
 
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          ...cropPayload, // Override with latest ref values
           highlights: highlights.length > 0 ? highlights : null,
         }),
       });
@@ -231,13 +254,40 @@ export default function ProductDetail() {
 
       const data = await res.json();
       
+      console.log('✅ [Admin] Save response:', {
+        productId: data.id,
+        shop_image_path: data.shop_image_path || data.shopImagePath,
+        thumb_path: data.thumb_path || data.thumbPath,
+        crop: {
+          scale: data.image_crop_scale || data.imageCropScale,
+          x: data.image_crop_x || data.imageCropX,
+          y: data.image_crop_y || data.imageCropY,
+        }
+      });
+      
       if (id === 'new') {
         router.push(`/admin/products/${data.id}`);
       } else {
+        // CRITICAL: Update product state with fresh data (includes new shop_image_path!)
         setProduct(data);
-        alert('Produkt erfolgreich aktualisiert');
+        
+        // Bump version for cache-busting
+        setImageVersion(Date.now());
+        
+        // Sync formData with saved values (in case backend modified them)
+        setFormData(prev => ({
+          ...prev,
+          shop_image_path: data.shop_image_path || data.shopImagePath,
+          thumb_path: data.thumb_path || data.thumbPath,
+          image_crop_scale: data.image_crop_scale || data.imageCropScale || prev.image_crop_scale,
+          image_crop_x: data.image_crop_x || data.imageCropX || prev.image_crop_x,
+          image_crop_y: data.image_crop_y || data.imageCropY || prev.image_crop_y,
+        }));
+        
+        alert('Produkt erfolgreich aktualisiert ✓');
       }
     } catch (err) {
+      console.error('[Admin] Save error:', err);
       alert('Fehler beim Speichern: ' + err.message);
     } finally {
       setSaving(false);
@@ -615,19 +665,42 @@ export default function ProductDetail() {
                       </div>
                     </div>
 
-                    {/* Shop Preview */}
+                    {/* Shop Preview - SSOT: Uses shop_image_path after save */}
                     <div className="shop-preview">
                       <label>👀 So sieht's im Shop aus (4:5):</label>
-                      <ProductImage
-                        src={getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at)}
-                        alt={formData.name}
-                        crop={{
-                          scale: formData.image_crop_scale,
-                          x: formData.image_crop_x,
-                          y: formData.image_crop_y,
-                        }}
-                        variant="shop"
-                      />
+                      {product?.shop_image_path || product?.shopImagePath ? (
+                        <>
+                          <ProductImage
+                            src={(() => {
+                              const shopPath = product.shop_image_path || product.shopImagePath;
+                              const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
+                              return `${data.publicUrl}?v=${imageVersion}`;
+                            })()}
+                            alt={formData.name}
+                            crop={{ scale: 1.0, x: 0, y: 0 }} // Already cropped!
+                            variant="shop"
+                          />
+                          <small style={{color: '#666', fontSize: '0.85em', marginTop: '8px', display: 'block'}}>
+                            ✓ Server-generiert (exakt wie im Shop)
+                          </small>
+                        </>
+                      ) : (
+                        <>
+                          <ProductImage
+                            src={getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at)}
+                            alt={formData.name}
+                            crop={{
+                              scale: formData.image_crop_scale,
+                              x: formData.image_crop_x,
+                              y: formData.image_crop_y,
+                            }}
+                            variant="shop"
+                          />
+                          <small style={{color: '#ff9800', fontSize: '0.85em', marginTop: '8px', display: 'block'}}>
+                            ⚠️ Preview (zum Speichern um final zu sehen)
+                          </small>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
