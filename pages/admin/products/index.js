@@ -193,6 +193,7 @@ export default function ProductsPage() {
                 let imageUrl;
                 if (product.thumb_path || product.thumbPath) {
                   const thumbPath = product.thumb_path || product.thumbPath;
+                  const supabase = getSupabasePublic();
                   const { data } = supabase.storage.from('product-images').getPublicUrl(thumbPath);
                   imageUrl = data?.publicUrl || getProductImageUrl(
                     product.image_path, 
