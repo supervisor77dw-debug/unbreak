@@ -5,7 +5,7 @@
 import { computeCoverTransform } from '../lib/crop-utils';
 import { useState, useRef, useEffect } from 'react';
 
-export default function CroppedImage({ src, alt, crop, aspect = '4/5', interactive = false, onCropChange }) {
+export default function CroppedImage({ src, alt, crop, aspect = '4/5', interactive = false, onCropChange, onImageLoad }) {
   const [imageSize, setImageSize] = useState(null);
   const [containerSize, setContainerSize] = useState(null);
   const containerRef = useRef(null);
@@ -103,10 +103,14 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
         src={src || '/images/placeholder-product.jpg'}
         alt={alt || 'Product'}
         onLoad={(e) => {
-          setImageSize({
+          const newSize = {
             width: e.target.naturalWidth,
             height: e.target.naturalHeight
-          });
+          };
+          setImageSize(newSize);
+          if (onImageLoad) {
+            onImageLoad(newSize);
+          }
         }}
         onError={(e) => {
           e.target.src = '/images/placeholder-product.jpg';
