@@ -65,7 +65,7 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
   };
 
   const handleMouseMove = useCallback((e) => {
-    if (!containerSize) return;
+    if (!interactive || !isDragging || !containerSize || !dragStartRef.current) return;
     e.preventDefault();
     
     const pixelDx = e.clientX - dragStartRef.current.x;
@@ -103,11 +103,12 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
     if (onCropChange) {
       onCropChange(newCrop);
     }
-  }, [containerSize, crop.scale, onCropChange, showDebug]);
+  }, [interactive, isDragging, containerSize, crop.scale, onCropChange, showDebug]);
 
   const handleMouseUp = useCallback(() => {
+    if (!interactive) return;
     setIsDragging(false);
-  }, []);
+  }, [interactive]);
 
   useEffect(() => {
     if (!interactive || !isDragging) return;
