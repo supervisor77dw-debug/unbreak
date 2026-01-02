@@ -60,10 +60,20 @@ export default async function handler(req, res) {
       } = req.body;
       
       // DEBUG: Log received crop params
-      console.log('📥 [API Received Crop]', {
-        scale: image_crop_scale,
-        x: image_crop_x,
-        y: image_crop_y,
+      const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('📥 API_INCOMING_CROP', {
+        requestId,
+        productId: requestProductId,
+        incoming: {
+          scale: image_crop_scale,
+          x: image_crop_x,
+          y: image_crop_y,
+          dx: req.body.image_crop_dx,  // if exists
+          dy: req.body.image_crop_dy,  // if exists
+          nx: req.body.image_crop_nx,  // normalized (if exists)
+          ny: req.body.image_crop_ny,  // normalized (if exists)
+        },
+        timestamp: new Date().toISOString(),
       });
 
       const updates = {

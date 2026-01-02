@@ -74,6 +74,26 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
       y: dragStartRef.current.cropY + dy
     };
     
+    // 🔥 UI_DEBUG_CROP: Log every crop change
+    if (showDebug) {
+      console.log('🎨 UI_DEBUG_CROP', {
+        timestamp: new Date().toISOString(),
+        event: 'drag',
+        uiScaleShown: crop.scale,
+        uiX: newCrop.x,
+        uiY: newCrop.y,
+        uiDx: dx,
+        uiDy: dy,
+        transformString: transform,
+        refW: containerSize?.width,
+        refH: containerSize?.height,
+        imageNaturalW: imageSize?.width,
+        imageNaturalH: imageSize?.height,
+        offsetPairUsedForTransform: 'xy+delta',
+        payloadToSave: { scale: newCrop.scale, x: newCrop.x, y: newCrop.y }
+      });
+    }
+    
     if (onCropChange) {
       onCropChange(newCrop);
     }

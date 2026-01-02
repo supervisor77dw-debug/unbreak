@@ -117,6 +117,66 @@ export default function DebugImages({ buildInfo, serverRenderTime }) {
         {/* CRITICAL TEST SECTION - CROP RECT VALIDATION */}
         <CropRectTestSection />
 
+        {/* 🔥 SMOKING GUN SECTION - Live Product Crop Source Tracking */}
+        <div style={{ 
+          marginBottom: '40px', 
+          background: '#1a1a2a', 
+          padding: '24px', 
+          borderRadius: '8px',
+          border: '3px solid #dc2626',
+        }}>
+          <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#dc2626' }}>
+            🔥 SMOKING GUN - Live Crop Source Tracking
+          </h2>
+          
+          <div style={{ 
+            background: '#0a0a0a', 
+            padding: '16px', 
+            borderRadius: '6px', 
+            marginBottom: '16px',
+            fontSize: '12px',
+            color: '#cbd5e1'
+          }}>
+            <strong>How to test:</strong><br/>
+            1. Set UI Scale to <strong>1.5</strong> exactly (not 1.7!)<br/>
+            2. Set x=-35, y=-117 (or use drag)<br/>
+            3. Click Save<br/>
+            4. Check Vercel Function Logs for:<br/>
+            &nbsp;&nbsp;• <code style={{color: '#fbbf24'}}>API_INCOMING_CROP</code> → should show scale=1.5<br/>
+            &nbsp;&nbsp;• <code style={{color: '#fbbf24'}}>DB_CROP_STATE</code> → should show scale=1.5<br/>
+            &nbsp;&nbsp;• <code style={{color: '#fbbf24'}}>PIPELINE_CROP_USED</code> → scaleUsed=1.5, source=db<br/>
+            5. If any log shows 1.7 instead of 1.5 → <strong style={{color: '#ef4444'}}>BUG FOUND</strong>
+          </div>
+          
+          <div style={{ 
+            background: '#7f1d1d', 
+            padding: '16px', 
+            borderRadius: '6px',
+            color: '#fff',
+            fontSize: '13px',
+          }}>
+            <strong>⚠️ Expected Logs (in order):</strong><br/>
+            <div style={{ marginTop: '8px', fontFamily: 'monospace', fontSize: '11px', lineHeight: '1.6' }}>
+              📥 API_INCOMING_CROP → scale: 1.5<br/>
+              💾 DB_CROP_STATE → db.scale: 1.5<br/>
+              ⚙️ PIPELINE_CROP_USED → scaleUsed: 1.5, source: "db"<br/>
+              🔥 [HARD ASSERTION] → SCALE_APPLIED: ✅ PASS
+            </div>
+          </div>
+          
+          <div style={{ 
+            marginTop: '16px',
+            background: '#065f46', 
+            padding: '12px', 
+            borderRadius: '6px',
+            color: '#fff',
+            fontSize: '12px',
+          }}>
+            <strong>✅ If all logs show 1.5:</strong> Single Source of Truth working correctly!<br/>
+            <strong>❌ If any log shows 1.7:</strong> Hardcoded value or wrong source being used!
+          </div>
+        </div>
+
         <div style={{ marginBottom: '40px', background: '#1a1a1a', padding: '20px', borderRadius: '8px' }}>
           <h2 style={{ fontSize: '16px', marginBottom: '16px', color: '#fbbf24' }}>
             📊 Database Table - All Products
@@ -688,8 +748,14 @@ function CropRectTestSection() {
               <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '8px' }}>
                 <strong>Debug Info:</strong><br/>
                 {result.cropRect.debug.baseSize}<br/>
-                {result.cropRect.debug.zoomedSize}<br/>
+                cropSize: {result.cropRect.debug.cropSize}<br/>
                 offset: {result.cropRect.debug.offsetRef} → {result.cropRect.debug.offsetOrig}
+              </div>
+              
+              <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '8px' }}>
+                <strong>🔍 Sources:</strong><br/>
+                scaleUsed: {result.scale} <span style={{color: '#10b981'}}>(test)</span><br/>
+                offsetUsed: xy <span style={{color: '#10b981'}}>(test)</span>
               </div>
               
               <div style={{ 

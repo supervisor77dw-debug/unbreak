@@ -107,6 +107,22 @@ export default async function handler(req, res) {
 
     // 4. ONE CROP RECT TO RULE THEM ALL
     // Compute CropRect ONCE in original pixels - same for shop AND thumb!
+    
+    // 🔥 DB_CROP_STATE: Log what we read from DB
+    console.log('💾 DB_CROP_STATE', {
+      productId,
+      db: {
+        scale: crop?.scale,
+        x: crop?.x,
+        y: crop?.y,
+        dx: crop?.dx,  // if exists
+        dy: crop?.dy,  // if exists  
+        nx: crop?.nx,  // normalized (if exists)
+        ny: crop?.ny,  // normalized (if exists)
+      },
+      timestamp: new Date().toISOString(),
+    });
+    
     const cropRect = computeCropRectOriginalPx(
       metadata.width,
       metadata.height,
@@ -171,6 +187,33 @@ export default async function handler(req, res) {
         SCALE_APPLIED: scaleApplied ? '✅ PASS' : '❌ FAIL - SCALE NOT APPLIED!',
       },
       cropRectHash: cropRect.debug.hash,
+    });
+    
+    // 🔥 PIPELINE_CROP_USED: Log what is actually used in sharp.extract()
+    console.log('⚙️ PIPELINE_CROP_USED', {
+      productId,
+      size,
+      scaleUsed: userScale,
+      scaleSource: crop?.scale !== undefined ? 'db' : 'default',
+      offsetUsed: {
+        x: crop?.x || 0,
+        y: crop?.y || 0,
+      },
+      offsetSource: crop?.x !== undefined ? 'db' : 'default',
+      refWH_used: 'NO - offsets are in 900×1125 reference space',
+      origWH: { origW: metadata.width, origH: metadata.height },
+      baseWH: { baseW: Math.round(baseWidth), baseH: Math.round(baseHeight) },
+      cropWH: { cropW: cropRect.width, cropH: cropRect.height },
+      offsetOrig: {
+        offsetX: cropRect.debug.offsetOrig,
+        calculation: cropRect.debug.offsetFormula,
+      },
+      position: { left: cropRect.left, top: cropRect.top },
+      clamped: cropRect.debug.wasClamped,
+      clampedValues: {
+        beforeClamp: cropRect.debug.position,
+        afterClamp: `[${cropRect.left}, ${cropRect.top}, ${cropRect.width}, ${cropRect.height}]`,
+      }
     });
     
     // FAIL HARD if scale is not applied
