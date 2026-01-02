@@ -34,8 +34,8 @@ export default function ProductDetail() {
   const [imageVersion, setImageVersion] = useState(Date.now()); // Cache-busting
   
   // CRITICAL: Separate draft (UI live) from persisted (DB) crop state
-  const [draftCrop, setDraftCrop] = useState({ scale: 1.0, x: 0, y: 0 });
-  const latestDraftRef = useRef({ scale: 1.0, x: 0, y: 0 });
+  const [draftCrop, setDraftCrop] = useState({ scale: 1.0, x: 0, y: 0, nx: 0, ny: 0, cropVersion: 2 });
+  const latestDraftRef = useRef({ scale: 1.0, x: 0, y: 0, nx: 0, ny: 0, cropVersion: 2 });
   
   // NEUE: Track Image + Container Size für coverScaleMin-Berechnung
   const [imageSize, setImageSize] = useState(null);
@@ -177,6 +177,9 @@ export default function ProductDetail() {
     // DEBUG: UI draftCrop tracking
     console.log('🎨 [UI draftCrop]', {
       scale: finalCrop.scale,
+      nx: finalCrop.nx,
+      ny: finalCrop.ny,
+      cropVersion: finalCrop.cropVersion,
       x: finalCrop.x,
       y: finalCrop.y,
       sourceImage: formData.image_path,
@@ -195,7 +198,10 @@ export default function ProductDetail() {
     const newCrop = { 
       scale: newScale, 
       x: draftCrop.x, 
-      y: draftCrop.y 
+      y: draftCrop.y,
+      nx: draftCrop.nx || 0,
+      ny: draftCrop.ny || 0,
+      cropVersion: 2
     };
     
     // Clamp damit Position bei Zoom-Out nicht zu leeren Bereichen führt
