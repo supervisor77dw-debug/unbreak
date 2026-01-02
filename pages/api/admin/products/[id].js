@@ -236,10 +236,13 @@ export default async function handler(req, res) {
       }
       
       // FINAL VERIFICATION: Ensure returned data matches request
-      console.log('🎉 [PATCH SUCCESS]', {
+      console.log('🎉 [PATCH SUCCESS] Response data:', {
         productId: updated.id,
         requestedId: requestProductId,
         match: updated.id === requestProductId,
+        shop_image_path: updated.shop_image_path,
+        thumb_path: updated.thumb_path,
+        image_updated_at: updated.image_updated_at,
         hasShopImage: !!updated.shop_image_path,
         hasThumb: !!updated.thumb_path,
       });

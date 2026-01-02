@@ -8,7 +8,16 @@ import AdminLayout from '../../../components/AdminLayout';
 import ProductImage from '../../../components/ProductImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
 
-export async function getServerSideProps() {
+// CRITICAL: Force dynamic rendering for admin pages
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+export async function getServerSideProps({ res }) {
+  // Set no-cache headers
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
   return { props: {} };
 }
 

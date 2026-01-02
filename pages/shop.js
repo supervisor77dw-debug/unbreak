@@ -7,6 +7,10 @@ import Layout from '../components/Layout';
 import ProductImage from '../components/ProductImage';
 import { getProductImageUrl } from '../lib/storage-utils';
 
+// CRITICAL: Force dynamic rendering - no ISR, no static, no edge cache
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function Shop({ initialProducts }) {
   const [products, setProducts] = useState(initialProducts || []);
   const [loading, setLoading] = useState(!initialProducts);
@@ -244,11 +248,15 @@ export default function Shop({ initialProducts }) {
                             const cacheVersion = product.image_updated_at || product.imageUpdatedAt || Date.now();
                             const cacheBustedUrl = `${data.publicUrl}?v=${cacheVersion}`;
                             
-                            // 🔍 DEBUG LOG: What Shop renders
-                            console.log('🛒 [ShopRender]', {
+                            // 🔍 DEBUG LOG: What Shop renders (SOURCE OF TRUTH)
+                            console.log('🛒 [SHOP RENDER]', {
+                              productId: product.id,
                               sku: product.sku,
+                              shop_image_path: product.shop_image_path,
+                              thumb_path: product.thumb_path,
+                              image_path: product.image_path,
+                              image_updated_at: product.image_updated_at,
                               srcUsed: cacheBustedUrl,
-                              shop_image_path: shopPath,
                               fallbackUsed: false,
                               cacheVersion,
                             });
@@ -266,11 +274,14 @@ export default function Shop({ initialProducts }) {
                         }
                         
                         // FEHLT shop_image_path → Platzhalter (KEIN TRANSFORM FALLBACK!)
-                        console.error('❌ [ShopRender]', {
-                          sku: product.sku,
+                        console.error('❌ [SHOP RENDER] Missing shop_image_path!', {
                           productId: product.id,
-                          shop_image_path: 'MISSING',
+                          sku: product.sku,
+                          shop_image_path: product.shop_image_path || 'MISSING',
+                          thumb_path: product.thumb_path || 'MISSING',
+                          image_path: product.image_path || 'MISSING',
                           fallbackUsed: 'placeholder',
+                          ACTION_REQUIRED: 'Open product in admin and save to regenerate',
                         });
                         return (
                           <div className="product-image-placeholder">
@@ -821,7 +832,12 @@ export default function Shop({ initialProducts }) {
   );
 }
 
-export async function getServerSideProps() {
+export async function getServerSideProps({ res }) {
+  // CRITICAL: Set aggressive no-cache headers
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   try {
     const supabase = getSupabaseAdmin();
 
@@ -835,6 +851,18 @@ export async function getServerSideProps() {
       console.error('[SSR] Error fetching products:', error);
       return { props: { initialProducts: [] } };
     }
+
+    // LOG: What DB returned (verify fresh data)
+    console.log('📦 [SHOP SSR] Products loaded from DB:', {
+      count: data?.length || 0,
+      products: data?.map(p => ({
+        id: p.id,
+        sku: p.sku,
+        shop_image_path: p.shop_image_path,
+        thumb_path: p.thumb_path,
+        image_updated_at: p.image_updated_at,
+      })),
+    });
 
     return {
       props: {
