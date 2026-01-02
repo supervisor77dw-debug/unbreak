@@ -144,8 +144,8 @@ export default async function handler(req, res) {
             console.error('[ADMIN PRODUCT] Failed to update thumbnail paths:', thumbError);
           } else {
             console.log('[ADMIN PRODUCT] Thumbnail paths updated in DB:', thumbUpdates);
-            // Merge in response
-            Object.assign(updated, thumbUpdates);
+            // IMMUTABLE: Create new object instead of mutating
+            updated = { ...updated, ...thumbUpdates };
           }
         }
       }

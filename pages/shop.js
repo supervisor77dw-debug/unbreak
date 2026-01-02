@@ -58,6 +58,7 @@ export default function Shop({ initialProducts }) {
         throw new Error('Supabase client not available');
       }
 
+      // NO CACHE: Ensure fresh data after admin edits
       const { data, error: fetchError } = await supabase
         .from('products')
         .select('*')
@@ -65,7 +66,9 @@ export default function Shop({ initialProducts }) {
         .order('created_at', { ascending: true });
 
       if (fetchError) throw fetchError;
-      setProducts(data || []);
+      
+      // IMMUTABLE: Set new array (prevents mutations affecting other products)
+      setProducts(data ? [...data] : []);
       setError(null);
     } catch (err) {
       console.error('Error loading products:', err);
