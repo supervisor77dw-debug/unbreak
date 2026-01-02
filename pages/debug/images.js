@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { getSupabasePublic } from '../../lib/supabase';
-import { computeCoverTransform, computeExtractRect } from '../../lib/crop-utils';
+import { computeCoverTransform, computeExtractRect, computeCropRectOriginalPx } from '../../lib/crop-utils';
 
 export async function getServerSideProps({ res }) {
   // Set aggressive no-cache headers
@@ -113,6 +113,9 @@ export default function DebugImages({ buildInfo, serverRenderTime }) {
             ⚡ This page uses getServerSideProps + no-cache headers. Every refresh = fresh data.
           </div>
         </div>
+
+        {/* CRITICAL TEST SECTION - CROP RECT VALIDATION */}
+        <CropRectTestSection />
 
         <div style={{ marginBottom: '40px', background: '#1a1a1a', padding: '20px', borderRadius: '8px' }}>
           <h2 style={{ fontSize: '16px', marginBottom: '16px', color: '#fbbf24' }}>
@@ -559,3 +562,162 @@ const placeholderStyle = {
   background: '#1a0a0a',
   borderRadius: '4px',
 };
+
+// CRITICAL TEST COMPONENT - Validates computeCropRectOriginalPx works correctly
+function CropRectTestSection() {
+  // Test Image (use a fixed example - 1920x1440 original)
+  const testImageW = 1920;
+  const testImageH = 1440;
+  
+  // Test Cases
+  const tests = [
+    { name: 'A: Baseline', scale: 1.0, x: 0, y: 0, expected: 'Normal cover-fit, centered' },
+    { name: 'B: Zoom Test', scale: 1.7, x: 0, y: 0, expected: 'Zoomed in, less background visible' },
+    { name: 'C: Offset Test', scale: 1.7, x: -55, y: -45, expected: 'Zoomed + shifted compared to B' },
+  ];
+  
+  const testResults = tests.map(test => {
+    const cropRect = computeCropRectOriginalPx(
+      testImageW, 
+      testImageH, 
+      0.8, // 4:5 aspect
+      test.scale, 
+      test.x, 
+      test.y
+    );
+    return { ...test, cropRect };
+  });
+  
+  // Check if hashes are all different
+  const hashes = testResults.map(r => r.cropRect.debug.hash);
+  const allUnique = new Set(hashes).size === hashes.length;
+  
+  return (
+    <div style={{ 
+      marginBottom: '40px', 
+      background: '#1a1a2a', 
+      padding: '24px', 
+      borderRadius: '8px',
+      border: allUnique ? '3px solid #10b981' : '3px solid #ef4444',
+    }}>
+      <h2 style={{ fontSize: '18px', marginBottom: '16px', color: allUnique ? '#10b981' : '#ef4444' }}>
+        {allUnique ? '✅ PASS' : '❌ FAIL'} - CropRect Validation Test
+      </h2>
+      
+      <div style={{ 
+        background: '#0a0a0a', 
+        padding: '16px', 
+        borderRadius: '6px', 
+        marginBottom: '20px',
+        fontSize: '12px',
+        color: '#cbd5e1'
+      }}>
+        <strong>Test Image:</strong> {testImageW}×{testImageH} (1920x1440 typical camera)<br/>
+        <strong>Target Aspect:</strong> 4:5 (0.8)<br/>
+        <strong>Requirement:</strong> Each test MUST produce different cropRect hash
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+        {testResults.map((result, idx) => {
+          const prevHash = idx > 0 ? testResults[idx - 1].cropRect.debug.hash : null;
+          const isDifferent = !prevHash || prevHash !== result.cropRect.debug.hash;
+          
+          return (
+            <div key={idx} style={{
+              background: isDifferent ? '#0a1a0a' : '#1a0a0a',
+              border: `2px solid ${isDifferent ? '#10b981' : '#ef4444'}`,
+              padding: '16px',
+              borderRadius: '6px',
+            }}>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: 'bold', 
+                marginBottom: '12px',
+                color: isDifferent ? '#10b981' : '#ef4444',
+              }}>
+                {result.name}
+              </div>
+              
+              <div style={{ fontSize: '11px', color: '#cbd5e1', marginBottom: '12px' }}>
+                <strong>Input:</strong><br/>
+                scale = {result.scale}<br/>
+                x = {result.x}px<br/>
+                y = {result.y}px
+              </div>
+              
+              <div style={{ fontSize: '11px', color: '#cbd5e1', marginBottom: '12px' }}>
+                <strong>CropRect (Original Pixels):</strong><br/>
+                left = {result.cropRect.left}<br/>
+                top = {result.cropRect.top}<br/>
+                width = {result.cropRect.width}<br/>
+                height = {result.cropRect.height}
+              </div>
+              
+              <div style={{ 
+                background: '#000', 
+                padding: '8px', 
+                borderRadius: '4px',
+                fontSize: '10px',
+                fontFamily: 'monospace',
+                color: '#fbbf24',
+                marginBottom: '8px',
+              }}>
+                Hash: {result.cropRect.debug.hash}
+              </div>
+              
+              <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '12px' }}>
+                {result.expected}
+              </div>
+              
+              {idx > 0 && (
+                <div style={{ 
+                  fontSize: '10px', 
+                  padding: '6px', 
+                  background: isDifferent ? '#065f46' : '#7f1d1d',
+                  borderRadius: '3px',
+                  color: '#fff',
+                }}>
+                  {isDifferent ? `✓ Different from ${tests[idx-1].name}` : `✗ SAME as ${tests[idx-1].name}!`}
+                </div>
+              )}
+              
+              {/* Visual size indicator */}
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ fontSize: '9px', color: '#6b7280', marginBottom: '4px' }}>
+                  Visual Crop Size:
+                </div>
+                <div style={{ 
+                  width: `${(result.cropRect.width / testImageW) * 100}%`, 
+                  height: '4px', 
+                  background: '#3b82f6',
+                  borderRadius: '2px',
+                }}></div>
+                <div style={{ fontSize: '9px', color: '#6b7280', marginTop: '2px' }}>
+                  {((result.cropRect.width / testImageW) * 100).toFixed(1)}% of original width
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      <div style={{ 
+        marginTop: '20px', 
+        padding: '16px', 
+        background: allUnique ? '#065f46' : '#7f1d1d',
+        borderRadius: '6px',
+        color: '#fff',
+      }}>
+        <strong style={{ fontSize: '14px' }}>
+          {allUnique ? '✅ PASS' : '❌ FAIL'} - Hash Uniqueness Check
+        </strong>
+        <div style={{ fontSize: '11px', marginTop: '8px', opacity: 0.9 }}>
+          {allUnique 
+            ? 'All three tests produce different cropRect hashes. Scale and offsets are working correctly!'
+            : 'CRITICAL BUG: Multiple tests produce identical cropRect! Scale/offset params are being ignored!'
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
