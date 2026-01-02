@@ -111,17 +111,16 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
   };
 
   useEffect(() => {
-    if (!interactive) return;
+    if (!interactive || !isDragging) return;
     
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, interactive]);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, interactive, containerSize, crop.scale, onCropChange, showDebug]);
 
   return (
     <div 
