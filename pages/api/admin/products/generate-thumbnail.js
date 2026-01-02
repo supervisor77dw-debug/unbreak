@@ -207,9 +207,9 @@ export default async function handler(req, res) {
         SCALE_APPLIED: scaleApplied ? '✅ PASS' : '❌ FAIL - SCALE NOT APPLIED!',
       },
       cropRectHash: cropRect.debug.hash,
-    });
     
-    // 🔥 CROP_SERVER_PIPELINE: Single-line JSON log (as specified)
+    // 🔥 CROP_SERVER_PIPELINE: Single-line JSON log (MANDATORY FORMAT)
+    // MUST NOT contain: x, y, dx, dy, viewportW, viewportH, refW, refH
     console.log(`[CROP_SERVER_PIPELINE] productId=${productId} source=db cropVersion=${cropVersion}`, {
       origW: metadata.width,
       origH: metadata.height,
@@ -220,7 +220,8 @@ export default async function handler(req, res) {
       ny: crop?.ny || 0,
       cropW: cropRect.width,
       cropH: cropRect.height,
-      offsetX: cropRect.debug.offsetPixels,
+      offsetX: `nx*cropW=${(crop?.nx || 0).toFixed(4)}*${cropRect.width}=${cropRect.debug.offsetPixels}`,
+      offsetY: `ny*cropH=${(crop?.ny || 0).toFixed(4)}*${cropRect.height}=${cropRect.debug.offsetPixels}`,
       left: cropRect.left,
       top: cropRect.top,
       clampedLeft: cropRect.left,
@@ -236,15 +237,6 @@ export default async function handler(req, res) {
       console.error('Got:', { width: cropRect.width, height: cropRect.height });
     }
 
-    // ⚡ DEBUG: UI CROP INPUT
-    console.log('🎨 [CROP INPUT]', {
-      productId,
-      crop_scale: crop?.scale || 1.0,
-      crop_x: crop?.x || 0,
-      crop_y: crop?.y || 0,
-      note: 'User crop params (x/y in 900×1125 reference space)',
-    });
-    
     // ⚡ DEBUG: ONE CROP RECT (computed ONCE)
     console.log('✂️ [ONE CROP RECT - Original Pixels]', {
       productId,

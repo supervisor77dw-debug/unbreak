@@ -3,7 +3,7 @@
 // Used by BOTH Editor and Preview to ensure identical rendering
 
 import { computeCoverTransform } from '../lib/crop-utils';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 export default function CroppedImage({ src, alt, crop, aspect = '4/5', interactive = false, onCropChange, onImageLoad, showDebug = false }) {
   const [imageSize, setImageSize] = useState(null);
@@ -64,8 +64,8 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
     };
   };
 
-  const handleMouseMove = (e) => {
-    if (!interactive || !isDragging || !containerSize) return;
+  const handleMouseMove = useCallback((e) => {
+    if (!containerSize) return;
     e.preventDefault();
     
     const pixelDx = e.clientX - dragStartRef.current.x;
@@ -103,12 +103,11 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
     if (onCropChange) {
       onCropChange(newCrop);
     }
-  };
+  }, [containerSize, crop.scale, onCropChange, showDebug]);
 
-  const handleMouseUp = () => {
-    if (!interactive) return;
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
 
   useEffect(() => {
     if (!interactive || !isDragging) return;
@@ -120,7 +119,7 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, interactive, containerSize, crop.scale, onCropChange, showDebug]);
+  }, [isDragging, interactive, handleMouseMove, handleMouseUp]);
 
   return (
     <div 
