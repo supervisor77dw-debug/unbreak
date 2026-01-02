@@ -32,8 +32,9 @@ export default function ProductDetail() {
   const [dragActive, setDragActive] = useState(false);
   const [imageVersion, setImageVersion] = useState(Date.now()); // Cache-busting
   
-  // CRITICAL: Ref for latest crop state (prevents stale state in save handler)
-  const latestCropRef = useRef({ scale: 1.0, x: 0, y: 0 });
+  // CRITICAL: Separate draft (UI live) from persisted (DB) crop state
+  const [draftCrop, setDraftCrop] = useState({ scale: 1.0, x: 0, y: 0 });
+  const latestDraftRef = useRef({ scale: 1.0, x: 0, y: 0 });
   
   // NEUE: Track Image + Container Size für coverScaleMin-Berechnung
   const [imageSize, setImageSize] = useState(null);
@@ -61,15 +62,22 @@ export default function ProductDetail() {
     }
   }, [status, router]);
 
+  // Sync latestDraftRef whenever draftCrop changes
+  useEffect(() => {
+    latestDraftRef.current = draftCrop;
+  }, [draftCrop]);
+
   // Reset crop when image changes (wichtig für Cache-Busting)
   useEffect(() => {
     if (product?.image_path !== formData.image_path && formData.image_path) {
       console.log('[Admin] Image changed - resetting crop to defaults');
+      const defaultCrop = { scale: 1.0, x: 0, y: 0 };
+      setDraftCrop(defaultCrop);
       setFormData(prev => ({
         ...prev,
-        image_crop_scale: 1.0,
-        image_crop_x: 0,
-        image_crop_y: 0,
+        image_crop_scale: defaultCrop.scale,
+        image_crop_x: defaultCrop.x,
+        image_crop_y: defaultCrop.y,
       }));
     }
   }, [product?.image_path]);
@@ -160,22 +168,15 @@ export default function ProductDetail() {
       return;
     }
     
-    console.log('[Admin] Crop changed:', newCrop);
-    
     // Optional: Clamping falls imageSize bekannt (ProductImage macht das auch intern)
     const finalCrop = imageSize && containerSize
       ? clampCropState(newCrop, imageSize, containerSize)
       : sanitizeCropState(newCrop);
     
-    // CRITICAL: Update ref immediately (prevents stale state in save)
-    latestCropRef.current = finalCrop;
+    console.log('🎨 [draftCrop]', finalCrop);
     
-    setFormData(prev => ({
-      ...prev,
-      image_crop_scale: finalCrop.scale,
-      image_crop_x: finalCrop.x,
-      image_crop_y: finalCrop.y,
-    }));
+    // Update ONLY draftCrop (UI live state) - formData stays unchanged until Save
+    setDraftCrop(finalCrop);
   };
 
   const handleZoomChange = (e) => {
@@ -183,8 +184,8 @@ export default function ProductDetail() {
     
     const newCrop = { 
       scale: newScale, 
-      x: formData.image_crop_x, 
-      y: formData.image_crop_y 
+      x: draftCrop.x, 
+      y: draftCrop.y 
     };
     
     // Clamp damit Position bei Zoom-Out nicht zu leeren Bereichen führt
@@ -195,9 +196,9 @@ export default function ProductDetail() {
     const step = 10;
     
     const newCrop = {
-      scale: formData.image_crop_scale,
-      x: formData.image_crop_x + dx * step,
-      y: formData.image_crop_y + dy * step,
+      scale: draftCrop.scale,
+      x: draftCrop.x + dx * step,
+      y: draftCrop.y + dy * step,
     };
     
     // Clamp automatisch (keine hardcoded -200/+200 mehr!)
@@ -224,14 +225,14 @@ export default function ProductDetail() {
 
       const highlights = formData.highlights.filter(h => h.trim() !== '');
       
-      // CRITICAL: Use latestCropRef to prevent stale state!
+      // CRITICAL: Use latestDraftRef to prevent stale state!
       const cropPayload = {
-        image_crop_scale: latestCropRef.current.scale,
-        image_crop_x: latestCropRef.current.x,
-        image_crop_y: latestCropRef.current.y,
+        image_crop_scale: latestDraftRef.current.scale,
+        image_crop_x: latestDraftRef.current.x,
+        image_crop_y: latestDraftRef.current.y,
       };
       
-      console.log('💾 [Admin] Save payload crop:', cropPayload);
+      console.log('💾 [savePayload]', cropPayload);
 
       const res = await fetch(url, {
         method,
@@ -269,14 +270,22 @@ export default function ProductDetail() {
         // Bump version for cache-busting
         setImageVersion(Date.now());
         
-        // Sync formData with saved values (in case backend modified them)
+        // Sync both formData AND draftCrop with saved values (in case backend modified them)
+        const savedCrop = {
+          scale: data.image_crop_scale || data.imageCropScale || latestDraftRef.current.scale,
+          x: data.image_crop_x || data.imageCropX || latestDraftRef.current.x,
+          y: data.image_crop_y || data.imageCropY || latestDraftRef.current.y,
+        };
+        
+        setDraftCrop(savedCrop);
+        
         setFormData(prev => ({
           ...prev,
           shop_image_path: data.shop_image_path || data.shopImagePath,
           thumb_path: data.thumb_path || data.thumbPath,
-          image_crop_scale: data.image_crop_scale || data.imageCropScale || prev.image_crop_scale,
-          image_crop_x: data.image_crop_x || data.imageCropX || prev.image_crop_x,
-          image_crop_y: data.image_crop_y || data.imageCropY || prev.image_crop_y,
+          image_crop_scale: savedCrop.scale,
+          image_crop_x: savedCrop.x,
+          image_crop_y: savedCrop.y,
         }));
         
         alert('Produkt erfolgreich aktualisiert ✓');
@@ -552,11 +561,7 @@ export default function ProductDetail() {
                         <ProductImage
                           src={getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at)}
                           alt={formData.name}
-                          crop={{
-                            scale: formData.image_crop_scale,
-                            x: formData.image_crop_x,
-                            y: formData.image_crop_y,
-                          }}
+                          crop={draftCrop}
                           interactive={true}
                           onCropChange={handleCropChange}
                           onLoad={(e) => {
@@ -570,11 +575,7 @@ export default function ProductDetail() {
                             // DEBUG: Umfassende Crop-Diagnose
                             if (isValidSize(newImageSize) && isValidSize(containerSize)) {
                               const coverScaleMin = calculateCoverScale(newImageSize, containerSize);
-                              const currentCrop = {
-                                scale: formData.image_crop_scale,
-                                x: formData.image_crop_x,
-                                y: formData.image_crop_y
-                              };
+                              const currentCrop = draftCrop;
                               
                               console.log('🔍 [Admin Editor] IMAGE LOADED - CROP DEBUG:', {
                                 productId: id,
@@ -619,14 +620,14 @@ export default function ProductDetail() {
                           }
                           max="2.5"
                           step="0.1"
-                          value={isFinite(formData.image_crop_scale) ? formData.image_crop_scale : 1.0}
+                          value={isFinite(draftCrop.scale) ? draftCrop.scale : 1.0}
                           onChange={handleZoomChange}
                           className="zoom-slider"
                           disabled={!imageSize}
                         />
                         <div className="zoom-value">
-                          {isFinite(formData.image_crop_scale) 
-                            ? `${formData.image_crop_scale.toFixed(1)}x` 
+                          {isFinite(draftCrop.scale) 
+                            ? `${draftCrop.scale.toFixed(1)}x` 
                             : 'NaN (FEHLER!)'}
                           {imageSize && containerSize && isValidSize(imageSize) && isValidSize(containerSize) && (
                             <small style={{display: 'block', fontSize: '11px', opacity: 0.7}}>
@@ -654,8 +655,8 @@ export default function ProductDetail() {
 
                         <div className="crop-info">
                           <strong>Aktuelle Position:</strong><br/>
-                          X: {isFinite(formData.image_crop_x) ? `${formData.image_crop_x}px` : 'NaN (FEHLER!)'} | 
-                          Y: {isFinite(formData.image_crop_y) ? `${formData.image_crop_y}px` : 'NaN (FEHLER!)'}
+                          X: {isFinite(draftCrop.x) ? `${draftCrop.x}px` : 'NaN (FEHLER!)'} | 
+                          Y: {isFinite(draftCrop.y) ? `${draftCrop.y}px` : 'NaN (FEHLER!)'}
                         </div>
                       </div>
                     </div>
@@ -685,11 +686,7 @@ export default function ProductDetail() {
                           <ProductImage
                             src={getProductImageUrl(formData.image_path, formData.image_url, product?.image_updated_at)}
                             alt={formData.name}
-                            crop={{
-                              scale: formData.image_crop_scale,
-                              x: formData.image_crop_x,
-                              y: formData.image_crop_y,
-                            }}
+                            crop={draftCrop}
                             variant="shop"
                           />
                           <small style={{color: '#ff9800', fontSize: '0.85em', marginTop: '8px', display: 'block'}}>

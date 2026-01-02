@@ -58,6 +58,13 @@ export default async function handler(req, res) {
         shipping_text,
         highlights,
       } = req.body;
+      
+      // DEBUG: Log received crop params
+      console.log('📥 [API Received Crop]', {
+        scale: image_crop_scale,
+        x: image_crop_x,
+        y: image_crop_y,
+      });
 
       const updates = {
         updated_at: new Date().toISOString(),
