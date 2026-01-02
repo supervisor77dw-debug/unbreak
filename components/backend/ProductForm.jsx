@@ -59,15 +59,22 @@ export default function ProductForm({ product, onSave, onCancel }) {
 
   // Crop handlers
   function handleCropChange(newCrop) {
-    console.log('📐 Crop changed:', newCrop, '→ Current state:', {
-      scale: formData.image_crop_scale,
-      x: formData.image_crop_x,
-      y: formData.image_crop_y
+    console.log('[CROP_UI_SAVE] manual', {
+      timestamp: new Date().toISOString(),
+      scale: newCrop.scale,
+      nx: newCrop.nx,
+      ny: newCrop.ny,
+      cropVersion: newCrop.cropVersion || 2
     });
+    
     setFormData(prev => ({
       ...prev,
       image_crop_scale: newCrop.scale,
-      image_crop_x: newCrop.x,
+      image_crop_nx: newCrop.nx || 0,
+      image_crop_ny: newCrop.ny || 0,
+      image_crop_version: newCrop.cropVersion || 2,
+      // Keep x/y for backward compat display only (not used by server)
+      image_crop_x: newCrop.x,  
       image_crop_y: newCrop.y,
     }));
   }
@@ -86,18 +93,22 @@ export default function ProductForm({ product, onSave, onCancel }) {
     setFormData(prev => ({
       ...prev,
       image_crop_scale: 1.0,
-      image_crop_x: 0,
-      image_crop_y: 0,
+      image_crop_nx: 0,
+      image_crop_ny: 0,
+      image_crop_version: 2,
+      image_crop_x: 0,  // legacy compat
+      image_crop_y: 0,  // legacy compat
     }));
   }
 
-  // Pfeil-Buttons für Feintuning (10px Steps)
+  // Pfeil-Buttons für Feintuning (deprecated - arrow keys modify legacy x/y)
+  // TODO: Remove this after full migration to nx/ny
   function handleArrowMove(direction) {
-    console.log('⬆️ Arrow move:', direction);
+    console.warn('⚠️ Arrow move uses legacy x/y - deprecated');
     const step = 10;
     setFormData(prev => {
-      let newX = prev.image_crop_x;
-      let newY = prev.image_crop_y;
+      let newX = prev.image_crop_x || 0;
+      let newY = prev.image_crop_y || 0;
       
       switch(direction) {
         case 'up': newY = Math.max(-200, newY - step); break;

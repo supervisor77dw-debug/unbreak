@@ -109,27 +109,47 @@ export default async function handler(req, res) {
     // Compute CropRect ONCE in original pixels - same for shop AND thumb!
     
     // 🔥 DB_CROP_STATE: Log what we read from DB
+    const cropVersion = crop?.cropVersion || crop?.image_crop_version || 1;
     console.log('💾 DB_CROP_STATE', {
       productId,
       db: {
+        cropVersion,
         scale: crop?.scale,
-        x: crop?.x,
-        y: crop?.y,
-        dx: crop?.dx,  // if exists
-        dy: crop?.dy,  // if exists  
-        nx: crop?.nx,  // normalized (if exists)
-        ny: crop?.ny,  // normalized (if exists)
+        nx: crop?.nx,  // v2
+        ny: crop?.ny,  // v2
+        x: crop?.x,    // v1 legacy
+        y: crop?.y,    // v1 legacy
       },
       timestamp: new Date().toISOString(),
     });
+    
+    // 🔥 FAIL-FAST: If v2 but nx/ny missing, abort
+    if (cropVersion === 2) {
+      const hasNx = typeof crop?.nx === 'number' && !isNaN(crop.nx);
+      const hasNy = typeof crop?.ny === 'number' && !isNaN(crop.ny);
+      
+      if (!hasNx || !hasNy) {
+        console.error('❌ [CROP ERROR] cropVersion=2 but nx/ny missing or NaN!', {
+          productId,
+          nx: crop?.nx,
+          ny: crop?.ny,
+          hasNx,
+          hasNy
+        });
+        throw new Error(`[CROP ERROR] Product ${productId}: cropVersion=2 requires valid nx/ny. Got nx=${crop?.nx}, ny=${crop?.ny}`);
+      }
+    }
     
     const cropRect = computeCropRectOriginalPx(
       metadata.width,
       metadata.height,
       0.8, // 4:5 aspect ratio (width/height = 0.8)
       crop?.scale || 1.0,
-      crop?.x || 0,
-      crop?.y || 0
+      crop?.nx || 0,   // v2: normalized offsets
+      crop?.ny || 0,   // v2: normalized offsets
+      cropVersion,
+      crop?.x || 0,    // v1: legacy x (for migration)
+      crop?.y || 0     // v1: legacy y (for migration)
     );
 
     // ═══════════════════════════════════════════════════════════════════
@@ -189,31 +209,24 @@ export default async function handler(req, res) {
       cropRectHash: cropRect.debug.hash,
     });
     
-    // 🔥 PIPELINE_CROP_USED: Log what is actually used in sharp.extract()
-    console.log('⚙️ PIPELINE_CROP_USED', {
-      productId,
-      size,
-      scaleUsed: userScale,
-      scaleSource: crop?.scale !== undefined ? 'db' : 'default',
-      offsetUsed: {
-        x: crop?.x || 0,
-        y: crop?.y || 0,
-      },
-      offsetSource: crop?.x !== undefined ? 'db' : 'default',
-      refWH_used: 'NO - offsets are in 900×1125 reference space',
-      origWH: { origW: metadata.width, origH: metadata.height },
-      baseWH: { baseW: Math.round(baseWidth), baseH: Math.round(baseHeight) },
-      cropWH: { cropW: cropRect.width, cropH: cropRect.height },
-      offsetOrig: {
-        offsetX: cropRect.debug.offsetOrig,
-        calculation: cropRect.debug.offsetFormula,
-      },
-      position: { left: cropRect.left, top: cropRect.top },
-      clamped: cropRect.debug.wasClamped,
-      clampedValues: {
-        beforeClamp: cropRect.debug.position,
-        afterClamp: `[${cropRect.left}, ${cropRect.top}, ${cropRect.width}, ${cropRect.height}]`,
-      }
+    // 🔥 CROP_SERVER_PIPELINE: Single-line JSON log (as specified)
+    console.log(`[CROP_SERVER_PIPELINE] productId=${productId} source=db cropVersion=${cropVersion}`, {
+      origW: metadata.width,
+      origH: metadata.height,
+      baseW: Math.round(baseWidth),
+      baseH: Math.round(baseHeight),
+      scale: userScale,
+      nx: crop?.nx || 0,
+      ny: crop?.ny || 0,
+      cropW: cropRect.width,
+      cropH: cropRect.height,
+      offsetX: cropRect.debug.offsetPixels,
+      left: cropRect.left,
+      top: cropRect.top,
+      clampedLeft: cropRect.left,
+      clampedTop: cropRect.top,
+      wasClamped: cropRect.debug.wasClamped,
+      offsetSource: cropRect.debug.offsetSource
     });
     
     // FAIL HARD if scale is not applied

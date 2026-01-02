@@ -11,8 +11,12 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
   const containerRef = useRef(null);
   const imageRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0, cropX: 0, cropY: 0 });
-  const [lastDelta, setLastDelta] = useState({ dx: 0, dy: 0 });
+  const dragStartRef = useRef({ x: 0, y: 0, nx: 0, ny: 0 });
+  const [currentDelta, setCurrentDelta] = useState({ dx: 0, dy: 0 });
+
+  // Reconstruct dx/dy from normalized offsets for display
+  const dx = (crop.nx || 0) * (containerSize?.width || 1);
+  const dy = (crop.ny || 0) * (containerSize?.height || 1);
 
   // Measure container on mount/resize
   useEffect(() => {
@@ -32,6 +36,7 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
   }, []);
 
   // Compute transform ONLY if sizes are available
+  // Use reconstructed dx/dy from normalized offsets
   const transformResult = imageSize && containerSize
     ? computeCoverTransform({
         imgW: imageSize.width,
@@ -39,8 +44,8 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
         frameW: containerSize.width,
         frameH: containerSize.height,
         scale: crop.scale,
-        x: crop.x,
-        y: crop.y
+        x: dx,  // Reconstructed from nx
+        y: dy   // Reconstructed from ny
       })
     : { transform: 'none', debug: {} };
   
@@ -54,43 +59,44 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
     dragStartRef.current = {
       x: e.clientX,
       y: e.clientY,
-      cropX: crop.x,
-      cropY: crop.y
+      nx: crop.nx || 0,
+      ny: crop.ny || 0
     };
   };
 
   const handleMouseMove = (e) => {
-    if (!interactive || !isDragging) return;
+    if (!interactive || !isDragging || !containerSize) return;
     e.preventDefault();
     
-    const dx = e.clientX - dragStartRef.current.x;
-    const dy = e.clientY - dragStartRef.current.y;
+    const pixelDx = e.clientX - dragStartRef.current.x;
+    const pixelDy = e.clientY - dragStartRef.current.y;
     
-    setLastDelta({ dx, dy });
+    setCurrentDelta({ dx: pixelDx, dy: pixelDy });
+    
+    // Compute normalized offsets from pixel delta
+    const newNx = dragStartRef.current.nx + (pixelDx / containerSize.width);
+    const newNy = dragStartRef.current.ny + (pixelDy / containerSize.height);
     
     const newCrop = {
       scale: crop.scale,
-      x: dragStartRef.current.cropX + dx,
-      y: dragStartRef.current.cropY + dy
+      nx: newNx,
+      ny: newNy,
+      cropVersion: 2  // NEW: Mark as v2 format
     };
     
-    // 🔥 UI_DEBUG_CROP: Log every crop change
+    // 🔥 CROP_UI_SAVE: Log with normalized offsets
     if (showDebug) {
-      console.log('🎨 UI_DEBUG_CROP', {
+      console.log('[CROP_UI_SAVE] drag', {
         timestamp: new Date().toISOString(),
-        event: 'drag',
-        uiScaleShown: crop.scale,
-        uiX: newCrop.x,
-        uiY: newCrop.y,
-        uiDx: dx,
-        uiDy: dy,
-        transformString: transform,
-        refW: containerSize?.width,
-        refH: containerSize?.height,
-        imageNaturalW: imageSize?.width,
-        imageNaturalH: imageSize?.height,
-        offsetPairUsedForTransform: 'xy+delta',
-        payloadToSave: { scale: newCrop.scale, x: newCrop.x, y: newCrop.y }
+        scale: crop.scale,
+        viewportW: containerSize.width,
+        viewportH: containerSize.height,
+        dx: pixelDx,
+        dy: pixelDy,
+        nx: newNx,
+        ny: newNy,
+        formula: `nx=${dragStartRef.current.nx}+(${pixelDx}/${containerSize.width})=${newNx}`,
+        cropVersion: 2
       });
     }
     
@@ -159,16 +165,16 @@ export default function CroppedImage({ src, alt, crop, aspect = '4/5', interacti
           zIndex: 1000,
         }}>
           <div>scale: {crop.scale.toFixed(2)}</div>
-          <div>x: {crop.x.toFixed(0)} y: {crop.y.toFixed(0)}</div>
-          <div>dx: {lastDelta.dx.toFixed(0)} dy: {lastDelta.dy.toFixed(0)}</div>
+          <div>nx: {(crop.nx || 0).toFixed(4)} ny: {(crop.ny || 0).toFixed(4)}</div>
+          <div>dx: {dx.toFixed(0)}px dy: {dy.toFixed(0)}px</div>
           <div style={{fontSize: '9px', marginTop: '4px', opacity: 0.7}}>
+            viewport: {containerSize?.width || 0}×{containerSize?.height || 0}
+          </div>
+          <div style={{fontSize: '9px', opacity: 0.7}}>
+            version: v2 (normalized offsets)
+          </div>
+          <div style={{fontSize: '9px', opacity: 0.7}}>
             transform: {transform.substring(0, 40)}...
-          </div>
-          <div style={{fontSize: '9px', opacity: 0.7}}>
-            mode: {transformResult.debug?.mode || 'unknown'}
-          </div>
-          <div style={{fontSize: '9px', opacity: 0.7}}>
-            invertedY: false (drag down = img down)
           </div>
         </div>
       )}

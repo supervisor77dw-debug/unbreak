@@ -54,6 +54,9 @@ export default async function handler(req, res) {
         image_crop_scale,
         image_crop_x,
         image_crop_y,
+        image_crop_nx,       // NEW: normalized offsets
+        image_crop_ny,       // NEW: normalized offsets
+        image_crop_version,  // NEW: version tag
         badge_label,
         shipping_text,
         highlights,
@@ -66,12 +69,12 @@ export default async function handler(req, res) {
         productId: requestProductId,
         incoming: {
           scale: image_crop_scale,
+          nx: image_crop_nx,
+          ny: image_crop_ny,
+          cropVersion: image_crop_version,
+          // Legacy (display only):
           x: image_crop_x,
           y: image_crop_y,
-          dx: req.body.image_crop_dx,  // if exists
-          dy: req.body.image_crop_dy,  // if exists
-          nx: req.body.image_crop_nx,  // normalized (if exists)
-          ny: req.body.image_crop_ny,  // normalized (if exists)
         },
         timestamp: new Date().toISOString(),
       });
@@ -87,6 +90,10 @@ export default async function handler(req, res) {
       if (active !== undefined) updates.active = active;
       if (image_url !== undefined) updates.image_url = image_url;
       if (image_crop_scale !== undefined) updates.image_crop_scale = image_crop_scale;
+      if (image_crop_nx !== undefined) updates.image_crop_nx = image_crop_nx;
+      if (image_crop_ny !== undefined) updates.image_crop_ny = image_crop_ny;
+      if (image_crop_version !== undefined) updates.image_crop_version = image_crop_version;
+      // Legacy x/y for backward compat (not used by server pipeline)
       if (image_crop_x !== undefined) updates.image_crop_x = image_crop_x;
       if (image_crop_y !== undefined) updates.image_crop_y = image_crop_y;
       if (badge_label !== undefined) updates.badge_label = badge_label;
@@ -136,7 +143,13 @@ export default async function handler(req, res) {
       });
 
       // KRITISCH: Wenn Crop geändert wurde ODER Bild existiert aber shop_image_path fehlt → regenerate Thumbnails
-      const cropChanged = (image_crop_scale !== undefined || image_crop_x !== undefined || image_crop_y !== undefined);
+      const cropChanged = (
+        image_crop_scale !== undefined || 
+        image_crop_nx !== undefined || 
+        image_crop_ny !== undefined ||
+        image_crop_x !== undefined || 
+        image_crop_y !== undefined
+      );
       const needsRegeneration = cropChanged || (!updated.shop_image_path && updated.image_path);
       
       if (needsRegeneration && updated.image_path) {
@@ -148,8 +161,13 @@ export default async function handler(req, res) {
           console.log('[ADMIN PRODUCT] Reason: shop_image_path missing - backfilling');
         }
         
+        // Use nx/ny if available (v2), otherwise fall back to x/y (v1)
         const crop = {
           scale: image_crop_scale !== undefined ? image_crop_scale : updated.image_crop_scale,
+          nx: image_crop_nx !== undefined ? image_crop_nx : updated.image_crop_nx,
+          ny: image_crop_ny !== undefined ? image_crop_ny : updated.image_crop_ny,
+          cropVersion: image_crop_version !== undefined ? image_crop_version : updated.image_crop_version,
+          // Legacy (for migration only):
           x: image_crop_x !== undefined ? image_crop_x : updated.image_crop_x,
           y: image_crop_y !== undefined ? image_crop_y : updated.image_crop_y,
         };
