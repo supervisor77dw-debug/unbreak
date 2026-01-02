@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import Head from 'next/head';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabasePublic } from '../../../lib/supabase';
 import AdminLayout from '../../../components/AdminLayout';
 import ProductImage from '../../../components/ProductImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
@@ -18,11 +18,6 @@ import {
   isValidSize,
   isValidCropState 
 } from '../../../lib/crop-utils';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
 
 export default function ProductDetail() {
   const router = useRouter();
@@ -673,6 +668,7 @@ export default function ProductDetail() {
                           <ProductImage
                             src={(() => {
                               const shopPath = product.shop_image_path || product.shopImagePath;
+                              const supabase = getSupabasePublic();
                               const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
                               return `${data.publicUrl}?v=${imageVersion}`;
                             })()}

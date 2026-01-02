@@ -3,15 +3,10 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabasePublic } from '../../../lib/supabase';
 import AdminLayout from '../../../components/AdminLayout';
 import ProductImage from '../../../components/ProductImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
 
 export async function getServerSideProps() {
   return { props: {} };

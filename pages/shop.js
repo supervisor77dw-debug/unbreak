@@ -1,17 +1,11 @@
 ﻿import Head from 'next/head';
 import Script from 'next/script';
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabasePublic, getSupabaseAdmin } from '../lib/supabase';
 import { getCart } from '../lib/cart';
 import Layout from '../components/Layout';
 import ProductImage from '../components/ProductImage';
 import { getProductImageUrl } from '../lib/storage-utils';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
 
 export default function Shop({ initialProducts }) {
   const [products, setProducts] = useState(initialProducts || []);
