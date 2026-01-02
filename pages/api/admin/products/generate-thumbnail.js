@@ -12,7 +12,7 @@
 import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import crypto from 'crypto';
-import { computeCoverTransform } from '../../../../lib/crop-utils';
+import { computeCoverTransform, computeExtractRect } from '../../../../lib/crop-utils';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -174,13 +174,32 @@ export default async function handler(req, res) {
       DERIVE_REFERENCE_EQ_UI_REFERENCE: true, // Both use computeCoverTransform with same params
     });
 
-    // 4. Sharp: Resize + Crop
-    // CRITICAL: Transform order must match UI!
-    // 1. baseScale (cover fit)
-    // 2. Apply offsets (in BASE coordinate space)
-    // 3. Apply user zoom
-    // 4. Calculate extract rect
-    
+    // 4. SINGLE SOURCE OF TRUTH: Use shared computeExtractRect
+    // This ensures UI and Server use IDENTICAL math
+    const extractRect = computeExtractRect({
+      origW: metadata.width,
+      origH: metadata.height,
+      targetW,
+      targetH,
+      scale: crop?.scale || 1.0,
+      x: crop?.x || 0,
+      y: crop?.y || 0,
+    });
+
+    // ⚡ DEBUG PIPELINE EXTRACT (from shared function)
+    console.log('✂️ [PIPELINE EXTRACT] Using shared computeExtractRect:', {
+      productId,
+      ...extractRect.debug,
+      finalExtractRect: {
+        left: extractRect.left,
+        top: extractRect.top,
+        width: extractRect.width,
+        height: extractRect.height,
+      },
+    });
+
+    // 5. Sharp: Resize to effectiveScale, then extract
+    const effectiveScale = parseFloat(extractRect.debug.effectiveScale);
     const scaledW = Math.round(metadata.width * effectiveScale);
     const scaledH = Math.round(metadata.height * effectiveScale);
 
@@ -192,56 +211,16 @@ export default async function handler(req, res) {
       resizeScale: effectiveScale.toFixed(4),
     });
 
-    // CRITICAL: Offsets are in BASE coordinate space (frameW x frameH)
-    // They must be scaled by effectiveScale to match the resized image space
-    const offsetX = crop?.x || 0;
-    const offsetY = crop?.y || 0;
-    
-    // Scale offsets from base coordinate space to resized image space
-    const scaledOffsetX = offsetX * effectiveScale;
-    const scaledOffsetY = offsetY * effectiveScale;
-    
-    // Extract-Region (centered + scaled offsets)
-    const left = Math.max(0, Math.round((scaledW - targetW) / 2 + scaledOffsetX));
-    const top = Math.max(0, Math.round((scaledH - targetH) / 2 + scaledOffsetY));
-
-    // Clamp to ensure we don't exceed bounds
-    const clampedLeft = Math.min(left, scaledW - targetW);
-    const clampedTop = Math.min(top, scaledH - targetH);
-
-    // ⚡ DEBUG PIPELINE EXTRACT
-    console.log('✂️ [PIPELINE EXTRACT]', {
-      productId,
-      offsetX_base: offsetX,
-      offsetY_base: offsetY,
-      offsetX_scaled: scaledOffsetX.toFixed(2),
-      offsetY_scaled: scaledOffsetY.toFixed(2),
-      extractLeft: left,
-      extractTop: top,
-      extractW: targetW,
-      extractH: targetH,
-      centerBeforeOffset: {
-        x: Math.round((scaledW - targetW) / 2),
-        y: Math.round((scaledH - targetH) / 2),
-      },
-      clampResult: {
-        clampedLeft,
-        clampedTop,
-        wasClamped: clampedLeft !== left || clampedTop !== top,
-      },
-      xyAppliedAfterZoom: false, // CORRECT: Applied in base space, then scaled
-    });
-
     const thumbnail = await normalizedImage
       .resize(scaledW, scaledH, {
         fit: 'fill',
         kernel: 'lanczos3',
       })
       .extract({
-        left: clampedLeft,
-        top: clampedTop,
-        width: targetW,
-        height: targetH,
+        left: extractRect.left,
+        top: extractRect.top,
+        width: extractRect.width,
+        height: extractRect.height,
       })
       .webp({ quality: 85 })
       .toBuffer();

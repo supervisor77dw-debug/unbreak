@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { getSupabasePublic } from '../../lib/supabase';
-import { computeCoverTransform } from '../../lib/crop-utils';
+import { computeCoverTransform, computeExtractRect } from '../../lib/crop-utils';
 
 export async function getServerSideProps({ res }) {
   // Set aggressive no-cache headers
@@ -434,22 +434,27 @@ export default function DebugImages({ buildInfo, serverRenderTime }) {
                 marginTop: '12px',
                 border: '1px solid #7c3aed',
               }}>
-                <strong style={{ color: '#c084fc' }}>🔬 PIPELINE DEBUG INFO:</strong><br/>
+                <strong style={{ color: '#c084fc' }}>🔬 EXACT CROP MATH (Shared UI ↔ Server):</strong><br/>
                 <code style={{ color: '#e0e7ff', display: 'block', marginTop: '6px', whiteSpace: 'pre-wrap' }}>
-                  CROP PARAMS: scale={crop.scale}, x={crop.x}px, y={crop.y}px{'\n'}
-                  TARGET (Shop): 900x1125 (4:5){'\n'}
-                  TARGET (Thumb): 240x300 (4:5){'\n'}
+                  INPUT CROP: scale={crop.scale}, x={crop.x}px, y={crop.y}px{'\n'}
                   {'\n'}
-                  ⚠️ Transform Order (CRITICAL):{'\n'}
-                  1. EXIF normalize (orientation = 1){'\n'}
-                  2. baseScale = cover-fit to 4:5{'\n'}
-                  3. X/Y offsets IN BASE SPACE (NOT zoomed!){'\n'}
-                  4. User zoom (scale * baseScale){'\n'}
-                  5. Extract crop rect{'\n'}
+                  Transform Order (IDENTICAL in UI and Server):{'\n'}
+                  1. EXIF normalize → orientation = 1{'\n'}
+                  2. baseScale = cover-fit to 4:5 aspect{'\n'}
+                  3. effectiveScale = baseScale * userScale{'\n'}
+                  4. scaledOffsetX = x * effectiveScale{'\n'}
+                  5. scaledOffsetY = y * effectiveScale{'\n'}
+                  6. Extract rect = center ± offset{'\n'}
+                  {'\n'}
+                  Y-Axis Mapping:{'\n'}
+                  - yAppliedBeforeZoom: false (applied in base, then scaled){'\n'}
+                  - ySign: + (positive Y moves DOWN){'\n'}
+                  - yScaleFactor: effectiveScale{'\n'}
                   {'\n'}
                   Check server logs → [PIPELINE EXTRACT]:{'\n'}
-                  - offsetX_base vs offsetX_scaled{'\n'}
-                  - xyAppliedAfterZoom: false (MUST be false!)
+                  - offsetBase vs offsetScaled{'\n'}
+                  - extractRect: left, top, width, height{'\n'}
+                  - wasClamped (should be false for centered crops)
                 </code>
               </div>
             </div>
@@ -458,6 +463,35 @@ export default function DebugImages({ buildInfo, serverRenderTime }) {
 
         <div style={{ marginTop: '40px', padding: '20px', background: '#1a1a1a', borderRadius: '8px' }}>
           <h3 style={{ fontSize: '14px', marginBottom: '12px', color: '#fbbf24' }}>
+            🧪 Mandatory Test Cases (UI ↔ Server Pixel-Perfect)
+          </h3>
+          <div style={{ lineHeight: '1.8', color: '#cbd5e1', fontSize: '12px' }}>
+            <strong style={{ color: '#10b981' }}>Test A: Baseline (No Crop)</strong><br/>
+            <code style={{ background: '#0a0a0a', padding: '4px 8px', borderRadius: '3px' }}>
+              scale=1.0, x=0, y=0
+            </code><br/>
+            Expected: UI Preview === Shop Derived (pixel-identical, centered)<br/>
+            <br/>
+            
+            <strong style={{ color: '#3b82f6' }}>Test B: Y-Offset Direction</strong><br/>
+            <code style={{ background: '#0a0a0a', padding: '4px 8px', borderRadius: '3px' }}>
+              scale=1.0, x=0, y=+50
+            </code><br/>
+            Expected: Image moves DOWN in both UI and Server<br/>
+            If inverted → ySign is wrong (+/- flipped)<br/>
+            <br/>
+            
+            <strong style={{ color: '#ec4899' }}>Test C: Complex Crop</strong><br/>
+            <code style={{ background: '#0a0a0a', padding: '4px 8px', borderRadius: '3px' }}>
+              scale=1.8, x=-49, y=-51
+            </code><br/>
+            Expected: UI "So sieht's im Shop aus" === Shop Derived (900x1125) pixel-perfect<br/>
+            Expected: Thumb (240x300) same composition, just smaller<br/>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '20px', padding: '20px', background: '#1a1a1a', borderRadius: '8px' }}>
+          <h3 style={{ fontSize: '14px', marginBottom: '12px', color: '#fbbf24' }}>
             📝 Acceptance Criteria Check
           </h3>
           <ul style={{ lineHeight: '1.8', color: '#cbd5e1' }}>
@@ -465,6 +499,7 @@ export default function DebugImages({ buildInfo, serverRenderTime }) {
             <li>✅ All products have unique thumb_path containing their productId</li>
             <li>✅ Shop and Admin use derived paths (not original + transform)</li>
             <li>✅ Saving one product only changes that product's paths</li>
+            <li>✅ UI and Server use IDENTICAL crop math (shared computeExtractRect)</li>
           </ul>
         </div>
       </div>
