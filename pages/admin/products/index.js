@@ -191,6 +191,8 @@ export default function ProductsPage() {
               {products.map((product) => {
                 // PRIORITY: Server-generiertes Thumbnail (240x300, 4:5, mit Crop)
                 let imageUrl;
+                let fallbackUsed = false;
+                
                 if (product.thumb_path || product.thumbPath) {
                   const thumbPath = product.thumb_path || product.thumbPath;
                   const supabase = getSupabasePublic();
@@ -205,6 +207,17 @@ export default function ProductsPage() {
                         product.image_url,
                         product.image_updated_at || product.imageUpdatedAt
                       );
+                  
+                  if (!data?.publicUrl) fallbackUsed = true;
+                  
+                  // 🔍 DEBUG LOG: What Admin List renders
+                  console.log('📋 [AdminListRender]', {
+                    sku: product.sku,
+                    srcUsed: imageUrl,
+                    thumb_path: thumbPath,
+                    fallbackUsed,
+                    cacheVersion,
+                  });
                 } else {
                   // FALLBACK: Original mit Crop (via ProductImage Component)
                   imageUrl = getProductImageUrl(
@@ -212,6 +225,13 @@ export default function ProductsPage() {
                     product.image_url,
                     product.image_updated_at || product.imageUpdatedAt
                   );
+                  fallbackUsed = true;
+                  
+                  console.warn('⚠️ [AdminListRender]', {
+                    sku: product.sku,
+                    thumb_path: 'MISSING',
+                    fallbackUsed: 'original',
+                  });
                 }
                 
                 // Debug: Log crop values per product

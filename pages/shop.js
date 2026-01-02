@@ -244,9 +244,13 @@ export default function Shop({ initialProducts }) {
                             const cacheVersion = product.image_updated_at || product.imageUpdatedAt || Date.now();
                             const cacheBustedUrl = `${data.publicUrl}?v=${cacheVersion}`;
                             
-                            console.log('🛒 [Shop] Product', product.id, 'using server-crop:', {
-                              path: shopPath,
-                              version: cacheVersion,
+                            // 🔍 DEBUG LOG: What Shop renders
+                            console.log('🛒 [ShopRender]', {
+                              sku: product.sku,
+                              srcUsed: cacheBustedUrl,
+                              shop_image_path: shopPath,
+                              fallbackUsed: false,
+                              cacheVersion,
                             });
                             
                             return (
@@ -262,7 +266,12 @@ export default function Shop({ initialProducts }) {
                         }
                         
                         // FEHLT shop_image_path → Platzhalter (KEIN TRANSFORM FALLBACK!)
-                        console.error('❌ [Shop] Product', product.id, 'SKU:', product.sku, 'MISSING shop_image_path - showing placeholder');
+                        console.error('❌ [ShopRender]', {
+                          sku: product.sku,
+                          productId: product.id,
+                          shop_image_path: 'MISSING',
+                          fallbackUsed: 'placeholder',
+                        });
                         return (
                           <div className="product-image-placeholder">
                             <div className="placeholder-icon">📷</div>
