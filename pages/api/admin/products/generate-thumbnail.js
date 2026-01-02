@@ -107,16 +107,21 @@ export default async function handler(req, res) {
       note: 'All crop math now uses THESE dimensions (post-rotation)',
     });
 
-    // 4. Berechne Crop-Transform (SINGLE SOURCE OF TRUTH!)
-    const { baseScale, effectiveScale, debug } = computeCoverTransform({
-      imgW: metadata.width,
-      imgH: metadata.height,
-      frameW: targetW,
-      frameH: targetH,
+    // 4. SINGLE SOURCE OF TRUTH: Use shared computeExtractRect
+    // This ensures UI and Server use IDENTICAL math
+    const extractRect = computeExtractRect({
+      origW: metadata.width,
+      origH: metadata.height,
+      targetW,
+      targetH,
       scale: crop?.scale || 1.0,
       x: crop?.x || 0,
       y: crop?.y || 0,
     });
+
+    // Extract values from debug info for logging
+    const baseScale = parseFloat(extractRect.debug.baseScale);
+    const effectiveScale = parseFloat(extractRect.debug.effectiveScale);
 
     // ⚡ DEBUG: UI CROP INPUT (B)
     console.log('🎨 [PIPELINE UI CROP INPUT]', {
@@ -127,8 +132,6 @@ export default async function handler(req, res) {
       CROP_BASE: { width: targetW, height: targetH },
       note: 'Client-sent crop params (frame-relative)',
     });
-
-    console.log('[Thumbnail] Transform debug:', debug);
     
     // ⚡ DEBUG PIPELINE START
     console.log('🚀 [PIPELINE START]', {
@@ -171,19 +174,7 @@ export default async function handler(req, res) {
       effectiveScale: effectiveScale.toFixed(4),
       resultW: targetW,
       resultH: targetH,
-      DERIVE_REFERENCE_EQ_UI_REFERENCE: true, // Both use computeCoverTransform with same params
-    });
-
-    // 4. SINGLE SOURCE OF TRUTH: Use shared computeExtractRect
-    // This ensures UI and Server use IDENTICAL math
-    const extractRect = computeExtractRect({
-      origW: metadata.width,
-      origH: metadata.height,
-      targetW,
-      targetH,
-      scale: crop?.scale || 1.0,
-      x: crop?.x || 0,
-      y: crop?.y || 0,
+      DERIVE_REFERENCE_EQ_UI_REFERENCE: true, // Both use computeExtractRect with same params
     });
 
     // ⚡ DEBUG PIPELINE EXTRACT (from shared function)
@@ -199,7 +190,6 @@ export default async function handler(req, res) {
     });
 
     // 5. Sharp: Resize to effectiveScale, then extract
-    const effectiveScale = parseFloat(extractRect.debug.effectiveScale);
     const scaledW = Math.round(metadata.width * effectiveScale);
     const scaledH = Math.round(metadata.height * effectiveScale);
 
