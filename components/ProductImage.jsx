@@ -300,7 +300,13 @@ export default function ProductImage({
           position: absolute;
           top: 50%;
           left: 50%;
-         
+          min-width: 100%;
+          min-height: 100%;
+          width: auto;
+          height: auto;
+          transform-origin: center center;
+          transition: transform 0.1s ease-out;
+        }
         
         /* DERIVED IMAGES: Use object-fit instead of transform */
         .product-image-container img[data-derived="true"] {
@@ -312,12 +318,6 @@ export default function ProductImage({
           object-fit: cover;
           object-position: center;
           transform: none !important;
-        } min-width: 100%;
-          min-height: 100%;
-          width: auto;
-          height: auto;
-          transform-origin: center center;
-          transition: transform 0.1s ease-out;
         }
 
         .product-image-container img[draggable="false"] {
