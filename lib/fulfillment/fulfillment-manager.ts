@@ -572,11 +572,4 @@ export function formatProductionDuration(durationMs: number): string {
 }
 
 // ============================================================
-// EXPORTS
-// ============================================================
 
-export type {
-  OrderFulfillmentStatus,
-  StatusTransitionEvent,
-  ChangeLockStatus,
-};

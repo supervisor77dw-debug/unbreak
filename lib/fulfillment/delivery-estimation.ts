@@ -439,15 +439,4 @@ export function updateDeliveryEstimate(
   return storedData;
 }
 
-// ============================================================
-// EXPORTS
-// ============================================================
-
-export type {
-  DeliveryTimeConfig,
-  DeliveryEstimate,
-  DeliveryMessage,
-  StoredDeliveryData,
-};
-
 export { DEFAULT_CONFIG as DEFAULT_DELIVERY_CONFIG };

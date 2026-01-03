@@ -517,14 +517,3 @@ export async function createProductionSnapshotsFromOrder(
   
   return snapshots;
 }
-
-// ============================================================
-// EXPORTS
-// ============================================================
-
-export type {
-  ProductionMaterial,
-  ProductionColor,
-  ProductionComponent,
-  ProductionSnapshot,
-};
