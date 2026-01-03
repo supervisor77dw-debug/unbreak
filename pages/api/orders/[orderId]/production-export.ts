@@ -112,8 +112,8 @@ async function handleProductionExport(
   } = req.query;
   
   // Parse boolean query parameters (come as strings from URL)
-  const includePreviewBool = includePreview === 'true' || includePreview === true || includePreview === undefined;
-  const includeCustomerInfoBool = includeCustomerInfo === 'true' || includeCustomerInfo === true || includeCustomerInfo === undefined;
+  const includePreviewBool = includePreview === 'true' || includePreview === undefined;
+  const includeCustomerInfoBool = includeCustomerInfo === 'true' || includeCustomerInfo === undefined;
   
   try {
     // TODO: Fetch snapshots from database
