@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, getSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import AdminLayout from '../../../components/AdminLayout';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 export default function PricingRulesPage() {
   const { data: session, status } = useSession();
@@ -16,8 +13,12 @@ export default function PricingRulesPage() {
   const fetchRules = async () => {
     setLoading(true);
     try {
-      const { data } = await supabase.from('pricing_rules').select('*').order('version', { ascending: false }).limit(50);
-      setRules(data || []);
+      const session = await getSession();
+      const res = await fetch('/api/admin/pricing', {
+        headers: { 'Authorization': `Bearer ${session?.accessToken}` }
+      });
+      const data = await res.json();
+      setRules(data.rules || []);
     } catch (err) {
       console.error('Error:', err);
     } finally {

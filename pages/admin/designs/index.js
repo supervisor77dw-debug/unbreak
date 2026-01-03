@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, getSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import AdminLayout from '../../../components/AdminLayout';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 export default function SavedDesignsPage() {
   const { data: session, status } = useSession();
@@ -17,10 +14,12 @@ export default function SavedDesignsPage() {
   const fetchDesigns = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('saved_designs').select('*').order('created_at', { ascending: false }).limit(100);
-      if (search) query = query.or(`design_code.ilike.%${search}%,customer_email.ilike.%${search}%`);
-      const { data } = await query;
-      setDesigns(data || []);
+      const session = await getSession();
+      const res = await fetch(`/api/admin/designs?search=${encodeURIComponent(search)}`, {
+        headers: { 'Authorization': `Bearer ${session?.accessToken}` }
+      });
+      const data = await res.json();
+      setDesigns(data.designs || []);
     } catch (err) {
       console.error('Error:', err);
     } finally {

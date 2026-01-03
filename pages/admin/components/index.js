@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, getSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import AdminLayout from '../../../components/AdminLayout';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 export default function ComponentInventoryPage() {
   const { data: session, status } = useSession();
@@ -17,10 +14,12 @@ export default function ComponentInventoryPage() {
   const fetchComponents = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('component_inventory').select('*').order('component_name', { ascending: true });
-      if (categoryFilter) query = query.eq('component_category', categoryFilter);
-      const { data } = await query;
-      setComponents(data || []);
+      const session = await getSession();
+      const res = await fetch(`/api/admin/components?category=${categoryFilter}`, {
+        headers: { 'Authorization': `Bearer ${session?.accessToken}` }
+      });
+      const data = await res.json();
+      setComponents(data.components || []);
     } catch (err) {
       console.error('Error:', err);
     } finally {

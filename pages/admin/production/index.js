@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, getSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import AdminLayout from '../../../components/AdminLayout';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 const STATUS_COLORS = {
   pending: '#ea580c', in_production: '#2563eb', quality_check: '#ca8a04',
@@ -22,10 +19,12 @@ export default function ProductionQueuePage() {
   const fetchQueue = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('production_queue').select('*').order('priority_level', { ascending: false }).order('created_at', { ascending: true }).limit(100);
-      if (statusFilter) query = query.eq('production_status', statusFilter);
-      const { data } = await query;
-      setItems(data || []);
+      const session = await getSession();
+      const res = await fetch(`/api/admin/production?status=${statusFilter}`, {
+        headers: { 'Authorization': `Bearer ${session?.accessToken}` }
+      });
+      const data = await res.json();
+      setItems(data.items || []);
     } catch (err) {
       console.error('Error:', err);
     } finally {
@@ -35,7 +34,15 @@ export default function ProductionQueuePage() {
 
   const updateStatus = async (id, newStatus) => {
     try {
-      await supabase.from('production_queue').update({ production_status: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
+      const session = await getSession();
+      await fetch(`/api/admin/production/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.accessToken}`
+        },
+        body: JSON.stringify({ production_status: newStatus })
+      });
       await fetchQueue();
     } catch (err) {
       console.error('Error:', err);
