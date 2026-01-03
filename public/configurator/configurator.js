@@ -281,6 +281,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        // ANY valid message from iframe means it's working - hide error
+        if (!isReady && errorContainer && errorContainer.style.display !== 'none') {
+            console.log('✓ Received message from iframe - clearing error state');
+            if (errorContainer) errorContainer.style.display = 'none';
+            if (loadingText) loadingText.style.display = 'block';
+        }
+        
         const data = event.data;
         logDebugEvent('MESSAGE', `Received: ${data.type} from ${event.origin}`);
         
@@ -318,10 +325,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'configChanged':
                 logDebugEvent('LEGACY', 'configChanged received');
-                console.log('Config updated:', data.config);
+                console.log('✓ Config updated from iframe:', data.config);
                 
-                // Send config update to parent (for checkout system)
-                if (data.config && window.parent !== window) {
+                // Hide error/loading if iframe is communicating
+                if (!isReady) {
+                    console.log('✓ iframe is communicating - clearing any errors');
+                    hideLoading();
+                }
+                
+                // If we ARE the parent (not in iframe), dispatch locally
+                if (window.parent === window) {
+                    console.log('✓ Dispatching config locally (we are parent)');
+                    window.postMessage({
+                        type: 'UNBREAK_CONFIG_UPDATE',
+                        config: data.config
+                    }, window.location.origin);
+                } else {
+                    // Send config update to parent (for checkout system)
+                    console.log('✓ Forwarding config to parent window');
                     window.parent.postMessage({
                         type: 'UNBREAK_CONFIG_UPDATE',
                         config: data.config
