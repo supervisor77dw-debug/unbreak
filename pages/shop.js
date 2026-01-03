@@ -77,12 +77,42 @@ export default function Shop({ initialProducts }) {
   }
 
   function handleAddToCart(product) {
-    if (!cart) return;
+    console.log('🛒 [SHOP] handleAddToCart called with:', product);
+    
+    if (!cart) {
+      console.error('❌ [SHOP] Cart not initialized!');
+      alert('Warenkorb konnte nicht geladen werden. Bitte Seite neu laden.');
+      return;
+    }
+    
+    console.log('🛒 [SHOP] Cart instance:', cart);
+    console.log('🛒 [SHOP] Product ID:', product.id);
     
     const success = cart.addItem(product);
+    
+    console.log('🛒 [SHOP] addItem result:', success);
+    
     if (success) {
-      // Show feedback (you could add a toast notification here)
-      console.log('Added to cart:', product.name);
+      console.log('✅ [SHOP] Added to cart:', product.name || product.title_de);
+      
+      // Visual feedback
+      const btn = event?.target;
+      if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = '✓ Hinzugefügt!';
+        btn.style.background = '#059669';
+        
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = '';
+        }, 1500);
+      }
+      
+      // Show cart count update
+      alert(`✓ ${product.title_de || product.name} wurde zum Warenkorb hinzugefügt!\n\nWarenkorb: ${cart.getItemCount()} Artikel`);
+    } else {
+      console.error('❌ [SHOP] Failed to add item to cart');
+      alert('Fehler beim Hinzufügen zum Warenkorb');
     }
   }
 
