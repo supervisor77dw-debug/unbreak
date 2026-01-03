@@ -5,6 +5,8 @@
  * WICHTIG: Keine Design-Änderungen - nur Funktionalität ergänzen
  */
 
+console.log('🚀 [CHECKOUT] checkout.js START - File is being executed');
+
 /**
  * Buy Standard Product (without configuration)
  * Usage: onclick="UnbreakCheckout.buyStandard('UNBREAK-WEIN-01')"
@@ -197,6 +199,8 @@ window.UnbreakCheckoutState = {
   lastConfig: null,
   initialized: false,
 };
+
+console.log('📦 [CHECKOUT] State object created:', window.UnbreakCheckoutState);
 
 /**
  * Initialize checkout buttons automatically
