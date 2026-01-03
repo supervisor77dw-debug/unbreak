@@ -227,11 +227,20 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
       ...(finalReplyTo && { replyTo: finalReplyTo }),
     });
 
-    console.log(`✅ [EMAIL SEND] Success - ID: ${result.id}`);
+    // Check for error response
+    if (result.error) {
+      console.error(`❌ [EMAIL SEND] Resend API error:`, result.error);
+      return {
+        sent: false,
+        error: result.error.message || 'Unknown Resend API error',
+      };
+    }
+
+    console.log(`✅ [EMAIL SEND] Success - ID: ${result.data?.id}`);
 
     return {
       sent: true,
-      id: result.id,
+      id: result.data?.id,
     };
 
   } catch (error: any) {
