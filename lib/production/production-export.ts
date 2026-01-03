@@ -19,7 +19,7 @@ import type { ProductionSnapshot } from './production-snapshot';
 // ============================================================
 
 export interface ProductionExportOptions {
-  format: 'pdf' | 'json' | 'both';
+  format?: 'pdf' | 'json' | 'both';
   includePreview?: boolean;
   includeCustomerInfo?: boolean;
   locale?: string;
