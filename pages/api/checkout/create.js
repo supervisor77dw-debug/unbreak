@@ -133,44 +133,31 @@ export default async function handler(req, res) {
     }
 
     // ========================================
-    // 4. CREATE CONFIGURATION
+    // 4. CREATE ORDER (pending_payment)
     // ========================================
-    const { data: configuration, error: configError } = await supabaseAdmin
-      .from('configurations')
-      .insert({
-        product_id: product.id,
-        config_json: config,
-        price_cents: price_cents,
-        currency: product.currency,
-        preview_image_url: config.previewImageUrl || null,
-        model_export_url: config.modelExportUrl || null,
-      })
-      .select()
-      .single();
-
-    if (configError) {
-      console.error('Configuration creation error:', configError);
-      return res.status(500).json({ error: 'Failed to save configuration' });
-    }
-
-    // ========================================
-    // 5. CREATE ORDER (pending_payment)
-    // ========================================
+    // Use simple_orders for guest checkout (no customer_id required)
     const orderNumber = generateOrderNumber();
 
     const { data: order, error: orderError } = await supabaseAdmin
-      .from('orders')
+      .from('simple_orders')
       .insert({
-        order_number: orderNumber,
-        customer_id: customerId,
-        configuration_id: configuration.id,
-        status: 'pending_payment',
-        subtotal_cents: subtotalCents,
-        shipping_cents: shippingCents,
-        tax_cents: taxCents,
-        total_cents: totalCents,
+        customer_email: customer?.email || null,
+        customer_name: customer?.name || null,
+        product_sku: product_sku,
+        quantity: config.quantity || 1,
+        total_amount_cents: totalCents,
         currency: product.currency,
-        shipping_address: customer.address || null,
+        status: 'pending',
+        order_type: 'configured',
+        config_json: config,
+        items: [{
+          product_id: product.id,
+          sku: product.sku,
+          name: product.title_de || product.name,
+          unit_price_cents: price_cents,
+          quantity: config.quantity || 1,
+          config: config
+        }]
       })
       .select()
       .single();
@@ -221,7 +208,7 @@ export default async function handler(req, res) {
         customer: stripeCustomerId,
       } : {
         customer_creation: 'always',
-        customer_email: customer.email,
+        customer_email: customer?.email || undefined,
       }),
       
       line_items: [
@@ -245,10 +232,9 @@ export default async function handler(req, res) {
       
       metadata: {
         order_id: order.id,
-        order_number: orderNumber,
-        configuration_id: configuration.id,
         product_sku: product.sku,
-        customer_id: customerId, // Pass our DB customer ID for webhook sync
+        order_type: 'configured',
+        config_json: JSON.stringify(config),
       },
       
       success_url: `${getOrigin(req)}/success?session_id={CHECKOUT_SESSION_ID}&order_number=${orderNumber}`,
@@ -260,8 +246,9 @@ export default async function handler(req, res) {
     // 7. UPDATE ORDER WITH STRIPE SESSION ID
     // ========================================
     await supabaseAdmin
-      .from('orders')
+      .from('simple_orders')
       .update({
+        stripe_session_id: checkoutSession.id,
         stripe_checkout_session_id: checkoutSession.id,
         updated_at: new Date().toISOString(),
       })
@@ -274,7 +261,7 @@ export default async function handler(req, res) {
       success: true,
       checkout_url: checkoutSession.url,
       order_id: order.id,
-      order_number: orderNumber,
+      session_id: checkoutSession.id,
       total_cents: totalCents,
       currency: product.currency,
       breakdown: {
