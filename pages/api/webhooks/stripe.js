@@ -334,6 +334,8 @@ async function sendOrderConfirmationEmail(session, order) {
   } catch (error) {
     // Log but don't throw - email failure shouldn't block webhook processing
     console.error('❌ [EMAIL] Failed to send order confirmation:', error.message);
+  }
+}
 
 async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
   try {
