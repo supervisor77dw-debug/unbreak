@@ -282,7 +282,7 @@ export default async function handler(req, res) {
         type: 'standard',
         user_id: userId || 'guest',
         item_count: cartItems.length,
-        supabase_customer_id: customerId || null,
+        supabase_user_id: userId || null,
       },
     };
     console.log('💳 [Checkout] Stripe session data:', {
