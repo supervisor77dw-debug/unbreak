@@ -1,0 +1,342 @@
+{
+  "_comment": "Complete Order + Invoice Example (Phase 3)",
+  "_description": "Shows concrete pricing, customer-facing UX texts, and invoice structure",
+  "_dateCreated": "2026-01-03",
+  
+  "order": {
+    "orderId": "ord_2026_001234",
+    "orderNumber": "ORD-2026-001234",
+    "customerId": "cus_abc123",
+    "status": "CONFIRMED",
+    "currency": "EUR",
+    "total": 181.81,
+    "createdAt": "2026-01-03T14:30:00.000Z",
+    
+    "customer": {
+      "name": "Max Mustermann",
+      "email": "max.mustermann@example.com",
+      "address": {
+        "street": "Musterstraße 123",
+        "postalCode": "10115",
+        "city": "Berlin",
+        "country": "DE"
+      }
+    },
+    
+    "lineItems": [
+      {
+        "lineItemId": "li_xyz789",
+        "type": "CONFIGURATOR_DESIGN",
+        "cartItemId": "cart_1704289800000_abc123",
+        "designId": "design_1704289800000_xyz789",
+        
+        "title": "Glashalter – individuelles Design",
+        "description": "Individuell konfiguriertes Produkt nach Ihren Wünschen gefertigt.",
+        "quantity": 1,
+        
+        "pricing": {
+          "currency": "EUR",
+          "unitPriceNet": 152.00,
+          "unitPriceGross": 180.88,
+          "totalNet": 152.00,
+          "totalGross": 180.88,
+          
+          "breakdownLines": [
+            {
+              "type": "base",
+              "sku": "UNBREAK-GLAS-SET-2",
+              "title": "Glashalter 2er Set",
+              "qty": 1,
+              "unitPriceNet": 89.00,
+              "lineTotalNet": 89.00,
+              "_customerLabel": "Basisprodukt",
+              "_revenueCategory": "Base Products"
+            },
+            {
+              "type": "customization",
+              "feeKey": "CUSTOM_DESIGN_FEE",
+              "title": "Individualisierung",
+              "lineTotalNet": 19.00,
+              "_customerLabel": "Individualisierung",
+              "_revenueCategory": "Customization Services"
+            },
+            {
+              "type": "addon",
+              "pricingKey": "ADDON_WOOD_INLAY",
+              "label": "Holzsockel",
+              "qty": 1,
+              "unitPriceNet": 24.00,
+              "lineTotalNet": 24.00,
+              "_customerLabel": "Holzsockel",
+              "_revenueCategory": "Premium Components - Materials"
+            },
+            {
+              "type": "addon",
+              "pricingKey": "ADDON_CUSTOM_COLOR_HEX",
+              "label": "Individuelle Farbe",
+              "qty": 1,
+              "unitPriceNet": 39.00,
+              "lineTotalNet": 39.00,
+              "_customerLabel": "Individuelle Farbe",
+              "_revenueCategory": "Premium Components - Coating"
+            }
+          ],
+          
+          "pricebookVersion": "v1.2026-01-03",
+          "pricingSignature": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
+          "calculatedAt": "2026-01-03T14:29:45.000Z"
+        },
+        
+        "previews": {
+          "heroUrl": "https://cdn.unbreak.one/designs/design_1704289800000_xyz789_hero.png",
+          "thumbUrl": "https://cdn.unbreak.one/designs/design_1704289800000_xyz789_thumb.png"
+        },
+        
+        "payload": {
+          "version": "1.0",
+          "designId": "design_1704289800000_xyz789",
+          "configuratorVersion": "1.0.0",
+          "productFamily": "GLASSHOLDER",
+          "baseComponents": [
+            {
+              "sku": "UNBREAK-GLAS-SET-2",
+              "qty": 1,
+              "variantId": "set-2"
+            }
+          ],
+          "customization": {
+            "enabled": true,
+            "feeKey": "CUSTOM_DESIGN_FEE"
+          },
+          "premiumAddons": [
+            {
+              "pricingKey": "ADDON_WOOD_INLAY",
+              "addonId": "WOOD_BASE",
+              "label": "Holzsockel",
+              "qty": 1
+            },
+            {
+              "pricingKey": "ADDON_CUSTOM_COLOR_HEX",
+              "addonId": "SPECIAL_COATING_CUSTOM",
+              "label": "Individuelle Farbe",
+              "qty": 1,
+              "color": {
+                "system": "HEX",
+                "code": "#2C5F2D",
+                "label": "Moosgrün"
+              }
+            }
+          ],
+          "sceneState": {
+            "colors": { "primary": "#2C5F2D" },
+            "materials": { "base": "STAINLESS_STEEL", "inlay": "WALNUT_WOOD" }
+          }
+        },
+        
+        "addedAt": "2026-01-03T14:29:45.000Z"
+      }
+    ],
+    
+    "totals": {
+      "subtotalNet": 152.00,
+      "vatAmount": 28.88,
+      "totalGross": 180.88,
+      "currency": "EUR"
+    },
+    
+    "payment": {
+      "method": "STRIPE",
+      "status": "PAID",
+      "sessionId": "cs_test_abc123xyz789"
+    }
+  },
+  
+  "invoice": {
+    "invoiceNumber": "RE-2026-001234",
+    "invoiceDate": "2026-01-03",
+    "orderNumber": "ORD-2026-001234",
+    "orderDate": "2026-01-03",
+    
+    "customer": {
+      "name": "Max Mustermann",
+      "email": "max.mustermann@example.com",
+      "address": {
+        "street": "Musterstraße 123",
+        "postalCode": "10115",
+        "city": "Berlin",
+        "country": "DE"
+      }
+    },
+    
+    "lineItems": [
+      {
+        "position": 1,
+        "title": "Glashalter – individuelles Design",
+        "description": "Dieses Produkt wird speziell nach Ihrer Konfiguration angefertigt.",
+        "quantity": 1,
+        "unitPriceNet": 152.00,
+        "lineTotalNet": 152.00,
+        "vatRate": 0.19,
+        "lineTotalGross": 180.88,
+        
+        "breakdown": {
+          "_comment": "Internal breakdown - not shown on invoice PDF, used for accounting",
+          "baseProduct": {
+            "sku": "UNBREAK-GLAS-SET-2",
+            "priceNet": 89.00
+          },
+          "customization": {
+            "feeKey": "CUSTOM_DESIGN_FEE",
+            "priceNet": 19.00
+          },
+          "premiumAddons": [
+            {
+              "addonKey": "ADDON_WOOD_INLAY",
+              "priceNet": 24.00,
+              "label": "Holzsockel"
+            },
+            {
+              "addonKey": "ADDON_CUSTOM_COLOR_HEX",
+              "priceNet": 39.00,
+              "label": "Individuelle Farbe"
+            }
+          ]
+        },
+        
+        "type": "CONFIGURATOR_DESIGN",
+        "designId": "design_1704289800000_xyz789"
+      }
+    ],
+    
+    "totals": {
+      "subtotalNet": 152.00,
+      "vatAmount": 28.88,
+      "totalGross": 180.88,
+      "currency": "EUR"
+    },
+    
+    "notes": [
+      "Individuell gefertigtes Produkt",
+      "Produktionszeit: 5-7 Werktage ab Zahlungseingang",
+      "Individualisierte Produkte sind vom Widerrufsrecht ausgeschlossen (§ 312g Abs. 2 Nr. 1 BGB)"
+    ],
+    
+    "_accounting": {
+      "_comment": "Internal revenue split for accounting system",
+      "revenueByCategory": {
+        "baseProducts": 89.00,
+        "customizationServices": 19.00,
+        "premiumComponents": 63.00
+      },
+      "revenueByCategoryDetailed": {
+        "baseProducts": {
+          "UNBREAK-GLAS-SET-2": 89.00
+        },
+        "customizationServices": {
+          "CUSTOM_DESIGN_FEE": 19.00
+        },
+        "premiumComponents": {
+          "materials": {
+            "ADDON_WOOD_INLAY": 24.00
+          },
+          "coating": {
+            "ADDON_CUSTOM_COLOR_HEX": 39.00
+          }
+        }
+      }
+    }
+  },
+  
+  "invoiceText": {
+    "_comment": "Customer-facing invoice text (German)",
+    "format": "text",
+    "content": "RECHNUNG\n─────────────────────────────────────────\n\nRechnungsnummer: RE-2026-001234\nRechnungsdatum: 2026-01-03\nBestellnummer: ORD-2026-001234\n\nKunde:\nMax Mustermann\nMusterstraße 123\n10115 Berlin\n\nPositionen:\n─────────────────────────────────────────\n\n1. Glashalter – individuelles Design\n   Dieses Produkt wird speziell nach Ihrer Konfiguration angefertigt.\n   \n   inkl. Basisprodukt\n   inkl. Individualisierung\n   inkl. Sonderkomponenten: Holzsockel, Individuelle Farbe\n   \n   Menge: 1\n   Einzelpreis (netto): 152,00 €\n   Gesamt (netto): 152,00 €\n\n─────────────────────────────────────────\n\nZwischensumme (netto): 152,00 €\nMwSt. (19%): 28,88 €\n\nGESAMTBETRAG: 180,88 €\n\n─────────────────────────────────────────\n\nHinweise:\n• Individuell gefertigtes Produkt\n• Produktionszeit: 5-7 Werktage ab Zahlungseingang\n• Individualisierte Produkte sind vom Widerrufsrecht ausgeschlossen (§ 312g Abs. 2 Nr. 1 BGB)"
+  },
+  
+  "_customerView": {
+    "_comment": "What customer sees in cart/checkout (no internal keys)",
+    "cart": {
+      "title": "Glashalter – individuelles Design",
+      "description": "Individuell konfiguriertes Produkt nach Ihren Wünschen gefertigt.",
+      "priceGross": "180,88 €",
+      "priceBreakdown": {
+        "expanded": true,
+        "header": "Preisaufschlüsselung",
+        "lines": [
+          {
+            "label": "Basisprodukt",
+            "subtitle": "Glashalter 2er Set",
+            "amount": "89,00 €"
+          },
+          {
+            "label": "Individualisierung",
+            "subtitle": null,
+            "amount": "19,00 €"
+          },
+          {
+            "label": "Optionale Komponenten",
+            "subtitle": null,
+            "amount": null,
+            "sublines": [
+              { "label": "Holzsockel", "amount": "24,00 €" },
+              { "label": "Individuelle Farbe", "amount": "39,00 €" }
+            ]
+          }
+        ],
+        "total": {
+          "label": "Gesamt (netto)",
+          "amount": "152,00 €"
+        },
+        "vat": {
+          "label": "inkl. MwSt. (19%)",
+          "amount": "28,88 €"
+        },
+        "totalGross": {
+          "label": "Gesamt",
+          "amount": "180,88 €"
+        }
+      },
+      "notice": "Dieses Produkt wird individuell nach Ihrer Konfiguration gefertigt."
+    },
+    
+    "checkout": {
+      "confirmationText": "Dieses Produkt wird individuell nach Ihrer Konfiguration gefertigt.",
+      "productionTime": "Voraussichtliche Produktionszeit: 5-7 Werktage",
+      "customizationNotice": "Individualisierte Produkte sind vom Umtausch ausgeschlossen."
+    },
+    
+    "orderConfirmation": {
+      "subject": "Bestellbestätigung – Individuelles Design",
+      "message": "Ihre individuelle Konfiguration wurde erfolgreich übermittelt.",
+      "productionEstimate": "Voraussichtliche Fertigstellung: 10.01.2026"
+    }
+  },
+  
+  "_validationRules": {
+    "_comment": "Hard-fail conditions",
+    "checks": [
+      {
+        "rule": "customization.enabled=true requires customization fee",
+        "status": "PASS",
+        "value": "CUSTOM_DESIGN_FEE applied"
+      },
+      {
+        "rule": "All premium addon pricingKeys must be known",
+        "status": "PASS",
+        "value": ["ADDON_WOOD_INLAY", "ADDON_CUSTOM_COLOR_HEX"]
+      },
+      {
+        "rule": "Client price must match server price",
+        "status": "PASS",
+        "clientTotal": 152.00,
+        "serverTotal": 152.00
+      },
+      {
+        "rule": "Pricebook version must match",
+        "status": "PASS",
+        "clientVersion": "v1.2026-01-03",
+        "serverVersion": "v1.2026-01-03"
+      }
+    ]
+  }
+}
