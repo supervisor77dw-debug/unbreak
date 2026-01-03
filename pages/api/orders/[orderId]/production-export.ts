@@ -106,10 +106,14 @@ async function handleProductionExport(
   const { orderId } = req.query;
   const {
     format = 'both',
-    includePreview = true,
-    includeCustomerInfo = true,
+    includePreview,
+    includeCustomerInfo,
     locale = 'de-DE',
-  } = req.query as ProductionExportRequest;
+  } = req.query;
+  
+  // Parse boolean query parameters (come as strings from URL)
+  const includePreviewBool = includePreview === 'true' || includePreview === true || includePreview === undefined;
+  const includeCustomerInfoBool = includeCustomerInfo === 'true' || includeCustomerInfo === true || includeCustomerInfo === undefined;
   
   try {
     // TODO: Fetch snapshots from database
@@ -129,8 +133,8 @@ async function handleProductionExport(
     for (const snapshot of snapshots) {
       const exportResult = await exportProductionSnapshot(snapshot, {
         format: format as 'pdf' | 'json' | 'both',
-        includePreview: includePreview === true || includePreview === 'true',
-        includeCustomerInfo: includeCustomerInfo === true || includeCustomerInfo === 'true',
+        includePreview: includePreviewBool,
+        includeCustomerInfo: includeCustomerInfoBool,
         locale: locale as string,
       });
       
