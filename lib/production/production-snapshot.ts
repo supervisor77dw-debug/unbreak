@@ -413,9 +413,9 @@ export function createProductionSnapshot(
   const productionComponents: ProductionComponent[] = cartItem.selectedComponents.map(comp => 
     convertToProductionComponent(
       comp.componentId,
-      comp.name,
+      comp.label,
       comp.category as 'material' | 'finish' | 'addon',
-      comp.description || comp.name
+      comp.label
     )
   );
   
