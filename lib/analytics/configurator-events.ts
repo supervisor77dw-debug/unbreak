@@ -539,19 +539,3 @@ export function aggregateSessionMetrics(events: ConfiguratorEvent[]): SessionMet
     abandonmentStage,
   };
 }
-
-// ============================================================
-// EXPORTS
-// ============================================================
-
-export type {
-  ConfiguratorEvent,
-  ConfiguratorEventData,
-  ComponentSelectedEvent,
-  PriceChangedEvent,
-  DesignSavedEvent,
-  AddToCartEvent,
-  CheckoutEvent,
-  AbandonmentData,
-  SessionMetrics,
-};
