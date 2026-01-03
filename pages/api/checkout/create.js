@@ -182,6 +182,11 @@ export default async function handler(req, res) {
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'], // Simplified for testing - add more when activated in Stripe Dashboard
+      
+      // CUSTOMER CREATION - ALWAYS CREATE/UPDATE CUSTOMER
+      customer_creation: 'always', // Ensures customer is always created in Stripe
+      customer_email: customer.email,
+      
       line_items: [
         {
           price_data: {
@@ -200,13 +205,15 @@ export default async function handler(req, res) {
           quantity: 1,
         },
       ],
-      customer_email: customer.email,
+      
       metadata: {
         order_id: order.id,
         order_number: orderNumber,
         configuration_id: configuration.id,
         product_sku: product.sku,
+        customer_id: customerId, // Pass our DB customer ID for webhook sync
       },
+      
       success_url: `${getOrigin(req)}/success?session_id={CHECKOUT_SESSION_ID}&order_number=${orderNumber}`,
       cancel_url: `${getOrigin(req)}/configurator?canceled=true`,
       expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour expiry

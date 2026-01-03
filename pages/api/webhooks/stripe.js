@@ -61,6 +61,14 @@ export default async function handler(req, res) {
         await handleCheckoutSessionCompleted(event.data.object);
         break;
 
+      case 'customer.created':
+        await handleCustomerCreated(event.data.object);
+        break;
+
+      case 'customer.updated':
+        await handleCustomerUpdated(event.data.object);
+        break;
+
       default:
         console.log(`⚠️ [Webhook] Unhandled event type: ${event.type}`);
     }
@@ -206,6 +214,9 @@ async function handleCheckoutSessionCompleted(session) {
     console.log('✅ [WEBHOOK] Order successfully marked as paid:', order.id);
     logData.status = 'success';
     await logWebhookEvent(logData);
+
+    // === SYNC STRIPE CUSTOMER TO SUPABASE ===
+    await syncStripeCustomerToSupabase(session, order);
 
     // === SYNC TO PRISMA (ADMIN SYSTEM) ===
     await syncOrderToPrisma(session, order, orderSource);
@@ -508,6 +519,203 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
 
   } catch (error) {
     // Don't throw - Prisma sync failure shouldn't block webhook
+    console.error('⚠️ [PRISMA SYNC] Failed but continuing:', error.message);
+  }
+}
+
+/**
+ * Sync Stripe customer to Supabase customers table
+ */
+async function syncStripeCustomerToSupabase(session, order) {
+  try {
+    console.log('👤 [CUSTOMER SYNC] Starting Stripe → Supabase sync...');
+
+    // Extract customer data from session
+    const stripeCustomerId = session.customer;
+    const customerEmail = session.customer_details?.email || session.customer_email;
+    const customerName = session.customer_details?.name || null;
+    const customerPhone = session.customer_details?.phone || null;
+
+    // Get shipping address if available
+    const defaultShipping = session.shipping_details?.address ? {
+      line1: session.shipping_details.address.line1,
+      line2: session.shipping_details.address.line2,
+      city: session.shipping_details.address.city,
+      state: session.shipping_details.address.state,
+      postal_code: session.shipping_details.address.postal_code,
+      country: session.shipping_details.address.country,
+      name: session.shipping_details.name,
+    } : null;
+
+    const defaultBilling = session.customer_details?.address ? {
+      line1: session.customer_details.address.line1,
+      line2: session.customer_details.address.line2,
+      city: session.customer_details.address.city,
+      state: session.customer_details.address.state,
+      postal_code: session.customer_details.address.postal_code,
+      country: session.customer_details.address.country,
+    } : null;
+
+    if (!stripeCustomerId) {
+      console.log('⚠️ [CUSTOMER SYNC] No Stripe customer ID in session - using email fallback');
+      
+      if (!customerEmail) {
+        console.error('❌ [CUSTOMER SYNC] No customer email found - cannot sync');
+        return;
+      }
+
+      // Fallback: Create customer without Stripe ID (will be updated later)
+      const { data: existingCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('email', customerEmail.toLowerCase())
+        .maybeSingle();
+
+      if (!existingCustomer) {
+        const { error: insertError } = await supabase
+          .from('customers')
+          .insert({
+            email: customerEmail.toLowerCase(),
+            name: customerName,
+            phone: customerPhone,
+            default_shipping: defaultShipping,
+            default_billing: defaultBilling,
+          });
+
+        if (insertError) {
+          console.error('❌ [CUSTOMER SYNC] Failed to create customer:', insertError.message);
+        } else {
+          console.log('✅ [CUSTOMER SYNC] Customer created (no Stripe ID)');
+        }
+      }
+      
+      return;
+    }
+
+    console.log('👤 [CUSTOMER SYNC] Stripe Customer ID:', stripeCustomerId);
+    console.log('👤 [CUSTOMER SYNC] Email:', customerEmail);
+
+    // Upsert customer in Supabase
+    const { data: customer, error: upsertError } = await supabase
+      .from('customers')
+      .upsert({
+        stripe_customer_id: stripeCustomerId,
+        email: customerEmail?.toLowerCase() || `stripe-${stripeCustomerId}@unknown.com`,
+        name: customerName,
+        phone: customerPhone,
+        default_shipping: defaultShipping,
+        default_billing: defaultBilling,
+        metadata: {
+          stripe_customer_id: stripeCustomerId,
+          last_session_id: session.id,
+          synced_at: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'stripe_customer_id',
+        ignoreDuplicates: false,
+      })
+      .select()
+      .single();
+
+    if (upsertError) {
+      console.error('❌ [CUSTOMER SYNC] Upsert failed:', upsertError.message);
+      throw upsertError;
+    }
+
+    console.log('✅ [CUSTOMER SYNC] Customer synced - ID:', customer.id);
+
+    // Update order with customer_id and stripe_customer_id
+    const tableName = order.order_number ? 'orders' : 'simple_orders';
+    const { error: orderUpdateError } = await supabase
+      .from(tableName)
+      .update({
+        customer_id: customer.id,
+        stripe_customer_id: stripeCustomerId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', order.id);
+
+    if (orderUpdateError) {
+      console.error('❌ [CUSTOMER SYNC] Failed to link order to customer:', orderUpdateError.message);
+    } else {
+      console.log('✅ [CUSTOMER SYNC] Order linked to customer');
+    }
+
+    // Trigger stats update (handled by database trigger)
+    console.log('✅ [CUSTOMER SYNC] Complete');
+
+  } catch (error) {
+    // Don't throw - customer sync failure shouldn't block webhook
+    console.error('⚠️ [CUSTOMER SYNC] Failed but continuing:', error.message);
+  }
+}
+
+/**
+ * Handle customer.created event
+ */
+async function handleCustomerCreated(customer) {
+  try {
+    console.log('👤 [CUSTOMER.CREATED] Stripe Customer ID:', customer.id);
+    console.log('👤 [CUSTOMER.CREATED] Email:', customer.email);
+
+    const { error } = await supabase
+      .from('customers')
+      .upsert({
+        stripe_customer_id: customer.id,
+        email: customer.email?.toLowerCase() || `stripe-${customer.id}@unknown.com`,
+        name: customer.name || null,
+        phone: customer.phone || null,
+        metadata: {
+          stripe_metadata: customer.metadata,
+          created_at_stripe: customer.created,
+        },
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'stripe_customer_id',
+        ignoreDuplicates: false,
+      });
+
+    if (error) {
+      console.error('❌ [CUSTOMER.CREATED] Sync failed:', error.message);
+    } else {
+      console.log('✅ [CUSTOMER.CREATED] Customer synced to Supabase');
+    }
+  } catch (error) {
+    console.error('❌ [CUSTOMER.CREATED] Exception:', error.message);
+  }
+}
+
+/**
+ * Handle customer.updated event
+ */
+async function handleCustomerUpdated(customer) {
+  try {
+    console.log('👤 [CUSTOMER.UPDATED] Stripe Customer ID:', customer.id);
+
+    const { error } = await supabase
+      .from('customers')
+      .update({
+        email: customer.email?.toLowerCase() || `stripe-${customer.id}@unknown.com`,
+        name: customer.name || null,
+        phone: customer.phone || null,
+        metadata: {
+          stripe_metadata: customer.metadata,
+          updated_at_stripe: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq('stripe_customer_id', customer.id);
+
+    if (error) {
+      console.error('❌ [CUSTOMER.UPDATED] Update failed:', error.message);
+    } else {
+      console.log('✅ [CUSTOMER.UPDATED] Customer updated in Supabase');
+    }
+  } catch (error) {
+    console.error('❌ [CUSTOMER.UPDATED] Exception:', error.message);
+  }
+}
     console.error('❌ [PRISMA SYNC] Failed:', error.message);
     console.error('❌ [PRISMA SYNC] Stack:', error.stack);
   }

@@ -15,6 +15,12 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [pagination, setPagination] = useState({
+    total: 0,
+    limit: 50,
+    offset: 0,
+    has_more: false,
+  });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -26,18 +32,23 @@ export default function CustomersPage() {
     if (session) {
       fetchCustomers();
     }
-  }, [session, search]);
+  }, [session, search, pagination.offset]);
 
   const fetchCustomers = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
+      params.append('limit', pagination.limit);
+      params.append('offset', pagination.offset);
 
       const res = await fetch(`/api/admin/customers?${params}`);
       if (res.ok) {
         const data = await res.json();
         setCustomers(data.customers || []);
+        setPagination(data.pagination || pagination);
+      } else {
+        console.error('Failed to fetch customers:', res.status);
       }
     } catch (err) {
       console.error('Failed to fetch customers:', err);
@@ -52,11 +63,30 @@ export default function CustomersPage() {
     </div>;
   }
 
-  const formatDate = (date) => new Date(date).toLocaleDateString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  const formatDate = (date) => {
+    if (!date) return '—';
+    return new Date(date).toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const formatCurrency = (cents) => {
+    return `€${(cents / 100).toFixed(2)}`;
+  };
+
+  const handleNextPage = () => {
+    if (pagination.has_more) {
+      setPagination({ ...pagination, offset: pagination.offset + pagination.limit });
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (pagination.offset > 0) {
+      setPagination({ ...pagination, offset: Math.max(0, pagination.offset - pagination.limit) });
+    }
+  };
 
   return (
     <AdminLayout>
@@ -72,11 +102,21 @@ export default function CustomersPage() {
       <div className="admin-filters">
         <input
           type="text"
-          placeholder="Nach E-Mail oder Name suchen..."
+          placeholder="Nach E-Mail, Name oder Stripe ID suchen..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPagination({ ...pagination, offset: 0 }); // Reset to first page on search
+          }}
           className="admin-search-input"
         />
+        <div className="filter-info">
+          {pagination.total > 0 && (
+            <span>
+              Zeige {pagination.offset + 1}-{Math.min(pagination.offset + pagination.limit, pagination.total)} von {pagination.total}
+            </span>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -84,38 +124,81 @@ export default function CustomersPage() {
       ) : customers.length === 0 ? (
         <div className="admin-empty">
           <p>Keine Kunden gefunden</p>
+          {search && <p style={{ fontSize: '14px', color: '#666' }}>Suchbegriff: "{search}"</p>}
         </div>
       ) : (
-        <div className="admin-table-container">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>E-Mail</th>
-                <th>Name</th>
-                <th>Telefon</th>
-                <th>Letzte Bestellung</th>
-                <th>Bestellungen</th>
-                <th>Erstellt</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.map((customer) => (
-                <tr key={customer.id}>
-                  <td>
-                    <div className="customer-email">{customer.email}</div>
-                  </td>
-                  <td>{customer.name || '—'}</td>
-                  <td>{customer.phone || '—'}</td>
-                  <td className="date-cell">
-                    {customer.lastOrderAt ? formatDate(customer.lastOrderAt) : '—'}
-                  </td>
-                  <td>{customer._count?.orders || 0}</td>
-                  <td className="date-cell">{formatDate(customer.createdAt)}</td>
+        <>
+          <div className="admin-table-container">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>E-Mail</th>
+                  <th>Name</th>
+                  <th>Telefon</th>
+                  <th>Stripe ID</th>
+                  <th>Bestellungen</th>
+                  <th>Umsatz</th>
+                  <th>Letzte Bestellung</th>
+                  <th>Erstellt</th>
+                  <th>Aktionen</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {customers.map((customer) => (
+                  <tr key={customer.id}>
+                    <td>
+                      <div className="customer-email">{customer.email}</div>
+                    </td>
+                    <td>{customer.name || '—'}</td>
+                    <td>{customer.phone || '—'}</td>
+                    <td className="stripe-id">
+                      {customer.stripe_customer_id ? (
+                        <code>{customer.stripe_customer_id.substring(0, 20)}...</code>
+                      ) : '—'}
+                    </td>
+                    <td>
+                      <span className="badge">{customer.total_orders}</span>
+                    </td>
+                    <td className="currency">
+                      {customer.total_spent_cents > 0 ? formatCurrency(customer.total_spent_cents) : '€0.00'}
+                    </td>
+                    <td className="date-cell">
+                      {formatDate(customer.last_order_at)}
+                    </td>
+                    <td className="date-cell">{formatDate(customer.created_at)}</td>
+                    <td>
+                      <Link href={`/admin/customers/${customer.id}`} className="action-link">
+                        Details →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {pagination.total > pagination.limit && (
+            <div className="pagination">
+              <button 
+                onClick={handlePrevPage} 
+                disabled={pagination.offset === 0}
+                className="pagination-btn"
+              >
+                ← Vorherige
+              </button>
+              <span className="pagination-info">
+                Seite {Math.floor(pagination.offset / pagination.limit) + 1} von {Math.ceil(pagination.total / pagination.limit)}
+              </span>
+              <button 
+                onClick={handleNextPage} 
+                disabled={!pagination.has_more}
+                className="pagination-btn"
+              >
+                Nächste →
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       <style jsx>{`
@@ -140,11 +223,12 @@ export default function CustomersPage() {
           gap: 12px;
           margin-bottom: 24px;
           flex-wrap: wrap;
+          align-items: center;
         }
 
         .admin-search-input {
           flex: 1;
-          min-width: 250px;
+          min-width: 300px;
           background: #1a1a1a;
           border: 1px solid #2a2a2a;
           border-radius: 6px;
@@ -156,6 +240,11 @@ export default function CustomersPage() {
         .admin-search-input:focus {
           outline: none;
           border-color: #0a4d4d;
+        }
+
+        .filter-info {
+          color: #666;
+          font-size: 13px;
         }
 
         .admin-table-container {
@@ -201,10 +290,77 @@ export default function CustomersPage() {
           font-weight: 500;
         }
 
+        .stripe-id code {
+          background: #222;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          color: #999;
+        }
+
+        .badge {
+          background: #2a2a2a;
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #0a4d4d;
+        }
+
+        .currency {
+          color: #0a9d0a;
+          font-weight: 600;
+          font-family: monospace;
+        }
+
         .date-cell {
           color: #999;
           font-size: 13px;
           font-family: monospace;
+        }
+
+        .action-link {
+          color: #0a4d4d;
+          text-decoration: none;
+          font-weight: 500;
+          font-size: 13px;
+        }
+
+        .action-link:hover {
+          text-decoration: underline;
+        }
+
+        .pagination {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 0;
+        }
+
+        .pagination-btn {
+          background: #1a1a1a;
+          border: 1px solid #2a2a2a;
+          border-radius: 6px;
+          color: #fff;
+          padding: 10px 20px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+          background: #222;
+          border-color: #0a4d4d;
+        }
+
+        .pagination-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .pagination-info {
+          color: #666;
+          font-size: 14px;
         }
 
         .admin-loading,
@@ -218,6 +374,15 @@ export default function CustomersPage() {
         @media (max-width: 768px) {
           .admin-table-container {
             overflow-x: auto;
+          }
+
+          .admin-filters {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .admin-search-input {
+            min-width: 100%;
           }
         }
       `}</style>
