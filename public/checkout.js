@@ -77,24 +77,32 @@ const UnbreakCheckout = {
   /**
    * Configured Product Checkout (from 3D Configurator)
    * @param {object} config - Configuration object with color, finish, etc.
+   * @param {Event} clickEvent - Optional click event for button feedback
    */
-  async buyConfigured(config) {
+  async buyConfigured(config, clickEvent = null) {
     try {
+      console.log('🛒 [CHECKOUT] buyConfigured called with:', config);
+      
       // Show loading
-      const btn = event?.target;
+      const btn = clickEvent?.target;
       const originalText = btn?.textContent;
       if (btn) {
         btn.disabled = true;
         btn.textContent = '⏳ Lädt...';
+        console.log('🛒 [CHECKOUT] Button disabled, showing loading...');
       }
 
       // Validate config
       if (!config || !config.color) {
+        console.warn('⚠️ [CHECKOUT] No color in config, throwing error');
         throw new Error('Bitte wähle zuerst eine Farbe aus');
       }
 
       // Default product SKU for configurator
       const sku = config.productSku || 'UNBREAK-GLAS-01';
+      
+      console.log('🛒 [CHECKOUT] Using SKU:', sku);
+      console.log('🛒 [CHECKOUT] Calling /api/checkout/create...');
 
       // Call checkout API
       const response = await fetch('/api/checkout/create', {
@@ -123,29 +131,35 @@ const UnbreakCheckout = {
 
       // Handle response
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Checkout failed');
+        const errorData = await response.json();
+        console.error('❌ [CHECKOUT] API error:', errorData);
+        throw new Error(errorData.error || 'Checkout failed');
       }
 
       const data = await response.json();
       
-      console.log('✓ Konfiguration gespeichert:', data.configuration_id);
-      console.log('✓ Order erstellt:', data.order_id);
+      console.log('✓ [CHECKOUT] Konfiguration gespeichert:', data.configuration_id);
+      console.log('✓ [CHECKOUT] Order erstellt:', data.order_id);
+      console.log('✓ [CHECKOUT] Checkout URL:', data.checkout_url);
 
       // Redirect to Stripe Checkout
       if (data.checkout_url) {
+        console.log('🔄 [CHECKOUT] Redirecting to Stripe...');
         window.location.href = data.checkout_url;
       } else {
+        console.error('❌ [CHECKOUT] No checkout URL in response!');
         throw new Error('Keine Checkout-URL erhalten');
       }
 
     } catch (error) {
-      console.error('❌ Checkout Error:', error);
+      console.error('❌ [CHECKOUT] Error:', error);
       
       // Restore button
+      const btn = clickEvent?.target;
       if (btn) {
         btn.disabled = false;
-        btn.textContent = originalText;
+        btn.textContent = originalText || '🛒 Jetzt kaufen';
+        console.log('🔄 [CHECKOUT] Button restored');
       }
 
       // Show user-friendly error
@@ -235,7 +249,7 @@ function initCheckoutButtons() {
         
         console.log('✓ [CHECKOUT] Using fallback config:', fallbackConfig);
         
-        UnbreakCheckout.buyConfigured(fallbackConfig);
+        UnbreakCheckout.buyConfigured(fallbackConfig, e); // Pass click event
         return;
       }
       
@@ -247,7 +261,7 @@ function initCheckoutButtons() {
       UnbreakCheckout.buyConfigured({
         productSku: productSku,
         ...config
-      });
+      }, e); // Pass click event for button feedback
     });
     
     // Mark as bound
