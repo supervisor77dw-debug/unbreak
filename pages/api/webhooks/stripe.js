@@ -716,10 +716,3 @@ async function handleCustomerUpdated(customer) {
     console.error('❌ [CUSTOMER.UPDATED] Exception:', error.message);
   }
 }
-    console.error('❌ [PRISMA SYNC] Failed:', error.message);
-    console.error('❌ [PRISMA SYNC] Stack:', error.stack);
-  }
-}
-    console.error('❌ [EMAIL] Stack:', error.stack);
-  }
-}
