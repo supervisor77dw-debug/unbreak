@@ -320,8 +320,12 @@ function initConfiguratorListener() {
     
     if (!allowedOrigins.includes(event.origin)) {
       console.warn('⚠️ [MESSAGE] Blocked - unknown origin:', event.origin);
+      console.log('⚠️ [MESSAGE] Allowed origins are:', allowedOrigins);
+      console.log('⚠️ [MESSAGE] Full event data:', event.data);
       return; // Ignore messages from unknown origins
     }
+    
+    console.log('✅ [MESSAGE] Origin allowed, processing message');
     
     // Handle config updates from configurator
     if (event.data.type === 'UNBREAK_CONFIG_UPDATE') {
@@ -347,6 +351,25 @@ function initConfiguratorListener() {
       
       window.UnbreakCheckoutState.lastConfig = transformedConfig;
       console.log('✓ [CONFIG] Transformed and saved:', transformedConfig);
+    } else {
+      console.log('ℹ️ [MESSAGE] Unknown message type, data:', event.data);
+      
+      // Try to extract config from any message containing product info
+      if (event.data.product_name || event.data.product_variant || event.data.colors) {
+        console.log('📦 [CONFIG] Found product data in unknown message type, processing...');
+        
+        const rawConfig = event.data;
+        const transformedConfig = {
+          color: rawConfig.colors?.selected || rawConfig.colors?.primary || rawConfig.color || 'petrol',
+          finish: rawConfig.finish || 'matte',
+          product: rawConfig.product_variant || rawConfig.product || 'glass_holder',
+          engraving: rawConfig.engraving || null,
+          quantity: rawConfig.quantity || 1,
+        };
+        
+        window.UnbreakCheckoutState.lastConfig = transformedConfig;
+        console.log('✓ [CONFIG] Extracted and saved from unknown type:', transformedConfig);
+      }
     }
   });
   
