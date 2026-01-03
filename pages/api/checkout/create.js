@@ -222,7 +222,6 @@ export default async function handler(req, res) {
               images: config.previewImageUrl ? [config.previewImageUrl] : [],
               metadata: {
                 product_sku: product.sku,
-                order_number: orderNumber,
               },
             },
           },
@@ -237,7 +236,7 @@ export default async function handler(req, res) {
         config_json: JSON.stringify(config),
       },
       
-      success_url: `${getOrigin(req)}/success?session_id={CHECKOUT_SESSION_ID}&order_number=${orderNumber}`,
+      success_url: `${getOrigin(req)}/success?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
       cancel_url: `${getOrigin(req)}/configurator?canceled=true`,
       expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour expiry
     });
