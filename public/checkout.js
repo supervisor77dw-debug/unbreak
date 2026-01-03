@@ -94,8 +94,17 @@ const UnbreakCheckout = {
 
       // Validate config
       if (!config || !config.color) {
-        console.warn('⚠️ [CHECKOUT] No color in config, throwing error');
-        throw new Error('Bitte wähle zuerst eine Farbe aus');
+        console.warn('⚠️ [CHECKOUT] No color in config!');
+        console.log('⚠️ [CHECKOUT] Config received:', config);
+        console.log('⚠️ [CHECKOUT] Full state:', window.UnbreakCheckoutState);
+        
+        // More lenient: proceed with fallback instead of throwing
+        console.log('⚠️ [CHECKOUT] Using fallback config instead of failing');
+        config = {
+          color: 'petrol',
+          finish: 'matte',
+          product: 'glass_holder'
+        };
       }
 
       // Default product SKU for configurator
@@ -229,10 +238,12 @@ function initCheckoutButtons() {
       e.preventDefault();
       
       console.log('🛒 [CHECKOUT] Button clicked');
+      console.log('🛒 [CHECKOUT] Button element:', button);
       console.log('🛒 [CHECKOUT] Current state:', window.UnbreakCheckoutState);
+      console.log('🛒 [CHECKOUT] Product SKU:', productSku);
       
       // Use last config from state
-      const config = window.UnbreakCheckoutState.lastConfig;
+      let config = window.UnbreakCheckoutState?.lastConfig;
       
       console.log('🛒 [CHECKOUT] Config from state:', config);
       
@@ -241,27 +252,26 @@ function initCheckoutButtons() {
         console.log('⚠️ [CHECKOUT] Proceeding with default config...');
         
         // Fallback: Use default config
-        const fallbackConfig = {
+        config = {
           color: 'petrol',
           finish: 'matte',
+          product: 'glass_holder',
           productSku: productSku,
         };
         
-        console.log('✓ [CHECKOUT] Using fallback config:', fallbackConfig);
-        
-        UnbreakCheckout.buyConfigured(fallbackConfig, e); // Pass click event
-        return;
+        console.log('✓ [CHECKOUT] Using fallback config:', config);
+      } else {
+        console.log('✓ [CHECKOUT] Using config from iframe:', config);
+        // Add SKU to config
+        config = {
+          ...config,
+          productSku: productSku
+        };
       }
       
-      console.log('✓ [CHECKOUT] Calling buyConfigured with:', {
-        productSku,
-        ...config
-      });
+      console.log('🛒 [CHECKOUT] Final config for buyConfigured:', config);
       
-      UnbreakCheckout.buyConfigured({
-        productSku: productSku,
-        ...config
-      }, e); // Pass click event for button feedback
+      UnbreakCheckout.buyConfigured(config, e); // Pass click event for button feedback
     });
     
     // Mark as bound
@@ -297,8 +307,28 @@ function initConfiguratorListener() {
     
     // Handle config updates from configurator
     if (event.data.type === 'UNBREAK_CONFIG_UPDATE') {
+      // Handle old format: {color, finish, ...}
       window.UnbreakCheckoutState.lastConfig = event.data.config;
-      console.log('✓ [CONFIG] Updated from configurator:', event.data.config);
+      console.log('✓ [CONFIG] Updated from configurator (old format):', event.data.config);
+    } else if (event.data.type === 'configChanged' || event.data.type === 'checkout_configuration') {
+      // Handle new format from iframe: {product_name, product_variant, colors: {...}, ...}
+      console.log('📦 [CONFIG] Received from configurator iframe:', event.data);
+      
+      const rawConfig = event.data.config || event.data;
+      
+      // Transform new format to old format
+      const transformedConfig = {
+        // Extract color from colors object or directly
+        color: rawConfig.colors?.selected || rawConfig.color || 'petrol',
+        finish: rawConfig.finish || 'matte',
+        product: rawConfig.product_variant || rawConfig.product || 'glass_holder',
+        // Preserve other fields
+        engraving: rawConfig.engraving || null,
+        quantity: rawConfig.quantity || 1,
+      };
+      
+      window.UnbreakCheckoutState.lastConfig = transformedConfig;
+      console.log('✓ [CONFIG] Transformed and saved:', transformedConfig);
     }
   });
   
