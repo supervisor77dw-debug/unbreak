@@ -5,15 +5,16 @@ Complete guide for integrating the 3D configurator into your shop for cart, pric
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [Setup & Installation](#setup--installation)
-3. [Iframe Integration](#iframe-integration)
-4. [Pricing System](#pricing-system)
-5. [Cart Integration](#cart-integration)
-6. [Checkout & Orders](#checkout--orders)
-7. [Fulfillment Export](#fulfillment-export)
-8. [Debug & Observability](#debug--observability)
-9. [Security](#security)
-10. [Testing](#testing)
+2. [Business Logic & Product Model](#business-logic--product-model)
+3. [Setup & Installation](#setup--installation)
+4. [Iframe Integration](#iframe-integration)
+5. [Pricing System](#pricing-system)
+6. [Cart Integration](#cart-integration)
+7. [Checkout & Orders](#checkout--orders)
+8. [Fulfillment Export](#fulfillment-export)
+9. [Debug & Observability](#debug--observability)
+10. [Security](#security)
+11. [Testing](#testing)
 
 ---
 
@@ -60,6 +61,66 @@ Complete guide for integrating the 3D configurator into your shop for cart, pric
 │ - Handles GET_CURRENT_PAYLOAD request          │
 └────────────────────────────────────────────────┘
 ```
+
+---
+
+## Business Logic & Product Model
+
+**Complete business rules:** See [BUSINESS-LOGIC-PRICING.md](./BUSINESS-LOGIC-PRICING.md)
+
+### Product Model (3 Components)
+
+Every configurator design resolves to:
+
+1. **Base Product (Mandatory)**
+   - Exactly ONE base SKU (identical to shop product)
+   - Price from shop catalog (single source of truth)
+   - Examples: `UNBREAK-GLAS-SET-2` (€89.90)
+
+2. **Customization Fee (Mandatory for Non-Default)**
+   - ONE global fee: `CUSTOM_DESIGN_FEE` (€15.00)
+   - Applied iff `customization.enabled = true`
+   - Covers: design effort, handling, production setup
+
+3. **Premium Components (Optional, Additive)**
+   - DELTA prices ONLY (not base products)
+   - Examples: Wood inlay (+€18), Custom color (+€30)
+   - Added on top of base + customization
+
+### Pricing Formula
+
+```
+TOTAL = BASE_PRICE + CUSTOMIZATION_FEE + SUM(PREMIUM_ADDONS)
+
+Example:
+  Base: Glashalter 2er Set         €89.90
+  Customization                     €15.00
+  Premium: Holzsockel               €18.00
+  Premium: Individuelle Farbe       €30.00
+  ──────────────────────────────────────────
+  TOTAL                            €152.90
+```
+
+### Validation Rules (Hard Fail)
+
+Reject design if:
+1. Base SKU cannot be resolved
+2. `customization.enabled = true` but no fee configured
+3. Premium addon `pricingKey` is unknown
+4. Pricing signature mismatch (client ≠ server)
+
+### Revenue Accounting Split
+
+```
+Total Revenue: €152.90
+├─ Base Products: €89.90 → assigned to SKU
+├─ Customization Services: €15.00 → "Customization Services"
+└─ Premium Components: €48.00 → addon categories
+   ├─ Materials: €18.00
+   └─ Colors: €30.00
+```
+
+**Example Order:** See [EXAMPLE-ORDER-SNAPSHOT.json](./EXAMPLE-ORDER-SNAPSHOT.json)
 
 ---
 

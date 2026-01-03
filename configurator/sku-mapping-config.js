@@ -184,17 +184,18 @@ export const PREMIUM_ADDON_MAPPING = {
 /**
  * Customization fee keys
  */
+/**
+ * Customization Fee (Single, Global)
+ * 
+ * Business Rule:
+ * - ONE global customization fee for ANY non-default design
+ * - Applied when customization.enabled = true
+ */
 export const CUSTOMIZATION_FEES = {
   STANDARD: {
-    feeKey: 'CUSTOMIZE_FEE_V1',
-    label: 'Standard Anpassung',
-    description: 'Basisgebühr für Individualisierung'
-  },
-  
-  ADVANCED: {
-    feeKey: 'CUSTOMIZE_FEE_ADVANCED_V1',
-    label: 'Erweiterte Anpassung',
-    description: 'Gebühr für komplexe Individualisierung'
+    feeKey: 'CUSTOM_DESIGN_FEE',
+    label: 'Individualisierung',
+    description: 'Aufpreis für individuelles Design'
   }
 };
 
@@ -238,13 +239,11 @@ export function getPremiumAddon(addonId) {
 
 /**
  * Helper: Get customization fee key
- * @param {string} complexity - "standard" | "advanced"
+ * @param {string} complexity - Ignored (legacy parameter)
  * @returns {string}
  */
 export function getCustomizationFeeKey(complexity = 'standard') {
-  if (complexity === 'advanced') {
-    return CUSTOMIZATION_FEES.ADVANCED.feeKey;
-  }
+  // Business Rule: Always return single global customization fee
   return CUSTOMIZATION_FEES.STANDARD.feeKey;
 }
 

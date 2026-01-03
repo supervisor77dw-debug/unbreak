@@ -1,0 +1,328 @@
+{
+  "_comment": "Example Order Snapshot - Configurator Design",
+  "_description": "Complete order representation showing base product, customization fee, premium components, and revenue split",
+  "_dateCreated": "2026-01-03",
+  
+  "order": {
+    "orderId": "ord_2026_001234",
+    "orderNumber": "ORD-2026-001234",
+    "customerId": "cus_abc123",
+    "customerEmail": "kunde@example.com",
+    "status": "PENDING",
+    "currency": "EUR",
+    "total": 109.90,
+    "createdAt": "2026-01-03T14:30:00.000Z",
+    
+    "lineItems": [
+      {
+        "lineItemId": "li_xyz789",
+        "type": "CONFIGURATOR_DESIGN",
+        "cartItemId": "cart_1704289800000_abc123",
+        "designId": "design_1704289800000_xyz789",
+        
+        "title": "Glashalter – individuelles Design",
+        "quantity": 1,
+        
+        "pricing": {
+          "currency": "EUR",
+          "unitPrice": 109.90,
+          "total": 109.90,
+          
+          "breakdownLines": [
+            {
+              "type": "base",
+              "sku": "UNBREAK-GLAS-SET-2",
+              "title": "Glashalter 2er Set",
+              "qty": 1,
+              "unitPrice": 89.90,
+              "lineTotal": 89.90,
+              "currency": "EUR",
+              "_revenueCategory": "Base Products",
+              "_accountingNote": "Revenue assigned to base product SKU"
+            },
+            {
+              "type": "customization",
+              "feeKey": "CUSTOM_DESIGN_FEE",
+              "title": "Individualisierung",
+              "lineTotal": 15.00,
+              "currency": "EUR",
+              "_revenueCategory": "Customization Services",
+              "_accountingNote": "Revenue assigned to customization services"
+            },
+            {
+              "type": "addon",
+              "pricingKey": "ADDON_WOOD_INLAY",
+              "label": "Holzsockel",
+              "qty": 1,
+              "unitPrice": 18.00,
+              "lineTotal": 18.00,
+              "currency": "EUR",
+              "_revenueCategory": "Premium Components - Materials",
+              "_accountingNote": "Revenue assigned to wood inlay addon"
+            },
+            {
+              "type": "addon",
+              "pricingKey": "ADDON_CUSTOM_COLOR_HEX",
+              "label": "Individuelle Farbe",
+              "qty": 1,
+              "unitPrice": 30.00,
+              "lineTotal": 30.00,
+              "currency": "EUR",
+              "_revenueCategory": "Premium Components - Colors",
+              "_accountingNote": "Revenue assigned to custom color addon"
+            }
+          ],
+          
+          "pricebookVersion": "v1.2024-01-03",
+          "pricingSignature": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
+          "calculatedAt": "2026-01-03T14:29:45.000Z",
+          
+          "_validationStatus": "VERIFIED",
+          "_signatureMatch": true
+        },
+        
+        "previews": {
+          "heroUrl": "https://cdn.unbreak.one/designs/design_1704289800000_xyz789_hero.png",
+          "thumbUrl": "https://cdn.unbreak.one/designs/design_1704289800000_xyz789_thumb.png"
+        },
+        
+        "payload": {
+          "version": "1.0",
+          "designId": "design_1704289800000_xyz789",
+          "configuratorVersion": "1.0.0",
+          "productFamily": "GLASSHOLDER",
+          
+          "baseComponents": [
+            {
+              "sku": "UNBREAK-GLAS-SET-2",
+              "qty": 1,
+              "variantId": "set-2",
+              "productKey": "glass_holder_set_2"
+            }
+          ],
+          
+          "customization": {
+            "enabled": true,
+            "feeKey": "CUSTOM_DESIGN_FEE"
+          },
+          
+          "premiumAddons": [
+            {
+              "pricingKey": "ADDON_WOOD_INLAY",
+              "addonId": "WOOD_INLAY",
+              "label": "Holzsockel",
+              "qty": 1
+            },
+            {
+              "pricingKey": "ADDON_CUSTOM_COLOR_HEX",
+              "addonId": "CUSTOM_COLOR_HEX",
+              "label": "Individuelle Farbe",
+              "qty": 1,
+              "color": {
+                "system": "HEX",
+                "code": "#2C5F2D",
+                "label": "Moosgrün"
+              }
+            }
+          ],
+          
+          "bom": {
+            "parts": [
+              {
+                "partId": "BASE_MOUNT",
+                "partName": "Basis-Halterung",
+                "qty": 2,
+                "material": "STAINLESS_STEEL",
+                "dimensions": null
+              },
+              {
+                "partId": "WOOD_BASE",
+                "partName": "Holzsockel (Walnuss)",
+                "qty": 2,
+                "material": "WALNUT_WOOD",
+                "dimensions": { "width": 80, "depth": 60, "height": 15, "unit": "mm" }
+              }
+            ]
+          },
+          
+          "sceneState": {
+            "camera": {
+              "position": { "x": 0, "y": 5, "z": 10 },
+              "target": { "x": 0, "y": 0, "z": 0 }
+            },
+            "colors": {
+              "primary": "#2C5F2D",
+              "coating": "POWDER_COATING"
+            },
+            "materials": {
+              "base": "STAINLESS_STEEL",
+              "inlay": "WALNUT_WOOD"
+            }
+          },
+          
+          "previews": {
+            "heroUrl": "https://cdn.unbreak.one/designs/design_1704289800000_xyz789_hero.png",
+            "thumbUrl": "https://cdn.unbreak.one/designs/design_1704289800000_xyz789_thumb.png"
+          },
+          
+          "validation": {
+            "isValid": true,
+            "errors": []
+          },
+          
+          "createdAt": "2026-01-03T14:25:00.000Z",
+          "updatedAt": "2026-01-03T14:29:00.000Z"
+        },
+        
+        "addedAt": "2026-01-03T14:29:45.000Z",
+        "updatedAt": "2026-01-03T14:29:45.000Z"
+      }
+    ],
+    
+    "payment": {
+      "method": "STRIPE",
+      "status": "PENDING",
+      "sessionId": "cs_test_abc123xyz789"
+    },
+    
+    "shipping": {
+      "method": "STANDARD",
+      "address": {
+        "name": "Max Mustermann",
+        "street": "Musterstraße 123",
+        "city": "Berlin",
+        "postalCode": "10115",
+        "country": "DE"
+      }
+    }
+  },
+  
+  "_accountingBreakdown": {
+    "_comment": "Revenue split for accounting",
+    "totalRevenue": 109.90,
+    "revenueByCategory": {
+      "baseProducts": {
+        "amount": 89.90,
+        "items": [
+          { "sku": "UNBREAK-GLAS-SET-2", "amount": 89.90 }
+        ]
+      },
+      "customizationServices": {
+        "amount": 15.00,
+        "items": [
+          { "feeKey": "CUSTOM_DESIGN_FEE", "amount": 15.00 }
+        ]
+      },
+      "premiumComponents": {
+        "amount": 48.00,
+        "itemsBySubcategory": {
+          "materials": [
+            { "pricingKey": "ADDON_WOOD_INLAY", "amount": 18.00 }
+          ],
+          "colors": [
+            { "pricingKey": "ADDON_CUSTOM_COLOR_HEX", "amount": 30.00 }
+          ]
+        }
+      }
+    }
+  },
+  
+  "_fulfillmentExport": {
+    "_comment": "Production instructions - no pricing logic required",
+    
+    "whatToPick": {
+      "baseSKU": "UNBREAK-GLAS-SET-2",
+      "qty": 1,
+      "location": "WAREHOUSE_A_SHELF_15"
+    },
+    
+    "whatToCustomize": {
+      "customizationEnabled": true,
+      "sceneState": {
+        "colors": { "primary": "#2C5F2D", "coating": "POWDER_COATING" },
+        "materials": { "base": "STAINLESS_STEEL", "inlay": "WALNUT_WOOD" }
+      },
+      "previewImages": {
+        "hero": "https://cdn.unbreak.one/designs/design_1704289800000_xyz789_hero.png",
+        "thumb": "https://cdn.unbreak.one/designs/design_1704289800000_xyz789_thumb.png"
+      }
+    },
+    
+    "whatToAdd": {
+      "premiumComponents": [
+        {
+          "component": "WOOD_BASE",
+          "material": "WALNUT_WOOD",
+          "qty": 2,
+          "instructions": "Walnuss-Einlage montieren"
+        }
+      ],
+      "coatings": [
+        {
+          "type": "POWDER_COATING",
+          "color": "#2C5F2D",
+          "colorLabel": "Moosgrün",
+          "instructions": "Pulverbeschichtung in individueller Farbe (siehe Farbcode)"
+        }
+      ]
+    },
+    
+    "productionNotes": [
+      "⚠️ INDIVIDUALISIERT - Sonderanfertigung",
+      "Farbe: #2C5F2D (Moosgrün)",
+      "Material: STAINLESS_STEEL",
+      "⚠️ Individuelle Montage erforderlich"
+    ]
+  },
+  
+  "_validationRules": {
+    "_comment": "Hard-fail conditions that would reject this order",
+    "checks": [
+      {
+        "rule": "Base SKU must resolve to existing shop product",
+        "status": "PASS",
+        "value": "UNBREAK-GLAS-SET-2"
+      },
+      {
+        "rule": "Exactly 1 base component required",
+        "status": "PASS",
+        "value": 1
+      },
+      {
+        "rule": "Customization.enabled=true requires valid fee configured",
+        "status": "PASS",
+        "value": "CUSTOM_DESIGN_FEE"
+      },
+      {
+        "rule": "All premium addon pricingKeys must be known",
+        "status": "PASS",
+        "value": ["ADDON_WOOD_INLAY", "ADDON_CUSTOM_COLOR_HEX"]
+      },
+      {
+        "rule": "Pricing signature must match server calculation",
+        "status": "PASS",
+        "clientSignature": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
+        "serverSignature": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456"
+      }
+    ]
+  },
+  
+  "_customerView": {
+    "_comment": "What the customer sees in cart/checkout (no internal SKUs/pricingKeys)",
+    "cartItem": {
+      "title": "Glashalter – individuelles Design",
+      "previewImage": "https://cdn.unbreak.one/designs/design_1704289800000_xyz789_hero.png",
+      "price": "109,90 €",
+      "priceBreakdown": {
+        "expanded": true,
+        "lines": [
+          { "label": "Glashalter 2er Set", "amount": "89,90 €" },
+          { "label": "Individualisierung", "amount": "15,00 €" },
+          { "label": "Holzsockel", "amount": "18,00 €" },
+          { "label": "Individuelle Farbe", "amount": "30,00 €" }
+        ],
+        "total": "109,90 €"
+      }
+    }
+  }
+}
