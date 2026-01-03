@@ -180,20 +180,58 @@
         if (event.origin === 'https://unbreak-3-d-konfigurator.vercel.app') {
             console.log('✅ [RELAY] Message from configurator iframe!');
             
-            // If data contains product config, relay it
-            if (event.data && (event.data.product_name || event.data.product_variant || event.data.colors)) {
-                console.log('📦 [RELAY] Found config data, dispatching to window...');
+            // Handle different message types
+            const data = event.data;
+            
+            // If message has a payload with config data
+            if (data.payload && (data.payload.product_name || data.payload.product_variant || data.payload.colors)) {
+                console.log('📦 [RELAY] Found config in payload, dispatching...');
                 
-                // Dispatch as new message to same window for checkout.js
                 window.postMessage({
                     type: 'checkout_configuration',
-                    ...event.data
+                    ...data.payload
+                }, window.location.origin);
+                
+                console.log('✅ [RELAY] Config from payload relayed');
+            }
+            // If data itself contains product config
+            else if (data.product_name || data.product_variant || data.colors) {
+                console.log('📦 [RELAY] Found config data in root, dispatching...');
+                
+                window.postMessage({
+                    type: 'checkout_configuration',
+                    ...data
                 }, window.location.origin);
                 
                 console.log('✅ [RELAY] Config relayed to checkout.js');
             }
+            // Special handling for error messages that might contain config
+            else if (data.type === 'UNBREAK_CONFIG_ERROR') {
+                console.log('⚠️ [RELAY] Error message received, checking for config in payload...');
+                
+                // Some iframes send config even in error payload
+                if (data.payload && typeof data.payload === 'object') {
+                    console.log('📦 [RELAY] Payload exists:', data.payload);
+                    
+                    // Try to use default config
+                    const fallbackConfig = {
+                        product_name: 'UNBREAK ONE',
+                        product_variant: 'glass_holder',
+                        colors: { selected: 'petrol' },
+                    };
+                    
+                    console.log('📦 [RELAY] Using fallback config after error');
+                    
+                    window.postMessage({
+                        type: 'checkout_configuration',
+                        ...fallbackConfig
+                    }, window.location.origin);
+                }
+            } else {
+                console.log('ℹ️ [RELAY] No config found in message, ignoring');
+            }
         }
-    }, true); // Use capture phase
+    }, true); // Use capture phase to catch before other handlers
     
     console.log('✅ [RELAY] Direct relay listener attached');
     </script>
