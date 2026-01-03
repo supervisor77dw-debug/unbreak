@@ -136,7 +136,6 @@ export default async function handler(req, res) {
     // 4. CREATE ORDER (pending_payment)
     // ========================================
     // Use simple_orders for guest checkout (no customer_id required)
-    const orderNumber = generateOrderNumber();
 
     const { data: order, error: orderError } = await supabaseAdmin
       .from('simple_orders')
@@ -149,13 +148,14 @@ export default async function handler(req, res) {
         currency: product.currency,
         status: 'pending',
         order_type: 'configured',
-        config_json: config,
+        // Store items as JSON (simple_orders has 'items' column as JSONB)
         items: [{
           product_id: product.id,
           sku: product.sku,
           name: product.title_de || product.name,
           unit_price_cents: price_cents,
           quantity: config.quantity || 1,
+          // Store config in item metadata
           config: config
         }]
       })
