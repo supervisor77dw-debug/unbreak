@@ -60,17 +60,19 @@ export default async function handler(req, res) {
     // ========================================
     // 1. VALIDATE INPUT
     // ========================================
-    if (!product_sku || !config || !customer?.email) {
+    if (!product_sku || !config) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['product_sku', 'config', 'customer.email'],
+        required: ['product_sku', 'config'],
       });
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(customer.email)) {
-      return res.status(400).json({ error: 'Invalid email address' });
+    // Email is optional - will be collected in Stripe Checkout
+    if (customer?.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(customer.email)) {
+        return res.status(400).json({ error: 'Invalid email address' });
+      }
     }
 
     // ========================================
@@ -88,44 +90,46 @@ export default async function handler(req, res) {
     const totalCents = subtotalCents + shippingCents + taxCents;
 
     // ========================================
-    // 3. UPSERT CUSTOMER
+    // 3. UPSERT CUSTOMER (if email provided)
     // ========================================
-    const { data: existingCustomer } = await supabaseAdmin
-      .from('customers')
-      .select('id')
-      .eq('email', customer.email.toLowerCase())
-      .single();
-
-    let customerId;
-
-    if (existingCustomer) {
-      customerId = existingCustomer.id;
-      
-      // Update name if provided and different
-      if (customer.name) {
-        await supabaseAdmin
-          .from('customers')
-          .update({ name: customer.name, updated_at: new Date().toISOString() })
-          .eq('id', customerId);
-      }
-    } else {
-      // Create new customer
-      const { data: newCustomer, error: customerError } = await supabaseAdmin
+    let customerId = null;
+    
+    if (customer?.email) {
+      const { data: existingCustomer } = await supabaseAdmin
         .from('customers')
-        .insert({
-          email: customer.email.toLowerCase(),
-          name: customer.name || null,
-          phone: customer.phone || null,
-        })
-        .select()
+        .select('id')
+        .eq('email', customer.email.toLowerCase())
         .single();
 
-      if (customerError) {
-        console.error('Customer creation error:', customerError);
-        return res.status(500).json({ error: 'Failed to create customer' });
-      }
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+        
+        // Update name if provided and different
+        if (customer.name) {
+          await supabaseAdmin
+            .from('customers')
+            .update({ name: customer.name, updated_at: new Date().toISOString() })
+            .eq('id', customerId);
+        }
+      } else {
+        // Create new customer
+        const { data: newCustomer, error: customerError } = await supabaseAdmin
+          .from('customers')
+          .insert({
+            email: customer.email.toLowerCase(),
+            name: customer.name || null,
+            phone: customer.phone || null,
+          })
+          .select()
+          .single();
 
-      customerId = newCustomer.id;
+        if (customerError) {
+          console.error('Customer creation error:', customerError);
+          return res.status(500).json({ error: 'Failed to create customer' });
+        }
+
+        customerId = newCustomer.id;
+      }
     }
 
     // ========================================
