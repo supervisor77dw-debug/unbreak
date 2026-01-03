@@ -431,14 +431,3 @@ export function getCriticalDropOffStages(
   
   return stages;
 }
-
-// ============================================================
-// EXPORTS
-// ============================================================
-
-export type {
-  AbandonmentReason,
-  AbandonmentConfig,
-  AbandonmentEvent,
-  AbandonmentAnalysis,
-};
