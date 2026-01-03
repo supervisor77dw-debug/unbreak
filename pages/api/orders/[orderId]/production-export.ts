@@ -30,6 +30,7 @@ import {
 import {
   FulfillmentManager,
   determineFulfillmentType,
+  getNextAllowedStatuses,
 } from '../../../../lib/fulfillment/fulfillment-manager';
 import {
   calculateOrderDeliveryEstimate,
@@ -299,7 +300,7 @@ async function handleProductionStatus(
     const canModify = FulfillmentManager.canModifyOrder(fulfillmentStatus);
     
     // Get next allowed statuses
-    const nextAllowedStatuses = FulfillmentManager.getNextAllowedStatuses(
+    const nextAllowedStatuses = getNextAllowedStatuses(
       fulfillmentStatus.productionStatus
     );
     
