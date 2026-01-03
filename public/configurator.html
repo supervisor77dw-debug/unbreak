@@ -158,6 +158,38 @@
     <script src="script.js"></script>
     <script src="checkout.js"></script>
     <script src="configurator/configurator.js"></script>
+    
+    <!-- Direct iframe message relay -->
+    <script>
+    console.log('🔧 [RELAY] Setting up direct iframe message relay');
+    
+    window.addEventListener('message', function(event) {
+        console.log('🔔 [RELAY] Message received:', {
+            origin: event.origin,
+            data: event.data
+        });
+        
+        // Check if this is from the configurator iframe
+        if (event.origin === 'https://unbreak-3-d-konfigurator.vercel.app') {
+            console.log('✅ [RELAY] Message from configurator iframe!');
+            
+            // If data contains product config, relay it
+            if (event.data && (event.data.product_name || event.data.product_variant || event.data.colors)) {
+                console.log('📦 [RELAY] Found config data, dispatching to window...');
+                
+                // Dispatch as new message to same window for checkout.js
+                window.postMessage({
+                    type: 'checkout_configuration',
+                    ...event.data
+                }, window.location.origin);
+                
+                console.log('✅ [RELAY] Config relayed to checkout.js');
+            }
+        }
+    }, true); // Use capture phase
+    
+    console.log('✅ [RELAY] Direct relay listener attached');
+    </script>
 
 </body>
 
