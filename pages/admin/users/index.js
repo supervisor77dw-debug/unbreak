@@ -14,20 +14,14 @@ import AdminLayout from '../../../components/AdminLayout';
 
 const ROLE_LABELS = {
   admin: 'Administrator',
-  ops: 'Operations',
+  staff: 'Staff',
   support: 'Support',
-  designer: 'Designer',
-  finance: 'Finance',
-  user: 'User',
 };
 
 const ROLE_COLORS = {
   admin: '#dc2626',
-  ops: '#ea580c',
+  staff: '#ea580c',
   support: '#2563eb',
-  designer: '#7c3aed',
-  finance: '#059669',
-  user: '#6b7280',
 };
 
 export default function UsersPage() {
@@ -42,10 +36,8 @@ export default function UsersPage() {
   const [activeFilter, setActiveFilter] = useState('');
   
   // Modals
-  const [showInviteModal, setShowInviteModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [inviteData, setInviteData] = useState({ email: '', role: 'user', display_name: '' });
-  const [createData, setCreateData] = useState({ email: '', password: '', role: 'user', display_name: '' });
+  const [createData, setCreateData] = useState({ email: '', password: '', role: 'support', display_name: '' });
   const [submitting, setSubmitting] = useState(false);
 
   // Fetch users
@@ -54,16 +46,13 @@ export default function UsersPage() {
     setError(null);
 
     try {
-      const session = await getSession();
       const params = new URLSearchParams({
         search,
         role: roleFilter,
         is_active: activeFilter,
       });
 
-      const response = await fetch(`/api/admin/users?${params}`, {
-        headers: { 'Authorization': `Bearer ${session?.accessToken}` }
-      });
+      const response = await fetch(`/api/admin/users?${params}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch users');
@@ -85,46 +74,15 @@ export default function UsersPage() {
     }
   }, [status, search, roleFilter, activeFilter]);
 
-  // Invite user
-  const handleInvite = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    try {
-      const session = await getSession();
-      const response = await fetch('/api/admin/users/invite', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.accessToken}`
-        },
-        body: JSON.stringify(inviteData),
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to invite user');
-
-      alert('✅ Invitation sent successfully!');
-      setShowInviteModal(false);
-      setInviteData({ email: '', role: 'user', display_name: '' });
-      await fetchUsers();
-    } catch (err) {
-      alert('❌ ' + err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   // Create user
   const handleCreate = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const session = await getSession();
       const response = await fetch('/api/admin/users/create', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.accessToken}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(createData),
       });
@@ -134,7 +92,7 @@ export default function UsersPage() {
 
       alert('✅ User created successfully!');
       setShowCreateModal(false);
-      setCreateData({ email: '', password: '', role: 'user', display_name: '' });
+      setCreateData({ email: '', password: '', role: 'support', display_name: '' });
       await fetchUsers();
     } catch (err) {
       alert('❌ ' + err.message);
@@ -146,12 +104,10 @@ export default function UsersPage() {
   // Update user
   const handleUpdateUser = async (userId, updates) => {
     try {
-      const session = await getSession();
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.accessToken}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(updates),
       });
@@ -168,8 +124,8 @@ export default function UsersPage() {
 
   // Change role
   const changeUserRole = (user) => {
-    const newRole = prompt(`Change role for ${user.email}\n\nOptions: admin, ops, support, designer, finance, user\n\nCurrent: ${user.role}`, user.role);
-    if (newRole && ['admin', 'ops', 'support', 'designer', 'finance', 'user'].includes(newRole)) {
+    const newRole = prompt(`Change role for ${user.email}\n\nOptions: admin, staff, support\n\nCurrent: ${user.role}`, user.role);
+    if (newRole && ['admin', 'staff', 'support'].includes(newRole)) {
       handleUpdateUser(user.id, { role: newRole });
     } else if (newRole) {
       alert('Invalid role');
@@ -206,38 +162,21 @@ export default function UsersPage() {
         {/* Header with action buttons */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
           <h1 style={{ color: '#fff', fontSize: '28px', margin: 0 }}>Users Management</h1>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={() => setShowInviteModal(true)}
-              style={{
-                padding: '10px 20px',
-                background: '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}
-            >
-              📧 Invite User
-            </button>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              style={{
-                padding: '10px 20px',
-                background: '#10b981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}
-            >
-              ➕ Create User
-            </button>
-          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              padding: '10px 20px',
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            ➕ Create User
+          </button>
         </div>
 
         {/* Filters */}
@@ -290,11 +229,8 @@ export default function UsersPage() {
             >
               <option value="">All Roles</option>
               <option value="admin">Administrator</option>
-              <option value="ops">Operations</option>
+              <option value="staff">Staff</option>
               <option value="support">Support</option>
-              <option value="designer">Designer</option>
-              <option value="finance">Finance</option>
-              <option value="user">User</option>
             </select>
           </div>
 
@@ -423,67 +359,6 @@ export default function UsersPage() {
           </div>
         )}
 
-        {/* Invite Modal */}
-        {showInviteModal && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div style={{ background: '#1a1a1a', padding: '30px', borderRadius: '12px', maxWidth: '500px', width: '90%', border: '1px solid #333' }}>
-              <h2 style={{ color: '#fff', marginBottom: '20px' }}>📧 Invite User</h2>
-              <form onSubmit={handleInvite}>
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#888' }}>Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={inviteData.email}
-                    onChange={(e) => setInviteData({...inviteData, email: e.target.value})}
-                    style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
-                  />
-                </div>
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#888' }}>Role *</label>
-                  <select
-                    value={inviteData.role}
-                    onChange={(e) => setInviteData({...inviteData, role: e.target.value})}
-                    style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
-                  >
-                    <option value="user">User</option>
-                    <option value="support">Support</option>
-                    <option value="designer">Designer</option>
-                    <option value="ops">Operations</option>
-                    <option value="finance">Finance</option>
-                    <option value="admin">Administrator</option>
-                  </select>
-                </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', color: '#888' }}>Display Name</label>
-                  <input
-                    type="text"
-                    value={inviteData.display_name}
-                    onChange={(e) => setInviteData({...inviteData, display_name: e.target.value})}
-                    style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowInviteModal(false)}
-                    style={{ padding: '10px 20px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    style={{ padding: '10px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.5 : 1 }}
-                  >
-                    {submitting ? 'Sending...' : 'Send Invitation'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
         {/* Create Modal */}
         {showCreateModal && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
@@ -518,11 +393,8 @@ export default function UsersPage() {
                     onChange={(e) => setCreateData({...createData, role: e.target.value})}
                     style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
                   >
-                    <option value="user">User</option>
                     <option value="support">Support</option>
-                    <option value="designer">Designer</option>
-                    <option value="ops">Operations</option>
-                    <option value="finance">Finance</option>
+                    <option value="staff">Staff</option>
                     <option value="admin">Administrator</option>
                   </select>
                 </div>

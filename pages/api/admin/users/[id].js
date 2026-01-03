@@ -1,26 +1,84 @@
 /**
  * ADMIN API: User Detail & Update
  * 
- * GET /api/admin/users/[id]
- * - Get user details
- * 
  * PATCH /api/admin/users/[id]
  * - Update user role
  * - Activate/deactivate user
  * - Update display name
  * 
- * Requires: admin role
+ * Requires: ADMIN role
  */
 
-import { createClient } from '@supabase/supabase-js';
-import { requireAdminAuth } from '../../../../lib/auth-helpers';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../auth/[...nextauth]';
+import prisma from '../../../../lib/prisma';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const VALID_ROLES = ['ADMIN', 'STAFF', 'SUPPORT'];
 
-const VALID_ROLES = ['admin', 'ops', 'support', 'designer', 'finance', 'user'];
+export default async function handler(req, res) {
+  // Check authentication
+  const session = await getServerSession(req, res, authOptions);
+  
+  if (!session || session.user.role !== 'ADMIN') {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.query;
+
+  if (req.method === 'PATCH') {
+    try {
+      const { role, is_active, display_name } = req.body;
+
+      const updates = {};
+
+      if (role) {
+        const roleUpper = role.toUpperCase();
+        if (!VALID_ROLES.includes(roleUpper)) {
+          return res.status(400).json({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` });
+        }
+        updates.role = roleUpper;
+      }
+
+      if (is_active !== undefined) {
+        updates.isActive = is_active;
+      }
+
+      if (display_name !== undefined) {
+        updates.name = display_name || null;
+      }
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: updates,
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isActive: true,
+          updatedAt: true,
+        },
+      });
+
+      return res.status(200).json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role.toLowerCase(),
+          display_name: user.name,
+          is_active: user.isActive,
+        },
+      });
+
+    } catch (error) {
+      console.error('❌ [UPDATE USER API] Error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' });
+}
 
 export default async function handler(req, res) {
   // Require admin authentication
