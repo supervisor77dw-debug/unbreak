@@ -203,8 +203,12 @@ window.UnbreakCheckoutState = {
  * Idempotent - can be called multiple times safely
  */
 function initCheckoutButtons() {
+  console.log('🔧 [INIT] initCheckoutButtons called');
+  console.log('🔧 [INIT] Document ready state:', document.readyState);
+  
   // Standard Product Buttons
   const standardButtons = document.querySelectorAll('[data-checkout="standard"]');
+  console.log('🔧 [INIT] Found standard buttons:', standardButtons.length);
   standardButtons.forEach(button => {
     // Skip if already bound
     if (button.dataset.bound === '1') return;
@@ -228,11 +232,16 @@ function initCheckoutButtons() {
   
   // Configured Product Buttons (Configurator)
   const configuredButtons = document.querySelectorAll('[data-checkout="configured"]');
+  console.log('🔧 [INIT] Found configured buttons:', configuredButtons.length);
   configuredButtons.forEach(button => {
     // Skip if already bound
-    if (button.dataset.bound === '1') return;
+    if (button.dataset.bound === '1') {
+      console.log('⏭️ [INIT] Button already bound, skipping');
+      return;
+    }
     
     const productSku = button.dataset.productSku || 'UNBREAK-GLAS-01';
+    console.log('🔧 [INIT] Binding configured button with SKU:', productSku);
     
     button.addEventListener('click', (e) => {
       e.preventDefault();
@@ -285,7 +294,12 @@ function initCheckoutButtons() {
  * Listen to configurator updates via postMessage
  */
 function initConfiguratorListener() {
-  if (window.UnbreakCheckoutState.initialized) return;
+  console.log('🔊 [INIT] initConfiguratorListener called');
+  
+  if (window.UnbreakCheckoutState.initialized) {
+    console.log('⏭️ [INIT] Listener already initialized, skipping');
+    return;
+  }
   
   window.addEventListener('message', (event) => {
     console.log('📨 [MESSAGE] Received:', {
@@ -332,6 +346,7 @@ function initConfiguratorListener() {
     }
   });
   
+  console.log('✅ [INIT] postMessage listener attached');
   window.UnbreakCheckoutState.initialized = true;
 }
 
@@ -366,7 +381,8 @@ if (typeof window !== 'undefined') {
       subtree: true,
     });
   }
+  
+  console.log('✅ [CHECKOUT] checkout.js loaded and initialized');
+  console.log('✅ [CHECKOUT] UnbreakCheckout available:', typeof window.UnbreakCheckout);
+  console.log('✅ [CHECKOUT] State initialized:', window.UnbreakCheckoutState);
 }
-
-// Export for module usage
-export default UnbreakCheckout;
