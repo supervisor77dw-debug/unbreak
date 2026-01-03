@@ -1,15 +1,13 @@
 /**
  * ADMIN UI: Users Management List
  * 
- * Display all users with:
- * - Email, Name, Role, Status
- * - Filter by role and active status
- * - Search by email/name
+ * Display all users from auth.users + profiles
+ * - Invite and Create new users
  * - Edit role and activate/deactivate
  */
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, getSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import AdminLayout from '../../../components/AdminLayout';
@@ -32,10 +30,6 @@ const ROLE_COLORS = {
   user: '#6b7280',
 };
 
-export async function getServerSideProps() {
-  return { props: {} };
-}
-
 export default function UsersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -46,12 +40,13 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 50,
-    total: 0,
-    totalPages: 0,
-  });
+  
+  // Modals
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [inviteData, setInviteData] = useState({ email: '', role: 'user', display_name: '' });
+  const [createData, setCreateData] = useState({ email: '', password: '', role: 'user', display_name: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   // Fetch users
   const fetchUsers = async () => {
@@ -59,15 +54,16 @@ export default function UsersPage() {
     setError(null);
 
     try {
+      const session = await getSession();
       const params = new URLSearchParams({
-        page: pagination.page,
-        limit: pagination.limit,
         search,
         role: roleFilter,
         is_active: activeFilter,
       });
 
-      const response = await fetch(`/api/admin/users?${params}`);
+      const response = await fetch(`/api/admin/users?${params}`, {
+        headers: { 'Authorization': `Bearer ${session?.accessToken}` }
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch users');
@@ -75,7 +71,6 @@ export default function UsersPage() {
 
       const data = await response.json();
       setUsers(data.users || []);
-      setPagination(data.pagination);
     } catch (err) {
       console.error('Error fetching users:', err);
       setError(err.message);
@@ -88,43 +83,103 @@ export default function UsersPage() {
     if (status === 'authenticated') {
       fetchUsers();
     }
-  }, [status, pagination.page, search, roleFilter, activeFilter]);
+  }, [status, search, roleFilter, activeFilter]);
 
-  // Update user role or status
+  // Invite user
+  const handleInvite = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const session = await getSession();
+      const response = await fetch('/api/admin/users/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.accessToken}`
+        },
+        body: JSON.stringify(inviteData),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to invite user');
+
+      alert('✅ Invitation sent successfully!');
+      setShowInviteModal(false);
+      setInviteData({ email: '', role: 'user', display_name: '' });
+      await fetchUsers();
+    } catch (err) {
+      alert('❌ ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Create user
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const session = await getSession();
+      const response = await fetch('/api/admin/users/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.accessToken}`
+        },
+        body: JSON.stringify(createData),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to create user');
+
+      alert('✅ User created successfully!');
+      setShowCreateModal(false);
+      setCreateData({ email: '', password: '', role: 'user', display_name: '' });
+      await fetchUsers();
+    } catch (err) {
+      alert('❌ ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Update user
   const handleUpdateUser = async (userId, updates) => {
     try {
+      const session = await getSession();
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.accessToken}`
+        },
         body: JSON.stringify(updates),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to update user');
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update user');
 
-      // Refresh users list
+      alert('✅ User updated successfully!');
       await fetchUsers();
-      alert('User updated successfully');
     } catch (err) {
-      console.error('Error updating user:', err);
-      alert('Failed to update user: ' + err.message);
+      alert('❌ ' + err.message);
     }
   };
 
-  // Toggle user active status
-  const toggleUserStatus = async (user) => {
+  // Change role
+  const changeUserRole = (user) => {
+    const newRole = prompt(`Change role for ${user.email}\n\nOptions: admin, ops, support, designer, finance, user\n\nCurrent: ${user.role}`, user.role);
+    if (newRole && ['admin', 'ops', 'support', 'designer', 'finance', 'user'].includes(newRole)) {
+      handleUpdateUser(user.id, { role: newRole });
+    } else if (newRole) {
+      alert('Invalid role');
+    }
+  };
+
+  // Toggle active status
+  const toggleUserStatus = (user) => {
     if (confirm(`Are you sure you want to ${user.is_active ? 'deactivate' : 'activate'} ${user.email}?`)) {
-      await handleUpdateUser(user.id, { is_active: !user.is_active });
-    }
-  };
-
-  // Change user role
-  const changeUserRole = async (user) => {
-    const newRole = prompt(`Enter new role for ${user.email}:\n\nAvailable roles:\n- admin\n- ops\n- support\n- designer\n- finance\n- user`, user.role);
-    
-    if (newRole && newRole !== user.role) {
-      await handleUpdateUser(user.id, { role: newRole });
+      handleUpdateUser(user.id, { is_active: !user.is_active });
     }
   };
 
@@ -141,30 +196,6 @@ export default function UsersPage() {
     return null;
   }
 
-  // Only ADMIN can access user management
-  if (session.user.role !== 'ADMIN') {
-    return (
-      <AdminLayout>
-        <Head>
-          <title>Access Denied - UNBREAK ONE Admin</title>
-        </Head>
-        <div style={{ padding: '40px' }}>
-          <div style={{ 
-            background: '#1a1a1a', 
-            padding: '60px', 
-            borderRadius: '12px', 
-            textAlign: 'center',
-            border: '1px solid #ff4444'
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔒</div>
-            <h2 style={{ color: '#ff4444', fontSize: '24px', marginBottom: '10px' }}>Access Denied</h2>
-            <p style={{ color: '#888' }}>You need ADMIN role to access user management</p>
-          </div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
   return (
     <AdminLayout>
       <Head>
@@ -172,7 +203,42 @@ export default function UsersPage() {
       </Head>
 
       <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
-        <h1 style={{ color: '#fff', marginBottom: '30px', fontSize: '28px' }}>Users Management</h1>
+        {/* Header with action buttons */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+          <h1 style={{ color: '#fff', fontSize: '28px', margin: 0 }}>Users Management</h1>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => setShowInviteModal(true)}
+              style={{
+                padding: '10px 20px',
+                background: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              📧 Invite User
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              style={{
+                padding: '10px 20px',
+                background: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              ➕ Create User
+            </button>
+          </div>
+        </div>
 
         {/* Filters */}
         <div style={{ 
@@ -262,153 +328,232 @@ export default function UsersPage() {
 
         {/* Users Table */}
         {!loading && !error && (
-          <>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ 
-                width: '100%', 
-                borderCollapse: 'collapse',
-                background: '#1a1a1a',
-                borderRadius: '8px',
-                overflow: 'hidden'
-              }}>
-                <thead>
-                  <tr style={{ background: '#0f0f0f', borderBottom: '2px solid #333' }}>
-                    <th style={{ padding: '15px', textAlign: 'left', fontWeight: '600', color: '#888' }}>Email</th>
-                    <th style={{ padding: '15px', textAlign: 'left', fontWeight: '600', color: '#888' }}>Name</th>
-                    <th style={{ padding: '15px', textAlign: 'left', fontWeight: '600', color: '#888' }}>Role</th>
-                    <th style={{ padding: '15px', textAlign: 'center', fontWeight: '600', color: '#888' }}>Status</th>
-                    <th style={{ padding: '15px', textAlign: 'left', fontWeight: '600', color: '#888' }}>Last Login</th>
-                    <th style={{ padding: '15px', textAlign: 'center', fontWeight: '600', color: '#888' }}>Actions</th>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ 
+              width: '100%', 
+              borderCollapse: 'collapse',
+              background: '#1a1a1a',
+              borderRadius: '8px'
+            }}>
+              <thead>
+                <tr style={{ background: '#0f0f0f', borderBottom: '2px solid #333' }}>
+                  <th style={{ padding: '15px', textAlign: 'left', fontWeight: '600', color: '#888' }}>Email</th>
+                  <th style={{ padding: '15px', textAlign: 'left', fontWeight: '600', color: '#888' }}>Name</th>
+                  <th style={{ padding: '15px', textAlign: 'left', fontWeight: '600', color: '#888' }}>Role</th>
+                  <th style={{ padding: '15px', textAlign: 'center', fontWeight: '600', color: '#888' }}>Status</th>
+                  <th style={{ padding: '15px', textAlign: 'left', fontWeight: '600', color: '#888' }}>Last Login</th>
+                  <th style={{ padding: '15px', textAlign: 'center', fontWeight: '600', color: '#888' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.id} style={{ borderBottom: '1px solid #333' }}>
+                    <td style={{ padding: '15px', fontWeight: '500', color: '#fff' }}>{user.email}</td>
+                    <td style={{ padding: '15px', color: '#888' }}>{user.display_name || '-'}</td>
+                    <td style={{ padding: '15px' }}>
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        background: ROLE_COLORS[user.role] + '20',
+                        color: ROLE_COLORS[user.role]
+                      }}>
+                        {ROLE_LABELS[user.role] || user.role}
+                      </span>
+                    </td>
+                    <td style={{ padding: '15px', textAlign: 'center' }}>
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        background: user.is_active ? '#16a34a20' : '#dc262620',
+                        color: user.is_active ? '#16a34a' : '#dc2626'
+                      }}>
+                        {user.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '15px', fontSize: '14px', color: '#666' }}>
+                      {user.last_sign_in_at 
+                        ? new Date(user.last_sign_in_at).toLocaleDateString('de-DE')
+                        : 'Never'}
+                    </td>
+                    <td style={{ padding: '15px', textAlign: 'center' }}>
+                      <button
+                        onClick={() => changeUserRole(user)}
+                        style={{
+                          padding: '6px 12px',
+                          marginRight: '8px',
+                          background: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '13px'
+                        }}
+                      >
+                        Change Role
+                      </button>
+                      <button
+                        onClick={() => toggleUserStatus(user)}
+                        style={{
+                          padding: '6px 12px',
+                          background: user.is_active ? '#ef4444' : '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '13px'
+                        }}
+                      >
+                        {user.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} style={{ borderBottom: '1px solid #333' }}>
-                      <td style={{ padding: '15px' }}>
-                        <div style={{ fontWeight: '500', color: '#fff' }}>{user.email}</div>
-                      </td>
-                      <td style={{ padding: '15px', color: '#888' }}>
-                        {user.display_name || '-'}
-                      </td>
-                      <td style={{ padding: '15px' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '4px 12px',
-                          borderRadius: '12px',
-                          fontSize: '13px',
-                          fontWeight: '500',
-                          background: ROLE_COLORS[user.role] + '20',
-                          color: ROLE_COLORS[user.role]
-                        }}>
-                          {ROLE_LABELS[user.role] || user.role}
-                        </span>
-                      </td>
-                      <td style={{ padding: '15px', textAlign: 'center' }}>
-                        <span style={{
-                          display: 'inline-block',
-                          padding: '4px 12px',
-                          borderRadius: '12px',
-                          fontSize: '13px',
-                          fontWeight: '500',
-                          background: user.is_active ? '#16a34a20' : '#dc262620',
-                          color: user.is_active ? '#16a34a' : '#dc2626'
-                        }}>
-                          {user.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '15px', fontSize: '14px', color: '#666' }}>
-                        {user.last_login_at 
-                          ? new Date(user.last_login_at).toLocaleDateString('de-DE', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
-                          : 'Never'}
-                      </td>
-                      <td style={{ padding: '15px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => changeUserRole(user)}
-                          style={{
-                            padding: '6px 12px',
-                            marginRight: '8px',
-                            background: '#3b82f6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '13px'
-                          }}
-                        >
-                          Change Role
-                        </button>
-                        <button
-                          onClick={() => toggleUserStatus(user)}
-                          style={{
-                            padding: '6px 12px',
-                            background: user.is_active ? '#ef4444' : '#10b981',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '13px'
-                          }}
-                        >
-                          {user.is_active ? 'Deactivate' : 'Activate'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <div style={{ 
-                marginTop: '20px', 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div style={{ fontSize: '14px', color: '#666' }}>
-                  Page {pagination.page} of {pagination.totalPages} ({pagination.total} users)
-                </div>
-                <div>
-                  <button
-                    onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
-                    disabled={pagination.page === 1}
-                    style={{
-                      padding: '8px 16px',
-                      marginRight: '10px',
-                      background: pagination.page === 1 ? '#333' : '#3b82f6',
-                      color: pagination.page === 1 ? '#666' : 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: pagination.page === 1 ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    Previous
-                  </button>
-                  <button
-                    onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
-                    disabled={!pagination.hasMore}
-                    style={{
-                      padding: '8px 16px',
-                      background: !pagination.hasMore ? '#333' : '#3b82f6',
-                      color: !pagination.hasMore ? '#666' : 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: !pagination.hasMore ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    Next
-                  </button>
-                </div>
+                ))}
+              </tbody>
+            </table>
+            {users.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '60px', color: '#666' }}>
+                <div style={{ fontSize: '48px' }}>👥</div>
+                <p>No users found</p>
               </div>
             )}
-          </>
+          </div>
+        )}
+
+        {/* Invite Modal */}
+        {showInviteModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: '#1a1a1a', padding: '30px', borderRadius: '12px', maxWidth: '500px', width: '90%', border: '1px solid #333' }}>
+              <h2 style={{ color: '#fff', marginBottom: '20px' }}>📧 Invite User</h2>
+              <form onSubmit={handleInvite}>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#888' }}>Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={inviteData.email}
+                    onChange={(e) => setInviteData({...inviteData, email: e.target.value})}
+                    style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#888' }}>Role *</label>
+                  <select
+                    value={inviteData.role}
+                    onChange={(e) => setInviteData({...inviteData, role: e.target.value})}
+                    style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
+                  >
+                    <option value="user">User</option>
+                    <option value="support">Support</option>
+                    <option value="designer">Designer</option>
+                    <option value="ops">Operations</option>
+                    <option value="finance">Finance</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#888' }}>Display Name</label>
+                  <input
+                    type="text"
+                    value={inviteData.display_name}
+                    onChange={(e) => setInviteData({...inviteData, display_name: e.target.value})}
+                    style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteModal(false)}
+                    style={{ padding: '10px 20px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{ padding: '10px 20px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.5 : 1 }}
+                  >
+                    {submitting ? 'Sending...' : 'Send Invitation'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Create Modal */}
+        {showCreateModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div style={{ background: '#1a1a1a', padding: '30px', borderRadius: '12px', maxWidth: '500px', width: '90%', border: '1px solid #333' }}>
+              <h2 style={{ color: '#fff', marginBottom: '20px' }}>➕ Create User</h2>
+              <form onSubmit={handleCreate}>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#888' }}>Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={createData.email}
+                    onChange={(e) => setCreateData({...createData, email: e.target.value})}
+                    style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#888' }}>Password * (min. 8 characters)</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    value={createData.password}
+                    onChange={(e) => setCreateData({...createData, password: e.target.value})}
+                    style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#888' }}>Role *</label>
+                  <select
+                    value={createData.role}
+                    onChange={(e) => setCreateData({...createData, role: e.target.value})}
+                    style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
+                  >
+                    <option value="user">User</option>
+                    <option value="support">Support</option>
+                    <option value="designer">Designer</option>
+                    <option value="ops">Operations</option>
+                    <option value="finance">Finance</option>
+                    <option value="admin">Administrator</option>
+                  </select>
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#888' }}>Display Name</label>
+                  <input
+                    type="text"
+                    value={createData.display_name}
+                    onChange={(e) => setCreateData({...createData, display_name: e.target.value})}
+                    style={{ width: '100%', padding: '10px', background: '#0f0f0f', border: '1px solid #333', borderRadius: '4px', color: '#fff' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    style={{ padding: '10px 20px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{ padding: '10px 20px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.5 : 1 }}
+                  >
+                    {submitting ? 'Creating...' : 'Create User'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
       </div>
     </AdminLayout>
