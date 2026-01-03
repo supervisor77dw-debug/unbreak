@@ -177,7 +177,17 @@ export default async function handler(req, res) {
 
     if (orderError) {
       console.error('Order creation error:', orderError);
-      return res.status(500).json({ error: 'Failed to create order' });
+      console.error('Order error details:', {
+        message: orderError.message,
+        details: orderError.details,
+        hint: orderError.hint,
+        code: orderError.code
+      });
+      return res.status(500).json({ 
+        error: 'Failed to create order',
+        details: orderError.message,
+        hint: orderError.hint
+      });
     }
 
     // ========================================

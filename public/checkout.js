@@ -82,12 +82,14 @@ const UnbreakCheckout = {
    * @param {Event} clickEvent - Optional click event for button feedback
    */
   async buyConfigured(config, clickEvent = null) {
+    // Store button reference and original text BEFORE try block
+    const btn = clickEvent?.target;
+    const originalText = btn?.textContent || '🛍️ Jetzt kaufen';
+    
     try {
-      console.log('🛒 [CHECKOUT] buyConfigured called with:', config);
+      console.log('🛍️ [CHECKOUT] buyConfigured called with:', config);
       
       // Show loading
-      const btn = clickEvent?.target;
-      const originalText = btn?.textContent;
       if (btn) {
         btn.disabled = true;
         btn.textContent = '⏳ Lädt...';
@@ -165,11 +167,10 @@ const UnbreakCheckout = {
     } catch (error) {
       console.error('❌ [CHECKOUT] Error:', error);
       
-      // Restore button
-      const btn = clickEvent?.target;
+      // Restore button (use stored originalText from function start)
       if (btn) {
         btn.disabled = false;
-        btn.textContent = originalText || '🛒 Jetzt kaufen';
+        btn.textContent = originalText;
         console.log('🔄 [CHECKOUT] Button restored');
       }
 
