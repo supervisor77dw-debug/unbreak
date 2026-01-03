@@ -1,6 +1,12 @@
-import { Resend } from 'resend';
+/**
+ * Order Confirmation Email API (DEPRECATED - Use emailService.ts)
+ * POST /api/email/order
+ * 
+ * NOTE: This endpoint now proxies to the central emailService
+ * Direct usage is deprecated - use sendOrderConfirmation() from emailService.ts instead
+ */
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { sendOrderConfirmation } from '../../../lib/email/emailService';
 
 // In-memory store for idempotency (prevents duplicate emails)
 const sentEmails = new Set();
@@ -8,24 +14,11 @@ const sentEmails = new Set();
 export default async function handler(req, res) {
   // === DIAGNOSTIC LOGGING ===
   console.log('📧 [EMAIL API] Method:', req.method);
-  console.log('📧 [ENV CHECK] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY);
-  console.log('📧 [ENV CHECK] RESEND_FROM present:', !!process.env.RESEND_FROM);
-  console.log('📧 [ENV CHECK] SHOP_OWNER_EMAIL present:', !!process.env.SHOP_OWNER_EMAIL);
+  console.log('📧 [EMAIL API] Using central emailService with kill-switch');
 
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  // Check ENV variables
-  if (!process.env.RESEND_API_KEY) {
-    console.error('❌ [EMAIL] Missing RESEND_API_KEY');
-    return res.status(500).json({ error: 'Email service not configured: Missing RESEND_API_KEY' });
-  }
-
-  if (!process.env.RESEND_FROM) {
-    console.error('❌ [EMAIL] Missing RESEND_FROM');
-    return res.status(500).json({ error: 'Email service not configured: Missing RESEND_FROM' });
   }
 
   try {
@@ -68,10 +61,11 @@ export default async function handler(req, res) {
       });
     }
 
-    // Build email content
-    const emailHtml = buildEmailHtml({
+    // === SEND EMAIL VIA CENTRAL SERVICE ===
+    const result = await sendOrderConfirmation({
       orderId,
       orderNumber,
+      customerEmail,
       customerName,
       items,
       totalAmount,
@@ -79,52 +73,32 @@ export default async function handler(req, res) {
       shippingAddress
     });
 
-    const emailSubject = language === 'de' 
-      ? `Bestellbestätigung - Bestellung #${orderNumber || orderId}`
-      : `Order Confirmation - Order #${orderNumber || orderId}`;
-
-    console.log('📧 [EMAIL] Sending to:', customerEmail);
-    console.log('📧 [EMAIL] Subject:', emailSubject);
-
-    // Send customer email
-    const customerEmailResult = await resend.emails.send({
-      from: process.env.RESEND_FROM,
-      to: customerEmail,
-      subject: emailSubject,
-      html: emailHtml,
-    });
-
-    console.log('✅ [EMAIL] Customer email sent:', customerEmailResult.id);
-
-    // Send shop owner notification (if configured)
-    if (process.env.SHOP_OWNER_EMAIL) {
-      const ownerEmailHtml = buildOwnerNotificationHtml({
-        orderId,
-        orderNumber,
-        customerEmail,
-        customerName,
-        items,
-        totalAmount,
-        shippingAddress
-      });
-
-      const ownerEmailResult = await resend.emails.send({
-        from: process.env.RESEND_FROM,
-        to: process.env.SHOP_OWNER_EMAIL,
-        subject: `🛒 Neue Bestellung #${orderNumber || orderId}`,
-        html: ownerEmailHtml,
-      });
-
-      console.log('✅ [EMAIL] Owner notification sent:', ownerEmailResult.id);
-    }
-
     // Mark as sent (idempotency)
     sentEmails.add(idempotencyKey);
 
-    return res.status(200).json({ 
-      success: true,
-      emailId: customerEmailResult.id,
-      message: 'Order confirmation email sent successfully'
+    if (result.preview) {
+      return res.status(200).json({
+        success: true,
+        preview: true,
+        message: 'Email preview logged (EMAILS_ENABLED=false)',
+      });
+    }
+
+    if (result.sent) {
+      console.log('✅ [EMAIL] Order confirmation sent:', result.id);
+      
+      return res.status(200).json({ 
+        success: true,
+        emailId: result.id,
+        message: 'Order confirmation email sent successfully'
+      });
+    }
+
+    // Email failed
+    console.error('❌ [EMAIL] Failed to send:', result.error);
+    return res.status(500).json({
+      error: 'Failed to send order confirmation email',
+      message: result.error
     });
 
   } catch (error) {

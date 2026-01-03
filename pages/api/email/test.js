@@ -1,6 +1,12 @@
-// Test endpoint for email functionality
-// Access: GET /api/email/test
-// Use this for development testing only
+/**
+ * Email Test Endpoint (Updated to use emailService)
+ * GET /api/email/test
+ * 
+ * Tests email functionality with kill-switch support
+ * Access: Development or with secret
+ */
+
+import { sendEmail } from '../../../lib/email/emailService';
 
 export default async function handler(req, res) {
   // Only allow in development or with secret
@@ -16,8 +22,11 @@ export default async function handler(req, res) {
   // Check ENV configuration
   const envCheck = {
     RESEND_API_KEY: !!process.env.RESEND_API_KEY,
+    EMAILS_ENABLED: process.env.EMAILS_ENABLED,
+    EMAIL_FROM_ORDERS: !!process.env.EMAIL_FROM_ORDERS,
+    EMAIL_FROM_SUPPORT: !!process.env.EMAIL_FROM_SUPPORT,
+    EMAIL_FROM_NO_REPLY: !!process.env.EMAIL_FROM_NO_REPLY,
     RESEND_FROM: !!process.env.RESEND_FROM,
-    SHOP_OWNER_EMAIL: !!process.env.SHOP_OWNER_EMAIL,
   };
 
   console.log('🧪 [EMAIL TEST] ENV check:', envCheck);
@@ -53,18 +62,14 @@ export default async function handler(req, res) {
   };
 
   try {
-    // Import and call email sending logic directly (avoid fetch to protected URL)
-    const { Resend } = require('resend');
-    const resend = new Resend(process.env.RESEND_API_KEY);
-
-    console.log('🧪 [EMAIL TEST] Sending test email directly...');
+    console.log('🧪 [EMAIL TEST] Sending test email via emailService...');
     console.log('🧪 [EMAIL TEST] To:', testOrderData.customerEmail);
     console.log('🧪 [EMAIL TEST] Language:', testOrderData.language);
 
-    // Build email HTML (simplified inline version)
+    // Build email HTML
     const emailSubject = testOrderData.language === 'de' 
-      ? `Bestellbestätigung - Bestellung #${testOrderData.orderNumber}`
-      : `Order Confirmation - Order #${testOrderData.orderNumber}`;
+      ? `TEST: Bestellbestätigung #${testOrderData.orderNumber}`
+      : `TEST: Order Confirmation #${testOrderData.orderNumber}`;
 
     const itemsHtml = testOrderData.items.map(item => `
       <tr>
@@ -79,8 +84,12 @@ export default async function handler(req, res) {
 <html>
 <head><meta charset="UTF-8"></head>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <h1 style="color: #0a4d4d; text-align: center;">UNBREAK ONE - ${emailSubject}</h1>
-  <p>Testbestellung #${testOrderData.orderNumber}</p>
+  <div style="background: #fffbea; padding: 20px; border-left: 4px solid #f59e0b; margin-bottom: 20px;">
+    <strong>⚠️ TEST EMAIL</strong> - Dies ist eine Test-E-Mail der Resend-Integration
+  </div>
+  <h1 style="color: #0a4d4d; text-align: center;">UNBREAK ONE</h1>
+  <h2>Test: ${emailSubject}</h2>
+  <p>Bestellung #${testOrderData.orderNumber}</p>
   <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
     <thead>
       <tr style="background: #f5f5f5;">
@@ -97,32 +106,40 @@ export default async function handler(req, res) {
       </tr>
     </tfoot>
   </table>
-  <p style="color: #666; font-size: 14px;">Dies ist eine Test-Email von der Resend-Integration.</p>
+  <p style="color: #666; font-size: 14px; margin-top: 40px;">
+    EMAILS_ENABLED: ${process.env.EMAILS_ENABLED || 'false'}<br>
+    ${process.env.EMAILS_ENABLED === 'true' 
+      ? '✅ Echte E-Mail via Resend gesendet' 
+      : '📋 Preview-Modus - E-Mail wird nur geloggt, nicht gesendet'}
+  </p>
 </body>
 </html>
     `;
 
-    // Send email
-    const emailResult = await resend.emails.send({
-      from: process.env.RESEND_FROM,
+    // Send email via central service
+    const result = await sendEmail({
+      type: 'test',
       to: testOrderData.customerEmail,
       subject: emailSubject,
       html: emailHtml,
+      meta: {
+        testOrder: testOrderData.orderNumber,
+        timestamp: new Date().toISOString()
+      }
     });
 
-    console.log('✅ [EMAIL TEST] Email sent successfully:', emailResult.id);
+    console.log('✅ [EMAIL TEST] Result:', result);
 
     return res.status(200).json({
       success: true,
-      message: 'Test email sent successfully',
-      emailResult: {
-        id: emailResult.id,
-        to: testOrderData.customerEmail,
-        subject: emailSubject
-      },
+      message: result.preview 
+        ? 'Test email preview logged (EMAILS_ENABLED=false)'
+        : 'Test email sent successfully',
+      result,
       testData: testOrderData,
       envCheck,
       instructions: {
+        enableEmails: 'Set EMAILS_ENABLED=true in .env.local to actually send emails',
         customEmail: 'Add ?email=your@email.com to send to a specific address',
         customLanguage: 'Add &lang=en for English email',
         example: '/api/email/test?email=you@example.com&lang=en'
