@@ -214,13 +214,35 @@ function initCheckoutButtons() {
     button.addEventListener('click', (e) => {
       e.preventDefault();
       
+      console.log('🛒 [CHECKOUT] Button clicked');
+      console.log('🛒 [CHECKOUT] Current state:', window.UnbreakCheckoutState);
+      
       // Use last config from state
       const config = window.UnbreakCheckoutState.lastConfig;
       
+      console.log('🛒 [CHECKOUT] Config from state:', config);
+      
       if (!config || !config.color) {
-        alert('Bitte wähle zuerst eine Farbe im Konfigurator aus.');
+        console.warn('⚠️ [CHECKOUT] No config or color found!');
+        console.log('⚠️ [CHECKOUT] Proceeding with default config...');
+        
+        // Fallback: Use default config
+        const fallbackConfig = {
+          color: 'petrol',
+          finish: 'matte',
+          productSku: productSku,
+        };
+        
+        console.log('✓ [CHECKOUT] Using fallback config:', fallbackConfig);
+        
+        UnbreakCheckout.buyConfigured(fallbackConfig);
         return;
       }
+      
+      console.log('✓ [CHECKOUT] Calling buyConfigured with:', {
+        productSku,
+        ...config
+      });
       
       UnbreakCheckout.buyConfigured({
         productSku: productSku,
@@ -242,6 +264,12 @@ function initConfiguratorListener() {
   if (window.UnbreakCheckoutState.initialized) return;
   
   window.addEventListener('message', (event) => {
+    console.log('📨 [MESSAGE] Received:', {
+      origin: event.origin,
+      type: event.data?.type,
+      data: event.data
+    });
+    
     // Security: Check origin (adjust for your configurator domain)
     const allowedOrigins = [
       'https://unbreak-3-d-konfigurator.vercel.app',
@@ -249,13 +277,14 @@ function initConfiguratorListener() {
     ];
     
     if (!allowedOrigins.includes(event.origin)) {
+      console.warn('⚠️ [MESSAGE] Blocked - unknown origin:', event.origin);
       return; // Ignore messages from unknown origins
     }
     
     // Handle config updates from configurator
     if (event.data.type === 'UNBREAK_CONFIG_UPDATE') {
       window.UnbreakCheckoutState.lastConfig = event.data.config;
-      console.log('✓ Configurator config updated:', event.data.config);
+      console.log('✓ [CONFIG] Updated from configurator:', event.data.config);
     }
   });
   
