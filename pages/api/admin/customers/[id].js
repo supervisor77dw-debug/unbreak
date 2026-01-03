@@ -121,13 +121,13 @@ async function handleUpdateCustomer(req, res, customerId) {
   const supabaseAdmin = getSupabaseAdmin();
 
   try {
-    const { name, phone, default_shipping, default_billing, metadata } = req.body;
+    const { name, phone, shipping_address, billing_address, metadata } = req.body;
 
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (phone !== undefined) updateData.phone = phone;
-    if (default_shipping !== undefined) updateData.default_shipping = default_shipping;
-    if (default_billing !== undefined) updateData.default_billing = default_billing;
+    if (shipping_address !== undefined) updateData.shipping_address = shipping_address;
+    if (billing_address !== undefined) updateData.billing_address = billing_address;
     if (metadata !== undefined) updateData.metadata = { ...(metadata || {}) };
     
     updateData.updated_at = new Date().toISOString();

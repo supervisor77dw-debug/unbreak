@@ -165,12 +165,18 @@ async function handleCheckoutSessionCompleted(session) {
     const updateData = {
       status: 'paid',
       stripe_payment_intent_id: session.payment_intent,
+      stripe_customer_id: session.customer,
+      customer_email: session.customer_details?.email || session.customer_email,
+      customer_name: session.customer_details?.name,
+      customer_phone: session.customer_details?.phone,
+      shipping_address: session.shipping_details?.address || null,
+      billing_address: session.customer_details?.address || null,
       updated_at: new Date().toISOString(),
     };
 
     console.log('📝 [DB UPDATE] Attempting update in', orderSource, 'table...');
     console.log('📝 [DB UPDATE] WHERE order.id =', order.id);
-    console.log('📝 [DB UPDATE] SET data:', JSON.stringify(updateData));
+    console.log('📝 [DB UPDATE] SET data:', JSON.stringify(updateData, null, 2));
 
     const tableName = orderSource === 'configurator' ? 'orders' : 'simple_orders';
     
@@ -580,8 +586,8 @@ async function syncStripeCustomerToSupabase(session, order) {
             email: customerEmail.toLowerCase(),
             name: customerName,
             phone: customerPhone,
-            default_shipping: defaultShipping,
-            default_billing: defaultBilling,
+            shipping_address: defaultShipping,
+            billing_address: defaultBilling,
           });
 
         if (insertError) {
@@ -605,8 +611,8 @@ async function syncStripeCustomerToSupabase(session, order) {
         email: customerEmail?.toLowerCase() || `stripe-${stripeCustomerId}@unknown.com`,
         name: customerName,
         phone: customerPhone,
-        default_shipping: defaultShipping,
-        default_billing: defaultBilling,
+        shipping_address: defaultShipping,
+        billing_address: defaultBilling,
         metadata: {
           stripe_customer_id: stripeCustomerId,
           last_session_id: session.id,
@@ -627,13 +633,18 @@ async function syncStripeCustomerToSupabase(session, order) {
 
     console.log('✅ [CUSTOMER SYNC] Customer synced - ID:', customer.id);
 
-    // Update order with customer_id and stripe_customer_id
+    // Update order with customer_id, stripe_customer_id and customer details
     const tableName = order.order_number ? 'orders' : 'simple_orders';
     const { error: orderUpdateError } = await supabase
       .from(tableName)
       .update({
         customer_id: customer.id,
         stripe_customer_id: stripeCustomerId,
+        customer_email: customerEmail,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        shipping_address: defaultShipping,
+        billing_address: defaultBilling,
         updated_at: new Date().toISOString(),
       })
       .eq('id', order.id);

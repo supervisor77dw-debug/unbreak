@@ -230,7 +230,21 @@ export default async function handler(req, res) {
 
     console.log('✅ [Checkout] Order created:', order.id);
 
-    // 4. Create Stripe Checkout Session
+    // 4. Get existing Stripe customer ID (if user is logged in)
+    let stripeCustomerId = null;
+    if (userId) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('stripe_customer_id')
+        .eq('id', userId)
+        .single();
+      if (profile?.stripe_customer_id) {
+        stripeCustomerId = profile.stripe_customer_id;
+        console.log('✅ [Checkout] Using existing Stripe customer:', stripeCustomerId);
+      }
+    }
+
+    // 5. Create Stripe Checkout Session
     console.log('💳 [Checkout] Creating Stripe session');
     const origin = getOrigin(req);
     console.log('🌐 [Checkout] Origin:', origin);
@@ -254,12 +268,21 @@ export default async function handler(req, res) {
       mode: 'payment',
       success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cancel.html`,
-      customer_email: customerEmail || undefined,
+      
+      // CUSTOMER: Use existing or create new
+      ...(stripeCustomerId ? {
+        customer: stripeCustomerId,
+      } : {
+        customer_creation: 'always',
+        customer_email: customerEmail || undefined,
+      }),
+      
       metadata: {
         order_id: order.id,
         type: 'standard',
         user_id: userId || 'guest',
         item_count: cartItems.length,
+        supabase_customer_id: customerId || null,
       },
     };
     console.log('💳 [Checkout] Stripe session data:', {
@@ -284,7 +307,7 @@ export default async function handler(req, res) {
     console.log('📋 If NOT found in your dashboard → Wrong Stripe account/key!');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // 5. Update order with Stripe session ID
+    // 6. Update order with Stripe session ID
     console.log('📝 [Checkout] Updating order with session ID');
     const { error: updateError } = await supabase
       .from('simple_orders')
@@ -299,7 +322,7 @@ export default async function handler(req, res) {
       // Don't fail the request - session is created
     }
 
-    // 6. Return checkout URL
+    // 7. Return checkout URL
     console.log('✅ [Checkout] Success! Returning session URL');
     res.status(200).json({ 
       url: session.url,

@@ -179,13 +179,36 @@ export default async function handler(req, res) {
     // ========================================
     // 6. CREATE STRIPE CHECKOUT SESSION
     // ========================================
+    
+    // Try to get existing Stripe customer ID from profiles (if user is logged in)
+    let stripeCustomerId = null;
+    if (req.headers.authorization) {
+      const token = req.headers.authorization.replace('Bearer ', '');
+      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+      if (user) {
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('stripe_customer_id')
+          .eq('id', user.id)
+          .single();
+        if (profile?.stripe_customer_id) {
+          stripeCustomerId = profile.stripe_customer_id;
+          console.log('✅ [Checkout] Using existing Stripe customer:', stripeCustomerId);
+        }
+      }
+    }
+
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'payment',
-      payment_method_types: ['card'], // Simplified for testing - add more when activated in Stripe Dashboard
+      payment_method_types: ['card'],
       
-      // CUSTOMER CREATION - ALWAYS CREATE/UPDATE CUSTOMER
-      customer_creation: 'always', // Ensures customer is always created in Stripe
-      customer_email: customer.email,
+      // CUSTOMER CREATION - Use existing or create new
+      ...(stripeCustomerId ? {
+        customer: stripeCustomerId,
+      } : {
+        customer_creation: 'always',
+        customer_email: customer.email,
+      }),
       
       line_items: [
         {

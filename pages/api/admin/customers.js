@@ -78,8 +78,8 @@ async function handleGetCustomers(req, res) {
       last_order_at: customer.last_order_at,
       created_at: customer.created_at,
       updated_at: customer.updated_at,
-      default_shipping: customer.default_shipping,
-      default_billing: customer.default_billing,
+      shipping_address: customer.shipping_address,
+      billing_address: customer.billing_address,
     }));
 
     return res.status(200).json({
