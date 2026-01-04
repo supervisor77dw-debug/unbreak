@@ -160,6 +160,63 @@
                 </p>
             </div>
 
+            <!-- Manual Color Selection (Fallback if iframe doesn't respond) -->
+            <div id="manual-color-selector" style="
+                background: white;
+                border: 2px solid #0891b2;
+                border-radius: 12px;
+                padding: 2rem;
+                margin-top: 2rem;
+                max-width: 500px;
+                margin-left: auto;
+                margin-right: auto;
+            ">
+                <h3 style="margin: 0 0 1rem 0; color: #333; font-size: 1.2rem;">✨ Farbauswahl</h3>
+                <p style="margin: 0 0 1.5rem 0; color: #666; font-size: 0.95rem;">Wähle deine Wunschfarben:</p>
+                
+                <div style="display: grid; gap: 1rem;">
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Basis:</label>
+                        <select id="color-base" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;">
+                            <option value="graphite">🎨 Graphit (Dunkelgrau)</option>
+                            <option value="anthracite">⚫ Anthrazit</option>
+                            <option value="petrol" selected>🌊 Petrol (Türkis)</option>
+                            <option value="silver">⚪ Silber</option>
+                            <option value="gold">🟡 Gold</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Top:</label>
+                        <select id="color-top" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;">
+                            <option value="graphite">🎨 Graphit</option>
+                            <option value="anthracite" selected>⚫ Anthrazit</option>
+                            <option value="petrol">🌊 Petrol</option>
+                            <option value="silver">⚪ Silber</option>
+                            <option value="gold">🟡 Gold</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Mitte:</label>
+                        <select id="color-middle" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;">
+                            <option value="graphite" selected>🎨 Graphit</option>
+                            <option value="anthracite">⚫ Anthrazit</option>
+                            <option value="petrol">🌊 Petrol</option>
+                            <option value="silver">⚪ Silber</option>
+                            <option value="gold">🟡 Gold</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Finish:</label>
+                        <select id="finish-type" style="width: 100%; padding: 0.75rem; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 1rem;">
+                            <option value="matte" selected>Matt</option>
+                            <option value="glossy">Glänzend</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <p style="margin: 1.5rem 0 0 0; color: #0891b2; font-size: 0.9rem; font-weight: 500;">💡 Farben werden automatisch beim Klick auf "Jetzt kaufen" übernommen</p>
+            </div>
+
             <!-- Info Section -->
             <div class="configurator-info">
                 <div class="info-card">
@@ -193,6 +250,7 @@
     <!-- Scripts -->
     <script src="animations.js"></script>
     <script src="script.js"></script>
+    <script src="configurator/trace-system.js"></script>
     <script src="checkout.js"></script>
     <script src="configurator/configurator.js"></script>
     

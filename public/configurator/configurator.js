@@ -483,4 +483,149 @@ function handleAddToCart(config) {
     alert('Produkt wurde zum Warenkorb hinzugefügt!\n\n' + JSON.stringify(config, null, 2));
 }
 
+/**
+ * Get configuration from manual color selectors
+ */
+function getManualColorSelection() {
+    const baseSelect = document.getElementById('color-base');
+    const topSelect = document.getElementById('color-top');
+    const middleSelect = document.getElementById('color-middle');
+    const finishSelect = document.getElementById('finish-type');
+    
+    if (!baseSelect || !topSelect || !middleSelect) {
+        console.log('⚠️ [MANUAL CONFIG] Selectors not found');
+        return null;
+    }
+    
+    const config = {
+        colors: {
+            base: baseSelect.value,
+            top: topSelect.value,
+            middle: middleSelect.value
+        },
+        finish: finishSelect ? finishSelect.value : 'matte',
+        quantity: 1,
+        product: 'glass_holder'
+    };
+    
+    console.log('📋 [MANUAL CONFIG] Generated from selectors:', config);
+    return config;
+}
+
+/**
+ * Request current configuration from iframe
+ * Returns a Promise that resolves with the config
+ */
+function requestConfigFromIframe() {
+    return new Promise((resolve, reject) => {
+        const iframe = document.getElementById('configurator-iframe');
+        if (!iframe || !iframe.contentWindow) {
+            console.error('❌ [CONFIG REQUEST] iframe not found');
+            reject(new Error('iframe not found'));
+            return;
+        }
+
+        console.log('📤 [CONFIG REQUEST] Requesting config from iframe...');
+        
+        // Set up one-time listener for response
+        const timeout = setTimeout(() => {
+            window.removeEventListener('message', responseHandler);
+            console.warn('⏱️ [CONFIG REQUEST] Timeout - no response from iframe');
+            reject(new Error('Timeout waiting for config'));
+        }, 3000); // 3s timeout
+
+        const responseHandler = (event) => {
+            // Check if this is a config response
+            if (event.data && (event.data.type === 'configChanged' || 
+                               event.data.type === 'checkout_configuration' ||
+                               event.data.type === 'UNBREAK_CONFIG_UPDATE')) {
+                console.log('📥 [CONFIG REQUEST] Received config from iframe:', event.data);
+                clearTimeout(timeout);
+                window.removeEventListener('message', responseHandler);
+                resolve(event.data.config || event.data);
+            }
+        };
+
+        window.addEventListener('message', responseHandler);
+
+        // Send request to iframe
+        iframe.contentWindow.postMessage({
+            type: 'GET_CONFIGURATION'
+        }, '*');
+
+        console.log('📤 [CONFIG REQUEST] GET_CONFIGURATION message sent to iframe');
+        
+        // Fallback: Also try to get config from manual selectors after 1s
+        setTimeout(() => {
+            if (timeout) { // If still waiting
+                console.log('⏱️ [CONFIG REQUEST] iframe slow, trying manual selectors...');
+                const manualConfig = getManualColorSelection();
+                if (manualConfig && manualConfig.colors) {
+                    console.log('✅ [CONFIG REQUEST] Got config from manual selectors:', manualConfig);
+                    clearTimeout(timeout);
+                    window.removeEventListener('message', responseHandler);
+                    resolve(manualConfig);
+                }
+            }
+        }, 1000);
+    });
+}
+
+// Attach to buy button
+document.addEventListener('DOMContentLoaded', () => {
+    const buyButton = document.getElementById('configurator-buy-now-btn');
+    
+    if (buyButton) {
+        console.log('🛒 [BUTTON] Found buy button, attaching pre-click handler');
+        
+        // Add CAPTURING listener (runs BEFORE checkout.js bubble listener)
+        buyButton.addEventListener('click', async (e) => {
+            console.log('🛒 [BUTTON] Pre-click handler triggered');
+            console.log('🛒 [BUTTON] Current state:', window.UnbreakCheckoutState);
+            
+            // If we already have config in state, let it proceed
+            if (window.UnbreakCheckoutState?.lastConfig) {
+                console.log('✅ [BUTTON] Config already in state, proceeding');
+                return; // Let checkout.js handle it
+            }
+            
+            // No config yet - request from iframe
+            console.log('⚠️ [BUTTON] No config in state, requesting from iframe...');
+            e.preventDefault(); // Stop the checkout for now
+            e.stopPropagation();
+            
+            try {
+                let config = await requestConfigFromIframe();
+                
+                // If iframe config failed, use manual selectors
+                if (!config || !config.colors) {
+                    console.log('⚠️ [BUTTON] No config from iframe, using manual selectors...');
+                    config = getManualColorSelection();
+                }
+                
+                console.log('✅ [BUTTON] Got config:', config);
+                
+                // Save to state
+                if (!window.UnbreakCheckoutState) {
+                    window.UnbreakCheckoutState = { lastConfig: null, initialized: true, userId: 'guest' };
+                }
+                window.UnbreakCheckoutState.lastConfig = config;
+                
+                console.log('✅ [BUTTON] Config saved to state, triggering click again');
+                
+                // Trigger click again (this time it will have config)
+                buyButton.click();
+                
+            } catch (error) {
+                console.error('❌ [BUTTON] Failed to get config:', error);
+                alert('Bitte warten Sie, bis der Konfigurator vollständig geladen ist.');
+            }
+        }, true); // Use CAPTURE phase to run before checkout.js
+        
+        console.log('✅ [BUTTON] Pre-click handler attached');
+    } else {
+        console.warn('⚠️ [BUTTON] Buy button not found');
+    }
+});
+
 })(); // End IIFE
