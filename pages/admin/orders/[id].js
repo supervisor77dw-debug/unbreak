@@ -202,22 +202,189 @@ export default function OrderDetail() {
             <div className="info-grid">
               <div>
                 <strong>E-Mail:</strong>
-                <span>{order.email}</span>
+                <span>{order.email || order.customer_email || order.customerEmail || '—'}</span>
               </div>
-              {order.shippingName && (
+              {(order.shippingName || order.customer_name || order.customerName) && (
                 <div>
                   <strong>Name:</strong>
-                  <span>{order.shippingName}</span>
+                  <span>{order.shippingName || order.customer_name || order.customerName}</span>
+                </div>
+              )}
+              {(order.customer_phone || order.customerPhone) && (
+                <div>
+                  <strong>Telefon:</strong>
+                  <span>{order.customer_phone || order.customerPhone}</span>
                 </div>
               )}
               {order.customer && (
                 <div>
                   <strong>Kunden-ID:</strong>
-                  <span>{order.customer.id.substring(0, 8)}...</span>
+                  <span title={order.customer.id}>{order.customer.id.substring(0, 8)}...</span>
+                </div>
+              )}
+              {(order.stripe_customer_id || order.stripeCustomerId) && (
+                <div>
+                  <strong>Stripe Customer:</strong>
+                  <span className="mono" style={{ fontSize: '12px' }}>
+                    {order.stripe_customer_id || order.stripeCustomerId}
+                  </span>
+                </div>
+              )}
+              {!order.customer && !order.customer_id && (
+                <div style={{ gridColumn: '1 / -1', padding: '12px', background: '#854d0e', borderRadius: '6px' }}>
+                  <strong style={{ color: '#fef3c7' }}>⚠️ Customer nicht verknüpft</strong>
+                  <p style={{ color: '#fef3c7', fontSize: '13px', margin: '4px 0 0 0' }}>
+                    Webhook möglicherweise nicht verarbeitet oder Customer-Sync fehlgeschlagen
+                  </p>
                 </div>
               )}
             </div>
           </div>
+
+          {/* Configuration (if configurator order) */}
+          {(order.config_json || order.configJson || order.configuration_id) && (
+            <div className="info-card">
+              <h2>🎨 Konfigurator-Konfiguration</h2>
+              
+              {(order.config_json || order.configJson) ? (
+                <>
+                  <div className="config-preview" style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '16px',
+                    marginBottom: '16px'
+                  }}>
+                    {(() => {
+                      const config = order.config_json || order.configJson;
+                      const configObj = typeof config === 'string' ? JSON.parse(config) : config;
+                      
+                      return (
+                        <>
+                          {configObj.color && (
+                            <div className="config-item">
+                              <strong style={{ color: '#94a3b8', fontSize: '12px' }}>Farbe</strong>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                                <div style={{
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '4px',
+                                  background: configObj.color,
+                                  border: '2px solid #404040'
+                                }}></div>
+                                <span style={{ color: '#d4f1f1', textTransform: 'capitalize' }}>
+                                  {configObj.color}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {configObj.finish && (
+                            <div className="config-item">
+                              <strong style={{ color: '#94a3b8', fontSize: '12px' }}>Finish</strong>
+                              <div style={{ color: '#d4f1f1', marginTop: '4px', textTransform: 'capitalize' }}>
+                                {configObj.finish}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {configObj.product_variant && (
+                            <div className="config-item">
+                              <strong style={{ color: '#94a3b8', fontSize: '12px' }}>Variante</strong>
+                              <div style={{ color: '#d4f1f1', marginTop: '4px' }}>
+                                {configObj.product_variant}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {configObj.product_name && (
+                            <div className="config-item">
+                              <strong style={{ color: '#94a3b8', fontSize: '12px' }}>Produkt</strong>
+                              <div style={{ color: '#d4f1f1', marginTop: '4px' }}>
+                                {configObj.product_name}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                  
+                  {(order.preview_image_url || order.previewImageUrl) && (
+                    <div className="config-preview-image" style={{ marginBottom: '16px' }}>
+                      <strong style={{ color: '#94a3b8', fontSize: '12px', display: 'block', marginBottom: '8px' }}>
+                        Vorschau
+                      </strong>
+                      <img 
+                        src={order.preview_image_url || order.previewImageUrl} 
+                        alt="Configuration Preview" 
+                        style={{
+                          maxWidth: '300px',
+                          borderRadius: '8px',
+                          border: '1px solid #404040'
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  <details style={{ marginTop: '16px' }}>
+                    <summary style={{ 
+                      cursor: 'pointer', 
+                      color: '#0891b2',
+                      padding: '8px',
+                      background: '#1a1a1a',
+                      borderRadius: '4px',
+                      userSelect: 'none'
+                    }}>
+                      📄 Vollständige Konfiguration (JSON)
+                    </summary>
+                    <div style={{ marginTop: '8px' }}>
+                      <button
+                        onClick={() => {
+                          const config = order.config_json || order.configJson;
+                          const jsonStr = typeof config === 'string' ? config : JSON.stringify(config, null, 2);
+                          navigator.clipboard.writeText(jsonStr);
+                          alert('Konfiguration in Zwischenablage kopiert!');
+                        }}
+                        style={{
+                          background: '#0891b2',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          marginBottom: '8px'
+                        }}
+                      >
+                        📋 JSON kopieren
+                      </button>
+                      <pre style={{
+                        background: '#1a1a1a',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        overflow: 'auto',
+                        fontSize: '12px',
+                        color: '#d4f1f1',
+                        border: '1px solid #404040'
+                      }}>
+                        {typeof (order.config_json || order.configJson) === 'string' 
+                          ? order.config_json || order.configJson
+                          : JSON.stringify(order.config_json || order.configJson, null, 2)
+                        }
+                      </pre>
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div style={{ padding: '12px', background: '#7c2d12', borderRadius: '6px' }}>
+                  <strong style={{ color: '#fed7aa' }}>⚠️ Konfiguration fehlt</strong>
+                  <p style={{ color: '#fed7aa', fontSize: '13px', margin: '4px 0 0 0' }}>
+                    Diese Bestellung wurde vor Migration 013 erstellt oder Config wurde nicht gespeichert.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Shipping Address */}
           {order.shippingAddress && (
