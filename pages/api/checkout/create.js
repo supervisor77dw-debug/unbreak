@@ -55,7 +55,57 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { product_sku, config, customer } = req.body;
+    // Extract trace_id from header or body (client sends both)
+    const trace_id = req.headers['x-trace-id'] || req.body.trace_id || crypto.randomUUID();
+    
+    console.log('[TRACE] CHECKOUT_API_IN', {
+      trace_id,
+      method: req.method,
+      has_config: !!req.body.config,
+      timestamp: new Date().toISOString()
+    });
+    
+    const { product_sku, customer } = req.body;
+    let config = req.body.config;
+    
+    // EMERGENCY FIX: Convert legacy single-color format to colors object
+    // Configurator may still send {color: "petrol"} instead of {colors: {...}}
+    if (config && config.color && !config.colors) {
+      console.log('[HOTFIX] Converting legacy color format to colors object', {
+        trace_id,
+        old_format: config.color
+      });
+      
+      // If it's a default fallback color, that's a problem
+      if (config.color === 'petrol' && !config.userSelected) {
+        console.warn('[HOTFIX] WARNING: Received default "petrol" color - may indicate config not saved', {
+          trace_id,
+          full_config: config
+        });
+      }
+      
+      config = {
+        ...config,
+        colors: {
+          base: config.color,
+          top: config.color,
+          middle: config.color
+        }
+      };
+      
+      console.log('[HOTFIX] Converted to colors object:', config.colors);
+    }
+    
+    console.log('[TRACE] CHECKOUT_CONFIG_RECEIVED', {
+      trace_id,
+      has_single_color: !!config?.color,
+      has_colors_object: !!config?.colors,
+      config_preview: {
+        color: config?.color,
+        colors: config?.colors,
+        finish: config?.finish
+      }
+    });
 
     // ========================================
     // 1. VALIDATE INPUT
@@ -171,6 +221,9 @@ export default async function handler(req, res) {
       console.log('⚠️ [Order] Config columns not available (migration 013 not run yet)');
     }
 
+    // Add trace_id to order data
+    orderData.trace_id = trace_id;
+    
     const { data: order, error: orderError } = await supabaseAdmin
       .from('simple_orders')
       .insert(orderData)
@@ -178,6 +231,11 @@ export default async function handler(req, res) {
       .single();
 
     if (orderError) {
+      console.log('[TRACE] ORDER_CREATE_FAILED', {
+        trace_id,
+        error: orderError.message,
+        code: orderError.code
+      });
       console.error('Order creation error:', orderError);
       console.error('Order error details:', {
         message: orderError.message,
@@ -191,6 +249,15 @@ export default async function handler(req, res) {
         hint: orderError.hint
       });
     }
+
+    console.log('[TRACE] ORDER_CREATED', {
+      trace_id,
+      order_id: order.id,
+      has_config_json: !!order.config_json,
+      config_color: order.config_json?.color,
+      config_colors: order.config_json?.colors,
+      customer_email: order.customer_email
+    });
 
     // ========================================
     // 6. CREATE STRIPE CHECKOUT SESSION
@@ -245,6 +312,7 @@ export default async function handler(req, res) {
       ],
       
       metadata: {
+        trace_id: trace_id,
         order_id: order.id,
         product_sku: product.sku,
         order_type: 'configured',
@@ -254,6 +322,13 @@ export default async function handler(req, res) {
       success_url: `${getOrigin(req)}/success?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
       cancel_url: `${getOrigin(req)}/configurator?canceled=true`,
       expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour expiry
+    });
+
+    console.log('[TRACE] STRIPE_SESSION_CREATED', {
+      trace_id,
+      session_id: checkoutSession.id,
+      order_id: order.id,
+      checkout_url_exists: !!checkoutSession.url
     });
 
     // ========================================

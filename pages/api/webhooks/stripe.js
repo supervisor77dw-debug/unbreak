@@ -55,10 +55,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
     }
 
+    // Extract trace_id from event metadata (passed through from checkout)
+    const trace_id = event.data.object.metadata?.trace_id;
+    
+    console.log('[TRACE] WEBHOOK_IN', {
+      trace_id,
+      event_id: event.id,
+      event_type: event.type,
+      timestamp: new Date().toISOString()
+    });
+    
     // 3. Handle specific events
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object);
+        await handleCheckoutSessionCompleted(event.data.object, trace_id);
         break;
 
       case 'customer.created':
@@ -86,7 +96,17 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleCheckoutSessionCompleted(session) {
+async function handleCheckoutSessionCompleted(session, trace_id) {
+  console.log('[TRACE] WEBHOOK_SESSION_DATA', {
+    trace_id,
+    stripe_session_id: session.id,
+    stripe_customer_id: session.customer,
+    email: session.customer_details?.email || session.customer_email,
+    payment_status: session.payment_status,
+    amount_total: session.amount_total,
+    has_metadata: !!session.metadata
+  });
+  
   console.log('💳 [SESSION] ID:', session.id);
   console.log('💳 [SESSION] Payment status:', session.payment_status);
   console.log('💳 [SESSION] Amount total:', session.amount_total);
@@ -121,10 +141,11 @@ async function handleCheckoutSessionCompleted(session) {
       console.log('✅ [DB QUERY] Found in CONFIGURATOR orders table');
     } else {
       // Second try: Standard shop orders (simple_orders table)
+      // CRITICAL: Check BOTH column names (stripe_session_id AND stripe_checkout_session_id)
       const { data: shopOrder } = await supabase
         .from('simple_orders')
         .select('*')
-        .eq('stripe_session_id', session.id)
+        .or(`stripe_session_id.eq.${session.id},stripe_checkout_session_id.eq.${session.id}`)
         .maybeSingle();
       
       if (shopOrder) {
@@ -222,7 +243,7 @@ async function handleCheckoutSessionCompleted(session) {
     await logWebhookEvent(logData);
 
     // === SYNC STRIPE CUSTOMER TO SUPABASE ===
-    await syncStripeCustomerToSupabase(session, order);
+    await syncStripeCustomerToSupabase(session, order, trace_id);
 
     // === SYNC TO PRISMA (ADMIN SYSTEM) ===
     await syncOrderToPrisma(session, order, orderSource);
@@ -534,8 +555,14 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
 /**
  * Sync Stripe customer to Supabase customers table
  */
-async function syncStripeCustomerToSupabase(session, order) {
+async function syncStripeCustomerToSupabase(session, order, trace_id) {
   try {
+    console.log('[TRACE] CUSTOMER_SYNC_START', {
+      trace_id,
+      stripe_customer_id: session.customer,
+      email: session.customer_details?.email || session.customer_email
+    });
+    
     console.log('👤 [CUSTOMER SYNC] Starting Stripe → Supabase sync...');
 
     // Extract customer data from session
@@ -627,10 +654,20 @@ async function syncStripeCustomerToSupabase(session, order) {
       .single();
 
     if (upsertError) {
+      console.log('[TRACE] CUSTOMER_UPSERT_ERROR', {
+        trace_id,
+        error: upsertError.message,
+        code: upsertError.code
+      });
       console.error('❌ [CUSTOMER SYNC] Upsert failed:', upsertError.message);
       throw upsertError;
     }
 
+    console.log('[TRACE] CUSTOMER_UPSERT_SUCCESS', {
+      trace_id,
+      customer_id: customer.id,
+      email: customer.email
+    });
     console.log('✅ [CUSTOMER SYNC] Customer synced - ID:', customer.id);
 
     // Update order with customer_id, stripe_customer_id and customer details
@@ -650,8 +687,18 @@ async function syncStripeCustomerToSupabase(session, order) {
       .eq('id', order.id);
 
     if (orderUpdateError) {
+      console.log('[TRACE] ORDER_CUSTOMER_LINK_ERROR', {
+        trace_id,
+        order_id: order.id,
+        error: orderUpdateError.message
+      });
       console.error('❌ [CUSTOMER SYNC] Failed to link order to customer:', orderUpdateError.message);
     } else {
+      console.log('[TRACE] ORDER_CUSTOMER_LINK_SUCCESS', {
+        trace_id,
+        order_id: order.id,
+        customer_id: customer.id
+      });
       console.log('✅ [CUSTOMER SYNC] Order linked to customer');
     }
 
