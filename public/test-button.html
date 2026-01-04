@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Standalone Button Test</h1>
+    
+    <div style="text-align: center; margin: 3rem auto; max-width: 800px; background: #f5f7fa; padding: 3rem 1rem; border-radius: 16px;">
+        <button 
+            id="test-buy-btn"
+            data-checkout="configured"
+            data-product-sku="UNBREAK-GLAS-01"
+            style="
+                padding: 1.5rem 4rem;
+                font-size: 1.4rem;
+                background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+                color: white;
+                border: none;
+                border-radius: 12px;
+                cursor: pointer;
+                box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3);
+                font-weight: 700;
+                width: 100%;
+                max-width: 500px;
+                display: block;
+                margin: 0 auto;
+            ">
+            🛒 Jetzt kaufen (Test)
+        </button>
+        <p style="margin-top: 1.5rem; color: #333;">Button ohne Konfigurator</p>
+    </div>
+
+    <script src="configurator/trace-system.js"></script>
+    <script src="checkout.js"></script>
+    
+    <script>
+        console.log('✅ Test page loaded');
+        console.log('UnbreakCheckout available?', typeof window.UnbreakCheckout);
+        
+        // Manually set a test config
+        if (window.UnbreakCheckoutState) {
+            window.UnbreakCheckoutState.lastConfig = {
+                colors: { base: 'graphite', top: 'anthracite', middle: 'petrol' },
+                finish: 'matte',
+                product: 'glass_holder'
+            };
+            console.log('✅ Test config set');
+        }
+    </script>
+</body>
+</html>
