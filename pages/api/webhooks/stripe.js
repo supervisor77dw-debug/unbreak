@@ -630,7 +630,8 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
     console.log('👤 [CUSTOMER SYNC] Stripe Customer ID:', stripeCustomerId);
     console.log('👤 [CUSTOMER SYNC] Email:', customerEmail);
 
-    // Upsert customer in Supabase (WITHOUT address columns for now - schema cache issue)
+    // Upsert customer - MINIMAL VERSION due to PostgREST schema cache issues
+    // Only use columns that existed BEFORE migration 008
     const { data: customer, error: upsertError } = await supabase
       .from('customers')
       .upsert({
@@ -638,13 +639,7 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
         email: customerEmail?.toLowerCase() || `stripe-${stripeCustomerId}@unknown.com`,
         name: customerName,
         phone: customerPhone,
-        // default_shipping: defaultShipping,  // TEMPORARILY DISABLED - schema cache
-        // default_billing: defaultBilling,    // TEMPORARILY DISABLED - schema cache
-        metadata: {
-          stripe_customer_id: stripeCustomerId,
-          last_session_id: session.id,
-          synced_at: new Date().toISOString(),
-        },
+        // All other columns disabled until schema cache refreshes
         updated_at: new Date().toISOString(),
       }, {
         onConflict: 'stripe_customer_id',
