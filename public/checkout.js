@@ -411,27 +411,48 @@ function initCheckoutButtons() {
     const productSku = button.dataset.productSku || 'UNBREAK-GLAS-01';
     console.log('🔧 [INIT] Binding configured button with SKU:', productSku);
     
-    button.addEventListener('click', (e) => {
+    button.addEventListener('click', async (e) => {
       e.preventDefault();
       
       console.log('🛒 [CHECKOUT] Button clicked');
       console.log('🛒 [CHECKOUT] Button element:', button);
-      console.log('🛒 [CHECKOUT] Current state:', window.UnbreakCheckoutState);
       console.log('🛒 [CHECKOUT] Product SKU:', productSku);
       
-      // Use last config from state
-      let config = window.UnbreakCheckoutState?.lastConfig;
+      // Get bridge reference
+      const bridge = window.getConfiguratorBridge && window.getConfiguratorBridge();
       
-      console.log('🛒 [CHECKOUT] Config from state:', config);
-      
-      // Check if config exists and has EITHER colors object OR legacy color field
-      if (!config) {
-        console.error('❌ [CHECKOUT] No config found in state!');
-        alert('Bitte wähle zuerst Farben im Konfigurator');
+      if (!bridge) {
+        console.error('❌ [CHECKOUT] ConfiguratorBridge not found!');
+        alert('Fehler: Konfigurator-Verbindung nicht gefunden');
         return;
       }
       
-      // Config exists, validation will be done in buyConfigured()
+      // Check if ready
+      if (!bridge.isReady()) {
+        console.warn('⚠️ [CHECKOUT] Configurator not ready yet');
+        alert('Bitte warten Sie, bis der Konfigurator vollständig geladen ist');
+        return;
+      }
+      
+      // Request config from bridge
+      console.log('📤 [CHECKOUT] Requesting config from bridge...');
+      let config;
+      
+      try {
+        config = await bridge.requestConfig();
+        console.log('✅ [CHECKOUT] Got config from bridge:', config);
+      } catch (error) {
+        console.error('❌ [CHECKOUT] Failed to get config:', error);
+        alert('Bitte wählen Sie zuerst Farben im Konfigurator');
+        return;
+      }
+      
+      // Validate config
+      if (!config || !config.colors || !config.colors.base || !config.colors.top || !config.colors.middle) {
+        console.error('❌ [CHECKOUT] Invalid config structure:', config);
+        alert('Konfiguration unvollständig - bitte wählen Sie alle Farben');
+        return;
+      }
       
       // Add SKU to config if not present
       config.productSku = config.productSku || productSku;
