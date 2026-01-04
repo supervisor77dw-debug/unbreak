@@ -341,6 +341,13 @@ document.addEventListener('DOMContentLoaded', () => {
      * - Listener wird bei pageHide entfernt (kein Memory Leak)
      */
     messageHandler = (event) => {
+        // DEBUG: Log ALL messages for troubleshooting
+        console.log('🔔 [PARENT] Message received:', {
+            origin: event.origin,
+            type: event.data?.type,
+            data: event.data
+        });
+        
         // Origin-Check: Nur Messages vom echten Konfigurator akzeptieren
         const allowedOrigins = [
             'https://unbreak-3-d-konfigurator.vercel.app',
@@ -350,9 +357,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!allowedOrigins.includes(event.origin)) {
             logDebugEvent('MESSAGE', `Unknown origin ignored: ${event.origin}`, true);
-            console.log('⚠️ Message from unknown origin ignored:', event.origin);
+            console.log('⚠️ [PARENT] Message BLOCKED - unknown origin:', event.origin);
+            console.log('⚠️ [PARENT] Allowed origins:', allowedOrigins);
             return;
         }
+        
+        console.log('✅ [PARENT] Message ACCEPTED from:', event.origin);
         
         // ANY valid message from iframe means it's working - hide error
         if (!isReady && errorContainer && errorContainer.style.display !== 'none') {
@@ -373,12 +383,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // CRITICAL: Send ACK back to iframe so it knows parent received READY
                 if (iframe && iframe.contentWindow) {
-                    console.log('✓ Sending READY_ACK back to iframe');
-                    iframe.contentWindow.postMessage({
+                    const ackMessage = {
                         type: 'UNBREAK_PARENT_READY',
                         ok: true,
                         timestamp: Date.now()
-                    }, 'https://unbreak-3-d-konfigurator.vercel.app');
+                    };
+                    console.log('✓ [PARENT] Sending ACK to iframe:', ackMessage);
+                    iframe.contentWindow.postMessage(ackMessage, 'https://unbreak-3-d-konfigurator.vercel.app');
+                    console.log('✓ [PARENT] ACK sent successfully');
+                } else {
+                    console.error('❌ [PARENT] Cannot send ACK - iframe or contentWindow missing!');
                 }
                 break;
                 
