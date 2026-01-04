@@ -234,7 +234,9 @@ const UnbreakCheckout = {
           });
       }
 
-      // Call checkout API
+      // Call checkout API - send complete validated config from bridge
+      console.log('[CHECKOUT] trace_id=' + trace_id + ' sending config:', config);
+      
       const response = await fetch('/api/checkout/create', {
         method: 'POST',
         headers: {
@@ -242,16 +244,9 @@ const UnbreakCheckout = {
           'X-Trace-ID': trace_id // Send trace_id to server
         },
         body: JSON.stringify({
-          trace_id, // Include in body
+          trace_id,
           product_sku: sku,
-          config: {
-            color: config.color,
-            finish: config.finish || 'matte',
-            engraving: config.engraving || null,
-            quantity: config.quantity || 1,
-            // Add any other configurator options
-            edition: config.edition || null,
-          },
+          config: config, // ✅ Send complete config (variant, colors.base/arm/module/pattern, finish, etc.)
           customer: {
             email: config.email || null,
             name: config.name || null,
