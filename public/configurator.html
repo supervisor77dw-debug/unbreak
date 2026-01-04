@@ -106,14 +106,20 @@
                 </div>
             </div>
             
-            <!-- Checkout Button (MOVED OUTSIDE viewer-wrapper for visibility) -->
+            <!-- Checkout Button (FORCED VISIBLE with !important) -->
             <div class="checkout-button-container" style="
-                text-align: center; 
-                margin: 3rem auto; 
-                padding: 2rem 0;
-                max-width: 600px;
-                position: relative;
-                z-index: 100;
+                text-align: center !important; 
+                margin: 3rem auto !important; 
+                padding: 3rem 1rem !important;
+                max-width: 800px !important;
+                position: relative !important;
+                z-index: 9999 !important;
+                background: #f5f7fa !important;
+                border-radius: 16px !important;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
             ">
                 <button 
                     id="configurator-buy-now-btn"
@@ -121,31 +127,36 @@
                     data-checkout="configured"
                     data-product-sku="UNBREAK-GLAS-01"
                     style="
-                        padding: 1.5rem 4rem;
-                        font-size: 1.3rem;
-                        background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-                        color: white;
-                        border: none;
-                        border-radius: 12px;
-                        cursor: pointer;
-                        box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3);
-                        transition: all 0.3s ease;
-                        font-weight: 600;
-                        width: 100%;
-                        max-width: 400px;
-                        display: block;
-                        margin: 0 auto;
+                        padding: 1.5rem 4rem !important;
+                        font-size: 1.4rem !important;
+                        background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%) !important;
+                        color: white !important;
+                        border: none !important;
+                        border-radius: 12px !important;
+                        cursor: pointer !important;
+                        box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3) !important;
+                        transition: all 0.3s ease !important;
+                        font-weight: 700 !important;
+                        width: 100% !important;
+                        max-width: 500px !important;
+                        display: block !important;
+                        margin: 0 auto !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        position: relative !important;
+                        z-index: 10000 !important;
                     " 
-                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 12px 40px rgba(8, 145, 178, 0.4)';"
+                    onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 16px 48px rgba(8, 145, 178, 0.5)';"
                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 32px rgba(8, 145, 178, 0.3)';">
                     🛒 Jetzt kaufen
                 </button>
                 <p style="
-                    margin-top: 1rem;
-                    color: #666;
-                    font-size: 0.9rem;
+                    margin-top: 1.5rem !important;
+                    color: #333 !important;
+                    font-size: 1rem !important;
+                    font-weight: 500 !important;
                 ">
-                    Konfiguration wird beim Klick übernommen
+                    ✨ Konfiguration wird beim Klick übernommen
                 </p>
             </div>
 
@@ -184,6 +195,71 @@
     <script src="script.js"></script>
     <script src="checkout.js"></script>
     <script src="configurator/configurator.js"></script>
+    
+    <!-- DEBUG: Button visibility check -->
+    <script>
+    console.log('🔍 [DEBUG] Checking button visibility...');
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            const btn = document.getElementById('configurator-buy-now-btn');
+            if (btn) {
+                const rect = btn.getBoundingClientRect();
+                const isVisible = rect.top < window.innerHeight;
+                console.log('✅ [DEBUG] Button exists!');
+                console.log('📏 [DEBUG] Button position:', {
+                    top: rect.top,
+                    bottom: rect.bottom,
+                    windowHeight: window.innerHeight,
+                    isVisibleInViewport: isVisible
+                });
+                console.log('🎨 [DEBUG] Button computed styles:', {
+                    display: window.getComputedStyle(btn).display,
+                    visibility: window.getComputedStyle(btn).visibility,
+                    opacity: window.getComputedStyle(btn).opacity,
+                    zIndex: window.getComputedStyle(btn).zIndex
+                });
+                
+                // Add visible marker above button
+                const marker = document.createElement('div');
+                marker.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: #10b981;
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    z-index: 99999;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                `;
+                marker.textContent = '✅ Button ist im DOM!';
+                document.body.appendChild(marker);
+                
+                if (!isVisible) {
+                    marker.textContent = '⚠️ Button existiert, aber nicht im Viewport - bitte scrollen!';
+                    marker.style.background = '#f59e0b';
+                }
+            } else {
+                console.error('❌ [DEBUG] Button NOT found in DOM!');
+                const errorMarker = document.createElement('div');
+                errorMarker.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: #ef4444;
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-weight: bold;
+                    z-index: 99999;
+                `;
+                errorMarker.textContent = '❌ Button NICHT im DOM!';
+                document.body.appendChild(errorMarker);
+            }
+        }, 1000);
+    });
+    </script>
     
     <!-- Direct iframe message relay -->
     <script>
