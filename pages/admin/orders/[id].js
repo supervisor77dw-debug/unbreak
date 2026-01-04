@@ -2,6 +2,7 @@ import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import AdminLayout from '../../../components/AdminLayout';
+import { getColorHex, getColorDisplayName } from '../../../lib/configValidation';
 
 export default function OrderDetail() {
   const router = useRouter();
@@ -337,24 +338,56 @@ export default function OrderDetail() {
                       
                       return (
                         <>
-                          {configObj.colors && (
+                          {configObj.variant && (
                             <div className="config-item">
-                              <strong style={{ color: '#94a3b8', fontSize: '12px' }}>Farben nach Bereich</strong>
-                              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                {Object.entries(configObj.colors).map(([area, color]) => (
-                                  <div key={area} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{
-                                      width: '20px',
-                                      height: '20px',
-                                      borderRadius: '4px',
-                                      background: color,
-                                      border: '2px solid #404040'
-                                    }}></div>
-                                    <span style={{ color: '#d4f1f1', fontSize: '13px' }}>
-                                      <strong>{area}:</strong> {color}
-                                    </span>
-                                  </div>
-                                ))}
+                              <strong style={{ color: '#94a3b8', fontSize: '12px' }}>Variant</strong>
+                              <div style={{ color: '#d4f1f1', marginTop: '4px', textTransform: 'capitalize' }}>
+                                {configObj.variant}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {configObj.colors && (
+                            <div className="config-item" style={{ gridColumn: '1 / -1' }}>
+                              <strong style={{ color: '#94a3b8', fontSize: '12px' }}>
+                                🎨 4-Part Color Configuration
+                              </strong>
+                              <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                                {['base', 'arm', 'module', 'pattern'].map((part) => {
+                                  const colorId = configObj.colors[part];
+                                  if (!colorId) return null;
+                                  
+                                  return (
+                                    <div key={part} style={{
+                                      background: '#1a1a1a',
+                                      padding: '12px',
+                                      borderRadius: '6px',
+                                      border: '1px solid #404040'
+                                    }}>
+                                      <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '6px', textTransform: 'uppercase', fontWeight: '600' }}>
+                                        {part}
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{
+                                          width: '32px',
+                                          height: '32px',
+                                          borderRadius: '6px',
+                                          background: getColorHex(colorId),
+                                          border: '2px solid #404040',
+                                          flexShrink: 0
+                                        }}></div>
+                                        <div style={{ flex: 1 }}>
+                                          <div style={{ color: '#d4f1f1', fontSize: '13px', fontWeight: '500' }}>
+                                            {getColorDisplayName(colorId)}
+                                          </div>
+                                          <div style={{ color: '#64748b', fontSize: '11px', fontFamily: 'monospace' }}>
+                                            {colorId}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
