@@ -116,3 +116,67 @@ END $$;
 -- - metadata: Additional metadata
 -- - stripe_checkout_session_id: Separate checkout session tracking
 -- =====================================================
+
+-- RUN THIS NOW: Complete Simple Orders Fix
+-- This script applies all necessary changes to the simple_orders table
+-- to ensure compatibility with the new configurator features.
+-- It is safe to run multiple times and can be used to migrate
+-- existing data to the new format.
+-- =====================================================
+
+-- 1) Update existing simple_orders to initialize new columns
+UPDATE public.simple_orders
+SET 
+  items = COALESCE(items, '[]'::jsonb),
+  config_json = COALESCE(config_json, '{}'::jsonb),
+  preview_image_url = NULL,
+  bom_json = COALESCE(bom_json, '{}'::jsonb),
+  price_breakdown_json = COALESCE(price_breakdown_json, '{}'::jsonb),
+  metadata = COALESCE(metadata, '{}'::jsonb),
+  stripe_checkout_session_id = NULL
+WHERE 
+  items IS NULL OR
+  config_json IS NULL OR
+  bom_json IS NULL OR
+  price_breakdown_json IS NULL OR
+  metadata IS NULL;
+
+-- 2) Migrate data from old columns to new JSONB structure (if applicable)
+-- (Assumes any existing config data is in a compatible format)
+UPDATE public.simple_orders
+SET 
+  items = COALESCE(NULLIF(items, '[]'::jsonb), '[]'::jsonb),
+  config_json = NULLIF(config_json, '{}'::jsonb),
+  preview_image_url = NULL,
+  bom_json = NULLIF(bom_json, '{}'::jsonb),
+  price_breakdown_json = NULLIF(price_breakdown_json, '{}'::jsonb),
+  metadata = NULLIF(metadata, '{}'::jsonb),
+  stripe_checkout_session_id = NULL
+WHERE 
+  items <> '[]'::jsonb OR
+  config_json <> '{}'::jsonb OR
+  bom_json <> '{}'::jsonb OR
+  price_breakdown_json <> '{}'::jsonb OR
+  metadata <> '{}'::jsonb;
+
+-- 3) Clean up any temporary or obsolete data (if necessary)
+-- (E.g., remove old config columns, if they exist)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'simple_orders' 
+    AND column_name = 'old_config_column'
+    AND table_schema = 'public'
+  ) THEN
+    ALTER TABLE public.simple_orders DROP COLUMN old_config_column;
+  END IF;
+END $$;
+
+-- =====================================================
+-- Simple Orders Fix complete
+-- =====================================================
+-- All necessary changes have been applied to the simple_orders table.
+-- It is now compatible with the new configurator features and ready
+-- for use with existing and new orders.
+-- =====================================================

@@ -1,0 +1,103 @@
+# ====================================================================
+# .env.local TEMPLATE - COPY THIS TO .env.local IN PROJECT ROOT
+# ====================================================================
+# 
+# ANLEITUNG:
+# 1. Kopiere diese Datei nach: .env.local (im Root-Verzeichnis)
+# 2. Fülle ALLE Werte aus (kopiere sie aus Vercel Dashboard)
+# 3. NIEMALS .env.local in Git committen!
+#
+# ====================================================================
+# SUPABASE KEYS - NUR SB_ PREFIX FORMAT
+# ====================================================================
+#
+# ⚠️ WICHTIG - KEY FORMAT:
+# - NEXT_PUBLIC_SUPABASE_ANON_KEY muss starten mit: sb_publishable_
+# - SUPABASE_SERVICE_ROLE_KEY muss starten mit: sb_secret_
+# - KEINE Legacy JWT Keys (eyJ...) verwenden!
+#
+# Hole Keys von: Supabase Dashboard → Settings → API
+# Projekt: qnzsdytdghfukrqpscsg
+#
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_URL=
+
+# ====================================================================
+# STRIPE KEYS
+# ====================================================================
+#
+# Hole Keys von: Stripe Dashboard → Developers → API Keys
+# Verwende TEST KEYS (pk_test_, sk_test_) für Development
+#
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# ====================================================================
+# NEXTAUTH
+# ====================================================================
+#
+# NEXTAUTH_SECRET: Generiere mit: openssl rand -base64 32
+# NEXTAUTH_URL: Für lokal: http://localhost:3000
+#
+NEXTAUTH_SECRET=
+NEXTAUTH_URL=
+
+# ====================================================================
+# DATABASE (PRISMA)
+# ====================================================================
+#
+# Connection Pooler (für Serverless/Vercel):
+DATABASE_URL=
+# Direct Connection (für Migrations):
+DIRECT_URL=
+
+# ====================================================================
+# EMAIL (RESEND)
+# ====================================================================
+#
+# Hole API Key von: Resend Dashboard → API Keys
+#
+RESEND_API_KEY=
+RESEND_FROM=
+SHOP_OWNER_EMAIL=
+
+# ====================================================================
+# ADMIN SEED
+# ====================================================================
+#
+# Initial Admin User (wird beim ersten Deploy angelegt)
+#
+ADMIN_SEED_EMAIL=
+ADMIN_SEED_PASSWORD=
+
+# ====================================================================
+# VERCEL (optional, nur wenn lokal Vercel CLI verwendet wird)
+# ====================================================================
+#
+NODE_ENV=development
+VERCEL=
+VERCEL_ENV=development
+
+# ====================================================================
+# SECURITY CHECKLISTE
+# ====================================================================
+#
+# ✅ .env.local ist in .gitignore
+# ✅ SUPABASE_SERVICE_ROLE_KEY startet mit sb_secret_
+# ✅ NEXT_PUBLIC_SUPABASE_ANON_KEY startet mit sb_publishable_
+# ✅ Alle NEXT_PUBLIC_* Variablen sind safe für Browser
+# ✅ NIEMALS sb_secret_* in NEXT_PUBLIC_* Variablen!
+#
+# ====================================================================
+# VALIDATION
+# ====================================================================
+#
+# Nach dem Ausfüllen, teste mit:
+# 
+# node scripts/print-env-health.js
+# node scripts/test-supabase-connection.js
+#
+# ====================================================================

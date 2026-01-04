@@ -241,6 +241,83 @@ export default function OrderDetail() {
             </div>
           </div>
 
+          {/* Order Items */}
+          <div className="info-card">
+            <h2>📦 Bestellte Produkte</h2>
+            {(order.items || order.items_json) ? (
+              <div className="items-table">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #404040' }}>
+                      <th style={{ textAlign: 'left', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Produkt</th>
+                      <th style={{ textAlign: 'center', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>SKU</th>
+                      <th style={{ textAlign: 'center', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Menge</th>
+                      <th style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Stückpreis</th>
+                      <th style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Gesamt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const items = order.items || order.items_json || [];
+                      const itemsArray = typeof items === 'string' ? JSON.parse(items) : items;
+                      
+                      return itemsArray.map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #2a2a2a' }}>
+                          <td style={{ padding: '12px 8px' }}>
+                            <div style={{ color: '#d4f1f1', fontWeight: '500' }}>
+                              {item.name || item.product_name || 'Produkt'}
+                            </div>
+                            {item.config && (
+                              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                                {item.config.colors ? (
+                                  <span>🎨 {Object.entries(item.config.colors).map(([area, color]) => `${area}: ${color}`).join(', ')}</span>
+                                ) : item.config.color ? (
+                                  <span>🎨 {item.config.color}</span>
+                                ) : null}
+                                {item.config.finish && <span> • {item.config.finish}</span>}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '12px 8px' }}>
+                            <code style={{ background: '#1a1a1a', padding: '2px 6px', borderRadius: '3px', fontSize: '11px', color: '#0891b2' }}>
+                              {item.sku || item.product_sku || '—'}
+                            </code>
+                          </td>
+                          <td style={{ textAlign: 'center', padding: '12px 8px', color: '#d4f1f1' }}>
+                            {item.quantity || 1}
+                          </td>
+                          <td style={{ textAlign: 'right', padding: '12px 8px', color: '#d4f1f1', fontFamily: 'monospace' }}>
+                            {formatCurrency(item.unit_price_cents || 0)}
+                          </td>
+                          <td style={{ textAlign: 'right', padding: '12px 8px', color: '#d4f1f1', fontWeight: '600', fontFamily: 'monospace' }}>
+                            {formatCurrency((item.unit_price_cents || 0) * (item.quantity || 1))}
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid #404040' }}>
+                      <td colSpan="4" style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontWeight: '600' }}>
+                        Gesamtsumme:
+                      </td>
+                      <td style={{ textAlign: 'right', padding: '12px 8px', color: '#0891b2', fontWeight: '700', fontSize: '16px', fontFamily: 'monospace' }}>
+                        {formatCurrency(order.total_amount_cents || order.totalCents || order.total_cents || 0)}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding: '12px', background: '#7c2d12', borderRadius: '6px' }}>
+                <strong style={{ color: '#fed7aa' }}>⚠️ Keine Items vorhanden</strong>
+                <p style={{ color: '#fed7aa', fontSize: '13px', margin: '4px 0 0 0' }}>
+                  Diese Bestellung hat keine Items-Daten. Möglicherweise vor Migration erstellt.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Configuration (if configurator order) */}
           {(order.config_json || order.configJson || order.configuration_id) && (
             <div className="info-card">
@@ -260,7 +337,29 @@ export default function OrderDetail() {
                       
                       return (
                         <>
-                          {configObj.color && (
+                          {configObj.colors && (
+                            <div className="config-item">
+                              <strong style={{ color: '#94a3b8', fontSize: '12px' }}>Farben nach Bereich</strong>
+                              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {Object.entries(configObj.colors).map(([area, color]) => (
+                                  <div key={area} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{
+                                      width: '20px',
+                                      height: '20px',
+                                      borderRadius: '4px',
+                                      background: color,
+                                      border: '2px solid #404040'
+                                    }}></div>
+                                    <span style={{ color: '#d4f1f1', fontSize: '13px' }}>
+                                      <strong>{area}:</strong> {color}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {configObj.color && !configObj.colors && (
                             <div className="config-item">
                               <strong style={{ color: '#94a3b8', fontSize: '12px' }}>Farbe</strong>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>

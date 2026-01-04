@@ -9,13 +9,17 @@ require('dotenv').config({ path: '.env.local' });
 const { createClient } = require('@supabase/supabase-js');
 const Stripe = require('stripe');
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+// Standardized env variable names
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const stripeKey = process.env.STRIPE_SECRET_KEY;
 
 if (!supabaseUrl || !supabaseKey || !stripeKey) {
   console.error('❌ Missing environment variables');
-  console.log('Required: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY');
+  console.log('Required:');
+  console.log('  - NEXT_PUBLIC_SUPABASE_URL (or SUPABASE_URL)');
+  console.log('  - SUPABASE_SERVICE_ROLE_KEY (sb_secret_...)');
+  console.log('  - STRIPE_SECRET_KEY');
   process.exit(1);
 }
 
@@ -80,7 +84,7 @@ async function backfillCustomers() {
         continue;
       }
 
-      // Upsert customer in customers table
+      // Upsert customer in customers table (simplified - only core fields)
       const { data: customer, error: customerError } = await supabase
         .from('customers')
         .upsert({
@@ -88,23 +92,6 @@ async function backfillCustomers() {
           email: customerEmail.toLowerCase(),
           name: customerName,
           phone: customerPhone,
-          default_shipping: session.shipping_details?.address ? {
-            line1: session.shipping_details.address.line1,
-            line2: session.shipping_details.address.line2,
-            city: session.shipping_details.address.city,
-            state: session.shipping_details.address.state,
-            postal_code: session.shipping_details.address.postal_code,
-            country: session.shipping_details.address.country,
-            name: session.shipping_details.name,
-          } : null,
-          default_billing: session.customer_details?.address ? {
-            line1: session.customer_details.address.line1,
-            line2: session.customer_details.address.line2,
-            city: session.customer_details.address.city,
-            state: session.customer_details.address.state,
-            postal_code: session.customer_details.address.postal_code,
-            country: session.customer_details.address.country,
-          } : null,
           metadata: {
             backfilled: true,
             backfilled_at: new Date().toISOString(),

@@ -197,10 +197,10 @@ export default async function handler(req, res) {
       currency: product.currency,
       status: 'pending',
       order_type: 'configured',
+      trace_id: trace_id,
     };
 
-    // Try to add config fields (may not exist if migration 013 not run yet)
-    // This makes the API work before AND after migration
+    // Build items array for order
     const itemsData = [{
       product_id: product.id,
       sku: product.sku,
@@ -210,19 +210,11 @@ export default async function handler(req, res) {
       config: config
     }];
 
-    try {
-      // Attempt to store items + config_json if columns exist (after migration 013)
-      orderData.items = itemsData;
-      orderData.config_json = config;
-      orderData.preview_image_url = config.previewImageUrl || null;
-      orderData.price_breakdown_json = breakdown;
-    } catch (e) {
-      // Column doesn't exist yet - that's OK, continue without it
-      console.log('⚠️ [Order] Config columns not available (migration 013 not run yet)');
-    }
-
-    // Add trace_id to order data
-    orderData.trace_id = trace_id;
+    // Store items + config_json + breakdown
+    orderData.items = itemsData;
+    orderData.config_json = config;
+    orderData.preview_image_url = config.previewImageUrl || null;
+    orderData.price_breakdown_json = breakdown;
     
     const { data: order, error: orderError } = await supabaseAdmin
       .from('simple_orders')
@@ -231,22 +223,24 @@ export default async function handler(req, res) {
       .single();
 
     if (orderError) {
+      console.error('[ORDER_WRITE_ERROR]', {
+        table: 'simple_orders',
+        error: orderError.message,
+        code: orderError.code,
+        details: orderError.details,
+        hint: orderError.hint,
+        attempted_columns: Object.keys(orderData)
+      });
       console.log('[TRACE] ORDER_CREATE_FAILED', {
         trace_id,
         error: orderError.message,
         code: orderError.code
       });
-      console.error('Order creation error:', orderError);
-      console.error('Order error details:', {
-        message: orderError.message,
-        details: orderError.details,
-        hint: orderError.hint,
-        code: orderError.code
-      });
       return res.status(500).json({ 
         error: 'Failed to create order',
         details: orderError.message,
-        hint: orderError.hint
+        hint: orderError.hint,
+        code: orderError.code
       });
     }
 
