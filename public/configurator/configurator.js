@@ -359,6 +359,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('✓ UNBREAK_CONFIG_READY received', data);
                 logDebugEvent('READY', `ok=${data.ok}, version=${data.version || 'n/a'}`);
                 hideLoading();
+                
+                // CRITICAL: Send ACK back to iframe so it knows parent received READY
+                if (iframe && iframe.contentWindow) {
+                    console.log('✓ Sending READY_ACK back to iframe');
+                    iframe.contentWindow.postMessage({
+                        type: 'UNBREAK_PARENT_READY',
+                        ok: true,
+                        timestamp: Date.now()
+                    }, 'https://unbreak-3-d-konfigurator.vercel.app');
+                }
                 break;
                 
             case 'UNBREAK_CONFIG_LOADING':
