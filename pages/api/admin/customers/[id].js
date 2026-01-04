@@ -42,6 +42,7 @@ async function handleGetCustomerDetails(req, res, customerId) {
     }
 
     // Get order history (configurator orders)
+    // FALLBACK MATCHING: customer_id OR stripe_customer_id OR email
     const { data: orders, error: ordersError } = await supabaseAdmin
       .from('orders')
       .select(`
@@ -52,20 +53,24 @@ async function handleGetCustomerDetails(req, res, customerId) {
         currency,
         created_at,
         updated_at,
+        customer_id,
+        stripe_customer_id,
+        customer_email,
         configurations:configuration_id (
           id,
           config_json,
           preview_image_url
         )
       `)
-      .eq('customer_id', customerId)
+      .or(`customer_id.eq.${customerId},stripe_customer_id.eq.${customer.stripe_customer_id},customer_email.ilike.${customer.email}`)
       .order('created_at', { ascending: false });
 
     // Get simple orders (shop orders)
+    // FALLBACK MATCHING: customer_id OR stripe_customer_id OR email
     const { data: simpleOrders, error: simpleOrdersError } = await supabaseAdmin
       .from('simple_orders')
       .select('*')
-      .eq('customer_id', customerId)
+      .or(`customer_id.eq.${customerId},stripe_customer_id.eq.${customer.stripe_customer_id},customer_email.ilike.${customer.email}`)
       .order('created_at', { ascending: false });
 
     // Get tickets
