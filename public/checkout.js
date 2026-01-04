@@ -150,31 +150,19 @@ const UnbreakCheckout = {
 
   /**
    * Configured Product Checkout (from 3D Configurator)
-   * @param {object} config - Configuration object with color, finish, etc.
+   * @param {object} config - DEPRECATED: Use ConfiguratorBridge instead
    * @param {Event} clickEvent - Optional click event for button feedback
    */
   async buyConfigured(config, clickEvent = null) {
     // START TRACE
     const trace_id = window.UnbreakTrace ? window.UnbreakTrace.start('checkout_configured') : crypto.randomUUID();
     
-    if (window.UnbreakTrace) {
-        window.UnbreakTrace.logConfig(config, 'CHECKOUT_CONFIG_SNAPSHOT');
-    }
-    
-    console.log('💳 [BUY_NOW] Button clicked!', {
-      trace_id,
-      config: config,
-      hasEvent: !!clickEvent,
-      userId: window.UnbreakCheckoutState?.userId || 'guest',
-      timestamp: new Date().toISOString()
-    });
-
     // Store button reference and original text BEFORE try block
     const btn = clickEvent?.target;
     const originalText = btn?.textContent || '🛍️ Jetzt kaufen';
     
     try {
-      console.log('🛍️ [CHECKOUT] buyConfigured called with:', { trace_id, config });
+      console.log('🛍️ [CHECKOUT] buyConfigured called');
       
       // Show loading
       if (btn) {
@@ -183,39 +171,43 @@ const UnbreakCheckout = {
         console.log('🛒 [CHECKOUT] Button disabled, showing loading...');
       }
 
-      // Validate config - check for colors object OR legacy color field
-      const hasColors = config && (config.colors || config.color);
-      if (!hasColors) {
-        console.error('❌ [CHECKOUT] No colors in config!');
-        console.log('❌ [CHECKOUT] Config received:', config);
-        console.log('❌ [CHECKOUT] Full state:', window.UnbreakCheckoutState);
+      // ✅ Get validated config from ConfiguratorBridge v2.0.0
+      if (!window.ConfiguratorBridge) {
+        console.error('❌ [CHECKOUT] ConfiguratorBridge not available!');
+        throw new Error('Konfigurator nicht geladen - bitte lade die Seite neu');
+      }
+
+      console.log('[CHECKOUT] trace_id=' + trace_id + ' requesting config from bridge...');
+      config = await window.ConfiguratorBridge.requestConfig();
+      console.log('[CHECKOUT] trace_id=' + trace_id + ' received validated config:', config);
+      
+      if (window.UnbreakTrace) {
+        window.UnbreakTrace.logConfig(config, 'CHECKOUT_CONFIG_FROM_BRIDGE');
+      }
+
+      // Validate required fields (bridge should already validate, but double-check)
+      if (!config || !config.colors || !config.variant) {
+        console.error('❌ [CHECKOUT] Invalid config from bridge!', config);
         
         if (window.UnbreakTrace) {
-            window.UnbreakTrace.log('CONFIG_MISSING_COLORS', {
-                config: config,
-                state: window.UnbreakCheckoutState
-            }, 'ERROR');
+          window.UnbreakTrace.log('CONFIG_INVALID_FROM_BRIDGE', {
+            config: config
+          }, 'ERROR');
         }
         
         throw new Error('Keine Konfiguration verfügbar - bitte wähle zuerst Farben im Konfigurator');
       }
-      
-      // Ensure colors are preserved as object if provided
-      if (config.colors && typeof config.colors === 'object') {
-        // Keep colors object intact
-        console.log('✅ [CHECKOUT] Colors object found:', config.colors);
-      } else if (config.color) {
-        // Convert legacy single color to colors object
-        config.colors = {
-          base: config.color,
-          top: config.color,
-          middle: config.color
-        };
-        console.log('⚠️ [CHECKOUT] Converted single color to colors object:', config.colors);
-      }
 
-      // Default product SKU for configurator
-      const sku = config.productSku || 'UNBREAK-GLAS-01';
+      // ✅ Config is already validated by bridge (4-part colors: base/arm/module/pattern)
+      console.log('✅ [CHECKOUT] Validated config from bridge:', {
+        variant: config.variant,
+        colors: config.colors,
+        finish: config.finish,
+        quantity: config.quantity
+      });
+
+      // Determine product SKU from variant
+      const sku = config.variant === 'bottle_holder' ? 'UNBREAK-WEIN-01' : 'UNBREAK-GLAS-01';
       
       console.log('🛒 [CHECKOUT] Using SKU:', { trace_id, sku });
       console.log('🛒 [CHECKOUT] Calling API with config:', { trace_id, config });
