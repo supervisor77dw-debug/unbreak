@@ -270,10 +270,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 10000);
     }
     
-    // iframe onLoad Event (für Debugging)
+    // iframe onLoad Event - CRITICAL: Send INIT signal to iframe
     if (iframe) {
         iframe.addEventListener('load', () => {
             logDebugEvent('IFRAME', 'iframe load event fired');
+            
+            // CRITICAL FIX: Send INIT signal to iframe so it knows parent is ready
+            console.log('✓ iframe loaded, sending PARENT_INIT to iframe...');
+            if (iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                    type: 'UNBREAK_PARENT_INIT',
+                    ok: true,
+                    timestamp: Date.now()
+                }, 'https://unbreak-3-d-konfigurator.vercel.app');
+                console.log('✓ PARENT_INIT sent to iframe');
+            }
         });
         
         iframe.addEventListener('error', (e) => {
