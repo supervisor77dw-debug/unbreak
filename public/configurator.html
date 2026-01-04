@@ -23,6 +23,19 @@
         console.log('🧪 [TEST] JavaScript IS executing!');
         console.log('🧪 [TEST] Window object exists:', typeof window);
         console.log('🧪 [TEST] Document ready state:', document.readyState);
+        
+        // Show deployment info for cache busting verification
+        console.log('🔍 [DEPLOY] Built at:', document.currentScript?.getAttribute('data-build-time') || 'unknown');
+        console.log('🔍 [DEPLOY] Commit:', '{{BUILD_HASH}}' || 'local');
+    </script>
+    
+    <!-- Build Info Footer (for cache verification) -->
+    <script>
+        window.UNBREAK_BUILD_INFO = {
+            timestamp: new Date().toISOString(),
+            commit: 'bc16910',
+            deployed: true
+        };
     </script>
 </head>
 
@@ -238,6 +251,10 @@
     <!-- Footer -->
     <footer>
         <div class="container">
+            <p style="margin: 0.5rem 0; color: #666; font-size: 11px; font-family: monospace;">
+                🔧 Build: <strong>bc16910</strong> • Deployed: <span id="deploy-time"></span> •
+                <a href="#" onclick="location.reload(true); return false;" style="color: #0891b2; text-decoration: underline;">Hard Refresh</a>
+            </p>
             <p>&copy; 2024 UNBREAK ONE. Alle Rechte vorbehalten.</p>
             <p>
                 <a href="impressum.html" data-i18n="footer.imprint">Impressum</a> |
@@ -245,6 +262,9 @@
                 <a href="agb.html" data-i18n="footer.terms">AGB</a>
             </p>
         </div>
+        <script>
+            document.getElementById('deploy-time').textContent = new Date().toLocaleTimeString('de-DE');
+        </script>
     </footer>
 
     <!-- Scripts -->
