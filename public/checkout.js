@@ -7,6 +7,12 @@
 
 console.log('🚀 [CHECKOUT] checkout.js START - File is being executed');
 
+// Initialize trace if available
+if (typeof window.UnbreakTrace !== 'undefined') {
+    window.UnbreakTrace.start('checkout_page_load');
+    console.log('✅ [TRACE] Trace system initialized on checkout page');
+}
+
 /**
  * Buy Standard Product (without configuration)
  * Usage: onclick="UnbreakCheckout.buyStandard('UNBREAK-WEIN-01')"
@@ -98,13 +104,9 @@ const UnbreakCheckout = {
       }
 
       // Validate config
-      if (!config || !config.color) {
-        console.warn('⚠️ [ADD_TO_CART] Using fallback config');
-        config = window.UnbreakCheckoutState?.lastConfig || {
-          color: 'petrol',
-          finish: 'matte',
-          product_sku: 'UNBREAK-GLAS-01'
-        };
+      if (!config || (!config.colors && !config.color)) {
+        console.error('❌ [ADD_TO_CART] No configuration available');
+        throw new Error('Keine Konfiguration verfügbar - bitte wähle zuerst im Konfigurator');
       }
 
       // Add to cart (localStorage for now)
@@ -152,7 +154,15 @@ const UnbreakCheckout = {
    * @param {Event} clickEvent - Optional click event for button feedback
    */
   async buyConfigured(config, clickEvent = null) {
+    // START TRACE
+    const trace_id = window.UnbreakTrace ? window.UnbreakTrace.start('checkout_configured') : crypto.randomUUID();
+    
+    if (window.UnbreakTrace) {
+        window.UnbreakTrace.logConfig(config, 'CHECKOUT_CONFIG_SNAPSHOT');
+    }
+    
     console.log('💳 [BUY_NOW] Button clicked!', {
+      trace_id,
       config: config,
       hasEvent: !!clickEvent,
       userId: window.UnbreakCheckoutState?.userId || 'guest',
@@ -164,7 +174,7 @@ const UnbreakCheckout = {
     const originalText = btn?.textContent || '🛍️ Jetzt kaufen';
     
     try {
-      console.log('🛍️ [CHECKOUT] buyConfigured called with:', config);
+      console.log('🛍️ [CHECKOUT] buyConfigured called with:', { trace_id, config });
       
       // Show loading
       if (btn) {
@@ -173,34 +183,66 @@ const UnbreakCheckout = {
         console.log('🛒 [CHECKOUT] Button disabled, showing loading...');
       }
 
-      // Validate config
-      if (!config || !config.color) {
-        console.warn('⚠️ [CHECKOUT] No color in config!');
-        console.log('⚠️ [CHECKOUT] Config received:', config);
-        console.log('⚠️ [CHECKOUT] Full state:', window.UnbreakCheckoutState);
+      // Validate config - check for colors object OR legacy color field
+      const hasColors = config && (config.colors || config.color);
+      if (!hasColors) {
+        console.error('❌ [CHECKOUT] No colors in config!');
+        console.log('❌ [CHECKOUT] Config received:', config);
+        console.log('❌ [CHECKOUT] Full state:', window.UnbreakCheckoutState);
         
-        // More lenient: proceed with fallback instead of throwing
-        console.log('⚠️ [CHECKOUT] Using fallback config instead of failing');
-        config = {
-          color: 'petrol',
-          finish: 'matte',
-          product: 'glass_holder'
+        if (window.UnbreakTrace) {
+            window.UnbreakTrace.log('CONFIG_MISSING_COLORS', {
+                config: config,
+                state: window.UnbreakCheckoutState
+            }, 'ERROR');
+        }
+        
+        throw new Error('Keine Konfiguration verfügbar - bitte wähle zuerst Farben im Konfigurator');
+      }
+      
+      // Ensure colors are preserved as object if provided
+      if (config.colors && typeof config.colors === 'object') {
+        // Keep colors object intact
+        console.log('✅ [CHECKOUT] Colors object found:', config.colors);
+      } else if (config.color) {
+        // Convert legacy single color to colors object
+        config.colors = {
+          base: config.color,
+          top: config.color,
+          middle: config.color
         };
+        console.log('⚠️ [CHECKOUT] Converted single color to colors object:', config.colors);
       }
 
       // Default product SKU for configurator
       const sku = config.productSku || 'UNBREAK-GLAS-01';
       
-      console.log('🛒 [CHECKOUT] Using SKU:', sku);
-      console.log('🛒 [CHECKOUT] Calling /api/checkout/create...');
+      console.log('🛒 [CHECKOUT] Using SKU:', { trace_id, sku });
+      console.log('🛒 [CHECKOUT] Calling API with config:', { trace_id, config });
+      
+      // Log before API call
+      if (window.UnbreakTrace) {
+          window.UnbreakTrace.log('CHECKOUT_API_CALL', {
+              endpoint: '/api/checkout/create',
+              product_sku: sku,
+              config_summary: {
+                  colors: config.colors,
+                  color: config.color,
+                  finish: config.finish,
+                  product: config.product
+              }
+          });
+      }
 
       // Call checkout API
       const response = await fetch('/api/checkout/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Trace-ID': trace_id // Send trace_id to server
         },
         body: JSON.stringify({
+          trace_id, // Include in body
           product_sku: sku,
           config: {
             color: config.color,
@@ -222,11 +264,25 @@ const UnbreakCheckout = {
       // Handle response
       if (!response.ok) {
         const errorData = await response.json();
+        if (window.UnbreakTrace) {
+          window.UnbreakTrace.log('CHECKOUT_API_ERROR', {
+            status: response.status,
+            error: errorData.error,
+            details: errorData.details
+          }, 'ERROR');
+        }
         console.error('❌ [CHECKOUT] API error:', errorData);
         throw new Error(errorData.error || 'Checkout failed');
       }
 
       const data = await response.json();
+      
+      if (window.UnbreakTrace) {
+        window.UnbreakTrace.log('CHECKOUT_API_SUCCESS', {
+          order_id: data.order_id,
+          has_checkout_url: !!data.checkout_url
+        });
+      }
       
       console.log('✓ [CHECKOUT] Konfiguration gespeichert:', data.configuration_id);
       console.log('✓ [CHECKOUT] Order erstellt:', data.order_id);
@@ -234,6 +290,12 @@ const UnbreakCheckout = {
 
       // Redirect to Stripe Checkout
       if (data.checkout_url) {
+        if (window.UnbreakTrace) {
+          window.UnbreakTrace.log('CHECKOUT_REDIRECT', {
+            url: data.checkout_url.substring(0, 50) + '...',
+            order_id: data.order_id
+          });
+        }
         console.log('🔄 [CHECKOUT] Redirecting to Stripe...');
         window.location.href = data.checkout_url;
       } else {
@@ -322,11 +384,13 @@ function initCheckoutButtons() {
       e.preventDefault();
       console.log('🛒 [CART] Add to cart button clicked');
       
-      let config = window.UnbreakCheckoutState?.lastConfig || {
-        color: 'petrol',
-        finish: 'matte',
-        product_sku: 'UNBREAK-GLAS-01'
-      };
+      const config = window.UnbreakCheckoutState?.lastConfig;
+      
+      if (!config) {
+        console.error('❌ [CART] No configuration available');
+        alert('Bitte wähle zuerst eine Konfiguration im Konfigurator');
+        return;
+      }
       
       UnbreakCheckout.addToCart(config, e);
     });
@@ -360,27 +424,17 @@ function initCheckoutButtons() {
       
       console.log('🛒 [CHECKOUT] Config from state:', config);
       
-      if (!config || !config.color) {
-        console.warn('⚠️ [CHECKOUT] No config or color found!');
-        console.log('⚠️ [CHECKOUT] Proceeding with default config...');
-        
-        // Fallback: Use default config
-        config = {
-          color: 'petrol',
-          finish: 'matte',
-          product: 'glass_holder',
-          productSku: productSku,
-        };
-        
-        console.log('✓ [CHECKOUT] Using fallback config:', config);
-      } else {
-        console.log('✓ [CHECKOUT] Using config from iframe:', config);
-        // Add SKU to config
-        config = {
-          ...config,
-          productSku: productSku
-        };
+      // Check if config exists and has EITHER colors object OR legacy color field
+      if (!config) {
+        console.error('❌ [CHECKOUT] No config found in state!');
+        alert('Bitte wähle zuerst Farben im Konfigurator');
+        return;
       }
+      
+      // Config exists, validation will be done in buyConfigured()
+      
+      // Add SKU to config if not present
+      config.productSku = config.productSku || productSku;
       
       console.log('🛒 [CHECKOUT] Final config for buyConfigured:', config);
       
@@ -438,19 +492,23 @@ function initConfiguratorListener() {
       
       const rawConfig = event.data.config || event.data;
       
-      // Transform new format to old format
+      // Preserve complete colors object - DO NOT flatten to single color!
       const transformedConfig = {
-        // Extract color from colors object or directly
-        color: rawConfig.colors?.selected || rawConfig.color || 'petrol',
+        colors: rawConfig.colors || (rawConfig.color ? {base: rawConfig.color, top: rawConfig.color} : null),
+        color: rawConfig.color || null, // Keep for legacy compatibility
         finish: rawConfig.finish || 'matte',
         product: rawConfig.product_variant || rawConfig.product || 'glass_holder',
-        // Preserve other fields
         engraving: rawConfig.engraving || null,
         quantity: rawConfig.quantity || 1,
       };
       
       window.UnbreakCheckoutState.lastConfig = transformedConfig;
       console.log('✓ [CONFIG] Transformed and saved:', transformedConfig);
+      
+      // Log color change if trace active
+      if (window.UnbreakTrace && transformedConfig.colors) {
+        window.UnbreakTrace.logConfig(transformedConfig, 'POSTMESSAGE_CONFIG_UPDATE');
+      }
     } else {
       console.log('ℹ️ [MESSAGE] Unknown message type, data:', event.data);
       
@@ -460,7 +518,8 @@ function initConfiguratorListener() {
         
         const rawConfig = event.data;
         const transformedConfig = {
-          color: rawConfig.colors?.selected || rawConfig.colors?.primary || rawConfig.color || 'petrol',
+          colors: rawConfig.colors || null, // PRESERVE full colors object
+          color: rawConfig.color || null,
           finish: rawConfig.finish || 'matte',
           product: rawConfig.product_variant || rawConfig.product || 'glass_holder',
           engraving: rawConfig.engraving || null,
@@ -469,6 +528,10 @@ function initConfiguratorListener() {
         
         window.UnbreakCheckoutState.lastConfig = transformedConfig;
         console.log('✓ [CONFIG] Extracted and saved from unknown type:', transformedConfig);
+        
+        if (window.UnbreakTrace) {
+          window.UnbreakTrace.logConfig(transformedConfig, 'UNKNOWN_MESSAGE_CONFIG');
+        }
       }
     }
   });
