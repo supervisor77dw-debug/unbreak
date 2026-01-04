@@ -105,16 +105,24 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Checkout Button (Production Ready) -->
-            <div style="text-align: center; margin: 3rem 0;">
+            
+            <!-- Checkout Button (MOVED OUTSIDE viewer-wrapper for visibility) -->
+            <div class="checkout-button-container" style="
+                text-align: center; 
+                margin: 3rem auto; 
+                padding: 2rem 0;
+                max-width: 600px;
+                position: relative;
+                z-index: 100;
+            ">
                 <button 
+                    id="configurator-buy-now-btn"
                     class="btn btn-primary btn-magnetic"
                     data-checkout="configured"
                     data-product-sku="UNBREAK-GLAS-01"
                     style="
-                        padding: 1.2rem 3rem;
-                        font-size: 1.2rem;
+                        padding: 1.5rem 4rem;
+                        font-size: 1.3rem;
                         background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
                         color: white;
                         border: none;
@@ -123,11 +131,22 @@
                         box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3);
                         transition: all 0.3s ease;
                         font-weight: 600;
+                        width: 100%;
+                        max-width: 400px;
+                        display: block;
+                        margin: 0 auto;
                     " 
                     onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 12px 40px rgba(8, 145, 178, 0.4)';"
                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 32px rgba(8, 145, 178, 0.3)';">
                     🛒 Jetzt kaufen
                 </button>
+                <p style="
+                    margin-top: 1rem;
+                    color: #666;
+                    font-size: 0.9rem;
+                ">
+                    Konfiguration wird beim Klick übernommen
+                </p>
             </div>
 
             <!-- Info Section -->

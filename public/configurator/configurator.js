@@ -205,8 +205,70 @@ document.addEventListener('DOMContentLoaded', () => {
             
             isReady = true;
             if (timeoutTimer) clearTimeout(timeoutTimer);
+            
+            // Show "Scroll to button" hint after 3 seconds if user hasn't scrolled
+            setTimeout(() => {
+                const button = document.getElementById('configurator-buy-now-btn');
+                if (button && !isElementInViewport(button)) {
+                    showScrollHint(button);
+                }
+            }, 3000);
         }
     }, 3000);
+    
+    // Helper: Check if element is in viewport
+    function isElementInViewport(el) {
+        const rect = el.getBoundingClientRect();
+        return (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+    }
+    
+    // Helper: Show scroll hint
+    function showScrollHint(button) {
+        const hint = document.createElement('div');
+        hint.id = 'scroll-hint';
+        hint.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            box-shadow: 0 8px 32px rgba(8, 145, 178, 0.5);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 10000;
+            animation: bounce 2s infinite;
+        `;
+        hint.innerHTML = '⬇️ Zum "Jetzt kaufen" Button scrollen';
+        hint.onclick = () => {
+            button.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            hint.remove();
+        };
+        
+        // Add bounce animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes bounce {
+                0%, 100% { transform: translateX(-50%) translateY(0); }
+                50% { transform: translateX(-50%) translateY(-10px); }
+            }
+        `;
+        document.head.appendChild(style);
+        document.body.appendChild(hint);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (hint.parentNode) hint.remove();
+        }, 10000);
+    }
     
     // iframe onLoad Event (für Debugging)
     if (iframe) {
