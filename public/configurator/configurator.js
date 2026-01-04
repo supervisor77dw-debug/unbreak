@@ -453,6 +453,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+    // UNIVERSAL MESSAGE LOGGER - catches ALL messages before any filtering
+    window.addEventListener('message', (event) => {
+        console.log('🌐 [UNIVERSAL] Message received:', {
+            origin: event.origin,
+            type: event.data?.type,
+            data: event.data
+        });
+    });
+    
     window.addEventListener('message', messageHandler);
     
     // Cleanup: Message-Listener entfernen bei pageHide (Navigation weg von Seite)
