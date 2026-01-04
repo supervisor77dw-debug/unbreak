@@ -5,7 +5,7 @@
  * Creates a Stripe Checkout Session for configured product
  * 
  * Flow:
- * 1. Validate product + config
+ * 1. Validate product + config (with canonical color validation)
  * 2. Calculate price (server-side, trusted)
  * 3. Upsert customer
  * 4. Create configuration record
@@ -17,6 +17,7 @@
 import { getSupabaseAdmin } from '../../../lib/supabase';
 import { stripe } from '../../../lib/stripe';
 import { calculatePrice, calculateShipping, calculateTax } from '../../../lib/pricing';
+import { validateConfiguratorConfig } from '../../../lib/configValidation';
 
 // Helper: Get origin from request (no hardcoded domains)
 function getOrigin(req) {
@@ -58,62 +59,38 @@ export default async function handler(req, res) {
     // Extract trace_id from header or body (client sends both)
     const trace_id = req.headers['x-trace-id'] || req.body.trace_id || crypto.randomUUID();
     
-    console.log('[TRACE] CHECKOUT_API_IN', {
-      trace_id,
-      method: req.method,
-      has_config: !!req.body.config,
-      timestamp: new Date().toISOString()
-    });
+    console.log('[CHECKOUT_CREATE] trace_id=' + trace_id + ' request received');
     
     const { product_sku, customer } = req.body;
     let config = req.body.config;
     
-    // EMERGENCY FIX: Convert legacy single-color format to colors object
-    // Configurator may still send {color: "petrol"} instead of {colors: {...}}
-    if (config && config.color && !config.colors) {
-      console.log('[HOTFIX] Converting legacy color format to colors object', {
-        trace_id,
-        old_format: config.color
+    // ========================================
+    // 1. VALIDATE CONFIG (strict, canonical)
+    // ========================================
+    let validatedConfig;
+    try {
+      validatedConfig = validateConfiguratorConfig(config, trace_id);
+      console.log('[CHECKOUT_CREATE] trace_id=' + trace_id + ' config validated:', {
+        variant: validatedConfig.variant,
+        colors: validatedConfig.colors,
+        finish: validatedConfig.finish
       });
-      
-      // If it's a default fallback color, that's a problem
-      if (config.color === 'petrol' && !config.userSelected) {
-        console.warn('[HOTFIX] WARNING: Received default "petrol" color - may indicate config not saved', {
-          trace_id,
-          full_config: config
-        });
-      }
-      
-      config = {
-        ...config,
-        colors: {
-          base: config.color,
-          top: config.color,
-          middle: config.color
-        }
-      };
-      
-      console.log('[HOTFIX] Converted to colors object:', config.colors);
+    } catch (error) {
+      console.error('[CHECKOUT_CREATE] trace_id=' + trace_id + ' validation failed:', error.message);
+      return res.status(400).json({
+        error: 'Invalid configuration',
+        details: error.message,
+        trace_id: trace_id
+      });
     }
-    
-    console.log('[TRACE] CHECKOUT_CONFIG_RECEIVED', {
-      trace_id,
-      has_single_color: !!config?.color,
-      has_colors_object: !!config?.colors,
-      config_preview: {
-        color: config?.color,
-        colors: config?.colors,
-        finish: config?.finish
-      }
-    });
 
     // ========================================
-    // 1. VALIDATE INPUT
+    // 2. VALIDATE INPUT
     // ========================================
-    if (!product_sku || !config) {
+    if (!product_sku) {
       return res.status(400).json({
-        error: 'Missing required fields',
-        required: ['product_sku', 'config'],
+        error: 'Missing required field: product_sku',
+        trace_id: trace_id
       });
     }
 
@@ -130,7 +107,7 @@ export default async function handler(req, res) {
     // ========================================
     const { product, price_cents, breakdown } = await calculatePrice(
       product_sku,
-      config
+      validatedConfig
     );
 
     // Calculate shipping & tax
@@ -187,12 +164,12 @@ export default async function handler(req, res) {
     // ========================================
     // Use simple_orders for guest checkout (no customer_id required)
 
-    // Prepare order data with conditional fields (depends on migration 013 status)
+    // Prepare order data
     const orderData = {
       customer_email: customer?.email || null,
       customer_name: customer?.name || null,
       product_sku: product_sku,
-      quantity: config.quantity || 1,
+      quantity: validatedConfig.quantity || 1,
       total_amount_cents: totalCents,
       currency: product.currency,
       status: 'pending',
@@ -200,21 +177,26 @@ export default async function handler(req, res) {
       trace_id: trace_id,
     };
 
-    // Build items array for order
+    // Build items array with embedded validated config
     const itemsData = [{
       product_id: product.id,
       sku: product.sku,
       name: product.title_de || product.name,
       unit_price_cents: price_cents,
-      quantity: config.quantity || 1,
-      config: config
+      quantity: validatedConfig.quantity || 1,
+      config: validatedConfig  // ✅ Embed complete validated config
     }];
 
-    // Store items + config_json + breakdown
+    // Store validated config (NO try/catch - let errors bubble)
     orderData.items = itemsData;
-    orderData.config_json = config;
-    orderData.preview_image_url = config.previewImageUrl || null;
+    orderData.config_json = validatedConfig;  // ✅ Complete 4-part config
+    orderData.preview_image_url = validatedConfig.previewImageUrl || null;
     orderData.price_breakdown_json = breakdown;
+    
+    console.log('[CHECKOUT_CREATE] trace_id=' + trace_id + ' storing order with config:', {
+      variant: validatedConfig.variant,
+      colors: validatedConfig.colors
+    });
     
     const { data: order, error: orderError } = await supabaseAdmin
       .from('simple_orders')
@@ -244,12 +226,10 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('[TRACE] ORDER_CREATED', {
-      trace_id,
+    console.log('[CHECKOUT_CREATE] trace_id=' + trace_id + ' order created:', {
       order_id: order.id,
-      has_config_json: !!order.config_json,
-      config_color: order.config_json?.color,
-      config_colors: order.config_json?.colors,
+      variant: order.config_json?.variant,
+      colors: order.config_json?.colors,
       customer_email: order.customer_email
     });
 
