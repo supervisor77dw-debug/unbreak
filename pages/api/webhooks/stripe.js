@@ -613,8 +613,8 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
             email: customerEmail.toLowerCase(),
             name: customerName,
             phone: customerPhone,
-            shipping_address: defaultShipping,
-            billing_address: defaultBilling,
+            default_shipping: defaultShipping,
+            default_billing: defaultBilling,
           });
 
         if (insertError) {
@@ -638,8 +638,8 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
         email: customerEmail?.toLowerCase() || `stripe-${stripeCustomerId}@unknown.com`,
         name: customerName,
         phone: customerPhone,
-        shipping_address: defaultShipping,
-        billing_address: defaultBilling,
+        default_shipping: defaultShipping,
+        default_billing: defaultBilling,
         metadata: {
           stripe_customer_id: stripeCustomerId,
           last_session_id: session.id,
