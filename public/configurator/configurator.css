@@ -4,8 +4,11 @@
 
 .configurator-section {
     min-height: 100vh;
-    padding: 120px 0 80px;
+    padding: 120px 0 120px; /* Increased bottom padding for button visibility */
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    /* Ensure section is scrollable */
+    overflow-y: auto;
+    height: auto;
 }
 
 .configurator-header {

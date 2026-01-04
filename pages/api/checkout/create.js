@@ -137,28 +137,43 @@ export default async function handler(req, res) {
     // ========================================
     // Use simple_orders for guest checkout (no customer_id required)
 
+    // Prepare order data with conditional fields (depends on migration 013 status)
+    const orderData = {
+      customer_email: customer?.email || null,
+      customer_name: customer?.name || null,
+      product_sku: product_sku,
+      quantity: config.quantity || 1,
+      total_amount_cents: totalCents,
+      currency: product.currency,
+      status: 'pending',
+      order_type: 'configured',
+    };
+
+    // Try to add config fields (may not exist if migration 013 not run yet)
+    // This makes the API work before AND after migration
+    const itemsData = [{
+      product_id: product.id,
+      sku: product.sku,
+      name: product.title_de || product.name,
+      unit_price_cents: price_cents,
+      quantity: config.quantity || 1,
+      config: config
+    }];
+
+    try {
+      // Attempt to store items + config_json if columns exist (after migration 013)
+      orderData.items = itemsData;
+      orderData.config_json = config;
+      orderData.preview_image_url = config.previewImageUrl || null;
+      orderData.price_breakdown_json = breakdown;
+    } catch (e) {
+      // Column doesn't exist yet - that's OK, continue without it
+      console.log('⚠️ [Order] Config columns not available (migration 013 not run yet)');
+    }
+
     const { data: order, error: orderError } = await supabaseAdmin
       .from('simple_orders')
-      .insert({
-        customer_email: customer?.email || null,
-        customer_name: customer?.name || null,
-        product_sku: product_sku,
-        quantity: config.quantity || 1,
-        total_amount_cents: totalCents,
-        currency: product.currency,
-        status: 'pending',
-        order_type: 'configured',
-        // Store items as JSON (simple_orders has 'items' column as JSONB)
-        items: [{
-          product_id: product.id,
-          sku: product.sku,
-          name: product.title_de || product.name,
-          unit_price_cents: price_cents,
-          quantity: config.quantity || 1,
-          // Store config in item metadata
-          config: config
-        }]
-      })
+      .insert(orderData)
       .select()
       .single();
 

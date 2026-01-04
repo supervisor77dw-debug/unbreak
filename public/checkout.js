@@ -77,11 +77,88 @@ const UnbreakCheckout = {
   },
 
   /**
+   * Add to Cart (from Configurator or Shop)
+   * @param {object} config - Configuration object
+   * @param {Event} clickEvent - Click event for button feedback
+   */
+  async addToCart(config, clickEvent = null) {
+    console.log('🛒 [ADD_TO_CART] Button clicked!', {
+      config: config,
+      hasEvent: !!clickEvent,
+      timestamp: new Date().toISOString()
+    });
+
+    const btn = clickEvent?.target;
+    const originalText = btn?.textContent || 'In den Warenkorb';
+
+    try {
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳ Wird hinzugefügt...';
+      }
+
+      // Validate config
+      if (!config || !config.color) {
+        console.warn('⚠️ [ADD_TO_CART] Using fallback config');
+        config = window.UnbreakCheckoutState?.lastConfig || {
+          color: 'petrol',
+          finish: 'matte',
+          product_sku: 'UNBREAK-GLAS-01'
+        };
+      }
+
+      // Add to cart (localStorage for now)
+      const cart = JSON.parse(localStorage.getItem('unbreak_cart') || '[]');
+      cart.push({
+        id: Date.now(),
+        product_sku: config.product_sku || 'UNBREAK-GLAS-01',
+        config: config,
+        quantity: 1,
+        added_at: new Date().toISOString()
+      });
+      localStorage.setItem('unbreak_cart', JSON.stringify(cart));
+
+      console.log('✅ [ADD_TO_CART] Item added to cart', { cartSize: cart.length });
+
+      // Success feedback
+      if (btn) {
+        btn.textContent = '✓ Hinzugefügt!';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }, 2000);
+      }
+
+      // Optional: Show cart count badge
+      const badge = document.querySelector('.cart-badge');
+      if (badge) {
+        badge.textContent = cart.length;
+        badge.style.display = 'block';
+      }
+
+    } catch (error) {
+      console.error('❌ [ADD_TO_CART] Error:', error);
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+      alert('Fehler beim Hinzufügen zum Warenkorb: ' + error.message);
+    }
+  },
+
+  /**
    * Configured Product Checkout (from 3D Configurator)
    * @param {object} config - Configuration object with color, finish, etc.
    * @param {Event} clickEvent - Optional click event for button feedback
    */
   async buyConfigured(config, clickEvent = null) {
+    console.log('💳 [BUY_NOW] Button clicked!', {
+      config: config,
+      hasEvent: !!clickEvent,
+      userId: window.UnbreakCheckoutState?.userId || 'guest',
+      timestamp: new Date().toISOString()
+    });
+
     // Store button reference and original text BEFORE try block
     const btn = clickEvent?.target;
     const originalText = btn?.textContent || '🛍️ Jetzt kaufen';
@@ -235,6 +312,28 @@ function initCheckoutButtons() {
     button.dataset.bound = '1';
   });
   
+  // Add to Cart Buttons
+  const cartButtons = document.querySelectorAll('[data-checkout="add-to-cart"]');
+  console.log('🔧 [INIT] Found add-to-cart buttons:', cartButtons.length);
+  cartButtons.forEach(button => {
+    if (button.dataset.bound === '1') return;
+    
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('🛒 [CART] Add to cart button clicked');
+      
+      let config = window.UnbreakCheckoutState?.lastConfig || {
+        color: 'petrol',
+        finish: 'matte',
+        product_sku: 'UNBREAK-GLAS-01'
+      };
+      
+      UnbreakCheckout.addToCart(config, e);
+    });
+    
+    button.dataset.bound = '1';
+  });
+
   // Configured Product Buttons (Configurator)
   const configuredButtons = document.querySelectorAll('[data-checkout="configured"]');
   console.log('🔧 [INIT] Found configured buttons:', configuredButtons.length);
@@ -292,7 +391,7 @@ function initCheckoutButtons() {
     button.dataset.bound = '1';
   });
   
-  console.log(`✓ Checkout buttons initialized: ${standardButtons.length + configuredButtons.length} buttons`);
+  console.log(`✓ Checkout buttons initialized: ${standardButtons.length + configuredButtons.length + cartButtons.length} buttons (${standardButtons.length} standard, ${configuredButtons.length} configured, ${cartButtons.length} cart)`);
 }
 
 /**
