@@ -434,8 +434,8 @@ function initCheckoutButtons() {
         return;
       }
       
-      // Validate config
-      if (!config || !config.colors || !config.colors.base || !config.colors.top || !config.colors.middle) {
+      // Validate config (4-part colors: base, arm, module, pattern)
+      if (!config || !config.colors || !config.colors.base || !config.colors.arm || !config.colors.module || !config.colors.pattern) {
         console.error('❌ [CHECKOUT] Invalid config structure:', config);
         alert('Konfiguration unvollständig - bitte wählen Sie alle Farben');
         return;
