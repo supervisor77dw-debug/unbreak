@@ -281,11 +281,23 @@
         </script>
     </footer>
 
-    <!-- Scripts -->
+    <!-- Scripts - CRITICAL ORDER: Bridge MUST load before configurator-new.js -->
     <script src="animations.js"></script>
     <script src="script.js"></script>
     <script src="configurator/trace-system.js"></script>
-    <script src="../lib/configuratorBridge.js"></script>
+    
+    <!-- CRITICAL: Load bridge first -->
+    <script src="lib/configuratorBridge.js"></script>
+    <script>
+        // IMMEDIATE VERIFICATION
+        console.log('[BRIDGE_CHECK] window.ConfiguratorBridge exists:', !!window.ConfiguratorBridge);
+        console.log('[BRIDGE_CHECK] typeof:', typeof window.ConfiguratorBridge);
+        console.log('[BRIDGE_CHECK] is constructor:', typeof window.ConfiguratorBridge === 'function');
+        if (!window.ConfiguratorBridge) {
+            console.error('❌ FATAL: ConfiguratorBridge not loaded! Script path broken.');
+        }
+    </script>
+    
     <script src="checkout.js"></script>
     <script src="configurator/configurator-new.js"></script>
     
