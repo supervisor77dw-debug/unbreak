@@ -298,13 +298,14 @@
         
         if (!debugMode) return;
         
-        console.log('🔧 [DEBUG MODE] Enabled');
+        console.log('🔧 [DEBUG MODE] Enabled - Failure-safe diagnostics active');
+        console.log('[DEBUG_INIT] URL:', window.location.href);
+        console.log('[DEBUG_INIT] Build:', window.UNBREAK_BUILD_INFO || 'unknown');
         
-        // Show debug bar
+        // Show debug bar IMMEDIATELY (no dependencies)
         const debugBar = document.getElementById('debug-bar');
         if (debugBar) {
             debugBar.style.display = 'block';
-            // Adjust body margin for fixed bar
             document.body.style.marginTop = '40px';
         }
         
@@ -378,11 +379,52 @@
             originalLog.apply(console, args);
         };
         
-        // Dump diagnostics button
+        // WATCHDOG: Detect stalled loading
+        let loadingStartTime = Date.now();
+        let isStalled = false;
+        setTimeout(function() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay && !loadingOverlay.classList.contains('hidden')) {
+                isStalled = true;
+                console.error('[3D_LOAD_STALLED] Still loading after 10s', {
+                    trace_id: 'stall_' + Date.now(),
+                    stalled_ms: Date.now() - loadingStartTime,
+                    overlay_visible: true,
+                    last_error: window._lastConsoleError || 'none'
+                });
+                
+                // Add STALLED badge to debug bar
+                const stalledBadge = document.createElement('span');
+                stalledBadge.textContent = '🔴 STALLED';
+                stalledBadge.style.cssText = 'color: #ef4444; font-weight: bold; animation: pulse 1s infinite;';
+                document.getElementById('debug-bar').appendChild(stalledBadge);
+            }
+        }, 10000);
+        
+        // Capture console errors
+        window._lastConsoleError = null;
+        const originalError = console.error;
+        console.error = function(...args) {
+            window._lastConsoleError = args.join(' ');
+            originalError.apply(console, args);
+        };
+        
+        // Dump diagnostics button (ALWAYS ENABLED)
         document.getElementById('dump-diagnostics').addEventListener('click', function() {
             console.log('═══════════════════════════════════════════');
-            console.log('🔍 DIAGNOSTIC DUMP');
+            console.log('🔍 DIAGNOSTIC DUMP (FAILURE-SAFE)');
             console.log('═══════════════════════════════════════════');
+            console.log('Timestamp:', new Date().toISOString());
+            console.log('Stalled:', isStalled);
+            console.log('Loading duration:', Date.now() - loadingStartTime, 'ms');
+            
+            // URL + Build
+            console.log('\n📍 ENVIRONMENT:');
+            console.log('- URL:', window.location.href);
+            console.log('- Pathname:', window.location.pathname);
+            console.log('- Is configurator.html:', window.location.pathname.includes('configurator.html'));
+            console.log('- Build info:', window.UNBREAK_BUILD_INFO);
+            console.log('- Last console error:', window._lastConsoleError || 'none');
             
             // 1. All buy button candidates
             console.log('\n📍 BUY BUTTON ELEMENTS:');
@@ -403,7 +445,7 @@
                 console.log('  Z-index:', getComputedStyle(byId).zIndex);
             }
             
-            // 2. Iframe details
+            // 2. Iframe details + loading status
             console.log('\n📍 IFRAME:');
             const iframe = document.getElementById('configurator-iframe');
             if (iframe) {
@@ -412,7 +454,15 @@
                 console.log('- Src:', iframe.src);
                 console.log('- Rect:', rect);
                 console.log('- contentWindow exists:', !!iframe.contentWindow);
+                console.log('- readyState:', iframe.contentDocument?.readyState || 'no access');
+                console.log('- onload fired:', iframe._onloadFired || false);
+            } else {
+                console.log('- IFRAME NOT FOUND');
             }
+            
+            const loadingOverlay = document.getElementById('loading-overlay');
+            console.log('- Loading overlay visible:', loadingOverlay && !loadingOverlay.classList.contains('hidden'));
+            console.log('- Loading overlay classes:', loadingOverlay?.className);
             
             // 3. Overlays covering button
             console.log('\n📍 POTENTIAL OVERLAYS (z-index > 1000):');
@@ -456,8 +506,48 @@
                 console.log('- Exists:', false);
             }
             
+            // 7. WebGL capability
+            console.log('\n📍 WEBGL:');
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            if (gl) {
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                console.log('- WebGL supported:', true);
+                console.log('- Vendor:', gl.getParameter(gl.VENDOR));
+                console.log('- Renderer:', debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'N/A');
+                console.log('- Version:', gl.getParameter(gl.VERSION));
+            } else {
+                console.log('- WebGL supported:', false, '❌ THIS IS THE PROBLEM');
+            }
+            
+            // 8. Network requests (if available)
+            console.log('\n📍 NETWORK (from Performance API):');
+            const resources = performance.getEntriesByType('resource');
+            const modelAssets = resources.filter(r => 
+                r.name.includes('.glb') || 
+                r.name.includes('.gltf') || 
+                r.name.includes('draco') ||
+                r.name.includes('ktx2') ||
+                r.name.includes('vercel.app')
+            );
+            console.log('- Total resources loaded:', resources.length);
+            console.log('- 3D-related assets:', modelAssets.length);
+            modelAssets.forEach(asset => {
+                console.log(`  - ${asset.name}`);
+                console.log(`    Duration: ${asset.duration}ms, Size: ${asset.transferSize || 'unknown'} bytes`);
+            });
+            
             console.log('\n═══════════════════════════════════════════');
         });
+        
+        // Track iframe onload
+        const iframe = document.getElementById('configurator-iframe');
+        if (iframe) {
+            iframe.addEventListener('load', function() {
+                console.log('[3D_IFRAME_LOADED] onload event fired');
+                this._onloadFired = true;
+            });
+        }
     })();
     </script>
     
