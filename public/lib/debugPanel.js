@@ -26,11 +26,19 @@
                 lastMessageToIframe: null,
                 lastMessageToIframeTime: null,
                 
+                // Message Tap
+                messagesFromIframe: [], // Last 10
+                messagesToIframe: [], // Last 10
+                blockedMessages: 0,
+                lastBlockedReason: null,
+                
                 // Config
                 configExists: false,
                 configVariant: null,
                 configColors: null,
+                configTimestamp: null,
                 missingColors: [],
+                configSchema: null, // 'legacy-3part', '4part', 'bottle_holder'
                 
                 // Button
                 buttonFound: false,
@@ -185,13 +193,38 @@
                     <div style="margin-left: 8px; line-height: 1.6;">
                         <div>${statusIcon(this.state.readyReceived)} READY: <span style="color: ${this.state.readyReceived ? '#10b981' : '#ef4444'}">${this.state.readyReceived ? 'RECEIVED' : 'NOT YET'}</span></div>
                         ${this.state.readyTimestamp ? `<div>→ At: <code style="color: #94a3b8">${formatTime(this.state.readyTimestamp)}</code></div>` : ''}
-                        ${this.state.lastMessageFromIframe ? `
-                            <div style="margin-top: 4px; color: #10b981;">← From iframe: <code>${this.state.lastMessageFromIframe}</code></div>
-                            <div style="margin-left: 12px; color: #94a3b8; font-size: 9px;">${formatTime(this.state.lastMessageFromIframeTime)}</div>
-                        ` : '<div style="color: #64748b;">← No messages from iframe</div>'}
-                        ${this.state.lastMessageToIframe ? `
-                            <div style="margin-top: 4px; color: #3b82f6;">→ To iframe: <code>${this.state.lastMessageToIframe}</code></div>
-                            <div style="margin-left: 12px; color: #94a3b8; font-size: 9px;">${formatTime(this.state.lastMessageToIframeTime)}</div>
+                        
+                        <div style="margin-top: 8px; color: #94a3b8; font-size: 10px;">
+                            📨 Messages FROM iframe (${this.state.messagesFromIframe.length}):
+                        </div>
+                        ${this.state.messagesFromIframe.length > 0 ? `
+                            <div style="background: #1e293b; padding: 4px; border-radius: 4px; margin-top: 2px; max-height: 100px; overflow-y: auto;">
+                                ${this.state.messagesFromIframe.slice(-10).reverse().map(msg => `
+                                    <div style="font-size: 9px; color: #10b981; border-bottom: 1px solid #334155; padding: 2px 0;">
+                                        <span style="color: #64748b;">${formatTime(msg.timestamp)}</span> <strong>${msg.type}</strong>
+                                        ${msg.data ? `<div style="color: #94a3b8; margin-left: 8px;">${JSON.stringify(msg.data).substring(0, 80)}...</div>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div style="color: #64748b; font-size: 9px;">None yet</div>'}
+                        
+                        <div style="margin-top: 8px; color: #94a3b8; font-size: 10px;">
+                            📤 Messages TO iframe (${this.state.messagesToIframe.length}):
+                        </div>
+                        ${this.state.messagesToIframe.length > 0 ? `
+                            <div style="background: #1e293b; padding: 4px; border-radius: 4px; margin-top: 2px; max-height: 80px; overflow-y: auto;">
+                                ${this.state.messagesToIframe.slice(-10).reverse().map(msg => `
+                                    <div style="font-size: 9px; color: #3b82f6; padding: 2px 0;">
+                                        <span style="color: #64748b;">${formatTime(msg.timestamp)}</span> <strong>${msg.type}</strong>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div style="color: #64748b; font-size: 9px;">None yet</div>'}
+                        
+                        ${this.state.blockedMessages > 0 ? `
+                            <div style="margin-top: 6px; background: #7f1d1d; padding: 4px; border-radius: 4px; font-size: 9px; color: #fca5a5;">
+                                🚫 Blocked: ${this.state.blockedMessages} | Last: ${this.state.lastBlockedReason}
+                            </div>
                         ` : ''}
                     </div>
                 </div>
@@ -203,6 +236,8 @@
                     </div>
                     <div style="margin-left: 8px; line-height: 1.6;">
                         <div>${statusIcon(this.state.configExists)} Config: <span style="color: ${this.state.configExists ? '#10b981' : '#ef4444'}">${this.state.configExists ? 'EXISTS' : 'MISSING'}</span></div>
+                        ${this.state.configTimestamp ? `<div>→ Received: <code style="color: #94a3b8">${formatTime(this.state.configTimestamp)}</code></div>` : ''}
+                        ${this.state.configSchema ? `<div>→ Schema: <code style="color: #fbbf24">${this.state.configSchema}</code></div>` : ''}
                         ${this.state.configVariant ? `<div>→ Variant: <code style="color: #fbbf24">${this.state.configVariant}</code></div>` : ''}
                         ${this.state.configColors ? `
                             <div style="margin-top: 4px; color: #94a3b8;">→ Colors:</div>
@@ -266,14 +301,34 @@
         }
         
         // Public methods to log messages/errors
-        logMessage(type, direction, message) {
+        logMessage(type, direction, message, data = null) {
+            const entry = {
+                type,
+                message,
+                data,
+                timestamp: Date.now()
+            };
+            
             if (direction === 'from') {
                 this.state.lastMessageFromIframe = type;
                 this.state.lastMessageFromIframeTime = Date.now();
+                this.state.messagesFromIframe.push(entry);
+                if (this.state.messagesFromIframe.length > 10) {
+                    this.state.messagesFromIframe.shift();
+                }
             } else {
                 this.state.lastMessageToIframe = type;
                 this.state.lastMessageToIframeTime = Date.now();
+                this.state.messagesToIframe.push(entry);
+                if (this.state.messagesToIframe.length > 10) {
+                    this.state.messagesToIframe.shift();
+                }
             }
+        }
+        
+        logBlocked(origin, reason) {
+            this.state.blockedMessages++;
+            this.state.lastBlockedReason = `${origin}: ${reason}`;
         }
         
         logError(message, source, context) {
@@ -292,6 +347,14 @@
         setReady(timestamp) {
             this.state.readyReceived = true;
             this.state.readyTimestamp = timestamp || Date.now();
+        }
+        
+        setConfig(config, schema) {
+            this.state.configExists = true;
+            this.state.configVariant = config.variant;
+            this.state.configColors = config.colors;
+            this.state.configTimestamp = Date.now();
+            this.state.configSchema = schema;
         }
     }
     

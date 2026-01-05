@@ -555,6 +555,54 @@ if (typeof window !== 'undefined') {
   // Make UnbreakCheckout available globally
   window.UnbreakCheckout = UnbreakCheckout;
   
+  // EVENT DELEGATION: Global click handler for buy buttons (always works)
+  document.addEventListener('click', function(e) {
+    const buyButton = e.target.closest('[data-checkout="configured"]');
+    if (!buyButton) return;
+    
+    // Only handle if no direct handler bound (fallback)
+    if (buyButton.dataset.bound === '1') return;
+    
+    e.preventDefault();
+    const traceId = 'click_' + Date.now();
+    console.log('[BUY] click captured via delegation, trace_id=' + traceId);
+    
+    if (window.UnbreakDebugPanel) {
+      window.UnbreakDebugPanel.logMessage('BUY_CLICK', 'to', 'Button click captured via delegation');
+    }
+    
+    // Try to get config from bridge
+    const bridge = window.getConfiguratorBridge?.();
+    if (!bridge) {
+      console.error('[BUY] Bridge not found');
+      alert('Konfigurator-Bridge nicht gefunden');
+      return;
+    }
+    
+    if (!bridge.isReady()) {
+      console.warn('[BUY] Bridge not ready');
+      alert('Bitte warten - Konfigurator lädt noch');
+      return;
+    }
+    
+    // Request config
+    bridge.requestConfig().then(config => {
+      console.log('[BUY] Got config, calling buyConfigured');
+      UnbreakCheckout.buyConfigured(config, e);
+    }).catch(err => {
+      console.error('[BUY] Config request failed:', err);
+      
+      // Try fallback to window.__unbreakLastConfig
+      const fallback = window.__unbreakLastConfig;
+      if (fallback) {
+        console.log('[BUY] Using fallback config from window.__unbreakLastConfig');
+        UnbreakCheckout.buyConfigured(fallback, e);
+      } else {
+        alert('Keine Konfiguration verfügbar - bitte wählen Sie zuerst Farben');
+      }
+    });
+  });
+  
   // Auto-initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
@@ -583,4 +631,5 @@ if (typeof window !== 'undefined') {
   console.log('✅ [CHECKOUT] checkout.js loaded and initialized');
   console.log('✅ [CHECKOUT] UnbreakCheckout available:', typeof window.UnbreakCheckout);
   console.log('✅ [CHECKOUT] State initialized:', window.UnbreakCheckoutState);
+  console.log('✅ [CHECKOUT] Event delegation active for [data-checkout="configured"]');
 }

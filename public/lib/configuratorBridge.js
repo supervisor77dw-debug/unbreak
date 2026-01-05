@@ -150,8 +150,27 @@
                     
                 case 'ERROR':
                 case 'UNBREAK_CONFIG_ERROR':
-                    console.error('[3D_ERROR]', data.message || 'Unknown error', data);
-                    this.handleError(data.message || 'Unknown error', false);
+                    const errorDetails = {
+                        message: data.message || 'Unknown error',
+                        stack: data.stack || 'No stack trace',
+                        code: data.code || 'UNKNOWN',
+                        payload: data.payload || data,
+                        internal_state: {
+                            variant: data.variant || 'unknown',
+                            colors: data.colors || null
+                        }
+                    };
+                    console.error('[3D_ERROR] Full details:', errorDetails);
+                    
+                    if (window.UnbreakDebugPanel) {
+                        window.UnbreakDebugPanel.logError(
+                            errorDetails.message,
+                            '3D Configurator',
+                            `Code: ${errorDetails.code} | Stack: ${errorDetails.stack.substring(0, 100)}`
+                        );
+                    }
+                    
+                    this.handleError(errorDetails.message, false);
                     break;
                     
                 default:
@@ -258,6 +277,7 @@
         /**
          * Validate configurator config structure
          * STRICT: No silent fallbacks, all errors thrown
+         * SUPPORTS MULTIPLE SCHEMAS: legacy-3part, 4part, bottle_holder
          */
         validateConfig(config) {
             const errors = [];
@@ -273,17 +293,36 @@
             }
             
             // Get variant (default to glass_holder)
-            const variant = config.variant || 'glass_holder';
+            const variant = config.variant || config.product || 'glass_holder';
             
             if (!['glass_holder', 'bottle_holder'].includes(variant)) {
                 errors.push(`Invalid variant: ${variant}`);
             }
             
-            // For glass_holder: require all 4 parts
-            // For bottle_holder: only pattern is configurable
-            const requiredParts = variant === 'glass_holder' 
-                ? ['base', 'arm', 'module', 'pattern']
-                : ['pattern'];
+            // Detect schema based on color keys present
+            const colorKeys = Object.keys(config.colors);
+            let schema = 'unknown';
+            let requiredParts = [];
+            
+            if (variant === 'bottle_holder') {
+                // Bottle holder: only base + top (or pattern)
+                schema = 'bottle_holder';
+                requiredParts = colorKeys.includes('pattern') ? ['base', 'pattern'] : ['base', 'top'];
+            } else if (colorKeys.includes('arm') || colorKeys.includes('module')) {
+                // New 4-part schema
+                schema = '4part';
+                requiredParts = ['base', 'arm', 'module', 'pattern'];
+            } else if (colorKeys.includes('middle')) {
+                // Legacy 3-part schema
+                schema = 'legacy-3part';
+                requiredParts = ['base', 'middle', 'top'];
+            } else if (colorKeys.includes('base') && colorKeys.includes('top')) {
+                // Minimal schema (bottle holder or simple)
+                schema = 'legacy-3part';
+                requiredParts = ['base', 'top'];
+            } else {
+                errors.push(`Cannot detect color schema. Keys found: ${colorKeys.join(', ')}`);
+            }
             
             // Validate required parts
             for (const part of requiredParts) {
@@ -294,14 +333,35 @@
                     continue;
                 }
                 
-                if (!this.isCanonicalColorId(colorId)) {
+                // Only validate canonical IDs for 4part schema
+                if (schema === '4part' && !this.isCanonicalColorId(colorId)) {
                     errors.push(`Invalid color ID for ${part}: "${colorId}" (must be one of: ${CANONICAL_COLOR_IDS.join(', ')})`);
                 }
             }
             
-            // For bottle_holder, set non-configurable parts to black
+            // If errors found, throw
+            if (errors.length > 0) {
+                const errorMsg = `Config validation failed (schema: ${schema}):\n${errors.map(e => `  - ${e}`).join('\n')}`;
+                
+                if (window.UnbreakDebugPanel) {
+                    window.UnbreakDebugPanel.logError(errorMsg, 'ConfigValidation', `Schema: ${schema}, Variant: ${variant}`);
+                }
+                
+                throw new Error(errorMsg);
+            }
+            
+            // Build normalized colors object
             const colors = { ...config.colors };
-            if (variant === 'bottle_holder') {
+            
+            // For bottle_holder with legacy schema, ensure black defaults
+            if (variant === 'bottle_holder' && schema === 'legacy-3part') {
+                colors.base = colors.base || 'black';
+                colors.top = colors.top || 'black';
+                colors.middle = colors.middle || 'black';
+            }
+            
+            // For 4part schema on bottle_holder
+            if (variant === 'bottle_holder' && schema === '4part') {
                 colors.base = colors.base || 'black';
                 colors.arm = colors.arm || 'black';
                 colors.module = colors.module || 'black';
@@ -309,30 +369,30 @@
             
             // Validate finish (optional)
             const finish = config.finish || 'matte';
-            if (!['matte', 'glossy'].includes(finish)) {
-                this.log(`Invalid finish: ${config.finish}, defaulting to matte`, null, true);
-            }
-            
-            // If errors found, throw
-            if (errors.length > 0) {
-                throw new Error(`Config validation failed:\n${errors.map(e => `  - ${e}`).join('\n')}`);
-            }
             
             // Return validated config with complete structure
-            return {
+            const validatedConfig = {
                 variant: variant,
-                colors: {
-                    base: colors.base,
-                    arm: colors.arm,
-                    module: colors.module,
-                    pattern: colors.pattern
-                },
+                colors: colors,
                 finish: finish,
                 quantity: config.quantity || 1,
                 source: 'configurator_iframe',
                 config_version: '1.0.0',
-                trace_id: this.traceId
+                trace_id: this.traceId,
+                _schema: schema
             };
+            
+            // Store globally
+            window.__unbreakLastConfig = validatedConfig;
+            
+            // Store in debug panel
+            if (window.UnbreakDebugPanel) {
+                window.UnbreakDebugPanel.setConfig(validatedConfig, schema);
+            }
+            
+            this.log(`[CONFIG_VALIDATED] schema=${schema} variant=${variant} colors=${Object.keys(colors).join(',')}`);
+            
+            return validatedConfig;
         }
         
         /**

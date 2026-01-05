@@ -294,6 +294,48 @@
             script.src = 'lib/debugPanel.js';
             document.head.appendChild(script);
             console.log('[DEBUG] Persistent Debug Panel loading...');
+            
+            // MESSAGE TAP: Log ALL postMessages (even blocked ones)
+            window.addEventListener('message', function(event) {
+                const ts = Date.now();
+                const data = event.data;
+                
+                // Always log to console for reference
+                console.log('[MESSAGE_TAP]', {
+                    timestamp: new Date(ts).toISOString().substring(11, 23),
+                    origin: event.origin,
+                    type: data?.type || 'no-type',
+                    data: data
+                });
+                
+                // Check if blocked by origin filter
+                const ALLOWED_ORIGINS = [
+                    'https://unbreak-3-d-konfigurator.vercel.app',
+                    window.location.origin
+                ];
+                
+                const isBlocked = !ALLOWED_ORIGINS.includes(event.origin);
+                
+                if (window.UnbreakDebugPanel) {
+                    if (isBlocked) {
+                        window.UnbreakDebugPanel.logBlocked(
+                            event.origin,
+                            `Not in allowlist: ${ALLOWED_ORIGINS.join(', ')}`
+                        );
+                    } else if (data && data.type) {
+                        // Determine direction
+                        const isFromIframe = event.origin === 'https://unbreak-3-d-konfigurator.vercel.app';
+                        window.UnbreakDebugPanel.logMessage(
+                            data.type,
+                            isFromIframe ? 'from' : 'to',
+                            data.message || '',
+                            data
+                        );
+                    }
+                }
+            }, true); // Use capture phase
+            
+            console.log('[MESSAGE_TAP] Installed - all postMessages will be logged');
         }
     </script>
     
