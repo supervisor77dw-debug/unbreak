@@ -119,6 +119,11 @@
             
             this.log(`[BRIDGE_MSG] ${data.type} from ${event.origin}`, data);
             
+            // Log to debug panel
+            if (window.UnbreakDebugPanel) {
+                window.UnbreakDebugPanel.logMessage(data.type, 'from', JSON.stringify(data).substring(0, 100));
+            }
+            
             switch (data.type) {
                 case 'READY':
                 case 'UNBREAK_CONFIG_READY':
@@ -159,7 +164,14 @@
          */
         handleReady(data) {
             this.ready = true;
-            this.log(`READY timestamp=${Date.now()}`);
+            this.readyTimestamp = Date.now();
+            this.log(`[READY] timestamp=${this.readyTimestamp}`);
+            
+            // Log to debug panel if available
+            if (window.UnbreakDebugPanel) {
+                window.UnbreakDebugPanel.setReady(this.readyTimestamp);
+                window.UnbreakDebugPanel.logMessage('READY', 'from', 'Configurator ready signal received');
+            }
             
             // CRITICAL: Send acknowledgement back to iframe
             if (this.iframe && this.iframe.contentWindow) {
@@ -167,7 +179,11 @@
                     type: 'READY_ACK',
                     source: 'parent'
                 }, CONFIGURATOR_ORIGIN);
-                this.log('Sent READY_ACK to iframe');
+                this.log('[READY_ACK] Sent to iframe');
+                
+                if (window.UnbreakDebugPanel) {
+                    window.UnbreakDebugPanel.logMessage('READY_ACK', 'to', 'Acknowledgement sent to iframe');
+                }
             }
             
             if (this.options.onReady) {
@@ -451,6 +467,11 @@
         handleError(message, isWarning = false) {
             const prefix = isWarning ? '⚠️' : '❌';
             console.error(`${prefix} [UNBREAK_PARENT] ${message}`);
+            
+            // Log to debug panel
+            if (window.UnbreakDebugPanel) {
+                window.UnbreakDebugPanel.logError(message, 'ConfiguratorBridge', isWarning ? 'warning' : 'error');
+            }
             
             if (this.options.onError) {
                 this.options.onError(message, isWarning);

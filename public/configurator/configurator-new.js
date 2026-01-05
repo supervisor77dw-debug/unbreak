@@ -30,6 +30,13 @@
         
         if (!iframe) {
             console.error('[CONFIGURATOR_PAGE] iframe not found!');
+            if (window.UnbreakDebugPanel) {
+                window.UnbreakDebugPanel.logError(
+                    'iframe not found in DOM',
+                    'configurator-new.js',
+                    'Selector: #configurator-iframe | Lifecycle: DOMContentLoaded | Will NOT retry'
+                );
+            }
             return;
         }
         

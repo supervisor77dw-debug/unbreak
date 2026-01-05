@@ -286,6 +286,17 @@
     <script src="script.js"></script>
     <script src="configurator/trace-system.js"></script>
     
+    <!-- PERSISTENT DEBUG PANEL (loads first if debug=1) -->
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('debug') === '1') {
+            const script = document.createElement('script');
+            script.src = 'lib/debugPanel.js';
+            document.head.appendChild(script);
+            console.log('[DEBUG] Persistent Debug Panel loading...');
+        }
+    </script>
+    
     <!-- CRITICAL: Load bridge first -->
     <script src="lib/configuratorBridge.js"></script>
     <script>
@@ -295,6 +306,9 @@
         console.log('[BRIDGE_CHECK] is constructor:', typeof window.ConfiguratorBridge === 'function');
         if (!window.ConfiguratorBridge) {
             console.error('❌ FATAL: ConfiguratorBridge not loaded! Script path broken.');
+            if (window.UnbreakDebugPanel) {
+                window.UnbreakDebugPanel.logError('ConfiguratorBridge not loaded', 'script-loader', 'Check lib/configuratorBridge.js path');
+            }
         }
     </script>
     
