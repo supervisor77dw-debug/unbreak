@@ -1,0 +1,45 @@
+# Documentation (74 MD files blocking deployment)
+*.md
+!README.md
+
+# Debug/Test Scripts (21 files)
+check-*.js
+diagnose-*.js
+inspect-*.js
+list-*.js
+mark-*.js
+migrate-*.js
+quick-*.js
+run-*.js
+test-*.js
+EMERGENCY-*.js
+
+# SQL Scripts
+*.sql
+
+# Backup Files
+*.bak
+*.backup
+
+# Test Files
+playwright.config.js
+tests/
+test-results/
+playwright-report/
+
+# Development Folders
+docs/
+scripts/
+
+# Misc Development Files
+*.txt
+scripts-new.json
+.migration-url.txt
+.commit-summary-*.md
+
+# Already in .gitignore but ensure not deployed
+.env
+.env.local
+.env.*.local
+node_modules/
+.next/
