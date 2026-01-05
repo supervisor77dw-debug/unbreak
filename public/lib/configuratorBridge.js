@@ -205,6 +205,24 @@
                 }
             }
             
+            // AUTO-REQUEST CONFIG after 3s if no configChanged received
+            setTimeout(() => {
+                if (!this.lastConfig) {
+                    this.log('[AUTO_CONFIG_REQUEST] No config received after READY, requesting...');
+                    
+                    if (this.iframe && this.iframe.contentWindow) {
+                        this.iframe.contentWindow.postMessage({
+                            type: 'GET_CONFIGURATION',
+                            source: 'parent'
+                        }, CONFIGURATOR_ORIGIN);
+                        
+                        if (window.UnbreakDebugPanel) {
+                            window.UnbreakDebugPanel.logMessage('GET_CONFIGURATION', 'to', 'Auto-request config after READY');
+                        }
+                    }
+                }
+            }, 3000);
+            
             if (this.options.onReady) {
                 this.options.onReady();
             }

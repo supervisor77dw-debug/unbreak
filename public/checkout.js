@@ -560,6 +560,9 @@ if (typeof window !== 'undefined') {
     const buyButton = e.target.closest('[data-checkout="configured"]');
     if (!buyButton) return;
     
+    // Mark delegation as active
+    buyButton._delegationActive = true;
+    
     // Only handle if no direct handler bound (fallback)
     if (buyButton.dataset.bound === '1') return;
     
@@ -632,4 +635,11 @@ if (typeof window !== 'undefined') {
   console.log('✅ [CHECKOUT] UnbreakCheckout available:', typeof window.UnbreakCheckout);
   console.log('✅ [CHECKOUT] State initialized:', window.UnbreakCheckoutState);
   console.log('✅ [CHECKOUT] Event delegation active for [data-checkout="configured"]');
+  
+  // Mark all buttons as having delegation active
+  setTimeout(() => {
+    document.querySelectorAll('[data-checkout="configured"]').forEach(btn => {
+      btn._delegationActive = true;
+    });
+  }, 100);
 }

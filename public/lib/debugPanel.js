@@ -132,7 +132,10 @@
                           document.querySelector('[data-checkout="configured"]');
             this.state.buttonFound = !!button;
             this.state.buttonDisabled = button ? button.disabled : null;
-            this.state.buttonHandlerBound = button ? !!button._boundHandler || !!button.onclick : false;
+            
+            // Check if handler bound (either direct or via delegation)
+            this.state.buttonHandlerBound = button ? 
+                (!!button.dataset.bound || !!button.onclick || !!button._delegationActive) : false;
             
             // Determine disabled reason
             if (button && button.disabled) {
@@ -167,8 +170,20 @@
             
             this.panel.innerHTML = `
                 <div style="background: #1e293b; padding: 8px; margin: -12px -12px 12px -12px; border-radius: 6px 6px 0 0; border-bottom: 2px solid #0891b2;">
-                    <strong style="color: #0891b2; font-size: 13px;">🔧 PERSISTENT DEBUG PANEL</strong>
-                    <div style="color: #94a3b8; font-size: 9px; margin-top: 4px;">${new Date().toLocaleTimeString('de-DE')}</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #0891b2; font-size: 13px;">🔧 PERSISTENT DEBUG PANEL</strong>
+                            <div style="color: #94a3b8; font-size: 9px; margin-top: 4px;">${new Date().toLocaleTimeString('de-DE')}</div>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button id="simulate-config-btn" style="background: #f59e0b; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold;">
+                                Test Config
+                            </button>
+                            <button id="copy-debug-report-btn" style="background: #0891b2; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 10px; font-weight: bold;">
+                                Copy Report
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- IFRAME STATUS -->
@@ -298,6 +313,21 @@
                     </div>
                 ` : ''}
             `;
+            
+            // Bind copy button
+            setTimeout(() => {
+                const copyBtn = this.panel.querySelector('#copy-debug-report-btn');
+                if (copyBtn && !copyBtn._bound) {
+                    copyBtn._bound = true;
+                    copyBtn.onclick = () => this.copyDebugReport();
+                }
+                
+                const simulateBtn = this.panel.querySelector('#simulate-config-btn');
+                if (simulateBtn && !simulateBtn._bound) {
+                    simulateBtn._bound = true;
+                    simulateBtn.onclick = () => this.simulateConfig();
+                }
+            }, 0);
         }
         
         // Public methods to log messages/errors
@@ -355,6 +385,257 @@
             this.state.configColors = config.colors;
             this.state.configTimestamp = Date.now();
             this.state.configSchema = schema;
+        }
+        
+        generateReport() {
+            const formatTime = (ts) => {
+                if (!ts) return 'N/A';
+                const date = new Date(ts);
+                return date.toISOString();
+            };
+            
+            const report = [];
+            
+            report.push('════════════════════════════════════════════════');
+            report.push('UNBREAK ONE - DEBUG REPORT');
+            report.push('════════════════════════════════════════════════');
+            report.push('Generated: ' + new Date().toISOString());
+            report.push('');
+            
+            // A) PAGE INFO
+            report.push('─────────────────────────────────────────────────');
+            report.push('A) PAGE INFO');
+            report.push('─────────────────────────────────────────────────');
+            report.push('URL: ' + window.location.href);
+            report.push('Build: ' + (window.UNBREAK_BUILD_INFO?.commit || 'unknown'));
+            report.push('UserAgent: ' + navigator.userAgent);
+            report.push('');
+            
+            // B) IFRAME
+            report.push('─────────────────────────────────────────────────');
+            report.push('B) IFRAME STATE');
+            report.push('─────────────────────────────────────────────────');
+            report.push('Found: ' + (this.state.iframeFound ? 'YES' : 'NO'));
+            report.push('Selector: ' + (this.state.iframeSelector || 'N/A'));
+            report.push('Src: ' + (this.state.iframeSrc || 'N/A'));
+            report.push('Origin: ' + (this.state.iframeOrigin || 'N/A'));
+            report.push('contentWindow: ' + (this.state.iframeContentWindow ? 'YES' : 'NO'));
+            report.push('');
+            
+            // C) BRIDGE STATE
+            report.push('─────────────────────────────────────────────────');
+            report.push('C) BRIDGE STATE');
+            report.push('─────────────────────────────────────────────────');
+            report.push('READY received: ' + (this.state.readyReceived ? 'YES' : 'NO'));
+            report.push('READY timestamp: ' + formatTime(this.state.readyTimestamp));
+            report.push('Config exists: ' + (this.state.configExists ? 'YES' : 'NO'));
+            report.push('Config schema: ' + (this.state.configSchema || 'N/A'));
+            report.push('Config variant: ' + (this.state.configVariant || 'N/A'));
+            report.push('Config timestamp: ' + formatTime(this.state.configTimestamp));
+            if (this.state.configColors) {
+                report.push('Config colors:');
+                Object.entries(this.state.configColors).forEach(([key, val]) => {
+                    report.push('  ' + key + ': ' + (val || 'MISSING'));
+                });
+            }
+            report.push('Handler bound: ' + (this.state.buttonHandlerBound ? 'YES' : 'NO'));
+            report.push('Button found: ' + (this.state.buttonFound ? 'YES' : 'NO'));
+            report.push('Button disabled: ' + (this.state.buttonDisabled ? 'YES' : 'NO'));
+            report.push('Disabled reason: ' + (this.state.buttonDisabledReason || 'N/A'));
+            report.push('');
+            
+            // D) MESSAGES FROM IFRAME
+            report.push('─────────────────────────────────────────────────');
+            report.push('D) MESSAGES FROM IFRAME (last 20)');
+            report.push('─────────────────────────────────────────────────');
+            if (this.state.messagesFromIframe.length === 0) {
+                report.push('None');
+            } else {
+                this.state.messagesFromIframe.slice(-20).forEach(msg => {
+                    const payload = msg.data ? JSON.stringify(msg.data).substring(0, 500) : 'N/A';
+                    report.push(formatTime(msg.timestamp) + ' | ' + msg.type + ' | ' + payload);
+                });
+            }
+            report.push('');
+            
+            // E) MESSAGES TO IFRAME
+            report.push('─────────────────────────────────────────────────');
+            report.push('E) MESSAGES TO IFRAME (last 20)');
+            report.push('─────────────────────────────────────────────────');
+            if (this.state.messagesToIframe.length === 0) {
+                report.push('None');
+            } else {
+                this.state.messagesToIframe.slice(-20).forEach(msg => {
+                    report.push(formatTime(msg.timestamp) + ' | ' + msg.type + ' | ' + (msg.message || ''));
+                });
+            }
+            report.push('');
+            
+            // F) ERRORS
+            report.push('─────────────────────────────────────────────────');
+            report.push('F) ERRORS (last 20)');
+            report.push('─────────────────────────────────────────────────');
+            if (this.state.errors.length === 0) {
+                report.push('None');
+            } else {
+                this.state.errors.slice(-20).forEach(err => {
+                    report.push(formatTime(err.timestamp) + ' | ' + err.source + ' | ' + err.message);
+                    if (err.context) {
+                        report.push('  Context: ' + err.context);
+                    }
+                });
+            }
+            report.push('');
+            
+            // G) RAW STATE DUMP
+            report.push('─────────────────────────────────────────────────');
+            report.push('G) RAW STATE DUMP');
+            report.push('─────────────────────────────────────────────────');
+            report.push('window.__unbreakLastConfig:');
+            report.push(JSON.stringify(window.__unbreakLastConfig, null, 2) || 'undefined');
+            report.push('');
+            report.push('sessionStorage unbreak_config:');
+            try {
+                const stored = sessionStorage.getItem('unbreak_config');
+                report.push(stored || 'empty');
+            } catch (e) {
+                report.push('Error reading: ' + e.message);
+            }
+            report.push('');
+            report.push('Blocked messages: ' + this.state.blockedMessages);
+            report.push('Last blocked reason: ' + (this.state.lastBlockedReason || 'N/A'));
+            report.push('');
+            report.push('════════════════════════════════════════════════');
+            report.push('END OF REPORT');
+            report.push('════════════════════════════════════════════════');
+            
+            return report.join('\n');
+        }
+        
+        async copyDebugReport() {
+            const report = this.generateReport();
+            
+            try {
+                await navigator.clipboard.writeText(report);
+                this.showToast('✓ Copied (' + report.length + ' chars)', '#10b981');
+                console.log('[DEBUG_PANEL] Report copied to clipboard');
+            } catch (err) {
+                console.warn('[DEBUG_PANEL] Clipboard API failed, showing fallback', err);
+                this.showFallbackCopy(report);
+            }
+        }
+        
+        showToast(message, color) {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                top: 60px;
+                right: 420px;
+                background: ${color};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 6px;
+                font-family: monospace;
+                font-size: 12px;
+                font-weight: bold;
+                z-index: 9999999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        showFallbackCopy(text) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.8);
+                z-index: 99999999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            `;
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: #1e293b;
+                padding: 20px;
+                border-radius: 8px;
+                max-width: 800px;
+                max-height: 80vh;
+                overflow: auto;
+            `;
+            
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.cssText = `
+                width: 100%;
+                min-height: 400px;
+                font-family: monospace;
+                font-size: 11px;
+                padding: 12px;
+                background: #0f172a;
+                color: #e2e8f0;
+                border: 2px solid #0891b2;
+                border-radius: 4px;
+            `;
+            textarea.select();
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = 'Close (CTRL+C to copy)';
+            closeBtn.style.cssText = `
+                margin-top: 12px;
+                padding: 8px 16px;
+                background: #0891b2;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: bold;
+            `;
+            closeBtn.onclick = () => overlay.remove();
+            
+            modal.appendChild(textarea);
+            modal.appendChild(closeBtn);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+        
+        simulateConfig() {
+            const testConfig = {
+                variant: 'glass_holder',
+                colors: {
+                    base: 'black',
+                    top: 'red',
+                    middle: 'purple'
+                },
+                finish: 'matte',
+                quantity: 1,
+                source: 'debug_panel_simulation',
+                config_version: '1.0.0',
+                trace_id: 'sim_' + Date.now()
+            };
+            
+            console.log('[DEBUG_PANEL] Simulating config:', testConfig);
+            
+            // Store globally
+            window.__unbreakLastConfig = testConfig;
+            
+            // Update panel
+            this.setConfig(testConfig, 'legacy-3part');
+            
+            // Trigger bridge if available
+            const bridge = window.getConfiguratorBridge?.();
+            if (bridge && bridge.handleConfigChanged) {
+                bridge.handleConfigChanged(testConfig, 'debug_simulation');
+            }
+            
+            this.showToast('✓ Test config set', '#10b981');
         }
     }
     
