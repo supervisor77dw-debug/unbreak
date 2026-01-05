@@ -41,8 +41,22 @@
 
 <body>
 
+    <!-- DEBUG BAR (visible when ?debug=1) -->
+    <div id="debug-bar" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: #1e293b; color: #fff; padding: 8px 12px; z-index: 999999; font-family: monospace; font-size: 11px; border-bottom: 2px solid #0891b2;">
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+            <strong style="color: #0891b2;">🔧 DEBUG MODE</strong>
+            <span id="debug-iframe-loaded">iframe: <span style="color: #ef4444;">NO</span></span>
+            <span id="debug-ready-received">ready: <span style="color: #ef4444;">NO</span></span>
+            <span id="debug-last-config">lastConfig: <span style="color: #94a3b8;">none</span></span>
+            <span id="debug-button-visible">button: <span style="color: #ef4444;">NO</span></span>
+            <span id="debug-scroll">scroll: <span style="color: #94a3b8;">-</span></span>
+            <button id="dump-diagnostics" style="background: #0891b2; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Dump Diagnostics</button>
+        </div>
+    </div>
+
     <!-- Header / Navigation -->
-    <header>
+    <header style="margin-top: 0;">
+    <!-- Adjust for debug bar if active -->
         <nav>
             <div class="logo">
                 <a href="index.html" class="logo-link">
@@ -274,6 +288,178 @@
     <script src="../lib/configuratorBridge.js"></script>
     <script src="checkout.js"></script>
     <script src="configurator/configurator-new.js"></script>
+    
+    <!-- DEBUG MODE CONTROLLER -->
+    <script>
+    (function() {
+        // Check if debug mode enabled
+        const urlParams = new URLSearchParams(window.location.search);
+        const debugMode = urlParams.get('debug') === '1';
+        
+        if (!debugMode) return;
+        
+        console.log('🔧 [DEBUG MODE] Enabled');
+        
+        // Show debug bar
+        const debugBar = document.getElementById('debug-bar');
+        if (debugBar) {
+            debugBar.style.display = 'block';
+            // Adjust body margin for fixed bar
+            document.body.style.marginTop = '40px';
+        }
+        
+        // State tracking
+        const state = {
+            iframeLoaded: false,
+            readyReceived: false,
+            lastConfigTs: null,
+            lastConfigVariant: null,
+            buttonVisible: false,
+            bridgeLogs: []
+        };
+        
+        // Update debug display
+        function updateDebug() {
+            const iframe = document.getElementById('configurator-iframe');
+            const button = document.getElementById('configurator-buy-now-btn');
+            
+            // Check iframe loaded
+            state.iframeLoaded = iframe && iframe.contentWindow != null;
+            document.querySelector('#debug-iframe-loaded span').textContent = state.iframeLoaded ? 'YES' : 'NO';
+            document.querySelector('#debug-iframe-loaded span').style.color = state.iframeLoaded ? '#10b981' : '#ef4444';
+            
+            // Check ready
+            const bridge = window.ConfiguratorBridge;
+            state.readyReceived = bridge && bridge.isReady && bridge.isReady();
+            document.querySelector('#debug-ready-received span').textContent = state.readyReceived ? 'YES' : 'NO';
+            document.querySelector('#debug-ready-received span').style.color = state.readyReceived ? '#10b981' : '#ef4444';
+            
+            // Check config
+            const lastConfig = bridge && bridge.lastConfig;
+            if (lastConfig) {
+                state.lastConfigTs = Date.now();
+                state.lastConfigVariant = lastConfig.variant;
+                const ago = state.lastConfigTs ? Math.round((Date.now() - state.lastConfigTs) / 1000) : 0;
+                document.querySelector('#debug-last-config span').textContent = `${state.lastConfigVariant} (${ago}s ago)`;
+                document.querySelector('#debug-last-config span').style.color = '#10b981';
+            } else {
+                document.querySelector('#debug-last-config span').textContent = 'none';
+                document.querySelector('#debug-last-config span').style.color = '#94a3b8';
+            }
+            
+            // Check button visible
+            state.buttonVisible = button && button.offsetParent !== null;
+            document.querySelector('#debug-button-visible span').textContent = state.buttonVisible ? 'YES' : 'NO';
+            document.querySelector('#debug-button-visible span').style.color = state.buttonVisible ? '#10b981' : '#ef4444';
+            
+            // Check scroll container
+            const container = document.querySelector('.checkout-button-container');
+            if (container) {
+                const rect = container.getBoundingClientRect();
+                const inView = rect.top < window.innerHeight && rect.bottom > 0;
+                document.querySelector('#debug-scroll span').textContent = inView ? 'in-view' : `${Math.round(rect.top)}px below`;
+                document.querySelector('#debug-scroll span').style.color = inView ? '#10b981' : '#f59e0b';
+            }
+        }
+        
+        // Update every 500ms
+        setInterval(updateDebug, 500);
+        
+        // Intercept bridge logs
+        const originalLog = console.log;
+        console.log = function(...args) {
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('[UNBREAK_PARENT]')) {
+                state.bridgeLogs.push({
+                    ts: Date.now(),
+                    msg: args.join(' ')
+                });
+                if (state.bridgeLogs.length > 30) state.bridgeLogs.shift();
+            }
+            originalLog.apply(console, args);
+        };
+        
+        // Dump diagnostics button
+        document.getElementById('dump-diagnostics').addEventListener('click', function() {
+            console.log('═══════════════════════════════════════════');
+            console.log('🔍 DIAGNOSTIC DUMP');
+            console.log('═══════════════════════════════════════════');
+            
+            // 1. All buy button candidates
+            console.log('\n📍 BUY BUTTON ELEMENTS:');
+            const byDataAttr = document.querySelectorAll('[data-checkout]');
+            const byId = document.getElementById('configurator-buy-now-btn');
+            const byText = Array.from(document.querySelectorAll('button')).filter(b => b.textContent.includes('kaufen'));
+            
+            console.log('- By [data-checkout]:', byDataAttr.length, byDataAttr);
+            console.log('- By ID #configurator-buy-now-btn:', byId);
+            console.log('- By text "kaufen":', byText.length, byText);
+            
+            if (byId) {
+                const rect = byId.getBoundingClientRect();
+                console.log('  Button rect:', rect);
+                console.log('  Visible (offsetParent):', byId.offsetParent !== null);
+                console.log('  Computed display:', getComputedStyle(byId).display);
+                console.log('  Computed visibility:', getComputedStyle(byId).visibility);
+                console.log('  Z-index:', getComputedStyle(byId).zIndex);
+            }
+            
+            // 2. Iframe details
+            console.log('\n📍 IFRAME:');
+            const iframe = document.getElementById('configurator-iframe');
+            if (iframe) {
+                const rect = iframe.getBoundingClientRect();
+                console.log('- Element:', iframe);
+                console.log('- Src:', iframe.src);
+                console.log('- Rect:', rect);
+                console.log('- contentWindow exists:', !!iframe.contentWindow);
+            }
+            
+            // 3. Overlays covering button
+            console.log('\n📍 POTENTIAL OVERLAYS (z-index > 1000):');
+            const allElements = document.querySelectorAll('*');
+            const highZIndex = Array.from(allElements).filter(el => {
+                const z = parseInt(getComputedStyle(el).zIndex);
+                return z > 1000;
+            });
+            console.log('- Count:', highZIndex.length);
+            highZIndex.forEach(el => {
+                console.log(`  - ${el.tagName}#${el.id}.${el.className} z=${getComputedStyle(el).zIndex}`);
+            });
+            
+            // 4. Container overflow
+            console.log('\n📍 SCROLL CONTAINERS:');
+            const body = document.body;
+            const main = document.querySelector('main');
+            const container = document.querySelector('.checkout-button-container');
+            
+            console.log('- body overflow:', getComputedStyle(body).overflow, 'height:', getComputedStyle(body).height);
+            if (main) console.log('- main overflow:', getComputedStyle(main).overflow, 'height:', getComputedStyle(main).height);
+            if (container) {
+                console.log('- .checkout-button-container:', getComputedStyle(container).overflow, 'height:', getComputedStyle(container).height);
+                console.log('  Rect:', container.getBoundingClientRect());
+            }
+            
+            // 5. Bridge logs
+            console.log('\n📍 LAST 30 BRIDGE LOGS:');
+            state.bridgeLogs.forEach(log => {
+                console.log(`  ${new Date(log.ts).toISOString().substr(11, 12)} ${log.msg}`);
+            });
+            
+            // 6. Bridge state
+            console.log('\n📍 BRIDGE STATE:');
+            const bridge = window.ConfiguratorBridge;
+            if (bridge) {
+                console.log('- Exists:', true);
+                console.log('- isReady:', bridge.isReady ? bridge.isReady() : 'no method');
+                console.log('- lastConfig:', bridge.lastConfig);
+            } else {
+                console.log('- Exists:', false);
+            }
+            
+            console.log('\n═══════════════════════════════════════════');
+        });
+    })();
+    </script>
     
     <!-- DEBUG: Button visibility check -->
     <script>
