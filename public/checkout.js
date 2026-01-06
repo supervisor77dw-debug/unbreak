@@ -172,13 +172,14 @@ const UnbreakCheckout = {
       }
 
       // ✅ Get validated config from ConfiguratorBridge v2.0.0
-      if (!window.ConfiguratorBridge) {
+      const bridge = window.getConfiguratorBridge && window.getConfiguratorBridge();
+      if (!bridge) {
         console.error('❌ [CHECKOUT] ConfiguratorBridge not available!');
         throw new Error('Konfigurator nicht geladen - bitte lade die Seite neu');
       }
 
       console.log('[CHECKOUT] trace_id=' + trace_id + ' requesting config from bridge...');
-      config = await window.ConfiguratorBridge.requestConfig();
+      config = await bridge.requestConfig();
       console.log('[CHECKOUT] trace_id=' + trace_id + ' received validated config:', config);
       
       if (window.UnbreakTrace) {
