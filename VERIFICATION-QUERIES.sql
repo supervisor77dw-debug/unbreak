@@ -14,7 +14,6 @@
 
 SELECT 
   id,
-  order_number,
   customer_id,
   customer_email,
   customer_name,
@@ -74,7 +73,6 @@ GROUP BY c.id, c.email, c.name, c.stripe_customer_id, c.created_at;
 
 SELECT 
   o.id,
-  o.order_number,
   o.customer_email,
   o.customer_name,
   o.status,

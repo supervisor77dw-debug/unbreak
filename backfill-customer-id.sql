@@ -35,7 +35,6 @@ FROM simple_orders;
 -- QUERY 1: Check specific order (replace 'xxx' with actual order ID)
 SELECT 
   id,
-  order_number,
   customer_id,
   customer_email,
   customer_name,
@@ -45,8 +44,7 @@ SELECT
   items,
   created_at
 FROM simple_orders
-WHERE id = 'xxx'  -- Replace with your order ID
-  OR order_number = 'xxx';  -- OR replace with order_number
+WHERE id = 'xxx';  -- Replace with your order ID
 
 -- QUERY 2: Check customer stats (replace 'xxx' with customer ID or email)
 SELECT 
@@ -69,7 +67,6 @@ GROUP BY c.id, c.email, c.name, c.stripe_customer_id;
 -- QUERY 3: Find orders without customer linkage (orphaned orders)
 SELECT 
   o.id,
-  o.order_number,
   o.customer_email,
   o.customer_name,
   o.status,
