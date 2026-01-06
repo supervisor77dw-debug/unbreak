@@ -320,21 +320,27 @@ export default function OrderDetail() {
           </div>
 
           {/* Configuration (if configurator order) */}
-          {(order.config_json || order.configJson || order.configuration_id) && (
-            <div className="info-card">
-              <h2>🎨 Konfigurator-Konfiguration</h2>
-              
-              {(order.config_json || order.configJson) ? (
-                <>
-                  <div className="config-preview" style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '16px',
-                    marginBottom: '16px'
-                  }}>
-                    {(() => {
-                      const config = order.config_json || order.configJson;
-                      const configObj = typeof config === 'string' ? JSON.parse(config) : config;
+          {(() => {
+            // ✅ PRIORITY: config_json > items[0].config > null
+            const configSource = order.config_json || order.configJson || order.items?.[0]?.config || order.items_json?.[0]?.config;
+            const hasConfig = configSource || order.configuration_id;
+            
+            if (!hasConfig) return null;
+            
+            return (
+              <div className="info-card">
+                <h2>🎨 Konfigurator-Konfiguration</h2>
+                
+                {configSource ? (
+                  <>
+                    <div className="config-preview" style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '16px',
+                      marginBottom: '16px'
+                    }}>
+                      {(() => {
+                        const configObj = typeof configSource === 'string' ? JSON.parse(configSource) : configSource;
                       
                       return (
                         <>
@@ -350,12 +356,18 @@ export default function OrderDetail() {
                           {configObj.colors && (
                             <div className="config-item" style={{ gridColumn: '1 / -1' }}>
                               <strong style={{ color: '#94a3b8', fontSize: '12px' }}>
-                                🎨 4-Part Color Configuration
+                                🎨 {configObj.variant === 'bottle_holder' ? '2-Part' : '4-Part'} Color Configuration
                               </strong>
                               <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
-                                {['base', 'arm', 'module', 'pattern'].map((part) => {
-                                  const colorId = configObj.colors[part];
-                                  if (!colorId) return null;
+                                {(() => {
+                                  // Determine parts based on variant
+                                  const parts = configObj.variant === 'bottle_holder' 
+                                    ? ['base', 'pattern']  // 2-part for bottle_holder
+                                    : ['base', 'arm', 'module', 'pattern'];  // 4-part for glass_holder
+                                  
+                                  return parts.map((part) => {
+                                    const colorId = configObj.colors[part];
+                                    if (!colorId) return null;
                                   
                                   return (
                                     <div key={part} style={{
@@ -387,25 +399,38 @@ export default function OrderDetail() {
                                       </div>
                                     </div>
                                   );
-                                })}
+                                })();
+                              })()}
                               </div>
                             </div>
                           )}
                           
                           {configObj.color && !configObj.colors && (
-                            <div className="config-item">
-                              <strong style={{ color: '#94a3b8', fontSize: '12px' }}>Farbe</strong>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                                <div style={{
-                                  width: '24px',
-                                  height: '24px',
-                                  borderRadius: '4px',
-                                  background: configObj.color,
-                                  border: '2px solid #404040'
-                                }}></div>
-                                <span style={{ color: '#d4f1f1', textTransform: 'capitalize' }}>
-                                  {configObj.color}
-                                </span>
+                            <div className="config-item" style={{ gridColumn: '1 / -1' }}>
+                              <div style={{
+                                background: '#854d0e',
+                                padding: '12px',
+                                borderRadius: '6px',
+                                border: '1px solid #a16207'
+                              }}>
+                                <strong style={{ color: '#fef3c7', fontSize: '12px' }}>
+                                  ⚠️ Legacy Order – Single Color Only
+                                </strong>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                                  <div style={{
+                                    width: '24px',
+                                    height: '24px',
+                                    borderRadius: '4px',
+                                    background: configObj.color,
+                                    border: '2px solid #404040'
+                                  }}></div>
+                                  <span style={{ color: '#fef3c7', textTransform: 'capitalize' }}>
+                                    {configObj.color}
+                                  </span>
+                                </div>
+                                <p style={{ color: '#fef3c7', fontSize: '11px', marginTop: '8px', marginBottom: 0 }}>
+                                  Diese Bestellung wurde vor Migration 013 (4-part colors) erstellt.
+                                </p>
                               </div>
                             </div>
                           )}
@@ -472,8 +497,7 @@ export default function OrderDetail() {
                     <div style={{ marginTop: '8px' }}>
                       <button
                         onClick={() => {
-                          const config = order.config_json || order.configJson;
-                          const jsonStr = typeof config === 'string' ? config : JSON.stringify(config, null, 2);
+                          const jsonStr = typeof configSource === 'string' ? configSource : JSON.stringify(configSource, null, 2);
                           navigator.clipboard.writeText(jsonStr);
                           alert('Konfiguration in Zwischenablage kopiert!');
                         }}
@@ -499,9 +523,9 @@ export default function OrderDetail() {
                         color: '#d4f1f1',
                         border: '1px solid #404040'
                       }}>
-                        {typeof (order.config_json || order.configJson) === 'string' 
-                          ? order.config_json || order.configJson
-                          : JSON.stringify(order.config_json || order.configJson, null, 2)
+                        {typeof configSource === 'string' 
+                          ? configSource
+                          : JSON.stringify(configSource, null, 2)
                         }
                       </pre>
                     </div>
@@ -511,12 +535,13 @@ export default function OrderDetail() {
                 <div style={{ padding: '12px', background: '#7c2d12', borderRadius: '6px' }}>
                   <strong style={{ color: '#fed7aa' }}>⚠️ Konfiguration fehlt</strong>
                   <p style={{ color: '#fed7aa', fontSize: '13px', margin: '4px 0 0 0' }}>
-                    Diese Bestellung wurde vor Migration 013 erstellt oder Config wurde nicht gespeichert.
+                    Diese Bestellung hat configuration_id aber keine config_json/items.config Daten.
                   </p>
                 </div>
               )}
-            </div>
-          )}
+              </div>
+            );
+          })()}
 
           {/* Shipping Address */}
           {order.shippingAddress && (
