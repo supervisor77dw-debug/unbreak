@@ -636,10 +636,10 @@ if (typeof window !== 'undefined') {
   console.log('✅ [CHECKOUT] State initialized:', window.UnbreakCheckoutState);
   console.log('✅ [CHECKOUT] Event delegation active for [data-checkout="configured"]');
   
-  // Mark all buttons as having delegation active
-  setTimeout(() => {
-    document.querySelectorAll('[data-checkout="configured"]').forEach(btn => {
-      btn._delegationActive = true;
-    });
-  }, 100);
+  // Mark all buttons as having delegation active (IMMEDIATELY, no setTimeout race condition)
+  document.querySelectorAll('[data-checkout="configured"]').forEach(btn => {
+    btn._delegationActive = true;
+  });
+  
+  console.log('✅ [CHECKOUT] _delegationActive flag set on all buy buttons');
 }
