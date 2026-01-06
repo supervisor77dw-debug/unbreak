@@ -5,7 +5,32 @@
 -- Execution: Run in Supabase SQL Editor
 -- Safety: Uses WHERE customer_id IS NULL to avoid overwriting existing links
 
--- BEFORE running: Verify orders missing customer_id
+-- ============================================
+-- STEP 1: Create missing customers from orders
+-- ============================================
+-- Purpose: Some orders have emails but no matching customer exists
+-- This creates customers for those emails before linking
+
+INSERT INTO customers (email, name, created_at, updated_at)
+SELECT DISTINCT
+  customer_email as email,
+  COALESCE(customer_name, split_part(customer_email, '@', 1)) as name,
+  MIN(created_at) as created_at,
+  NOW() as updated_at
+FROM simple_orders
+WHERE customer_email IS NOT NULL
+  AND customer_id IS NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM customers c 
+    WHERE lower(c.email) = lower(simple_orders.customer_email)
+  )
+GROUP BY customer_email, customer_name
+ON CONFLICT (email) DO NOTHING;
+
+-- ============================================
+-- STEP 2: Verify orders missing customer_id
+-- ============================================
+-- BEFORE running backfill: Check how many need linking
 SELECT 
   COUNT(*) as orders_missing_customer_id,
   COUNT(DISTINCT customer_email) as unique_emails
@@ -13,7 +38,10 @@ FROM simple_orders
 WHERE customer_id IS NULL
   AND customer_email IS NOT NULL;
 
--- BACKFILL UPDATE: Match by email (case-insensitive)
+-- ============================================
+-- STEP 3: BACKFILL UPDATE - Link orders to customers
+-- ============================================
+-- Match by email (case-insensitive)
 UPDATE simple_orders
 SET customer_id = customers.id
 FROM customers
@@ -21,7 +49,9 @@ WHERE simple_orders.customer_id IS NULL
   AND simple_orders.customer_email IS NOT NULL
   AND lower(simple_orders.customer_email) = lower(customers.email);
 
--- AFTER running: Verify results
+-- ============================================
+-- STEP 4: AFTER verification - Check results
+-- ============================================
 SELECT 
   COUNT(*) as total_orders,
   COUNT(customer_id) as orders_with_customer_id,
