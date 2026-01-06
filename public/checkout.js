@@ -290,7 +290,20 @@ const UnbreakCheckout = {
       }
 
     } catch (error) {
-      console.error('❌ [CHECKOUT] Error:', error);
+      console.error('❌ [CHECKOUT] Error:', {
+        message: error.message,
+        stack: error.stack,
+        error: error
+      });
+      
+      // Log to trace
+      if (window.UnbreakTrace) {
+        window.UnbreakTrace.log('CHECKOUT_ERROR', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name
+        }, 'ERROR');
+      }
       
       // Restore button (use stored originalText from function start)
       if (btn) {
@@ -299,8 +312,9 @@ const UnbreakCheckout = {
         console.log('🔄 [CHECKOUT] Button restored');
       }
 
-      // Show user-friendly error
-      alert(`Fehler beim Checkout: ${error.message}\n\nBitte versuche es erneut oder kontaktiere uns.`);
+      // Show user-friendly error with full details
+      const errorMsg = error.message || error.toString() || 'Unbekannter Fehler';
+      alert(`Fehler beim Checkout: ${errorMsg}\n\nBitte versuche es erneut oder kontaktiere uns.`);
     }
   },
 
@@ -420,49 +434,10 @@ function initCheckoutButtons() {
         return;
       }
       
-      // Request config from bridge
-      console.log('📤 [CHECKOUT] Requesting config from bridge...');
-      let config;
+      // Call buyConfigured - it will request config from bridge itself
+      console.log('📤 [CHECKOUT] Calling buyConfigured (will fetch config internally)...');
       
-      try {
-        config = await bridge.requestConfig();
-        console.log('✅ [CHECKOUT] Got config from bridge:', config);
-      } catch (error) {
-        console.error('❌ [CHECKOUT] Failed to get config:', error);
-        alert('Bitte wählen Sie zuerst Farben im Konfigurator');
-        return;
-      }
-      
-      // Validate config based on variant
-      if (!config || !config.colors || !config.variant) {
-        console.error('❌ [CHECKOUT] Invalid config structure:', config);
-        alert('Konfiguration unvollständig - bitte wählen Sie Farben im Konfigurator');
-        return;
-      }
-      
-      // Variant-specific validation
-      if (config.variant === 'glass_holder') {
-        // glass_holder requires all 4 parts
-        if (!config.colors.base || !config.colors.arm || !config.colors.module || !config.colors.pattern) {
-          console.error('❌ [CHECKOUT] glass_holder missing required colors:', config.colors);
-          alert('Bitte wählen Sie alle 4 Farben (Basis, Arm, Modul, Muster)');
-          return;
-        }
-      } else if (config.variant === 'bottle_holder') {
-        // bottle_holder requires base (black) + pattern
-        if (!config.colors.base || !config.colors.pattern) {
-          console.error('❌ [CHECKOUT] bottle_holder missing required colors:', config.colors);
-          alert('Bitte wählen Sie Muster-Farbe im Konfigurator');
-          return;
-        }
-      }
-      
-      // Add SKU to config if not present
-      config.productSku = config.productSku || productSku;
-      
-      console.log('🛒 [CHECKOUT] Final config for buyConfigured:', config);
-      
-      UnbreakCheckout.buyConfigured(config, e); // Pass click event for button feedback
+      UnbreakCheckout.buyConfigured(null, e); // buyConfigured fetches config itself
     });
     
     // Mark as bound
