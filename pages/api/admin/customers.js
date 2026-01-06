@@ -36,11 +36,7 @@ async function handleGetCustomers(req, res) {
     // Build query
     let query = supabaseAdmin
       .from('customers')
-      .select(`
-        *,
-        orders:orders(count),
-        simple_orders:simple_orders(count)
-      `);
+      .select('*');
 
     // Search filter
     if (search) {
@@ -65,21 +61,43 @@ async function handleGetCustomers(req, res) {
       .from('customers')
       .select('*', { count: 'exact', head: true });
 
-    // Format response
-    const formattedCustomers = customers.map(customer => ({
-      id: customer.id,
-      email: customer.email,
-      name: customer.name,
-      phone: customer.phone,
-      stripe_customer_id: customer.stripe_customer_id,
-      total_orders: customer.total_orders || 0,
-      total_spent_cents: customer.total_spent_cents || 0,
-      total_spent_eur: ((customer.total_spent_cents || 0) / 100).toFixed(2),
-      last_order_at: customer.last_order_at,
-      created_at: customer.created_at,
-      updated_at: customer.updated_at,
-      shipping_address: customer.shipping_address,
-      billing_address: customer.billing_address,
+    // ✅ Calculate stats for each customer (with email fallback like [id].js)
+    const formattedCustomers = await Promise.all(customers.map(async (customer) => {
+      // Get orders with fallback: customer_id OR email
+      const { data: orders } = await supabaseAdmin
+        .from('orders')
+        .select('total_cents, created_at')
+        .or(`customer_id.eq.${customer.id},customer_email.ilike.${customer.email}`);
+
+      const { data: simpleOrders } = await supabaseAdmin
+        .from('simple_orders')
+        .select('total_amount_cents, created_at')
+        .or(`customer_id.eq.${customer.id},customer_email.ilike.${customer.email}`);
+
+      const allOrders = [...(orders || []), ...(simpleOrders || [])];
+      const totalOrders = allOrders.length;
+      const totalSpentCents = allOrders.reduce((sum, order) => {
+        return sum + (order.total_cents || order.total_amount_cents || 0);
+      }, 0);
+      const lastOrderAt = allOrders.length > 0 
+        ? allOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0].created_at
+        : null;
+
+      return {
+        id: customer.id,
+        email: customer.email,
+        name: customer.name,
+        phone: customer.phone,
+        stripe_customer_id: customer.stripe_customer_id,
+        total_orders: totalOrders,
+        total_spent_cents: totalSpentCents,
+        total_spent_eur: (totalSpentCents / 100).toFixed(2),
+        last_order_at: lastOrderAt,
+        created_at: customer.created_at,
+        updated_at: customer.updated_at,
+        shipping_address: customer.shipping_address,
+        billing_address: customer.billing_address,
+      };
     }));
 
     return res.status(200).json({
