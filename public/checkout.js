@@ -104,7 +104,7 @@ const UnbreakCheckout = {
       }
 
       // Validate config
-      if (!config || (!config.colors && !config.color)) {
+      if (!config || !config.colors) {
         console.error('❌ [ADD_TO_CART] No configuration available');
         throw new Error('Keine Konfiguration verfügbar - bitte wähle zuerst im Konfigurator');
       }
@@ -218,10 +218,9 @@ const UnbreakCheckout = {
               endpoint: '/api/checkout/create',
               product_sku: sku,
               config_summary: {
+                  variant: config.variant,
                   colors: config.colors,
-                  color: config.color,
-                  finish: config.finish,
-                  product: config.product
+                  finish: config.finish
               }
           });
       }
@@ -434,11 +433,28 @@ function initCheckoutButtons() {
         return;
       }
       
-      // Validate config (4-part colors: base, arm, module, pattern)
-      if (!config || !config.colors || !config.colors.base || !config.colors.arm || !config.colors.module || !config.colors.pattern) {
+      // Validate config based on variant
+      if (!config || !config.colors || !config.variant) {
         console.error('❌ [CHECKOUT] Invalid config structure:', config);
-        alert('Konfiguration unvollständig - bitte wählen Sie alle Farben');
+        alert('Konfiguration unvollständig - bitte wählen Sie Farben im Konfigurator');
         return;
+      }
+      
+      // Variant-specific validation
+      if (config.variant === 'glass_holder') {
+        // glass_holder requires all 4 parts
+        if (!config.colors.base || !config.colors.arm || !config.colors.module || !config.colors.pattern) {
+          console.error('❌ [CHECKOUT] glass_holder missing required colors:', config.colors);
+          alert('Bitte wählen Sie alle 4 Farben (Basis, Arm, Modul, Muster)');
+          return;
+        }
+      } else if (config.variant === 'bottle_holder') {
+        // bottle_holder requires base (black) + pattern
+        if (!config.colors.base || !config.colors.pattern) {
+          console.error('❌ [CHECKOUT] bottle_holder missing required colors:', config.colors);
+          alert('Bitte wählen Sie Muster-Farbe im Konfigurator');
+          return;
+        }
       }
       
       // Add SKU to config if not present
@@ -490,56 +506,16 @@ function initConfiguratorListener() {
     console.log('✅ [MESSAGE] Origin allowed, processing message');
     
     // Handle config updates from configurator
-    if (event.data.type === 'UNBREAK_CONFIG_UPDATE') {
-      // Handle old format: {color, finish, ...}
-      window.UnbreakCheckoutState.lastConfig = event.data.config;
-      console.log('✓ [CONFIG] Updated from configurator (old format):', event.data.config);
-    } else if (event.data.type === 'configChanged' || event.data.type === 'checkout_configuration') {
-      // Handle new format from iframe: {product_name, product_variant, colors: {...}, ...}
-      console.log('📦 [CONFIG] Received from configurator iframe:', event.data);
+    // NOTE: ConfiguratorBridge now handles all config updates - this is legacy fallback
+    if (event.data.type === 'configChanged' || event.data.type === 'checkout_configuration') {
+      console.log('📦 [CONFIG] configChanged received (handled by ConfiguratorBridge)');
       
-      const rawConfig = event.data.config || event.data;
-      
-      // Preserve complete colors object - DO NOT flatten to single color!
-      const transformedConfig = {
-        colors: rawConfig.colors || (rawConfig.color ? {base: rawConfig.color, top: rawConfig.color} : null),
-        color: rawConfig.color || null, // Keep for legacy compatibility
-        finish: rawConfig.finish || 'matte',
-        product: rawConfig.product_variant || rawConfig.product || 'glass_holder',
-        engraving: rawConfig.engraving || null,
-        quantity: rawConfig.quantity || 1,
-      };
-      
-      window.UnbreakCheckoutState.lastConfig = transformedConfig;
-      console.log('✓ [CONFIG] Transformed and saved:', transformedConfig);
-      
-      // Log color change if trace active
-      if (window.UnbreakTrace && transformedConfig.colors) {
-        window.UnbreakTrace.logConfig(transformedConfig, 'POSTMESSAGE_CONFIG_UPDATE');
-      }
-    } else {
-      console.log('ℹ️ [MESSAGE] Unknown message type, data:', event.data);
-      
-      // Try to extract config from any message containing product info
-      if (event.data.product_name || event.data.product_variant || event.data.colors) {
-        console.log('📦 [CONFIG] Found product data in unknown message type, processing...');
-        
-        const rawConfig = event.data;
-        const transformedConfig = {
-          colors: rawConfig.colors || null, // PRESERVE full colors object
-          color: rawConfig.color || null,
-          finish: rawConfig.finish || 'matte',
-          product: rawConfig.product_variant || rawConfig.product || 'glass_holder',
-          engraving: rawConfig.engraving || null,
-          quantity: rawConfig.quantity || 1,
-        };
-        
-        window.UnbreakCheckoutState.lastConfig = transformedConfig;
-        console.log('✓ [CONFIG] Extracted and saved from unknown type:', transformedConfig);
-        
-        if (window.UnbreakTrace) {
-          window.UnbreakTrace.logConfig(transformedConfig, 'UNKNOWN_MESSAGE_CONFIG');
-        }
+      // Bridge validates and stores - we just log
+      if (window.UnbreakTrace) {
+        window.UnbreakTrace.log('POSTMESSAGE_CONFIG_CHANGED', {
+          type: event.data.type,
+          hasConfig: !!event.data.config
+        });
       }
     }
   });
