@@ -162,10 +162,10 @@ export default async function handler(req, res) {
     // ========================================
     // 4. CREATE ORDER (pending_payment)
     // ========================================
-    // Use simple_orders for guest checkout (no customer_id required)
-
-    // Prepare order data
+    
+    // Prepare order data (includes customer_id for stats linkage)
     const orderData = {
+      customer_id: customerId || null,  // ✅ Link to customer for stats aggregation
       customer_email: customer?.email || null,
       customer_name: customer?.name || null,
       product_sku: product_sku,
