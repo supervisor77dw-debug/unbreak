@@ -10,7 +10,7 @@
 -- Purpose: Verify config_json, items, and customer_id are stored
 -- Expected: config_json should show colors {base, arm, module, pattern} for glass_holder
 --           items should be JSONB array with embedded config
---           customer_id should be UUID (not NULL)
+--           customer_id should be UUID (not NULL after backfill)
 
 SELECT 
   id,

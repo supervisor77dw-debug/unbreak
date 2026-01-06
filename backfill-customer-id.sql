@@ -32,7 +32,8 @@ FROM simple_orders;
 -- VERIFICATION QUERIES (requested by user)
 -- ============================================
 
--- QUERY 1: Check specific order (replace 'xxx' with actual order ID)
+-- QUERY 1: Check specific order
+-- Usage: Uncomment WHERE clause and replace UUID
 SELECT 
   id,
   customer_id,
@@ -44,9 +45,12 @@ SELECT
   items,
   created_at
 FROM simple_orders
-WHERE id = 'xxx';  -- Replace with your order ID
+-- WHERE id = '12345678-1234-1234-1234-123456789abc'  -- Uncomment and replace with actual UUID
+ORDER BY created_at DESC
+LIMIT 5;
 
--- QUERY 2: Check customer stats (replace 'xxx' with customer ID or email)
+-- QUERY 2: Check customer stats
+-- Usage: Uncomment WHERE clause and replace with your email or customer ID
 SELECT 
   c.id as customer_id,
   c.email,
@@ -60,9 +64,10 @@ LEFT JOIN simple_orders o ON (
   o.customer_id = c.id 
   OR lower(o.customer_email) = lower(c.email)
 )
-WHERE c.id = 'xxx'  -- Replace with customer ID
-  OR lower(c.email) = lower('xxx')  -- OR replace with email
-GROUP BY c.id, c.email, c.name, c.stripe_customer_id;
+-- WHERE lower(c.email) = lower('your-email@example.com')  -- Uncomment and replace with your email
+GROUP BY c.id, c.email, c.name, c.stripe_customer_id
+ORDER BY COUNT(o.id) DESC
+LIMIT 10;
 
 -- QUERY 3: Find orders without customer linkage (orphaned orders)
 SELECT 
