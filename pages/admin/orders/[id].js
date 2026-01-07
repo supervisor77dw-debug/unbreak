@@ -121,6 +121,7 @@ export default function OrderDetail() {
   }
 
   const formatCurrency = (cents) => {
+    if (cents == null || isNaN(cents)) return '€0,00';
     return new Intl.NumberFormat('de-DE', {
       style: 'currency',
       currency: order.currency || 'EUR',
@@ -128,7 +129,10 @@ export default function OrderDetail() {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('de-DE', {
+    if (!dateString) return '—';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '—';
+    return date.toLocaleString('de-DE', {
       dateStyle: 'medium',
       timeStyle: 'short',
     });
@@ -294,16 +298,16 @@ export default function OrderDetail() {
                         <tr key={idx} style={{ borderBottom: '1px solid #2a2a2a' }}>
                           <td style={{ padding: '12px 8px' }}>
                             <div style={{ color: '#d4f1f1', fontWeight: '500' }}>
-                              {item.name || item.product_name || 'Produkt'}
+                              {item?.name || item?.product_name || 'Produkt'}
                             </div>
-                            {item.config && (
+                            {item?.config && (
                               <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                                {item.config.colors ? (
+                                {item?.config?.colors ? (
                                   <span>🎨 {Object.entries(item.config.colors).map(([area, color]) => `${area}: ${color}`).join(', ')}</span>
-                                ) : item.config.color ? (
+                                ) : item?.config?.color ? (
                                   <span>🎨 {item.config.color}</span>
                                 ) : null}
-                                {item.config.finish && <span> • {item.config.finish}</span>}
+                                {item?.config?.finish && <span> • {item.config.finish}</span>}
                               </div>
                             )}
                           </td>
@@ -313,13 +317,13 @@ export default function OrderDetail() {
                             </code>
                           </td>
                           <td style={{ textAlign: 'center', padding: '12px 8px', color: '#d4f1f1' }}>
-                            {item.quantity || 1}
+                            {item?.quantity || 1}
                           </td>
                           <td style={{ textAlign: 'right', padding: '12px 8px', color: '#d4f1f1', fontFamily: 'monospace' }}>
-                            {formatCurrency(item.unit_price_cents || 0)}
+                            {formatCurrency(item?.unitPrice || item?.unit_price_cents || 0)}
                           </td>
                           <td style={{ textAlign: 'right', padding: '12px 8px', color: '#d4f1f1', fontWeight: '600', fontFamily: 'monospace' }}>
-                            {formatCurrency((item.unit_price_cents || 0) * (item.quantity || 1))}
+                            {formatCurrency((item?.unitPrice || item?.unit_price_cents || 0) * (item?.quantity || 1))}
                           </td>
                         </tr>
                       ));
@@ -331,7 +335,7 @@ export default function OrderDetail() {
                         Gesamtsumme:
                       </td>
                       <td style={{ textAlign: 'right', padding: '12px 8px', color: '#0891b2', fontWeight: '700', fontSize: '16px', fontFamily: 'monospace' }}>
-                        {formatCurrency(order.total_amount_cents || order.totalCents || order.total_cents || 0)}
+                        {formatCurrency(order.amountTotal || 0)}
                       </td>
                     </tr>
                   </tfoot>
