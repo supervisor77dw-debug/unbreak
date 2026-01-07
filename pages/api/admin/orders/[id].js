@@ -34,18 +34,23 @@ export default async function handler(req, res) {
       let config_json = null;
       const supabase = getSupabaseAdmin();
       if (supabase) {
-        const { data: simpleOrder } = await supabase
-          .from('simple_orders')
-          .select('config_json, items')
-          .eq('id', id)
-          .single();
+        try {
+          const { data: simpleOrder, error } = await supabase
+            .from('simple_orders')
+            .select('config_json, items')
+            .eq('id', id)
+            .maybeSingle(); // Use maybeSingle instead of single to avoid error if not found
 
-        if (simpleOrder?.config_json) {
-          config_json = simpleOrder.config_json;
-        }
-        // Fallback: Check if items[0] has config
-        else if (simpleOrder?.items?.[0]?.config) {
-          config_json = simpleOrder.items[0].config;
+          if (!error && simpleOrder?.config_json) {
+            config_json = simpleOrder.config_json;
+          }
+          // Fallback: Check if items[0] has config
+          else if (!error && simpleOrder?.items?.[0]?.config) {
+            config_json = simpleOrder.items[0].config;
+          }
+        } catch (err) {
+          // Silently fail - order might not exist in simple_orders (only in Prisma)
+          console.log('Could not fetch config from simple_orders:', err.message);
         }
       }
 
