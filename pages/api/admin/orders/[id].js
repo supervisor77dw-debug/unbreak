@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import prisma from '../../../../lib/prisma';
+import { getSupabaseAdmin } from '../../../../lib/supabase';
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
@@ -13,7 +14,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // Fetch order with all relations
+      // Fetch order with all relations from Prisma
       const order = await prisma.order.findUnique({
         where: { id },
         include: {
@@ -27,6 +28,24 @@ export default async function handler(req, res) {
 
       if (!order) {
         return res.status(404).json({ error: 'Order not found' });
+      }
+
+      // AUGMENT: Get config_json from Supabase simple_orders
+      const supabase = getSupabaseAdmin();
+      if (supabase) {
+        const { data: simpleOrder } = await supabase
+          .from('simple_orders')
+          .select('config_json, items')
+          .eq('id', id)
+          .single();
+
+        if (simpleOrder?.config_json) {
+          order.config_json = simpleOrder.config_json;
+        }
+        // Fallback: Check if items[0] has config
+        if (!order.config_json && simpleOrder?.items?.[0]?.config) {
+          order.config_json = simpleOrder.items[0].config;
+        }
       }
 
       return res.status(200).json(order);
