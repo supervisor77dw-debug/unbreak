@@ -22,20 +22,43 @@ export default function OrderDetail() {
 
   useEffect(() => {
     // Wait for both ID and session to be ready
-    if (!id || status === 'loading') return;
+    if (!id || status === 'loading') {
+      console.log('[ORDER DETAIL] Waiting...', { hasId: !!id, status });
+      return;
+    }
     
     // If not authenticated, redirect will happen via other useEffect
-    if (status === 'unauthenticated') return;
+    if (status === 'unauthenticated') {
+      console.log('[ORDER DETAIL] Not authenticated - redirect handled separately');
+      return;
+    }
+    
+    // DEBUG: Log before fetch
+    console.log('[ORDER DETAIL] Fetching order:', {
+      orderId: id.substring(0, 8),
+      hasSession: !!session,
+      status
+    });
     
     async function fetchOrder() {
       try {
         const res = await fetch(`/api/admin/orders/${id}`);
+        
+        // Handle different error types
         if (!res.ok) {
-          if (res.status === 401) {
-            // Session expired - redirect to login
+          const errorData = await res.json().catch(() => ({ error: 'UNKNOWN' }));
+          
+          if (res.status === 401 || errorData.error === 'UNAUTHORIZED') {
+            console.error('[ORDER DETAIL] UNAUTHORIZED - redirecting to login');
             router.push('/admin/login');
             return;
           }
+          
+          if (res.status === 404 && errorData.error === 'NOT_FOUND') {
+            console.error('[ORDER DETAIL] Order not found');
+            throw new Error('Bestellung nicht gefunden');
+          }
+          
           throw new Error(`Failed to fetch order: ${res.status}`);
         }
         const data = await res.json();
@@ -76,7 +99,7 @@ export default function OrderDetail() {
     }
     
     fetchOrder();
-  }, [id, status, router]);
+  }, [id, status, session, router]);
 
   async function updateStatus(field, value) {
     setUpdating(true);

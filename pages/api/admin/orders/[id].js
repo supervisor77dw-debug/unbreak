@@ -5,8 +5,19 @@ import prisma from '../../../../lib/prisma';
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
 
+  // DEBUG: Log auth status (without exposing secrets)
+  console.log('[API /admin/orders/:id] Auth check:', {
+    hasSession: !!session,
+    method: req.method,
+    orderId: req.query.id?.substring(0, 8)
+  });
+
   if (!session) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    console.log('[API /admin/orders/:id] UNAUTHORIZED - No session');
+    return res.status(401).json({ 
+      error: 'UNAUTHORIZED',
+      message: 'Authentication required'
+    });
   }
 
   const { id } = req.query;
@@ -26,7 +37,11 @@ export default async function handler(req, res) {
       });
 
       if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
+        console.log('[API /admin/orders/:id] NOT FOUND - Order does not exist');
+        return res.status(404).json({ 
+          error: 'NOT_FOUND',
+          message: 'Order not found'
+        });
       }
 
       // ✅ PRISMA IS NOW SINGLE SOURCE - config_json comes from Prisma
