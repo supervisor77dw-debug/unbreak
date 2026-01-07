@@ -21,12 +21,21 @@ export default function OrderDetail() {
   }, [status, router]);
 
   useEffect(() => {
-    if (!id) return;
+    // Wait for both ID and session to be ready
+    if (!id || status === 'loading') return;
+    
+    // If not authenticated, redirect will happen via other useEffect
+    if (status === 'unauthenticated') return;
     
     async function fetchOrder() {
       try {
         const res = await fetch(`/api/admin/orders/${id}`);
         if (!res.ok) {
+          if (res.status === 401) {
+            // Session expired - redirect to login
+            router.push('/admin/login');
+            return;
+          }
           throw new Error(`Failed to fetch order: ${res.status}`);
         }
         const data = await res.json();
@@ -67,7 +76,7 @@ export default function OrderDetail() {
     }
     
     fetchOrder();
-  }, [id]);
+  }, [id, status, router]);
 
   async function updateStatus(field, value) {
     setUpdating(true);
@@ -92,7 +101,9 @@ export default function OrderDetail() {
   if (status === 'loading' || loading) {
     return (
       <AdminLayout>
-        <div className="loading">Bestellung wird geladen...</div>
+        <div className="loading">
+          {status === 'loading' ? 'Authentifizierung wird geprüft...' : 'Bestellung wird geladen...'}
+        </div>
       </AdminLayout>
     );
   }
