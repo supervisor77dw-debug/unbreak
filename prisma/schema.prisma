@@ -136,6 +136,14 @@ model OrderItem {
   qty        Int
   unitPrice  Int    @map("unit_price") // cents
   totalPrice Int    @map("total_price") // cents
+  
+  // Configurator Pricing Fields (Freeze Pricing)
+  pricingVersion      String? @map("pricing_version")
+  basePriceCents      Int?    @map("base_price_cents")
+  optionPricesCents   Json?   @map("option_prices_cents") // {base, arm, module, pattern, finish}
+  customFeeCents      Int?    @default(0) @map("custom_fee_cents")
+  subtotalCents       Int?    @map("subtotal_cents") // base + options + custom_fee
+  config              Json?   // Configurator config for this item
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
