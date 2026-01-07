@@ -22,40 +22,17 @@ export default function OrderDetail() {
 
   useEffect(() => {
     // Wait for session to be fully loaded
-    if (!id) {
-      console.log('[ORDER DETAIL] Waiting for ID...', { hasId: !!id });
-      return;
-    }
-    
-    if (status === 'loading') {
-      console.log('[ORDER DETAIL] Session loading...', { status });
-      return;
-    }
+    if (!id) return;
+    if (status === 'loading') return;
     
     // If not authenticated, redirect
     if (status === 'unauthenticated') {
-      console.log('[ORDER DETAIL] Not authenticated - redirecting to login');
       router.push('/admin/login');
       return;
     }
     
-    // CRITICAL: Only fetch when status is 'authenticated' AND session exists
-    if (status !== 'authenticated' || !session) {
-      console.log('[ORDER DETAIL] Waiting for authenticated session...', { 
-        status, 
-        hasSession: !!session 
-      });
-      return;
-    }
-    
-    // DEBUG: Log before fetch
-    console.log('[ORDER DETAIL] Fetching order:', {
-      orderId: id.substring(0, 8),
-      hasSession: !!session,
-      sessionUser: session?.user?.email,
-      status,
-      timestamp: new Date().toISOString()
-    });
+    // Only fetch when authenticated with active session
+    if (status !== 'authenticated' || !session) return;
     
     async function fetchOrder() {
       try {
@@ -65,26 +42,16 @@ export default function OrderDetail() {
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({ error: 'UNKNOWN' }));
           
-          console.error('[ORDER DETAIL] API Error:', {
-            status: res.status,
-            errorData,
-            hasSession: !!session,
-            url: res.url
-          });
-          
           if (res.status === 401 || errorData.error === 'UNAUTHORIZED') {
-            console.error('[ORDER DETAIL] UNAUTHORIZED - redirecting to login');
             router.push('/admin/login');
             return;
           }
           
           if (res.status === 404) {
             if (errorData.error === 'NOT_FOUND') {
-              console.error('[ORDER DETAIL] Order genuinely not found in DB');
               throw new Error('Bestellung nicht gefunden');
             } else {
-              // 404 without NOT_FOUND error might be auth issue
-              console.error('[ORDER DETAIL] 404 but no NOT_FOUND error - likely auth issue');
+              // 404 without NOT_FOUND might be auth issue
               router.push('/admin/login');
               return;
             }
@@ -93,33 +60,6 @@ export default function OrderDetail() {
           throw new Error(`Failed to fetch order: ${res.status}`);
         }
         const data = await res.json();
-        
-        // BUILD MARKER - Deployment verification
-        console.log('🔵 BUILD_MARKER: 1b1fe4e-DIAGNOSTIC');
-        
-        // DIAGNOSE: Log order fields for color visibility debug
-        console.log('[ORDER DETAIL] Order data:');
-        console.log('  ID:', data.id?.substring(0, 8));
-        console.log('  🎨 configJson (Prisma camelCase):', !!data.configJson);
-        console.log('  configJson value:', JSON.stringify(data.configJson, null, 2));
-        console.log('  colors:', data.configJson?.colors);
-        console.log('  hasItems:', !!data.items?.length);
-        console.log('  All keys:', Object.keys(data));
-        
-        // RAW RESPONSE - Complete structure analysis
-        console.log('[ORDER RAW] Full response:', data);
-        console.log('[ORDER KEYS] Top-level keys:', Object.keys(data));
-        
-        // RECURSIVE DIAGNOSTIC - Check all possible config locations
-        console.log('[CONFIG SEARCH] Checking all possible locations:');
-        console.log('  1. data.config_json:', !!data.config_json);
-        console.log('  2. data.configJson:', !!data.configJson);
-        console.log('  3. data.config:', !!data.config);
-        console.log('  4. data.configuration:', !!data.configuration);
-        console.log('  5. data.items?.[0]?.config:', !!data.items?.[0]?.config);
-        console.log('  6. data.items?.[0]?.config_json:', !!data.items?.[0]?.config_json);
-        console.log('  7. data.metadata?.config:', !!data.metadata?.config);
-        console.log('  8. data.stripeCheckoutSessionId:', data.stripeCheckoutSessionId);
         
         setOrder(data);
       } catch (err) {
@@ -422,9 +362,6 @@ export default function OrderDetail() {
             const configSource = order.configJson || order.config_json || order.items?.[0]?.config || order.items_json?.[0]?.config;
             const hasConfig = configSource || order.configuration_id;
             
-            console.log('[RENDER] configSource:', configSource);
-            console.log('[RENDER] hasConfig:', hasConfig);
-            
             if (!hasConfig) return null;
             
             return (
@@ -464,8 +401,6 @@ export default function OrderDetail() {
                                   const parts = configObj.variant === 'bottle_holder' 
                                     ? ['base', 'pattern']  // 2-part for bottle_holder
                                     : ['base', 'arm', 'module', 'pattern'];  // 4-part for glass_holder
-                                  
-                                  console.log('[COLOR RENDER] parts:', parts, 'colors:', configObj.colors);
                                   
                                   return Array.isArray(parts) ? parts.map((part) => {
                                     const colorId = configObj.colors[part];
