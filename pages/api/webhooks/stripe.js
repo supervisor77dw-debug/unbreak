@@ -481,7 +481,21 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
 
     console.log('✅ [PRISMA SYNC] Admin customer:', customer.id);
 
-    // 3. Create or update order in admin system
+    // 3. Parse config_json from session metadata or supabaseOrder
+    let configJson = null;
+    try {
+      if (session.metadata?.config_json) {
+        configJson = JSON.parse(session.metadata.config_json);
+        console.log('✅ [PRISMA SYNC] config_json from Stripe metadata:', configJson);
+      } else if (supabaseOrder?.config_json) {
+        configJson = supabaseOrder.config_json;
+        console.log('✅ [PRISMA SYNC] config_json from Supabase order:', configJson);
+      }
+    } catch (error) {
+      console.warn('⚠️ [PRISMA SYNC] Failed to parse config_json:', error.message);
+    }
+
+    // 4. Create or update order in admin system
     const order = await prisma.order.upsert({
       where: { stripeCheckoutSessionId: session.id },
       update: {
@@ -489,6 +503,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         stripePaymentIntentId: session.payment_intent,
         paidAt: new Date(),
         updatedAt: new Date(),
+        ...(configJson && { configJson: configJson }),
       },
       create: {
         stripeCheckoutSessionId: session.id,
@@ -504,6 +519,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         shippingAddress: session.shipping_details?.address || supabaseOrder.shipping_address || null,
         customerId: customer.id,
         paidAt: new Date(),
+        configJson: configJson,
       },
     });
 

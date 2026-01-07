@@ -7,43 +7,30 @@ const supabase = createClient(
 );
 
 async function checkOrder() {
-  // Get all orders with config_json to see which ones have color data
-  const { data: orders, error } = await supabase
+  const orderId = '8131c67c-87b3-4b02-a51e-644560a78a45'; // Just created
+  
+  const { data: order, error } = await supabase
     .from('simple_orders')
     .select('id, customer_email, config_json, items')
-    .not('config_json', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(10);
+    .eq('id', orderId)
+    .single();
   
   if (error) {
-    console.error('Error:', error.message);
+    console.error('❌ Error:', error.message);
+    console.log('\n⚠️  Order NOT in simple_orders table!');
+    console.log('Only in Prisma (admin_orders)');
+    console.log('\n🔍 PROBLEM: Checkout does not write to simple_orders');
     return;
   }
   
-  console.log(`Found ${orders.length} orders with config_json:\n`);
+  console.log('✅ Order found in simple_orders');
+  console.log('ID:', order.id);
+  console.log('Email:', order.customer_email);
+  console.log('Has config_json:', !!order.config_json);
+  console.log('config_json:', JSON.stringify(order.config_json, null, 2));
   
-  orders.forEach((order, i) => {
-    console.log(`${i + 1}. ${order.id.substring(0, 8)}... - ${order.customer_email}`);
-    console.log('   Has colors:', !!order.config_json?.colors);
-    if (order.config_json?.colors) {
-      console.log('   Colors:', Object.keys(order.config_json.colors).join(', '));
-    }
-  });
-  
-  // Also check the specific order from browser log
-  console.log('\n=== Checking order 70e852c2... ===');
-  const { data: specificOrder } = await supabase
-    .from('simple_orders')
-    .select('id, customer_email, config_json')
-    .ilike('id', '70e852c2%')
-    .single();
-  
-  if (specificOrder) {
-    console.log('Found:', specificOrder.id);
-    console.log('Has config_json:', !!specificOrder.config_json);
-    console.log('config_json:', specificOrder.config_json);
-  } else {
-    console.log('Order not found');
+  if (order.items?.[0]?.config) {
+    console.log('\nitems[0].config:', JSON.stringify(order.items[0].config, null, 2));
   }
 }
 

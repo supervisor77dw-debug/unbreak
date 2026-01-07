@@ -108,6 +108,7 @@ model Order {
   paidAt                  DateTime?         @map("paid_at")
   shippedAt               DateTime?         @map("shipped_at")
   notes                   String?
+  configJson              Json?             @map("config_json") // Configurator config with colors
 
   customer Customer      @relation(fields: [customerId], references: [id])
   items    OrderItem[]
