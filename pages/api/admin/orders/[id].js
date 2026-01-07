@@ -31,6 +31,7 @@ export default async function handler(req, res) {
       }
 
       // AUGMENT: Get config_json from Supabase simple_orders
+      let config_json = null;
       const supabase = getSupabaseAdmin();
       if (supabase) {
         const { data: simpleOrder } = await supabase
@@ -40,15 +41,19 @@ export default async function handler(req, res) {
           .single();
 
         if (simpleOrder?.config_json) {
-          order.config_json = simpleOrder.config_json;
+          config_json = simpleOrder.config_json;
         }
         // Fallback: Check if items[0] has config
-        if (!order.config_json && simpleOrder?.items?.[0]?.config) {
-          order.config_json = simpleOrder.items[0].config;
+        else if (simpleOrder?.items?.[0]?.config) {
+          config_json = simpleOrder.items[0].config;
         }
       }
 
-      return res.status(200).json(order);
+      // Return merged object
+      return res.status(200).json({
+        ...order,
+        config_json
+      });
     }
 
     if (req.method === 'PATCH') {
