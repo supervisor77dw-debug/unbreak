@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import prisma from '../../../../lib/prisma';
-import { getSupabaseAdmin } from '../../../../lib/supabase';
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
@@ -14,7 +13,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // Fetch order with all relations from Prisma
+      // Fetch order with all relations from Prisma (SINGLE SOURCE)
       const order = await prisma.order.findUnique({
         where: { id },
         include: {
@@ -30,35 +29,9 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Order not found' });
       }
 
-      // AUGMENT: Get config_json from Supabase simple_orders
-      let config_json = null;
-      const supabase = getSupabaseAdmin();
-      if (supabase) {
-        try {
-          const { data: simpleOrder, error } = await supabase
-            .from('simple_orders')
-            .select('config_json, items')
-            .eq('id', id)
-            .maybeSingle(); // Use maybeSingle instead of single to avoid error if not found
-
-          if (!error && simpleOrder?.config_json) {
-            config_json = simpleOrder.config_json;
-          }
-          // Fallback: Check if items[0] has config
-          else if (!error && simpleOrder?.items?.[0]?.config) {
-            config_json = simpleOrder.items[0].config;
-          }
-        } catch (err) {
-          // Silently fail - order might not exist in simple_orders (only in Prisma)
-          console.log('Could not fetch config from simple_orders:', err.message);
-        }
-      }
-
-      // Return merged object
-      return res.status(200).json({
-        ...order,
-        config_json
-      });
+      // ✅ PRISMA IS NOW SINGLE SOURCE - config_json comes from Prisma
+      // Return order directly - config_json is already included from Prisma
+      return res.status(200).json(order);
     }
 
     if (req.method === 'PATCH') {
