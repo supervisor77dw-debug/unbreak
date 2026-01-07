@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { buffer } from 'micro';
 import prisma from '../../../lib/prisma';
+import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPrice.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -532,10 +533,37 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
 
     if (existingItems === 0 && items.length > 0) {
       for (const item of items) {
+        // Calculate pricing fields if this is a configured product
+        let pricingFields = {};
+        if (configJson && configJson.colors) {
+          const productType = configJson.variant === 'bottle_holder' ? 'bottle_holder' : 'glass_holder';
+          const pricing = calcConfiguredPrice({
+            productType,
+            config: configJson,
+            customFeeCents: 0,
+          });
+          
+          pricingFields = {
+            pricingVersion: pricing.pricing_version,
+            basePriceCents: pricing.base_price_cents,
+            optionPricesCents: pricing.option_prices_cents,
+            customFeeCents: pricing.custom_fee_cents,
+            subtotalCents: pricing.subtotal_cents,
+            config: configJson,
+          };
+          
+          console.log('💰 [PRISMA SYNC] Calculated pricing:', {
+            sku: pricing.sku,
+            subtotal: pricing.subtotal_cents,
+            base: pricing.base_price_cents,
+          });
+        }
+        
         await prisma.orderItem.create({
           data: {
             orderId: order.id,
-            ...item
+            ...item,
+            ...pricingFields,
           },
         });
       }
