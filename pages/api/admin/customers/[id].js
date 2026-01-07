@@ -4,14 +4,11 @@
  */
 
 import { getSupabaseAdmin } from '../../../../lib/supabase';
-import { requireAdminAuth } from '../../../../lib/auth-helpers';
+import { requireAdmin } from '../../../../lib/adminAuth';
 
 export default async function handler(req, res) {
-  // Require admin/ops/support role
-  const user = await requireAdminAuth(req, res, ['admin', 'ops', 'support']);
-  if (!user) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  // Require admin API key
+  if (!requireAdmin(req, res)) return;
 
   const { id } = req.query;
 

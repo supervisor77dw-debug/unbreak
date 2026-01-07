@@ -14,6 +14,7 @@ export default function CustomersPage() {
   const router = useRouter();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [pagination, setPagination] = useState({
     total: 0,
@@ -42,11 +43,19 @@ export default function CustomersPage() {
       params.append('limit', pagination.limit);
       params.append('offset', pagination.offset);
 
-      const res = await fetch(`/api/admin/customers?${params}`);
+      const res = await fetch(`/api/admin/customers?${params}`, {
+        headers: {
+          'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_API_KEY || '',
+        },
+      });
+      
       if (res.ok) {
         const data = await res.json();
         setCustomers(data.customers || []);
         setPagination(data.pagination || pagination);
+      } else if (res.status === 401) {
+        console.error('❌ Admin API unauthorized - check NEXT_PUBLIC_ADMIN_API_KEY');
+        setError('Admin API unauthorized. Check environment configuration.');
       } else {
         console.error('Failed to fetch customers:', res.status);
       }

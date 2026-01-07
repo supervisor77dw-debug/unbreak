@@ -37,7 +37,12 @@ export default function CustomerDetailPage() {
   const fetchCustomerDetails = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/customers/${id}`);
+      const res = await fetch(`/api/admin/customers/${id}`, {
+        headers: {
+          'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_API_KEY || '',
+        },
+      });
+      
       if (res.ok) {
         const data = await res.json();
         setCustomer(data.customer);
@@ -45,6 +50,9 @@ export default function CustomerDetailPage() {
         setSimpleOrders(data.simple_orders || []);
         setTickets(data.tickets || []);
         setStats(data.stats);
+      } else if (res.status === 401) {
+        console.error('❌ Admin API unauthorized - check NEXT_PUBLIC_ADMIN_API_KEY');
+        alert('Admin API unauthorized. Check environment configuration (x-admin-key).');
       } else {
         console.error('Failed to fetch customer:', res.status);
         if (res.status === 404) {
