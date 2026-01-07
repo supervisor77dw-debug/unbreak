@@ -32,20 +32,15 @@ export default function OrderDetail() {
         const data = await res.json();
         
         // DIAGNOSE: Log order fields for color visibility debug
-        console.log('[ORDER DETAIL] Order data:', {
-          id: data.id?.substring(0, 8),
-          hasConfigJson: !!data.config_json,
-          configJson: data.config_json,
-          hasConfigJsonColors: !!data.config_json?.colors,
-          configJsonColors: data.config_json?.colors,
-          hasConfigJson2: !!data.configJson,
-          configJson2: data.configJson,
-          hasConfig: !!data.config,
-          config: data.config,
-          hasItems: !!data.items?.length,
-          firstItemConfig: data.items?.[0]?.config,
-          hasConfigurator: !!data.configurator,
-        });
+        console.log('[ORDER DETAIL] Order data:');
+        console.log('  ID:', data.id?.substring(0, 8));
+        console.log('  hasConfigJson:', !!data.config_json);
+        console.log('  config_json:', JSON.stringify(data.config_json, null, 2));
+        console.log('  hasConfigJsonColors:', !!data.config_json?.colors);
+        console.log('  configJsonColors:', data.config_json?.colors);
+        console.log('  hasItems:', !!data.items?.length);
+        console.log('  firstItemConfig:', data.items?.[0]?.config);
+        console.log('  All keys:', Object.keys(data));
         
         setOrder(data);
       } catch (err) {
