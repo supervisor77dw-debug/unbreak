@@ -433,8 +433,7 @@ export default function OrderDetail() {
                                     </div>
                                   );
                                 }) : null;
-                                })();
-                              })()}
+                                })()}
                               </div>
                             </div>
                           )}
