@@ -21,15 +21,30 @@ export default function OrderDetail() {
   }, [status, router]);
 
   useEffect(() => {
-    // Wait for both ID and session to be ready
-    if (!id || status === 'loading') {
-      console.log('[ORDER DETAIL] Waiting...', { hasId: !!id, status });
+    // Wait for session to be fully loaded
+    if (!id) {
+      console.log('[ORDER DETAIL] Waiting for ID...', { hasId: !!id });
       return;
     }
     
-    // If not authenticated, redirect will happen via other useEffect
+    if (status === 'loading') {
+      console.log('[ORDER DETAIL] Session loading...', { status });
+      return;
+    }
+    
+    // If not authenticated, redirect
     if (status === 'unauthenticated') {
-      console.log('[ORDER DETAIL] Not authenticated - redirect handled separately');
+      console.log('[ORDER DETAIL] Not authenticated - redirecting to login');
+      router.push('/admin/login');
+      return;
+    }
+    
+    // CRITICAL: Only fetch when status is 'authenticated' AND session exists
+    if (status !== 'authenticated' || !session) {
+      console.log('[ORDER DETAIL] Waiting for authenticated session...', { 
+        status, 
+        hasSession: !!session 
+      });
       return;
     }
     
@@ -37,7 +52,9 @@ export default function OrderDetail() {
     console.log('[ORDER DETAIL] Fetching order:', {
       orderId: id.substring(0, 8),
       hasSession: !!session,
-      status
+      sessionUser: session?.user?.email,
+      status,
+      timestamp: new Date().toISOString()
     });
     
     async function fetchOrder() {
@@ -48,15 +65,29 @@ export default function OrderDetail() {
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({ error: 'UNKNOWN' }));
           
+          console.error('[ORDER DETAIL] API Error:', {
+            status: res.status,
+            errorData,
+            hasSession: !!session,
+            url: res.url
+          });
+          
           if (res.status === 401 || errorData.error === 'UNAUTHORIZED') {
             console.error('[ORDER DETAIL] UNAUTHORIZED - redirecting to login');
             router.push('/admin/login');
             return;
           }
           
-          if (res.status === 404 && errorData.error === 'NOT_FOUND') {
-            console.error('[ORDER DETAIL] Order not found');
-            throw new Error('Bestellung nicht gefunden');
+          if (res.status === 404) {
+            if (errorData.error === 'NOT_FOUND') {
+              console.error('[ORDER DETAIL] Order genuinely not found in DB');
+              throw new Error('Bestellung nicht gefunden');
+            } else {
+              // 404 without NOT_FOUND error might be auth issue
+              console.error('[ORDER DETAIL] 404 but no NOT_FOUND error - likely auth issue');
+              router.push('/admin/login');
+              return;
+            }
           }
           
           throw new Error(`Failed to fetch order: ${res.status}`);
