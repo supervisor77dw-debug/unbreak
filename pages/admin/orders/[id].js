@@ -31,6 +31,9 @@ export default function OrderDetail() {
         }
         const data = await res.json();
         
+        // BUILD MARKER - Deployment verification
+        console.log('🔵 BUILD_MARKER: 1b1fe4e-DIAGNOSTIC');
+        
         // DIAGNOSE: Log order fields for color visibility debug
         console.log('[ORDER DETAIL] Order data:');
         console.log('  ID:', data.id?.substring(0, 8));
@@ -41,6 +44,21 @@ export default function OrderDetail() {
         console.log('  hasItems:', !!data.items?.length);
         console.log('  firstItemConfig:', data.items?.[0]?.config);
         console.log('  All keys:', Object.keys(data));
+        
+        // RAW RESPONSE - Complete structure analysis
+        console.log('[ORDER RAW] Full response:', data);
+        console.log('[ORDER KEYS] Top-level keys:', Object.keys(data));
+        
+        // RECURSIVE DIAGNOSTIC - Check all possible config locations
+        console.log('[CONFIG SEARCH] Checking all possible locations:');
+        console.log('  1. data.config_json:', !!data.config_json);
+        console.log('  2. data.configJson:', !!data.configJson);
+        console.log('  3. data.config:', !!data.config);
+        console.log('  4. data.configuration:', !!data.configuration);
+        console.log('  5. data.items?.[0]?.config:', !!data.items?.[0]?.config);
+        console.log('  6. data.items?.[0]?.config_json:', !!data.items?.[0]?.config_json);
+        console.log('  7. data.metadata?.config:', !!data.metadata?.config);
+        console.log('  8. data.stripeCheckoutSessionId:', data.stripeCheckoutSessionId);
         
         setOrder(data);
       } catch (err) {
