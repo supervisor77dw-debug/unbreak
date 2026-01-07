@@ -37,12 +37,10 @@ export default function OrderDetail() {
         // DIAGNOSE: Log order fields for color visibility debug
         console.log('[ORDER DETAIL] Order data:');
         console.log('  ID:', data.id?.substring(0, 8));
-        console.log('  hasConfigJson:', !!data.config_json);
-        console.log('  config_json:', JSON.stringify(data.config_json, null, 2));
-        console.log('  hasConfigJsonColors:', !!data.config_json?.colors);
-        console.log('  configJsonColors:', data.config_json?.colors);
+        console.log('  🎨 configJson (Prisma camelCase):', !!data.configJson);
+        console.log('  configJson value:', JSON.stringify(data.configJson, null, 2));
+        console.log('  colors:', data.configJson?.colors);
         console.log('  hasItems:', !!data.items?.length);
-        console.log('  firstItemConfig:', data.items?.[0]?.config);
         console.log('  All keys:', Object.keys(data));
         
         // RAW RESPONSE - Complete structure analysis
@@ -351,9 +349,12 @@ export default function OrderDetail() {
 
           {/* Configuration (if configurator order) */}
           {(() => {
-            // ✅ PRIORITY: config_json > items[0].config > null
-            const configSource = order.config_json || order.configJson || order.items?.[0]?.config || order.items_json?.[0]?.config;
+            // ✅ PRIORITY: configJson (Prisma camelCase) > config_json (legacy) > items[0].config
+            const configSource = order.configJson || order.config_json || order.items?.[0]?.config || order.items_json?.[0]?.config;
             const hasConfig = configSource || order.configuration_id;
+            
+            console.log('[RENDER] configSource:', configSource);
+            console.log('[RENDER] hasConfig:', hasConfig);
             
             if (!hasConfig) return null;
             
@@ -383,7 +384,7 @@ export default function OrderDetail() {
                             </div>
                           )}
                           
-                          {configObj.colors && (
+                          {configObj?.colors && (
                             <div className="config-item" style={{ gridColumn: '1 / -1' }}>
                               <strong style={{ color: '#94a3b8', fontSize: '12px' }}>
                                 🎨 {configObj.variant === 'bottle_holder' ? '2-Part' : '4-Part'} Color Configuration
@@ -395,7 +396,9 @@ export default function OrderDetail() {
                                     ? ['base', 'pattern']  // 2-part for bottle_holder
                                     : ['base', 'arm', 'module', 'pattern'];  // 4-part for glass_holder
                                   
-                                  return parts.map((part) => {
+                                  console.log('[COLOR RENDER] parts:', parts, 'colors:', configObj.colors);
+                                  
+                                  return Array.isArray(parts) ? parts.map((part) => {
                                     const colorId = configObj.colors[part];
                                     if (!colorId) return null;
                                   
@@ -429,6 +432,7 @@ export default function OrderDetail() {
                                       </div>
                                     </div>
                                   );
+                                }) : null;
                                 })();
                               })()}
                               </div>
