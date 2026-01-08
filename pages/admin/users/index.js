@@ -39,6 +39,13 @@ export default function UsersPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createData, setCreateData] = useState({ email: '', password: '', role: 'support', display_name: '' });
   const [submitting, setSubmitting] = useState(false);
+  
+  // Password Reset Modal
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   // Fetch users
   const fetchUsers = async () => {
@@ -136,6 +143,60 @@ export default function UsersPage() {
   const toggleUserStatus = (user) => {
     if (confirm(`Are you sure you want to ${user.is_active ? 'deactivate' : 'activate'} ${user.email}?`)) {
       handleUpdateUser(user.id, { is_active: !user.is_active });
+    }
+  };
+  
+  // Reset password
+  const openResetPassword = (user) => {
+    setResetPasswordUser(user);
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowResetPasswordModal(true);
+  };
+  
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    
+    if (newPassword !== confirmPassword) {
+      alert('❌ Passwörter stimmen nicht überein!');
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      alert('❌ Passwort muss mindestens 8 Zeichen lang sein!');
+      return;
+    }
+    
+    if (!confirm(`Passwort für ${resetPasswordUser.email} wirklich zurücksetzen?`)) {
+      return;
+    }
+    
+    setResettingPassword(true);
+    try {
+      const response = await fetch('/api/admin/users/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: resetPasswordUser.id,
+          newPassword: newPassword,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Fehler beim Zurücksetzen');
+      }
+      
+      alert('✅ Passwort erfolgreich zurückgesetzt!');
+      setShowResetPasswordModal(false);
+      setResetPasswordUser(null);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      alert('❌ ' + err.message);
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -335,6 +396,7 @@ export default function UsersPage() {
                         onClick={() => toggleUserStatus(user)}
                         style={{
                           padding: '6px 12px',
+                          marginRight: '8px',
                           background: user.is_active ? '#ef4444' : '#10b981',
                           color: 'white',
                           border: 'none',
@@ -344,6 +406,20 @@ export default function UsersPage() {
                         }}
                       >
                         {user.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => openResetPassword(user)}
+                        style={{
+                          padding: '6px 12px',
+                          background: '#8b5cf6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '13px'
+                        }}
+                      >
+                        🔑 Reset PW
                       </button>
                     </td>
                   </tr>
@@ -421,6 +497,144 @@ export default function UsersPage() {
                     style={{ padding: '10px 20px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.5 : 1 }}
                   >
                     {submitting ? 'Creating...' : 'Create User'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        
+        {/* Password Reset Modal */}
+        {showResetPasswordModal && resetPasswordUser && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              background: '#1a1a1a',
+              padding: '32px',
+              borderRadius: '12px',
+              maxWidth: '500px',
+              width: '90%',
+              border: '2px solid #8b5cf6'
+            }}>
+              <h2 style={{ marginBottom: '24px', color: '#8b5cf6', fontSize: '24px' }}>
+                🔑 Passwort zurücksetzen
+              </h2>
+              
+              <div style={{
+                padding: '12px',
+                background: '#0a0a0a',
+                borderRadius: '6px',
+                marginBottom: '24px',
+                border: '1px solid #404040'
+              }}>
+                <div style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '4px' }}>Benutzer:</div>
+                <div style={{ color: '#d4f1f1', fontSize: '16px', fontWeight: '600' }}>
+                  {resetPasswordUser.email}
+                </div>
+              </div>
+              
+              <form onSubmit={handleResetPassword}>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#94a3b8', fontSize: '14px' }}>
+                    Neues Passwort * (min. 8 Zeichen)
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    autoFocus
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #404040',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      background: '#0a0a0a',
+                      color: '#d4f1f1'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', color: '#94a3b8', fontSize: '14px' }}>
+                    Passwort bestätigen *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #404040',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      background: '#0a0a0a',
+                      color: '#d4f1f1'
+                    }}
+                  />
+                </div>
+                
+                <div style={{
+                  padding: '12px',
+                  background: '#7c2d12',
+                  borderRadius: '6px',
+                  border: '1px solid #dc2626',
+                  marginBottom: '24px',
+                  fontSize: '13px',
+                  color: '#fecaca'
+                }}>
+                  ⚠️ <strong>Sicherheitshinweis:</strong> Das neue Passwort wird gehasht gespeichert. Der Benutzer sollte es beim nächsten Login ändern.
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    type="submit"
+                    disabled={resettingPassword}
+                    style={{
+                      flex: 1,
+                      padding: '12px 24px',
+                      background: resettingPassword ? '#404040' : '#8b5cf6',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: resettingPassword ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    {resettingPassword ? 'Wird zurückgesetzt...' : '🔑 Passwort zurücksetzen'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPasswordModal(false)}
+                    disabled={resettingPassword}
+                    style={{
+                      padding: '12px 24px',
+                      background: '#1a1a1a',
+                      color: '#94a3b8',
+                      border: '2px solid #404040',
+                      borderRadius: '6px',
+                      cursor: resettingPassword ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Abbrechen
                   </button>
                 </div>
               </form>
