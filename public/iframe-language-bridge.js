@@ -17,6 +17,24 @@
     'https://unbreak-one.vercel.app',
     'http://localhost:3000', // Dev
   ];
+
+  /**
+   * Check if origin is allowed (supports Vercel preview deployments)
+   */
+  function isOriginAllowed(origin) {
+    // Exact match
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      return true;
+    }
+    
+    // Vercel preview deployments: https://unbreak-*.vercel.app
+    const vercelPreviewPattern = /^https:\/\/unbreak-[a-z0-9-]+\.vercel\.app$/;
+    if (vercelPreviewPattern.test(origin)) {
+      return true;
+    }
+    
+    return false;
+  }
   
   let iframe = null;
   let currentLang = 'de';
@@ -122,7 +140,7 @@
    */
   function handleIframeMessage(event) {
     // Security: Check origin
-    if (!ALLOWED_ORIGINS.includes(event.origin)) {
+    if (!isOriginAllowed(event.origin)) {
       console.warn('[iFrame Bridge] Blocked message from unknown origin:', event.origin);
       return;
     }
