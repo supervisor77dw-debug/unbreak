@@ -303,7 +303,16 @@ export default function OrderDetail() {
                         <tr key={idx} style={{ borderBottom: '1px solid #2a2a2a' }}>
                           <td style={{ padding: '12px 8px' }}>
                             <div style={{ color: '#d4f1f1', fontWeight: '500' }}>
-                              {item?.name || item?.product_name || 'Produkt'}
+                              {(() => {
+                                // Use correct name for configured products
+                                if (item?.config && item?.config?.colors && item?.pricingVersion) {
+                                  const variant = item.config.variant || 'glass_holder';
+                                  return variant === 'bottle_holder' 
+                                    ? 'Flaschenhalter (konfiguriert)'
+                                    : 'Glashalter (konfiguriert)';
+                                }
+                                return item?.name || item?.product_name || 'Produkt';
+                              })()}
                             </div>
                             {item?.config && (
                               <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
@@ -313,6 +322,27 @@ export default function OrderDetail() {
                                   <span>🎨 {item.config.color}</span>
                                 ) : null}
                                 {item?.config?.finish && <span> • {item.config.finish}</span>}
+                                
+                                {/* Pricing Breakdown */}
+                                {item?.pricingVersion && item?.optionPricesCents && (
+                                  <div style={{ marginTop: '8px', padding: '8px', background: '#1a1a1a', borderRadius: '4px', borderLeft: '2px solid #0891b2' }}>
+                                    <div style={{ color: '#0891b2', fontWeight: '600', marginBottom: '4px', fontSize: '11px' }}>
+                                      💰 PRICING BREAKDOWN (v{item.pricingVersion})
+                                    </div>
+                                    <div style={{ fontFamily: 'monospace', fontSize: '11px', lineHeight: '1.6' }}>
+                                      <div>Basis: {formatCurrency(item.basePriceCents || 0)}</div>
+                                      {item.optionPricesCents.base > 0 && <div style={{ color: '#fbbf24' }}>+ Base-Farbe: {formatCurrency(item.optionPricesCents.base)}</div>}
+                                      {item.optionPricesCents.arm > 0 && <div style={{ color: '#fbbf24' }}>+ Arm-Farbe: {formatCurrency(item.optionPricesCents.arm)}</div>}
+                                      {item.optionPricesCents.module > 0 && <div style={{ color: '#fbbf24' }}>+ Modul-Farbe: {formatCurrency(item.optionPricesCents.module)}</div>}
+                                      {item.optionPricesCents.pattern > 0 && <div style={{ color: '#fbbf24' }}>+ Pattern-Farbe: {formatCurrency(item.optionPricesCents.pattern)}</div>}
+                                      {item.optionPricesCents.finish > 0 && <div style={{ color: '#fbbf24' }}>+ Finish: {formatCurrency(item.optionPricesCents.finish)}</div>}
+                                      {item.customFeeCents > 0 && <div style={{ color: '#fbbf24' }}>+ Custom Fee: {formatCurrency(item.customFeeCents)}</div>}
+                                      <div style={{ borderTop: '1px solid #404040', marginTop: '4px', paddingTop: '4px', color: '#0891b2', fontWeight: '600' }}>
+                                        = Item Subtotal: {formatCurrency(item.subtotalCents || 0)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </td>

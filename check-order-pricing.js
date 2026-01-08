@@ -8,7 +8,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function checkOrder() {
-  const orderId = 'eacebcb0'; // Just first 8 chars for quick search
+  const orderId = '56d87d4d'; // Latest order
   
   const { data: order, error: orderError } = await supabase
     .from('admin_orders')
