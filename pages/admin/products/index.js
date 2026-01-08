@@ -7,6 +7,7 @@ import { getSupabasePublic } from '../../../lib/supabase';
 import AdminLayout from '../../../components/AdminLayout';
 import ProductImage from '../../../components/ProductImage';
 import { getProductImageUrl } from '../../../lib/storage-utils';
+import PricingConfigSection from '../../../components/admin/PricingConfigSection';
 
 // CRITICAL: Force dynamic rendering for admin pages
 export const dynamic = 'force-dynamic';
@@ -586,7 +587,8 @@ export default function ProductsPage() {
           }
         }
       `}</style>
-    </AdminLayout>
+      {/* Pricing Configuration Section */}
+      <PricingConfigSection />    </AdminLayout>
   );
 }
 
