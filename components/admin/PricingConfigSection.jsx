@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CONFIGURATOR_COLORS } from '../../lib/constants/colors';
+import { PART_LABELS } from '../../lib/constants/parts';
+import { parseEuroToCents, formatCentsToEuro } from '../../lib/utils/currency';
 
 export default function PricingConfigSection() {
   const [loading, setLoading] = useState(true);
@@ -70,15 +72,24 @@ export default function PricingConfigSection() {
   }
 
   function updateColorPrice(part, colorId, value) {
+    const cents = parseEuroToCents(value);
     setEditedConfig(prev => ({
       ...prev,
       color_prices: {
         ...prev.color_prices,
         [part]: {
           ...prev.color_prices[part],
-          [colorId]: parseInt(value) || 0,
+          [colorId]: cents,
         },
       },
+    }));
+  }
+
+  function updateBasePrice(value) {
+    const cents = parseEuroToCents(value);
+    setEditedConfig(prev => ({
+      ...prev,
+      base_price_cents: cents,
     }));
   }
 
@@ -86,11 +97,27 @@ export default function PricingConfigSection() {
     return <div style={{ padding: '16px', color: '#94a3b8' }}>Laden...</div>;
   }
 
+  const glassHolderParts = ['base', 'arm', 'module', 'pattern'];
+  const bottleHolderParts = ['pattern']; // Nur Muster hat Aufschläge
+
   return (
     <div style={{ marginTop: '48px', paddingTop: '48px', borderTop: '2px solid #2a2a2a' }}>
       <h2 style={{ fontSize: '24px', color: '#d4f1f1', marginBottom: '24px' }}>
         ⚙️ Pricing-Konfiguration
       </h2>
+
+      {/* Info Box */}
+      <div style={{
+        padding: '12px 16px',
+        marginBottom: '20px',
+        borderRadius: '6px',
+        background: '#1e3a8a',
+        color: '#bfdbfe',
+        border: '1px solid #3b82f6',
+        fontSize: '13px',
+      }}>
+        💡 <strong>Snapshot-Prinzip:</strong> Preisänderungen wirken NICHT rückwirkend. Alte Bestellungen behalten ihre Preise.
+      </div>
 
       {message && (
         <div style={{
@@ -151,16 +178,14 @@ export default function PricingConfigSection() {
             border: '1px solid #404040',
           }}>
             <h3 style={{ color: '#0891b2', fontSize: '16px', marginBottom: '12px', fontWeight: '600' }}>
-              Basispreis
+              💰 Basispreis
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <input
-                type="number"
-                value={editedConfig.base_price_cents || 0}
-                onChange={(e) => setEditedConfig(prev => ({
-                  ...prev,
-                  base_price_cents: parseInt(e.target.value) || 0,
-                }))}
+                type="text"
+                value={formatCentsToEuro(editedConfig.base_price_cents || 0)}
+                onChange={(e) => updateBasePrice(e.target.value)}
+                placeholder="0,00"
                 style={{
                   padding: '10px',
                   fontSize: '16px',
@@ -171,13 +196,11 @@ export default function PricingConfigSection() {
                   borderRadius: '6px',
                 }}
               />
-              <span style={{ color: '#94a3b8', fontSize: '14px' }}>
-                Cent (= €{((editedConfig.base_price_cents || 0) / 100).toFixed(2)})
-              </span>
+              <span style={{ color: '#94a3b8', fontSize: '14px' }}>€</span>
             </div>
           </div>
 
-          {/* Glashalter: Color Upcharges for all 4 parts */}
+          {/* Glashalter: Color Upcharges for 4 parts */}
           {activeVariant === 'glass_holder' && (
             <div style={{
               background: '#1a1a1a',
@@ -187,66 +210,59 @@ export default function PricingConfigSection() {
               border: '1px solid #404040',
             }}>
               <h3 style={{ color: '#0891b2', fontSize: '16px', marginBottom: '16px', fontWeight: '600' }}>
-                🎨 Farb-Aufschläge (7 Farben pro Teil)
+                🎨 Farb-Aufschläge (7 Farben)
               </h3>
               
-              {['base', 'arm', 'module', 'pattern'].map(part => (
-                <div key={part} style={{ marginBottom: '20px' }}>
+              {glassHolderParts.map(part => (
+                <div key={part} style={{ marginBottom: '24px' }}>
                   <h4 style={{ 
                     color: '#94a3b8', 
-                    fontSize: '13px', 
-                    textTransform: 'uppercase', 
-                    marginBottom: '10px',
+                    fontSize: '14px', 
+                    marginBottom: '12px',
                     fontWeight: '600',
                   }}>
-                    {part === 'base' ? 'Basis' : part === 'arm' ? 'Arm' : part === 'module' ? 'Modul' : 'Pattern'}
+                    {PART_LABELS[part]}
                   </h4>
+                  
                   <div style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', 
-                    gap: '10px' 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: '12px',
                   }}>
                     {CONFIGURATOR_COLORS.map(color => (
-                      <div key={color.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        background: '#0a0a0a',
-                        padding: '6px 10px',
-                        borderRadius: '4px',
-                        border: '1px solid #404040',
-                      }}>
+                      <div key={color.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{
-                          width: '16px',
-                          height: '16px',
-                          borderRadius: '3px',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '4px',
                           background: color.hex,
                           border: '1px solid #404040',
                           flexShrink: 0,
-                        }}></div>
+                        }} />
                         <span style={{ 
-                          color: '#d4f1f1', 
-                          flex: 1, 
+                          color: '#cbd5e1', 
                           fontSize: '13px',
+                          width: '80px',
+                          flexShrink: 0,
                         }}>
                           {color.name}
                         </span>
                         <input
-                          type="number"
-                          value={editedConfig.color_prices?.[part]?.[color.id] || 0}
+                          type="text"
+                          value={formatCentsToEuro(editedConfig.color_prices?.[part]?.[color.id] || 0)}
                           onChange={(e) => updateColorPrice(part, color.id, e.target.value)}
+                          placeholder="0,00"
                           style={{
-                            width: '60px',
-                            padding: '4px 6px',
-                            background: '#000',
-                            color: '#fbbf24',
+                            padding: '6px 8px',
+                            fontSize: '13px',
+                            width: '70px',
+                            background: '#0a0a0a',
+                            color: '#d4f1f1',
                             border: '1px solid #404040',
-                            borderRadius: '3px',
-                            fontSize: '12px',
-                            textAlign: 'right',
+                            borderRadius: '4px',
                           }}
                         />
-                        <span style={{ color: '#64748b', fontSize: '11px' }}>¢</span>
+                        <span style={{ color: '#64748b', fontSize: '12px' }}>€</span>
                       </div>
                     ))}
                   </div>
@@ -255,26 +271,79 @@ export default function PricingConfigSection() {
             </div>
           )}
 
-          {/* Flaschenhalter: Info */}
+          {/* Flaschenhalter: Only pattern upcharges */}
           {activeVariant === 'bottle_holder' && (
             <div style={{
-              background: '#0c4a6e',
-              padding: '16px',
+              background: '#1a1a1a',
+              padding: '20px',
               borderRadius: '8px',
               marginBottom: '20px',
-              border: '1px solid #0ea5e9',
+              border: '1px solid #404040',
             }}>
-              <div style={{ color: '#7dd3fc', fontSize: '14px', marginBottom: '4px', fontWeight: '600' }}>
-                ℹ️ Flaschenhalter-Konfiguration
+              <h3 style={{ color: '#0891b2', fontSize: '16px', marginBottom: '16px', fontWeight: '600' }}>
+                🎨 {PART_LABELS.pattern}-Aufschläge (7 Farben)
+              </h3>
+              
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '12px',
+              }}>
+                {CONFIGURATOR_COLORS.map(color => (
+                  <div key={color.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '4px',
+                      background: color.hex,
+                      border: '1px solid #404040',
+                      flexShrink: 0,
+                    }} />
+                    <span style={{ 
+                      color: '#cbd5e1', 
+                      fontSize: '13px',
+                      width: '80px',
+                      flexShrink: 0,
+                    }}>
+                      {color.name}
+                    </span>
+                    <input
+                      type="text"
+                      value={formatCentsToEuro(editedConfig.color_prices?.pattern?.[color.id] || 0)}
+                      onChange={(e) => updateColorPrice('pattern', color.id, e.target.value)}
+                      placeholder="0,00"
+                      style={{
+                        padding: '6px 8px',
+                        fontSize: '13px',
+                        width: '70px',
+                        background: '#0a0a0a',
+                        color: '#d4f1f1',
+                        border: '1px solid #404040',
+                        borderRadius: '4px',
+                      }}
+                    />
+                    <span style={{ color: '#64748b', fontSize: '12px' }}>€</span>
+                  </div>
+                ))}
               </div>
-              <div style={{ color: '#bae6fd', fontSize: '13px' }}>
-                Flaschenhalter verwendet aktuell nur den Basispreis. Farbaufschläge werden nicht angewendet.
+
+              <div style={{
+                marginTop: '16px',
+                padding: '12px',
+                background: '#0a0a0a',
+                borderRadius: '6px',
+                border: '1px solid #334155',
+              }}>
+                <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
+                  ℹ️ <strong>Flaschenhalter</strong> besteht aus Grundplatte (Basispreis) + Muster (Aufschlag).
+                  <br />Keine Arm-/Gummilippen-Auswahl.
+                </p>
               </div>
             </div>
           )}
 
-          {/* Save Buttons */}
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={handleSave}
               disabled={saving}
@@ -289,7 +358,7 @@ export default function PricingConfigSection() {
                 fontWeight: '600',
               }}
             >
-              {saving ? '💾 Speichern...' : '💾 Speichern'}
+              {saving ? 'Speichert...' : '💾 Speichern'}
             </button>
             <button
               onClick={() => setEditedConfig({ ...configs[activeVariant] })}
@@ -302,24 +371,11 @@ export default function PricingConfigSection() {
                 borderRadius: '6px',
                 cursor: saving ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
+                fontWeight: '600',
               }}
             >
               ↺ Zurücksetzen
             </button>
-          </div>
-
-          {/* Info Box */}
-          <div style={{
-            padding: '12px',
-            background: '#0c4a6e',
-            borderRadius: '6px',
-            border: '1px solid #0ea5e9',
-          }}>
-            <ul style={{ color: '#bae6fd', fontSize: '12px', lineHeight: '1.6', margin: 0, paddingLeft: '20px' }}>
-              <li>Preisänderungen gelten nur für neue Bestellungen</li>
-              <li>Bestehende Bestellungen bleiben unverändert</li>
-              <li>Version: {editedConfig.version}</li>
-            </ul>
           </div>
         </>
       )}

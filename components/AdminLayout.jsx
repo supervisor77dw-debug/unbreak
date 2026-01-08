@@ -35,42 +35,42 @@ export default function AdminLayout({ children }) {
         <ul className="admin-nav">
           <li>
             <Link href="/admin" className={isActive('/admin') && router.pathname === '/admin' ? 'active' : ''}>
-              <span className="icon">📊</span> Dashboard
+              <span className="icon">📊</span> Übersicht
             </Link>
           </li>
           <li>
             <Link href="/admin/orders" className={isActive('/admin/orders') ? 'active' : ''}>
-              <span className="icon">📦</span> Orders
+              <span className="icon">📦</span> Bestellungen
             </Link>
           </li>
           <li>
             <Link href="/admin/customers" className={isActive('/admin/customers') ? 'active' : ''}>
-              <span className="icon">👥</span> Customers
+              <span className="icon">👥</span> Kunden
             </Link>
           </li>
           <li>
             <Link href="/admin/tickets" className={isActive('/admin/tickets') ? 'active' : ''}>
-              <span className="icon">🎫</span> Tickets
+              <span className="icon">🎫</span> Anfragen
             </Link>
           </li>
           {canViewUsers && (
             <li>
               <Link href="/admin/users" className={isActive('/admin/users') ? 'active' : ''}>
-                <span className="icon">🔒</span> Users
+                <span className="icon">🔒</span> Benutzer
               </Link>
             </li>
           )}
           {canViewProducts && (
             <li>
               <Link href="/admin/products" className={isActive('/admin/products') ? 'active' : ''}>
-                <span className="icon">🏷️</span> Products
+                <span className="icon">🏷️</span> Produkte
               </Link>
             </li>
           )}
         </ul>
 
         <button onClick={() => signOut({ callbackUrl: '/admin/login' })} className="admin-logout">
-          <span className="icon">🚪</span> Sign Out
+          <span className="icon">🚺</span> Abmelden
         </button>
       </nav>
 
