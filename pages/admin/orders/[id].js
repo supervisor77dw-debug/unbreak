@@ -391,10 +391,10 @@ export default function OrderDetail() {
                   <tfoot>
                     <tr style={{ borderTop: '2px solid #404040' }}>
                       <td colSpan="4" style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontWeight: '600' }}>
-                        Gesamtsumme:
+                        Gesamtsumme (Brutto):
                       </td>
                       <td style={{ textAlign: 'right', padding: '12px 8px', color: '#0891b2', fontWeight: '700', fontSize: '16px', fontFamily: 'monospace' }}>
-                        {formatCurrency(order.amountTotal || 0)}
+                        {formatCurrency(order.totalGross || order.amountTotal || 0)}
                       </td>
                     </tr>
                   </tfoot>
@@ -683,50 +683,42 @@ export default function OrderDetail() {
             <h2>Summen</h2>
             <div className="totals">
               {(() => {
-                // SINGLE SOURCE OF TRUTH: Calculate from orderItems.unitPrice
-                const itemsSubtotal = order.items?.reduce((sum, item) => sum + (item.totalPrice || 0), 0) || 0;
+                // SINGLE SOURCE OF TRUTH: Use new fields if available, fallback to legacy
+                const subtotalNet = order.subtotalNet || order.items?.reduce((sum, item) => sum + (item.unitPrice * item.qty), 0) || 0;
                 const shipping = order.amountShipping || 0;
-                const tax = order.amountTax || 0;
-                const calculatedTotal = itemsSubtotal + shipping + tax;
-                
-                // Detect mismatch with Stripe total
-                const stripeTotalMismatch = Math.abs(calculatedTotal - order.amountTotal) > 1; // Allow 1 cent tolerance
+                const taxAmount = order.taxAmount || 0;
+                const totalGross = order.totalGross || (subtotalNet + taxAmount + shipping);
+                const taxRate = order.taxRate || 0.19;
                 
                 return (
                   <>
                     <div className="total-row">
-                      <span>Zwischensumme (Artikel):</span>
-                      <span>{formatCurrency(itemsSubtotal)}</span>
+                      <span>Zwischensumme (Netto):</span>
+                      <span>{formatCurrency(subtotalNet)}</span>
                     </div>
                     <div className="total-row">
-                      <span>Versand:</span>
+                      <span>Versand (Netto):</span>
                       <span>{formatCurrency(shipping)}</span>
                     </div>
                     <div className="total-row">
-                      <span>MwSt.:</span>
-                      <span>{formatCurrency(tax)}</span>
+                      <span>MwSt. ({(taxRate * 100).toFixed(0)}%):</span>
+                      <span>{formatCurrency(taxAmount)}</span>
                     </div>
                     <div className="total-row total">
-                      <span>Gesamt:</span>
-                      <span>{formatCurrency(calculatedTotal)}</span>
+                      <span>Gesamt (Brutto):</span>
+                      <span>{formatCurrency(totalGross)}</span>
                     </div>
-                    {stripeTotalMismatch && (
+                    {!order.subtotalNet && (
                       <div style={{
                         marginTop: '12px',
                         padding: '12px',
-                        background: '#7c2d12',
+                        background: '#1e3a8a',
                         borderRadius: '6px',
-                        border: '1px solid #dc2626'
+                        border: '1px solid #3b82f6',
+                        fontSize: '13px',
+                        color: '#bfdbfe',
                       }}>
-                        <div style={{ color: '#fecaca', fontSize: '13px', fontWeight: '600' }}>
-                          ⚠️ Preisabweichung erkannt
-                        </div>
-                        <div style={{ color: '#fed7aa', fontSize: '12px', marginTop: '4px' }}>
-                          Stripe Total: {formatCurrency(order.amountTotal)} ≠ Berechnet: {formatCurrency(calculatedTotal)}
-                        </div>
-                        <div style={{ color: '#fed7aa', fontSize: '11px', marginTop: '4px', opacity: 0.8 }}>
-                          Differenz: {formatCurrency(Math.abs(order.amountTotal - calculatedTotal))}
-                        </div>
+                        ℹ️ <strong>Legacy-Bestellung:</strong> MwSt-Ausweisung nicht verfügbar.
                       </div>
                     )}
                   </>

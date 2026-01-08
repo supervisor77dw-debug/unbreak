@@ -592,6 +592,37 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         });
       }
       console.log(`✅ [PRISMA SYNC] Created ${items.length} order items`);
+      
+      // 5. Recalculate order totals from items (SINGLE SOURCE OF TRUTH)
+      const createdItems = await prisma.orderItem.findMany({
+        where: { orderId: order.id }
+      });
+      
+      const subtotalNet = createdItems.reduce((sum, item) => sum + (item.unitPrice * item.qty), 0);
+      const taxRate = 0.19; // 19% German VAT
+      const shippingAmount = amountShipping || 0;
+      const taxAmount = Math.round((subtotalNet + shippingAmount) * taxRate);
+      const totalGross = subtotalNet + taxAmount + shippingAmount;
+      
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          subtotalNet: subtotalNet,
+          taxRate: taxRate,
+          taxAmount: taxAmount,
+          amountShipping: shippingAmount,
+          amountTax: taxAmount, // Keep legacy field synced
+          amountTotal: totalGross, // Keep legacy field synced
+          totalGross: totalGross,
+        },
+      });
+      
+      console.log('💰 [PRISMA SYNC] Recalculated totals:', {
+        subtotal_net: subtotalNet,
+        tax_amount: taxAmount,
+        shipping: shippingAmount,
+        total_gross: totalGross,
+      });
     } else {
       console.log('ℹ️ [PRISMA SYNC] Order items already exist - skipping');
     }

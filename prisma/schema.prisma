@@ -95,9 +95,13 @@ model Order {
   statusPayment           PaymentStatus     @default(PENDING) @map("status_payment")
   statusFulfillment       FulfillmentStatus @default(NEW) @map("status_fulfillment")
   currency                String            @default("EUR")
-  amountTotal             Int               @map("amount_total") // cents
+  amountTotal             Int               @map("amount_total") // cents - LEGACY (use totalGross instead)
   amountShipping          Int               @default(0) @map("amount_shipping") // cents
-  amountTax               Int               @default(0) @map("amount_tax") // cents
+  amountTax               Int               @default(0) @map("amount_tax") // cents - LEGACY (use taxAmount instead)
+  subtotalNet             Int?              @map("subtotal_net") // cents - Net product total (excluding tax)
+  taxRate                 Decimal?          @map("tax_rate") @db.Decimal(5, 4) // e.g., 0.19 for 19% VAT
+  taxAmount               Int?              @map("tax_amount") // cents - Calculated tax
+  totalGross              Int?              @map("total_gross") // cents - Total including tax
   shippingName            String?           @map("shipping_name")
   shippingAddress         Json?             @map("shipping_address")
   billingAddress          Json?             @map("billing_address")
