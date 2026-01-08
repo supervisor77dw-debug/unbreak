@@ -151,7 +151,7 @@
       return;
     }
 
-    const { type, payload } = event.data || {};
+    const { type, payload, config, reason } = event.data || {};
 
     switch (type) {
       case 'LOCALE_ACK':
@@ -161,6 +161,14 @@
       case 'UNBREAK_ONE_ADD_TO_CART':
         console.info('[iFrame Bridge] 🛒 Add to Cart received:', payload);
         handleAddToCart(payload);
+        break;
+
+      case 'configChanged':
+        // Handle iframe's native format: {type: 'configChanged', reason: 'add_to_cart', config: {...}}
+        if (reason === 'add_to_cart') {
+          console.info('[iFrame Bridge] 🛒 Add to Cart (configChanged):', config);
+          handleAddToCart(config);
+        }
         break;
 
       case 'UNBREAK_ONE_RESET_VIEW':
@@ -187,17 +195,29 @@
     try {
       console.log('[iFrame Bridge] Starting checkout with config:', payload);
 
-      // Validate required fields
-      const { variant, config, pricing, locale } = payload;
-      if (!variant || !config) {
-        throw new Error('Missing required fields: variant or config');
+      // Support both formats:
+      // Format 1: {variant, config, pricing, locale} - from UNBREAK_ONE_ADD_TO_CART
+      // Format 2: {product, parts, colors, ...} - from configChanged
+      
+      let productType, configuration;
+      
+      if (payload.variant && payload.config) {
+        // Format 1 (structured)
+        productType = payload.variant;
+        configuration = payload.config;
+      } else if (payload.product || payload.parts) {
+        // Format 2 (iframe native) - use entire payload as config
+        productType = payload.product || 'glass_holder'; // fallback
+        configuration = payload;
+      } else {
+        throw new Error('Invalid config format - no product/variant found');
       }
 
       // Map to checkout API format
       const checkoutData = {
-        productType: variant, // 'glass_holder' | 'bottle_holder'
-        configuration: config, // Full config JSON
-        locale: locale || currentLang,
+        productType: productType,
+        configuration: configuration,
+        locale: payload.locale || currentLang,
         metadata: {
           source: 'iframe_configurator',
           timestamp: new Date().toISOString(),
