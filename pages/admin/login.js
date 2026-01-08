@@ -10,6 +10,7 @@ export async function getServerSideProps() {
 
 export default function AdminLogin() {
   const router = useRouter();
+  const { callbackUrl } = router.query;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -30,7 +31,9 @@ export default function AdminLogin() {
       if (result?.error) {
         setError(result.error);
       } else if (result?.ok) {
-        router.push('/admin');
+        // Redirect to callback URL if present, otherwise to admin dashboard
+        const redirectTo = callbackUrl ? decodeURIComponent(callbackUrl) : '/admin';
+        router.push(redirectTo);
       }
     } catch (err) {
       setError('Login failed. Please try again.');

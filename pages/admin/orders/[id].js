@@ -16,7 +16,9 @@ export default function OrderDetail() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/admin/login');
+      // Redirect to login with callback URL to return here after login
+      const callbackUrl = encodeURIComponent(router.asPath);
+      router.push(`/admin/login?callbackUrl=${callbackUrl}`);
     }
   }, [status, router]);
 
@@ -27,7 +29,8 @@ export default function OrderDetail() {
     
     // If not authenticated, redirect
     if (status === 'unauthenticated') {
-      router.push('/admin/login');
+      const callbackUrl = encodeURIComponent(router.asPath);
+      router.push(`/admin/login?callbackUrl=${callbackUrl}`);
       return;
     }
     
@@ -43,7 +46,8 @@ export default function OrderDetail() {
           const errorData = await res.json().catch(() => ({ error: 'UNKNOWN' }));
           
           if (res.status === 401 || errorData.error === 'UNAUTHORIZED') {
-            router.push('/admin/login');
+            const callbackUrl = encodeURIComponent(router.asPath);
+            router.push(`/admin/login?callbackUrl=${callbackUrl}`);
             return;
           }
           
@@ -52,7 +56,8 @@ export default function OrderDetail() {
               throw new Error('Bestellung nicht gefunden');
             } else {
               // 404 without NOT_FOUND might be auth issue
-              router.push('/admin/login');
+              const callbackUrl = encodeURIComponent(router.asPath);
+              router.push(`/admin/login?callbackUrl=${callbackUrl}`);
               return;
             }
           }
