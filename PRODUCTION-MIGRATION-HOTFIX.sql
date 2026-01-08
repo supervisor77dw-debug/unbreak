@@ -31,9 +31,50 @@ INSERT INTO shipping_rates (country_code, label_de, label_en, price_net, active,
 SELECT 'INT', 'International', 'International', 2490, true, 3
 WHERE NOT EXISTS (SELECT 1 FROM shipping_rates WHERE country_code = 'INT');
 
--- 2. Add shipping_region to admin_orders (if not exists)
+-- 2. Add ALL missing fields to admin_orders (from previous sessions)
 DO $$
 BEGIN
+  -- Add subtotal_net (MwSt calculation)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'admin_orders' AND column_name = 'subtotal_net'
+  ) THEN
+    ALTER TABLE admin_orders ADD COLUMN subtotal_net INTEGER;
+  END IF;
+
+  -- Add tax_rate (MwSt rate)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'admin_orders' AND column_name = 'tax_rate'
+  ) THEN
+    ALTER TABLE admin_orders ADD COLUMN tax_rate DECIMAL(5,4);
+  END IF;
+
+  -- Add tax_amount (calculated MwSt)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'admin_orders' AND column_name = 'tax_amount'
+  ) THEN
+    ALTER TABLE admin_orders ADD COLUMN tax_amount INTEGER;
+  END IF;
+
+  -- Add total_gross (total including MwSt)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'admin_orders' AND column_name = 'total_gross'
+  ) THEN
+    ALTER TABLE admin_orders ADD COLUMN total_gross INTEGER;
+  END IF;
+
+  -- Add config_json (configurator config)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'admin_orders' AND column_name = 'config_json'
+  ) THEN
+    ALTER TABLE admin_orders ADD COLUMN config_json JSONB;
+  END IF;
+
+  -- Add shipping_region (DE/EU/INT)
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'admin_orders' AND column_name = 'shipping_region'
@@ -43,14 +84,15 @@ BEGIN
   END IF;
 END $$;
 
--- 3. Verify tables exist
+-- 3. Verify all columns exist
+SELECT 
+  'admin_orders columns' as check_type,
+  COUNT(*) as total_columns
+FROM information_schema.columns 
+WHERE table_name = 'admin_orders';
+
+-- 4. Verify shipping_rates
 SELECT 
   'shipping_rates' as table_name, 
   COUNT(*) as row_count 
-FROM shipping_rates
-UNION ALL
-SELECT 
-  'admin_orders with shipping_region' as table_name,
-  COUNT(*) as row_count
-FROM admin_orders
-WHERE shipping_region IS NOT NULL;
+FROM shipping_rates;
