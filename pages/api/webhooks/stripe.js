@@ -250,7 +250,13 @@ async function handleCheckoutSessionCompleted(session, trace_id) {
     await syncOrderToPrisma(session, order, orderSource);
 
     // === SEND ORDER CONFIRMATION EMAIL ===
-    await sendOrderConfirmationEmail(session, order);
+    try {
+      await sendOrderConfirmationEmail(session, order);
+    } catch (emailError) {
+      // Don't fail the entire webhook if email fails
+      console.error('⚠️ [EMAIL] Failed to send confirmation email:', emailError.message);
+      console.error('⚠️ [EMAIL] Order was still created successfully');
+    }
 
   } catch (error) {
     console.error('❌ [Webhook] handleCheckoutSessionCompleted failed:', error);
