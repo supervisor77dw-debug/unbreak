@@ -697,7 +697,7 @@ export default function OrderDetail() {
                       <span>{formatCurrency(subtotalNet)}</span>
                     </div>
                     <div className="total-row">
-                      <span>Versand (Netto):</span>
+                      <span>Versand (Netto){order.shippingRegion ? ` [${order.shippingRegion}]` : ''}:</span>
                       <span>{formatCurrency(shipping)}</span>
                     </div>
                     <div className="total-row">

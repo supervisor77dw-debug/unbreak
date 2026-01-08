@@ -362,5 +362,25 @@
       "text": "Gestalte deinen eigenen UNBREAK ONE mit unserem 3D-Konfigurator",
       "button": "Zum Konfigurator"
     }
-  }
-}
+  },
+  "configurator": {
+    "parts": {
+      "base": "Grundplatte",
+      "arm": "Arm",
+      "module": "Gummilippe",
+      "pattern": "Muster",
+      "finish": "Oberfläche"
+    },
+    "colors": {
+      "mint": "Mint",
+      "green": "Grün",
+      "purple": "Lila",
+      "ice_blue": "Eisblau",
+      "dark_blue": "Dunkelblau",
+      "red": "Rot",
+      "black": "Schwarz"
+    },
+    "products": {
+      "glass_holder": "Glashalter (konfiguriert)",
+      "bottle_holder": "Flaschenhalter (konfiguriert)"
+    }

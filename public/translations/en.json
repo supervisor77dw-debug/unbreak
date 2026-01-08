@@ -360,5 +360,25 @@
       "text": "Design your own UNBREAK ONE with our 3D configurator",
       "button": "To Configurator"
     }
-  }
-}
+  },
+  "configurator": {
+    "parts": {
+      "base": "Base plate",
+      "arm": "Arm",
+      "module": "Rubber lip",
+      "pattern": "Pattern",
+      "finish": "Finish"
+    },
+    "colors": {
+      "mint": "Mint",
+      "green": "Green",
+      "purple": "Purple",
+      "ice_blue": "Ice Blue",
+      "dark_blue": "Dark Blue",
+      "red": "Red",
+      "black": "Black"
+    },
+    "products": {
+      "glass_holder": "Glass Holder (configured)",
+      "bottle_holder": "Bottle Holder (configured)"
+    }
