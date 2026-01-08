@@ -122,3 +122,12 @@ npx prisma generate
 
 **Status nach Hotfix:** ✅ Admin Panel sollte funktionieren
 **Nächster Test:** Neue Bestellung erstellen → Region sollte automatisch erkannt werden
+
+---
+
+## 🔄 VERCEL CACHE ISSUE
+
+Falls weiterhin 500 Errors nach SQL Migration:
+1. Warte auf neuen Vercel Build (prüfe Dashboard)
+2. Oder force rebuild: `vercel --prod` oder Redeploy in Vercel UI
+3. Prisma Client wird automatisch neu generiert beim Build
