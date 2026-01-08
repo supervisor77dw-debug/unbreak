@@ -541,6 +541,11 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
       for (const item of items) {
         // Calculate pricing fields if this is a configured product
         let pricingFields = {};
+        let finalUnitPrice = item.unitPrice;
+        let finalTotalPrice = item.totalPrice;
+        let finalName = item.name;
+        let finalSku = item.sku;
+        
         if (configJson && configJson.colors) {
           const productType = configJson.variant === 'bottle_holder' ? 'bottle_holder' : 'glass_holder';
           const pricing = calcConfiguredPrice({
@@ -548,6 +553,12 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
             config: configJson,
             customFeeCents: 0,
           });
+          
+          // SINGLE SOURCE OF TRUTH: Use calculated subtotal as unit_price
+          finalUnitPrice = pricing.subtotal_cents;
+          finalTotalPrice = pricing.subtotal_cents * (item.qty || 1);
+          finalName = pricing.display_title; // e.g., "Glashalter (konfiguriert)"
+          finalSku = pricing.sku; // e.g., "UNBREAK-GLAS-CONFIG"
           
           pricingFields = {
             pricingVersion: pricing.pricing_version,
@@ -559,7 +570,9 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
           };
           
           console.log('💰 [PRISMA SYNC] Calculated pricing:', {
-            sku: pricing.sku,
+            sku: finalSku,
+            name: finalName,
+            unit_price: finalUnitPrice,
             subtotal: pricing.subtotal_cents,
             base: pricing.base_price_cents,
           });
@@ -568,7 +581,12 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         await prisma.orderItem.create({
           data: {
             orderId: order.id,
-            ...item,
+            sku: finalSku,
+            name: finalName,
+            variant: item.variant,
+            qty: item.qty,
+            unitPrice: finalUnitPrice,
+            totalPrice: finalTotalPrice,
             ...pricingFields,
           },
         });

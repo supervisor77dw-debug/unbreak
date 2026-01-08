@@ -343,8 +343,27 @@ export default function OrderDetail() {
                                       {item.optionPricesCents.finish > 0 && <div style={{ color: '#fbbf24' }}>+ Finish: {formatCurrency(item.optionPricesCents.finish)}</div>}
                                       {item.customFeeCents > 0 && <div style={{ color: '#fbbf24' }}>+ Custom Fee: {formatCurrency(item.customFeeCents)}</div>}
                                       <div style={{ borderTop: '1px solid #404040', marginTop: '4px', paddingTop: '4px', color: '#0891b2', fontWeight: '600' }}>
-                                        = Item Subtotal: {formatCurrency(item.subtotalCents || 0)}
+                                        = Subtotal: {formatCurrency(item.subtotalCents || 0)}
                                       </div>
+                                      {(() => {
+                                        // Validation: Check if subtotal matches unit_price
+                                        const mismatch = Math.abs((item.subtotalCents || 0) - (item.unitPrice || 0)) > 1;
+                                        if (mismatch) {
+                                          return (
+                                            <div style={{ 
+                                              marginTop: '4px', 
+                                              padding: '4px', 
+                                              background: '#7c2d12', 
+                                              borderRadius: '3px',
+                                              color: '#fecaca',
+                                              fontSize: '10px'
+                                            }}>
+                                              ⚠️ MISMATCH: unit_price={formatCurrency(item.unitPrice || 0)}
+                                            </div>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
                                     </div>
                                   </div>
                                 )}
@@ -663,22 +682,56 @@ export default function OrderDetail() {
           <div className="info-card">
             <h2>Summen</h2>
             <div className="totals">
-              <div className="total-row">
-                <span>Zwischensumme:</span>
-                <span>{formatCurrency(order.amountTotal - order.amountShipping - order.amountTax)}</span>
-              </div>
-              <div className="total-row">
-                <span>Versand:</span>
-                <span>{formatCurrency(order.amountShipping)}</span>
-              </div>
-              <div className="total-row">
-                <span>MwSt.:</span>
-                <span>{formatCurrency(order.amountTax)}</span>
-              </div>
-              <div className="total-row total">
-                <span>Gesamt:</span>
-                <span>{formatCurrency(order.amountTotal)}</span>
-              </div>
+              {(() => {
+                // SINGLE SOURCE OF TRUTH: Calculate from orderItems.unitPrice
+                const itemsSubtotal = order.items?.reduce((sum, item) => sum + (item.totalPrice || 0), 0) || 0;
+                const shipping = order.amountShipping || 0;
+                const tax = order.amountTax || 0;
+                const calculatedTotal = itemsSubtotal + shipping + tax;
+                
+                // Detect mismatch with Stripe total
+                const stripeTotalMismatch = Math.abs(calculatedTotal - order.amountTotal) > 1; // Allow 1 cent tolerance
+                
+                return (
+                  <>
+                    <div className="total-row">
+                      <span>Zwischensumme (Artikel):</span>
+                      <span>{formatCurrency(itemsSubtotal)}</span>
+                    </div>
+                    <div className="total-row">
+                      <span>Versand:</span>
+                      <span>{formatCurrency(shipping)}</span>
+                    </div>
+                    <div className="total-row">
+                      <span>MwSt.:</span>
+                      <span>{formatCurrency(tax)}</span>
+                    </div>
+                    <div className="total-row total">
+                      <span>Gesamt:</span>
+                      <span>{formatCurrency(calculatedTotal)}</span>
+                    </div>
+                    {stripeTotalMismatch && (
+                      <div style={{
+                        marginTop: '12px',
+                        padding: '12px',
+                        background: '#7c2d12',
+                        borderRadius: '6px',
+                        border: '1px solid #dc2626'
+                      }}>
+                        <div style={{ color: '#fecaca', fontSize: '13px', fontWeight: '600' }}>
+                          ⚠️ Preisabweichung erkannt
+                        </div>
+                        <div style={{ color: '#fed7aa', fontSize: '12px', marginTop: '4px' }}>
+                          Stripe Total: {formatCurrency(order.amountTotal)} ≠ Berechnet: {formatCurrency(calculatedTotal)}
+                        </div>
+                        <div style={{ color: '#fed7aa', fontSize: '11px', marginTop: '4px', opacity: 0.8 }}>
+                          Differenz: {formatCurrency(Math.abs(order.amountTotal - calculatedTotal))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
