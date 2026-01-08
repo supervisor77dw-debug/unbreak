@@ -645,7 +645,40 @@
             // Handle different message types
             const data = event.data;
             
-            // If message has a payload with config data
+            // Extract config from various message shapes
+            const cfg = data.config ?? data.payload?.config ?? data.payload ?? null;
+            const reason = data.reason ?? data.payload?.reason ?? data.action ?? null;
+            const messageType = data.type ?? 'unknown';
+            
+            console.log('📦 [RELAY] Extracted:', { messageType, reason, hasConfig: !!cfg });
+            
+            // TRIGGER: Add to Cart
+            if (reason === 'add_to_cart' && cfg) {
+                console.log('🛒 [RELAY] ADD TO CART detected! Starting checkout...');
+                
+                // Call checkout directly with config
+                if (window.UnbreakCheckout?.createCheckoutSession) {
+                    console.log('🔧 [RELAY] Calling UnbreakCheckout.createCheckoutSession');
+                    
+                    window.UnbreakCheckout.createCheckoutSession(cfg)
+                        .then(url => {
+                            console.log('✅ [RELAY] Checkout URL received, redirecting:', url);
+                            window.location.href = url;
+                        })
+                        .catch(err => {
+                            console.error('❌ [RELAY] Checkout failed:', err);
+                            alert('Checkout-Fehler: ' + err.message);
+                        });
+                } else {
+                    console.error('❌ [RELAY] UnbreakCheckout.createCheckoutSession not available!');
+                    alert('Checkout-System nicht geladen. Bitte Seite neu laden.');
+                }
+                return;
+            }
+                return;
+            }
+            
+            // Legacy: If message has a payload with config data
             if (data.payload && (data.payload.product_name || data.payload.product_variant || data.payload.colors)) {
                 console.log('📦 [RELAY] Found config in payload, dispatching...');
                 
@@ -656,7 +689,7 @@
                 
                 console.log('✅ [RELAY] Config from payload relayed');
             }
-            // If data itself contains product config
+            // Legacy: If data itself contains product config
             else if (data.product_name || data.product_variant || data.colors) {
                 console.log('📦 [RELAY] Found config data in root, dispatching...');
                 
@@ -689,6 +722,9 @@
                         ...fallbackConfig
                     }, window.location.origin);
                 }
+            } else if (cfg) {
+                console.log('ℹ️ [RELAY] Config found but no add_to_cart action, storing in bridge');
+                // Let ConfiguratorBridge handle config updates
             } else {
                 console.log('ℹ️ [RELAY] No config found in message, ignoring');
             }
