@@ -269,8 +269,9 @@ class I18n {
     // Update meta tags
     this.updateMetaTags();
     
-    // Dispatch event
+    // Dispatch events for language change
     window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+    window.dispatchEvent(new CustomEvent('i18nLanguageChanged', { detail: { lang } }));
   }
 
   /**
