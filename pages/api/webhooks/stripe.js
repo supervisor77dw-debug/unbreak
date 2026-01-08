@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { buffer } from 'micro';
 import prisma from '../../../lib/prisma';
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
+import { countryToRegion } from '../../../lib/utils/shipping.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -503,6 +504,15 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     }
 
     // 4. Create or update order in admin system
+    
+    // Determine shipping region from country code
+    const shippingCountry = session.shipping_details?.address?.country || 
+                           session.customer_details?.address?.country || 
+                           null;
+    const shippingRegion = countryToRegion(shippingCountry);
+    
+    console.log('🌍 [PRISMA SYNC] Shipping country:', shippingCountry, '→ Region:', shippingRegion);
+    
     const order = await prisma.order.upsert({
       where: { stripeCheckoutSessionId: session.id },
       update: {
@@ -510,6 +520,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         stripePaymentIntentId: session.payment_intent,
         paidAt: new Date(),
         updatedAt: new Date(),
+        shippingRegion: shippingRegion,
         ...(configJson && { configJson: configJson }),
       },
       create: {
@@ -524,6 +535,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         email: customerEmail,
         shippingName: customerName || session.shipping_details?.name,
         shippingAddress: session.shipping_details?.address || supabaseOrder.shipping_address || null,
+        shippingRegion: shippingRegion,
         customerId: customer.id,
         paidAt: new Date(),
         configJson: configJson,

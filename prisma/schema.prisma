@@ -14,11 +14,9 @@ datasource db {
 // =====================================================
 
 enum Role {
-  ADMIN      // Full access: products, system, users
-  STAFF      // Orders, fulfillment, refunds
-  SUPPORT    // Tickets, communication, notes
-
-
+  ADMIN // Full access: products, system, users
+  STAFF // Orders, fulfillment, refunds
+  SUPPORT // Tickets, communication, notes
 }
 
 model User {
@@ -33,11 +31,7 @@ model User {
 
   ticketMessages TicketMessage[]
 
-
-
   @@map("admin_users")
-
-
 }
 
 // =====================================================
@@ -57,11 +51,7 @@ model Customer {
   orders  Order[]
   tickets Ticket[]
 
-
-
   @@map("admin_customers")
-
-
 }
 
 // =====================================================
@@ -74,8 +64,6 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   PARTIALLY_REFUNDED
-
-
 }
 
 enum FulfillmentStatus {
@@ -84,8 +72,6 @@ enum FulfillmentStatus {
   SHIPPED
   DONE
   CANCELED
-
-
 }
 
 model Order {
@@ -102,6 +88,7 @@ model Order {
   taxRate                 Decimal?          @map("tax_rate") @db.Decimal(5, 4) // e.g., 0.19 for 19% VAT
   taxAmount               Int?              @map("tax_amount") // cents - Calculated tax
   totalGross              Int?              @map("total_gross") // cents - Total including tax
+  shippingRegion          String?           @map("shipping_region") // 'DE' | 'EU' | 'INT'
   shippingName            String?           @map("shipping_name")
   shippingAddress         Json?             @map("shipping_address")
   billingAddress          Json?             @map("billing_address")
@@ -114,49 +101,41 @@ model Order {
   notes                   String?
   configJson              Json?             @map("config_json") // Configurator config with colors
 
-  customer Customer      @relation(fields: [customerId], references: [id])
+  customer Customer     @relation(fields: [customerId], references: [id])
   items    OrderItem[]
   events   OrderEvent[]
   tickets  Ticket[]
   refunds  Refund[]
-
-
 
   @@index([customerId])
   @@index([statusPayment])
   @@index([statusFulfillment])
   @@index([createdAt])
   @@map("admin_orders")
-
-
 }
 
 model OrderItem {
-  id         String @id @default(uuid())
-  orderId    String @map("order_id")
+  id         String  @id @default(uuid())
+  orderId    String  @map("order_id")
   sku        String?
   name       String
   variant    String?
   qty        Int
-  unitPrice  Int    @map("unit_price") // cents
-  totalPrice Int    @map("total_price") // cents
-  
+  unitPrice  Int     @map("unit_price") // cents
+  totalPrice Int     @map("total_price") // cents
+
   // Configurator Pricing Fields (Freeze Pricing)
-  pricingVersion      String? @map("pricing_version")
-  basePriceCents      Int?    @map("base_price_cents")
-  optionPricesCents   Json?   @map("option_prices_cents") // {base, arm, module, pattern, finish}
-  customFeeCents      Int?    @default(0) @map("custom_fee_cents")
-  subtotalCents       Int?    @map("subtotal_cents") // base + options + custom_fee
-  config              Json?   // Configurator config for this item
+  pricingVersion    String? @map("pricing_version")
+  basePriceCents    Int?    @map("base_price_cents")
+  optionPricesCents Json?   @map("option_prices_cents") // {base, arm, module, pattern, finish}
+  customFeeCents    Int?    @default(0) @map("custom_fee_cents")
+  subtotalCents     Int?    @map("subtotal_cents") // base + options + custom_fee
+  config            Json? // Configurator config for this item
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-
-
   @@index([orderId])
   @@map("admin_order_items")
-
-
 }
 
 // =====================================================
@@ -169,28 +148,22 @@ enum EventType {
   STATUS_CHANGE
   NOTE_ADDED
   ERROR
-
-
 }
 
 model OrderEvent {
   id        String    @id @default(uuid())
   orderId   String?   @map("order_id")
   type      EventType
-  source    String    // 'stripe', 'resend', 'admin', 'system'
+  source    String // 'stripe', 'resend', 'admin', 'system'
   payload   Json
   createdAt DateTime  @default(now()) @map("created_at")
 
   order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-
-
   @@index([orderId])
   @@index([type])
   @@index([createdAt])
   @@map("admin_order_events")
-
-
 }
 
 // =====================================================
@@ -202,8 +175,6 @@ enum TicketType {
   RETURN
   QUESTION
   OTHER
-
-
 }
 
 enum TicketStatus {
@@ -212,8 +183,6 @@ enum TicketStatus {
   WAITING_CUSTOMER
   RESOLVED
   CLOSED
-
-
 }
 
 enum TicketPriority {
@@ -221,8 +190,6 @@ enum TicketPriority {
   NORMAL
   HIGH
   URGENT
-
-
 }
 
 model Ticket {
@@ -241,15 +208,11 @@ model Ticket {
   customer Customer        @relation(fields: [customerId], references: [id])
   messages TicketMessage[]
 
-
-
   @@index([customerId])
   @@index([orderId])
   @@index([status])
   @@index([priority])
   @@map("admin_tickets")
-
-
 }
 
 model TicketMessage {
@@ -263,12 +226,8 @@ model TicketMessage {
   ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   author User?  @relation(fields: [authorUserId], references: [id])
 
-
-
   @@index([ticketId])
   @@map("admin_ticket_messages")
-
-
 }
 
 // =====================================================
@@ -280,15 +239,13 @@ enum RefundStatus {
   SUBMITTED
   SUCCEEDED
   FAILED
-
-
 }
 
 model Refund {
   id             String       @id @default(uuid())
   orderId        String       @map("order_id")
   stripeRefundId String?      @unique @map("stripe_refund_id")
-  amount         Int          // cents
+  amount         Int // cents
   reason         String?
   status         RefundStatus @default(REQUESTED)
   createdAt      DateTime     @default(now()) @map("created_at")
@@ -296,13 +253,9 @@ model Refund {
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-
-
   @@index([orderId])
   @@index([status])
   @@map("admin_refunds")
-
-
 }
 
 // =====================================================
@@ -310,25 +263,25 @@ model Refund {
 // =====================================================
 
 model Product {
-  id              String    @id @default(uuid())
-  sku             String    @unique
-  name            String
-  description     String?
-  basePriceCents  Int       @map("base_price_cents")
-  active          Boolean   @default(true)
-  imagePath       String?   @map("image_path")      // Supabase Storage: products/<sku>/main.jpg (Original)
-  imageUrl        String?   @map("image_url")       // Public URL (cached, Original)
-  imageUpdatedAt  DateTime? @map("image_updated_at") // Cache-Buster: Timestamp des letzten Image-Uploads
-  thumbPath       String?   @map("thumb_path")      // Server-generated Thumbnail (240x300, 4:5, mit Crop)
-  shopImagePath   String?   @map("shop_image_path") // Server-generated Shop Image (800x1000, 4:5, mit Crop)
-  imageCropScale  Float?    @default(1.0) @map("image_crop_scale") // Zoom: 1.0 - 2.5
-  imageCropX      Int?      @default(0) @map("image_crop_x")       // X offset: -200 to +200
-  imageCropY      Int?      @default(0) @map("image_crop_y")       // Y offset: -200 to +200
-  badgeLabel      String?   @map("badge_label")     // e.g. "Gastro Edition" (max 20 chars)
-  shippingText    String?   @map("shipping_text")   // e.g. "Versand 3–5 Tage"
-  highlights      Json?                              // JSONB array of USPs
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id             String    @id @default(uuid())
+  sku            String    @unique
+  name           String
+  description    String?
+  basePriceCents Int       @map("base_price_cents")
+  active         Boolean   @default(true)
+  imagePath      String?   @map("image_path") // Supabase Storage: products/<sku>/main.jpg (Original)
+  imageUrl       String?   @map("image_url") // Public URL (cached, Original)
+  imageUpdatedAt DateTime? @map("image_updated_at") // Cache-Buster: Timestamp des letzten Image-Uploads
+  thumbPath      String?   @map("thumb_path") // Server-generated Thumbnail (240x300, 4:5, mit Crop)
+  shopImagePath  String?   @map("shop_image_path") // Server-generated Shop Image (800x1000, 4:5, mit Crop)
+  imageCropScale Float?    @default(1.0) @map("image_crop_scale") // Zoom: 1.0 - 2.5
+  imageCropX     Int?      @default(0) @map("image_crop_x") // X offset: -200 to +200
+  imageCropY     Int?      @default(0) @map("image_crop_y") // Y offset: -200 to +200
+  badgeLabel     String?   @map("badge_label") // e.g. "Gastro Edition" (max 20 chars)
+  shippingText   String?   @map("shipping_text") // e.g. "Versand 3–5 Tage"
+  highlights     Json? // JSONB array of USPs
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   @@map("products")
 }
@@ -338,18 +291,18 @@ model Product {
 // =====================================================
 
 model PricingConfig {
-  id            String   @id @default(uuid())
-  variant       String   // "glass_holder" or "bottle_holder"
-  basePriceCents Int     @map("base_price_cents") // Base price in cents
-  colorPrices   Json     @map("color_prices")     // { base: { green: 0, purple: 200, ... }, arm: { ... }, module: { ... }, pattern: { ... } }
-  finishPrices  Json     @map("finish_prices")    // { matte: 0, glossy: 200, textured: 300, goldEdition: 1000 }
-  armPrices     Json?    @map("arm_prices")       // { standardArm: 0, premiumArm: 450 } (future)
-  modulePrices  Json?    @map("module_prices")    // { singleModule: 0, doubleModule: 250, proModule: 600 } (future)
-  patternPrices Json?    @map("pattern_prices")   // { standardPattern: 0, specialPattern: 300 } (future)
-  active        Boolean  @default(true)           // Only one active config per variant
-  version       String   @default("2026-01-v1")   // Pricing version identifier
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  variant        String // "glass_holder" or "bottle_holder"
+  basePriceCents Int      @map("base_price_cents") // Base price in cents
+  colorPrices    Json     @map("color_prices") // { base: { green: 0, purple: 200, ... }, arm: { ... }, module: { ... }, pattern: { ... } }
+  finishPrices   Json     @map("finish_prices") // { matte: 0, glossy: 200, textured: 300, goldEdition: 1000 }
+  armPrices      Json?    @map("arm_prices") // { standardArm: 0, premiumArm: 450 } (future)
+  modulePrices   Json?    @map("module_prices") // { singleModule: 0, doubleModule: 250, proModule: 600 } (future)
+  patternPrices  Json?    @map("pattern_prices") // { standardPattern: 0, specialPattern: 300 } (future)
+  active         Boolean  @default(true) // Only one active config per variant
+  version        String   @default("2026-01-v1") // Pricing version identifier
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@unique([variant, active]) // Ensure only one active config per variant
   @@index([variant])
