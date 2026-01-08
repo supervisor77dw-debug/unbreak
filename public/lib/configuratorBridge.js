@@ -368,8 +368,11 @@
                 throw new Error(errorMsg);
             }
             
-            // Build normalized colors object
-            const colors = { ...config.colors };
+            // Build normalized colors object (convert snake_case to camelCase)
+            const colors = {};
+            for (const [part, colorId] of Object.entries(config.colors)) {
+                colors[part] = this.normalizeColorId(colorId);
+            }
             
             // For bottle_holder with legacy schema, ensure black defaults
             if (variant === 'bottle_holder' && schema === 'legacy-3part') {
@@ -415,9 +418,33 @@
         
         /**
          * Check if a value is a valid canonical color ID
+         * Supports both camelCase (darkBlue, iceBlue) and snake_case (dark_blue, ice_blue)
          */
         isCanonicalColorId(value) {
-            return typeof value === 'string' && CANONICAL_COLOR_IDS.includes(value);
+            if (typeof value !== 'string') return false;
+            
+            // Exact match (camelCase)
+            if (CANONICAL_COLOR_IDS.includes(value)) return true;
+            
+            // Normalize snake_case to camelCase
+            const normalized = value.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+            return CANONICAL_COLOR_IDS.includes(normalized);
+        }
+        
+        /**
+         * Normalize color ID from snake_case to camelCase
+         */
+        normalizeColorId(value) {
+            if (typeof value !== 'string') return value;
+            
+            // Already in camelCase
+            if (CANONICAL_COLOR_IDS.includes(value)) return value;
+            
+            // Convert snake_case to camelCase
+            const normalized = value.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+            
+            // Return normalized if valid, otherwise return original
+            return CANONICAL_COLOR_IDS.includes(normalized) ? normalized : value;
         }
         
         /**
