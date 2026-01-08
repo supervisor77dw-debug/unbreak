@@ -61,11 +61,18 @@ export default function AdminLayout({ children }) {
             </li>
           )}
           {canViewProducts && (
-            <li>
-              <Link href="/admin/products" className={isActive('/admin/products') ? 'active' : ''}>
-                <span className="icon">🏷️</span> Produkte
-              </Link>
-            </li>
+            <>
+              <li>
+                <Link href="/admin/products" className={isActive('/admin/products') ? 'active' : ''}>
+                  <span className="icon">🏷️</span> Produkte
+                </Link>
+              </li>
+              <li>
+                <Link href="/admin/shipping" className={isActive('/admin/shipping') ? 'active' : ''}>
+                  <span className="icon">📦</span> Versandkosten
+                </Link>
+              </li>
+            </>
           )}
         </ul>
 

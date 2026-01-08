@@ -356,3 +356,19 @@ model PricingConfig {
   @@index([active])
   @@map("pricing_configs")
 }
+
+model ShippingRate {
+  id          String   @id @default(uuid())
+  countryCode String   @map("country_code") // e.g., "DE", "EU", "INT"
+  labelDe     String   @map("label_de") // e.g., "Deutschland"
+  labelEn     String   @map("label_en") // e.g., "Germany"
+  priceNet    Int      @map("price_net") // cents, excluding VAT
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([active])
+  @@index([sortOrder])
+  @@map("shipping_rates")
+}
