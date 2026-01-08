@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { buffer } from 'micro';
 import prisma from '../../../lib/prisma';
-import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPrice.js';
+import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -548,7 +548,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         
         if (configJson && configJson.colors) {
           const productType = configJson.variant === 'bottle_holder' ? 'bottle_holder' : 'glass_holder';
-          const pricing = calcConfiguredPrice({
+          const pricing = await calcConfiguredPrice({
             productType,
             config: configJson,
             customFeeCents: 0,

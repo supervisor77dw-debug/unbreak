@@ -328,3 +328,27 @@ model Product {
 
   @@map("products")
 }
+
+// =====================================================
+// PRICING CONFIGURATION (Configurator)
+// =====================================================
+
+model PricingConfig {
+  id            String   @id @default(uuid())
+  variant       String   // "glass_holder" or "bottle_holder"
+  basePriceCents Int     @map("base_price_cents") // Base price in cents
+  colorPrices   Json     @map("color_prices")     // { base: { green: 0, purple: 200, ... }, arm: { ... }, module: { ... }, pattern: { ... } }
+  finishPrices  Json     @map("finish_prices")    // { matte: 0, glossy: 200, textured: 300, goldEdition: 1000 }
+  armPrices     Json?    @map("arm_prices")       // { standardArm: 0, premiumArm: 450 } (future)
+  modulePrices  Json?    @map("module_prices")    // { singleModule: 0, doubleModule: 250, proModule: 600 } (future)
+  patternPrices Json?    @map("pattern_prices")   // { standardPattern: 0, specialPattern: 300 } (future)
+  active        Boolean  @default(true)           // Only one active config per variant
+  version       String   @default("2026-01-v1")   // Pricing version identifier
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([variant, active]) // Ensure only one active config per variant
+  @@index([variant])
+  @@index([active])
+  @@map("pricing_configs")
+}
