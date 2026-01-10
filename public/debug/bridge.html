@@ -255,6 +255,13 @@
 
 <!-- Test Functions -->
 <script>
+// Diagnostic: Check what's loaded
+console.log('🔍 [DIAGNOSTIC] Checking loaded objects...');
+console.log('  - window.UnbreakCheckout:', typeof window.UnbreakCheckout);
+console.log('  - window.UnbreakCheckout.createCheckoutSession:', typeof window.UnbreakCheckout?.createCheckoutSession);
+console.log('  - window.BridgeMessage:', typeof window.BridgeMessage);
+console.log('  - window.UnbreakBridgeDebug:', typeof window.UnbreakBridgeDebug);
+
 // Enable debug mode
 window.UnbreakBridgeDebug.enable();
 
