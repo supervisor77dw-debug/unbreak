@@ -326,6 +326,66 @@ const UnbreakCheckout = {
    */
   async quickBuy(sku, quantity = 1) {
     return this.buyStandard(sku, { quantity });
+  },
+
+  /**
+   * Create Checkout from Config (for iframe messages)
+   * Direct checkout creation without ConfiguratorBridge dependency
+   * @param {object} config - Configuration object from iframe
+   * @returns {Promise<string>} Stripe Checkout URL
+   */
+  async createCheckoutFromConfig(config) {
+    console.log('🛍️ [CHECKOUT] createCheckoutFromConfig called with:', config);
+
+    try {
+      // Validate config
+      if (!config || !config.colors || !config.variant) {
+        throw new Error('Invalid configuration: missing colors or variant');
+      }
+
+      // Determine product SKU from variant
+      const sku = config.variant === 'bottle_holder' ? 'UNBREAK-WEIN-01' : 'UNBREAK-GLAS-01';
+      
+      console.log('🛒 [CHECKOUT] Creating checkout session...', { sku, config });
+
+      // Call checkout API
+      const response = await fetch('/api/checkout/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          product_sku: sku,
+          config: config,
+          customer: {
+            email: config.email || null,
+            name: config.name || null,
+            address: config.address || null,
+            country: config.country || 'DE'
+          }
+        }),
+      });
+
+      // Handle response
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Checkout creation failed');
+      }
+
+      const data = await response.json();
+      
+      // Return checkout URL
+      if (data.checkout_url) {
+        console.log('✅ [CHECKOUT] Session created:', data.order_id);
+        return data.checkout_url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+
+    } catch (error) {
+      console.error('❌ [CHECKOUT] Error:', error);
+      throw error; // Re-throw for caller to handle
+    }
   }
 };
 
