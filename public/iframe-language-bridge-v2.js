@@ -71,10 +71,47 @@
   }
 
   /**
-   * Send language to iframe
+   * ACK tracking for language changes
+   */
+  const pendingAcks = new Map(); // correlationId → {lang, sentAt, timeoutId}
+  const ACK_TIMEOUT_MS = 3000; // 3 seconds
+
+  /**
+   * Send language to iframe with ACK tracking
    */
   function sendLanguageToIframe(lang) {
-    sendToIframe(EventTypes.SET_LOCALE, { locale: lang });
+    console.info('[LANG][PARENT→IFRAME]', lang);
+    
+    const message = new BridgeMessage(EventTypes.SET_LANG, { lang });
+    const validation = message.validate();
+
+    if (!validation.valid) {
+      console.error('[LANG] Invalid message:', validation.errors);
+      return;
+    }
+
+    // Send to iframe
+    if (!iframe || !iframe.contentWindow) {
+      console.warn('[LANG] iframe not ready, cannot send');
+      return;
+    }
+
+    iframe.contentWindow.postMessage(message.toJSON(), CONFIGURATOR_ORIGIN);
+    debug.logMessageSent(message, CONFIGURATOR_ORIGIN);
+
+    // Track pending ACK
+    const timeoutId = setTimeout(() => {
+      if (pendingAcks.has(message.correlationId)) {
+        console.warn('[LANG][NO_ACK] iframe did not confirm language:', lang);
+        pendingAcks.delete(message.correlationId);
+      }
+    }, ACK_TIMEOUT_MS);
+
+    pendingAcks.set(message.correlationId, {
+      lang,
+      sentAt: Date.now(),
+      timeoutId
+    });
   }
 
   /**
@@ -87,13 +124,15 @@
       // Map common type names to event names
       const typeToEventMap = {
         'UNBREAK_CONFIG_READY': 'UNBREAK_IFRAME_READY',
+        'UNBREAK_SET_LANG': 'UNBREAK_SET_LANG',
+        'UNBREAK_LANG_ACK': 'UNBREAK_LANG_ACK',
         'configChanged': 'UNBREAK_CONFIG_CHANGED',
         'addToCart': 'UNBREAK_ADD_TO_CART',
         'resetView': 'UNBREAK_RESET_VIEW',
         'error': 'UNBREAK_ERROR',
         'ready': 'UNBREAK_IFRAME_READY',
-        'langAck': 'UNBREAK_ACK',
-        'languageChanged': 'UNBREAK_ACK',
+        'langAck': 'UNBREAK_LANG_ACK',
+        'languageChanged': 'UNBREAK_LANG_ACK',
       };
 
       const eventName = typeToEventMap[data.type] || data.type;
@@ -243,6 +282,11 @@
         handleGetLang(message);
         break;
 
+      case EventTypes.LANG_ACK:
+        debug.logHandlerMatched('handleLangAck', message);
+        handleLangAck(message);
+        break;
+
       case EventTypes.ACK:
         debug.logHandlerMatched('handleAck', message);
         handleAck(message);
@@ -304,17 +348,40 @@
 
   /**
    * Handler: Get Language
-   * iframe requests current language - respond with SET_LOCALE
+   * iframe requests current language - respond with SET_LANG
    */
   function handleGetLang(message) {
     console.log('[BRIDGE] 🌐 iframe requests language, sending:', currentLang);
     
-    // Respond with current language
-    sendToIframe(EventTypes.SET_LOCALE, {
-      locale: currentLang
-    }, {
-      replyTo: message.correlationId
-    });
+    // Respond with current language using new protocol
+    sendLanguageToIframe(currentLang);
+  }
+
+  /**
+   * Handler: Language ACK
+   * iframe confirms language change
+   */
+  function handleLangAck(message) {
+    const lang = message.payload?.lang;
+    const replyTo = message.replyTo;
+
+    console.info('[LANG][IFRAME→PARENT][ACK]', lang);
+
+    // Clear timeout if this is a reply to our SET_LANG
+    if (replyTo && pendingAcks.has(replyTo)) {
+      const pending = pendingAcks.get(replyTo);
+      clearTimeout(pending.timeoutId);
+      pendingAcks.delete(replyTo);
+
+      const latency = Date.now() - pending.sentAt;
+      console.log('[LANG][ACK] Confirmed in', latency, 'ms');
+    }
+
+    // Update current language if different
+    if (lang && lang !== currentLang) {
+      currentLang = lang;
+      console.log('[LANG] Language synchronized:', lang);
+    }
   }
 
   /**
@@ -468,13 +535,24 @@
     document.addEventListener('languageChanged', function(e) {
       const newLang = e.detail?.language || e.detail?.lang || getCurrentLanguage();
       currentLang = newLang;
+      console.log('[LANG] Language switched to:', newLang);
       sendLanguageToIframe(newLang);
     });
 
-    // Send initial language after short delay (ensure iframe is ready)
+    // AKTIV: Send initial language immediately when iframe loads
+    iframe.addEventListener('load', function() {
+      console.log('[LANG] iframe loaded, sending initial language:', currentLang);
+      // Wait 200ms to ensure iframe JS is initialized
+      setTimeout(() => {
+        sendLanguageToIframe(currentLang);
+      }, 200);
+    });
+
+    // Fallback: Also send after timeout if load event didn't fire
     setTimeout(() => {
+      console.log('[LANG] Fallback: ensuring language is set:', currentLang);
       sendLanguageToIframe(currentLang);
-    }, 500);
+    }, 800);
   }
 
   /**

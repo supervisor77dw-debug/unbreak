@@ -19,11 +19,13 @@
     // Parent → iframe
     PARENT_HELLO: 'UNBREAK_PARENT_HELLO',
     SET_LOCALE: 'UNBREAK_SET_LOCALE',
+    SET_LANG: 'UNBREAK_SET_LANG', // NEW: Direct language command
     GET_CONFIG: 'UNBREAK_GET_CONFIG',
     
     // iframe → Parent
     IFRAME_READY: 'UNBREAK_IFRAME_READY',
     GET_LANG: 'UNBREAK_GET_LANG', // iframe requests current language
+    LANG_ACK: 'UNBREAK_LANG_ACK', // NEW: Language change acknowledged
     ACK: 'UNBREAK_ACK',
     CONFIG_CHANGED: 'UNBREAK_CONFIG_CHANGED',
     ADD_TO_CART: 'UNBREAK_ADD_TO_CART',
@@ -174,8 +176,16 @@
       locale: 'string', // 'de' | 'en'
     },
 
+    [EventTypes.SET_LANG]: {
+      lang: 'string', // 'de' | 'en' - simplified protocol
+    },
+
     [EventTypes.GET_LANG]: {
       // iframe requests current language - no payload required
+    },
+
+    [EventTypes.LANG_ACK]: {
+      lang: 'string', // 'de' | 'en' - confirmed language
     },
 
     [EventTypes.CONFIG_CHANGED]: {
