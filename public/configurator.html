@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="de">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,52 +10,135 @@
     <link rel="stylesheet" href="/styles.css">
     <link rel="stylesheet" href="/animations.css">
     <link rel="stylesheet" href="/i18n.css">
-    <link rel="stylesheet" href="/readability-optimization.css">
     <link rel="stylesheet" href="/configurator/configurator.css">
 
-    <!-- i18n System -->
-    <script src="/i18n.js?v=2.0.5"></script>
-    <script src="/language-switch.js?v=2.0.5" defer></script>
+    <!-- i18n System with translations -->
+    <script src="/i18n.js?v=2.0.6"></script>
+    <script src="/language-switch.js?v=2.0.6" defer></script>
     
-    <!-- CRITICAL: Test if JavaScript runs at all -->
-    <script>
-        console.log('🧪 [TEST] JavaScript IS executing!');
-        console.log('🧪 [TEST] Window object exists:', typeof window);
-        console.log('🧪 [TEST] Document ready state:', document.readyState);
+    <style>
+    /* Configurator Page Specific Styles */
+    body {
+        padding-top: 84px; /* Header height */
+    }
+    
+    .configurator-section {
+        min-height: calc(100vh - 84px);
+        padding: 2rem 0 4rem;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+    }
+    
+    .configurator-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding: 0 1rem;
+    }
+    
+    .configurator-header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        color: var(--color-graphit);
+    }
+    
+    .configurator-header p {
+        font-size: 1.125rem;
+        color: var(--color-anthrazit);
+        opacity: 0.8;
+    }
+    
+    .configurator-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 1rem;
+    }
+    
+    .iframe-wrapper {
+        position: relative;
+        width: 100%;
+        height: 70vh;
+        min-height: 600px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    #configurator-iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+    
+    .checkout-actions {
+        position: sticky;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        padding: 1.5rem;
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+        z-index: 100;
+    }
+    
+    .checkout-actions-inner {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    /* Debug Bar (hidden by default) */
+    #debug-bar {
+        display: none;
+        position: fixed;
+        top: 84px;
+        left: 0;
+        right: 0;
+        background: #1e293b;
+        color: #fff;
+        padding: 8px 12px;
+        z-index: 9999;
+        font-family: monospace;
+        font-size: 11px;
+        border-bottom: 2px solid #0891b2;
+    }
+    
+    #debug-bar.active {
+        display: block;
+    }
+    
+    @media (max-width: 768px) {
+        .configurator-header h1 {
+            font-size: 2rem;
+        }
         
-        // Show deployment info for cache busting verification
-        console.log('🔍 [DEPLOY] Built at:', document.currentScript?.getAttribute('data-build-time') || 'unknown');
-        console.log('🔍 [DEPLOY] Commit:', '{{BUILD_HASH}}' || 'local');
-    </script>
-    
-    <!-- Build Info Footer (for cache verification) -->
-    <script>
-        window.UNBREAK_BUILD_INFO = {
-            timestamp: new Date().toISOString(),
-            commit: 'bc16910',
-            deployed: true
-        };
-    </script>
+        .iframe-wrapper {
+            min-height: 500px;
+            height: 60vh;
+        }
+        
+        .checkout-actions {
+            padding: 1rem;
+        }
+    }
+    </style>
 </head>
 
 <body>
-
-    <!-- DEBUG BAR (visible when ?debug=1) -->
-    <div id="debug-bar" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: #1e293b; color: #fff; padding: 8px 12px; z-index: 999999; font-family: monospace; font-size: 11px; border-bottom: 2px solid #0891b2;">
+    <!-- Debug Bar (only visible with ?debug=1) -->
+    <div id="debug-bar">
         <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
             <strong style="color: #0891b2;">🔧 DEBUG MODE</strong>
-            <span id="debug-iframe-loaded">iframe: <span style="color: #ef4444;">NO</span></span>
-            <span id="debug-ready-received">ready: <span style="color: #ef4444;">NO</span></span>
-            <span id="debug-last-config">lastConfig: <span style="color: #94a3b8;">none</span></span>
-            <span id="debug-button-visible">button: <span style="color: #ef4444;">NO</span></span>
-            <span id="debug-scroll">scroll: <span style="color: #94a3b8;">-</span></span>
-            <button id="dump-diagnostics" style="background: #0891b2; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Dump Diagnostics</button>
+            <span id="debug-status">Loading...</span>
+            <button id="debug-panel-toggle" style="background: #0891b2; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer;">Toggle Panel (Ctrl+Shift+D)</button>
         </div>
     </div>
 
     <!-- Header / Navigation -->
-    <header style="margin-top: 0;">
-    <!-- Adjust for debug bar if active -->
+    <header>
         <nav>
             <div class="logo">
                 <a href="index.html" class="logo-link">
@@ -64,7 +146,6 @@
                 </a>
             </div>
 
-            <!-- Mobile Burger Menu -->
             <div class="burger-menu" id="burgerMenu">
                 <span></span>
                 <span></span>
@@ -72,601 +153,127 @@
             </div>
 
             <ul class="nav-links" id="navLinks">
-                <li><a href="index.html#product" data-i18n="nav.product">Produkt</a></li>
-                <li><a href="index.html#use-cases" data-i18n="nav.useCases">Einsatzbereiche</a></li>
-                <li><a href="index.html#tech" data-i18n="nav.tech">Technologie</a></li>
-                <li><a href="index.html#how-to" data-i18n="nav.howTo">Anwendung</a></li>
-                <li><a href="configurator.html" class="active" data-i18n="nav.configurator">Konfigurator</a></li>
-                <li><a href="/shop" data-i18n="nav.shop">Shop</a></li>
-                <li><a href="index.html#contact" data-i18n="nav.contact">Kontakt</a></li>
+                <li><a href="index.html#hero">Start</a></li>
+                <li><a href="index.html#produkt">Produkt</a></li>
+                <li><a href="index.html#einsatzbereiche">Einsatzbereiche</a></li>
+                <li><a href="index.html#technik">Technik</a></li>
+                <li><a href="configurator.html" class="active">Konfigurator</a></li>
+                <li><a href="/shop">Shop</a></li>
+                <li><a href="index.html#kontakt">Kontakt</a></li>
             </ul>
         </nav>
     </header>
 
     <!-- Configurator Section -->
-    <section class="configurator-section">
+    <section class="configurator-section" id="configurator">
         <div class="container">
             <div class="configurator-header">
-                <h1 data-i18n="configurator.title">3D-Konfigurator</h1>
-                <p data-i18n="configurator.subtitle">Gestalten Sie Ihren individuellen UNBREAK ONE Weinglashalter</p>
+                <h1>3D-Konfigurator</h1>
+                <p>Gestalten Sie Ihren individuellen UNBREAK ONE</p>
             </div>
 
             <div class="configurator-container">
-                <!-- 3D Viewer - Vercel Integration -->
-                <div class="viewer-wrapper-fullwidth">
-                    <div class="cfgFrameOuter">
-                        <iframe 
-                            id="configurator-iframe"
-                            src="https://unbreak-3-d-konfigurator.vercel.app/"
-                            title="UNBREAK ONE 3D Konfigurator"
-                            allow="accelerometer; autoplay; camera; encrypted-media; fullscreen; geolocation; gyroscope; magnetometer; microphone; midi; payment; vr; xr-spatial-tracking; web-share"
-                            loading="eager"
-                            allowfullscreen>
-                        </iframe>
-                    </div>
-                    
-                    <!-- Loading State -->
-                    <div id="loading-overlay" class="loading-overlay">
-                        <div class="loading-card">
-                            <img src="images/logo.png" alt="UNBREAK ONE" class="loading-logo">
-                            <div id="loading-spinner" class="loading-spinner"></div>
-                            <p id="loading-text" class="loading-text" data-i18n="configurator.loading">Konfigurator wird geladen...</p>
-                            <div id="loading-progress" class="loading-progress" style="display: none;">
-                                <div class="progress-bar">
-                                    <div id="progress-fill" class="progress-fill"></div>
-                                </div>
-                                <span id="progress-percent" class="progress-percent">0%</span>
-                            </div>
-                            <div id="error-container" class="error-container" style="display: none;">
-                                <p id="error-message" class="error-message"></p>
-                                <button id="reload-button" class="reload-button">Neu laden</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Debug Mode: Event Log (?debug=1 in URL) -->
-                    <div id="debug-log" class="debug-log" style="display: none;">
-                        <h4>Event Log</h4>
-                        <div id="debug-events" class="debug-events"></div>
-                        <button id="debug-clear" class="debug-clear-btn">Clear Log</button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Checkout Button (FORCED VISIBLE with !important) -->
-            <div class="checkout-button-container" style="
-                text-align: center !important; 
-                margin: 3rem auto !important; 
-                padding: 3rem 1rem !important;
-                max-width: 800px !important;
-                position: relative !important;
-                z-index: 9999 !important;
-                background: #f5f7fa !important;
-                border-radius: 16px !important;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-                display: block !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-            ">
-                <button 
-                    id="configurator-buy-now-btn"
-                    class="btn btn-primary btn-magnetic"
-                    data-checkout="configured"
-                    data-product-sku="UNBREAK-GLAS-01"
-                    style="
-                        padding: 1.5rem 4rem !important;
-                        font-size: 1.4rem !important;
-                        background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%) !important;
-                        color: white !important;
-                        border: none !important;
-                        border-radius: 12px !important;
-                        cursor: pointer !important;
-                        box-shadow: 0 8px 32px rgba(8, 145, 178, 0.3) !important;
-                        transition: all 0.3s ease !important;
-                        font-weight: 700 !important;
-                        width: 100% !important;
-                        max-width: 500px !important;
-                        display: block !important;
-                        margin: 0 auto !important;
-                        visibility: visible !important;
-                        opacity: 1 !important;
-                        position: relative !important;
-                        z-index: 10000 !important;
-                    " 
-                    onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 16px 48px rgba(8, 145, 178, 0.5)';"
-                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 32px rgba(8, 145, 178, 0.3)';">
-                    🛒 Jetzt kaufen
-                </button>
-                <p style="
-                    margin-top: 1.5rem !important;
-                    color: #333 !important;
-                    font-size: 1rem !important;
-                    font-weight: 500 !important;
-                ">
-                    ✨ Konfiguration wird beim Klick übernommen
-                </p>
-            </div>
-
-            <!-- Info Section -->
-            <div class="configurator-info">
-                <div class="info-card">
-                    <h4 data-i18n="configurator.infoMaterialTitle">Premium-Material</h4>
-                    <p data-i18n="configurator.infoMaterialText">Hochwertige Verarbeitung aus robustem Material für langlebigen Halt.</p>
-                </div>
-                <div class="info-card">
-                    <h4 data-i18n="configurator.infoDeliveryTitle">Schnelle Lieferung</h4>
-                    <p data-i18n="configurator.infoDeliveryText">Ihre Bestellung wird innerhalb von 3-5 Tagen bearbeitet und versendet.</p>
-                </div>
-                <div class="info-card">
-                    <h4 data-i18n="configurator.infoCustomTitle">Individuell</h4>
-                    <p data-i18n="configurator.infoCustomText">Jedes Stück wird nach Ihren Wünschen gefertigt.</p>
+                <div class="iframe-wrapper">
+                    <iframe 
+                        id="configurator-iframe"
+                        src="https://unbreak-3-d-konfigurator.vercel.app/"
+                        title="UNBREAK ONE 3D Konfigurator"
+                        allow="accelerometer; autoplay; encrypted-media; fullscreen; geolocation; gyroscope; payment; vr; xr-spatial-tracking"
+                        loading="eager"
+                        allowfullscreen>
+                    </iframe>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            <p style="margin: 0.5rem 0; color: #666; font-size: 11px; font-family: monospace;">
-                🔧 Build: <strong>bc16910</strong> • Deployed: <span id="deploy-time"></span> •
-                <a href="#" onclick="location.reload(true); return false;" style="color: #0891b2; text-decoration: underline;">Hard Refresh</a>
-            </p>
-            <p>&copy; 2024 UNBREAK ONE. Alle Rechte vorbehalten.</p>
-            <p>
-                <a href="impressum.html" data-i18n="footer.imprint">Impressum</a> |
-                <a href="datenschutz.html" data-i18n="footer.privacy">Datenschutz</a> |
-                <a href="agb.html" data-i18n="footer.terms">AGB</a>
+    <!-- Sticky Checkout Actions (always visible) -->
+    <div class="checkout-actions">
+        <div class="checkout-actions-inner">
+            <p style="margin: 0; color: var(--color-anthrazit); font-size: 0.9rem;">
+                <span id="checkout-hint">Wählen Sie Ihre Farben und klicken Sie im Konfigurator auf "In den Warenkorb"</span>
             </p>
         </div>
-        <script>
-            document.getElementById('deploy-time').textContent = new Date().toLocaleTimeString('de-DE');
-        </script>
-    </footer>
+    </div>
 
-    <!-- Scripts - CRITICAL ORDER: Bridge MUST load before configurator-new.js -->
-    <script src="animations.js"></script>
-    <script src="script.js"></script>
-    <script src="configurator/trace-system.js"></script>
+    <!-- Scripts -->
+    <script src="/checkout.js"></script>
     
-    <!-- PERSISTENT DEBUG PANEL (loads first if debug=1) -->
-    <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('debug') === '1') {
-            const script = document.createElement('script');
-            script.src = 'lib/debugPanel.js';
-            document.head.appendChild(script);
-            console.log('[DEBUG] Persistent Debug Panel loading...');
-            
-            // MESSAGE TAP: Log ALL postMessages (even blocked ones)
-            window.addEventListener('message', function(event) {
-                const ts = Date.now();
-                const data = event.data;
-                
-                // Always log to console for reference
-                console.log('[MESSAGE_TAP]', {
-                    timestamp: new Date(ts).toISOString().substring(11, 23),
-                    origin: event.origin,
-                    type: data?.type || 'no-type',
-                    data: data
-                });
-                
-                // Check if blocked by origin filter
-                const ALLOWED_ORIGINS = [
-                    'https://unbreak-3-d-konfigurator.vercel.app',
-                    window.location.origin
-                ];
-                
-                const isBlocked = !ALLOWED_ORIGINS.includes(event.origin);
-                
-                if (window.UnbreakDebugPanel) {
-                    if (isBlocked) {
-                        window.UnbreakDebugPanel.logBlocked(
-                            event.origin,
-                            `Not in allowlist: ${ALLOWED_ORIGINS.join(', ')}`
-                        );
-                    } else if (data && data.type) {
-                        // Determine direction
-                        const isFromIframe = event.origin === 'https://unbreak-3-d-konfigurator.vercel.app';
-                        window.UnbreakDebugPanel.logMessage(
-                            data.type,
-                            isFromIframe ? 'from' : 'to',
-                            data.message || '',
-                            data
-                        );
-                    }
-                }
-            }, true); // Use capture phase
-            
-            console.log('[MESSAGE_TAP] Installed - all postMessages will be logged');
-        }
-    </script>
-    
-    <!-- CRITICAL: Load bridge first -->
-    <script src="lib/configuratorBridge.js"></script>
-    <script>
-        // IMMEDIATE VERIFICATION
-        console.log('[BRIDGE_CHECK] window.ConfiguratorBridge exists:', !!window.ConfiguratorBridge);
-        console.log('[BRIDGE_CHECK] typeof:', typeof window.ConfiguratorBridge);
-        console.log('[BRIDGE_CHECK] is constructor:', typeof window.ConfiguratorBridge === 'function');
-        if (!window.ConfiguratorBridge) {
-            console.error('❌ FATAL: ConfiguratorBridge not loaded! Script path broken.');
-            if (window.UnbreakDebugPanel) {
-                window.UnbreakDebugPanel.logError('ConfiguratorBridge not loaded', 'script-loader', 'Check lib/configuratorBridge.js path');
-            }
-        }
-    </script>
-    
-    <script src="checkout.js"></script>
-    
-    <!-- Bridge Communication System v2.0 (MUST load after checkout.js) -->
+    <!-- Bridge Communication System v2.0 -->
     <script src="/lib/bridge-schema.js?v=2.0.1"></script>
     <script src="/lib/bridge-debug.js?v=2.0.1"></script>
     <script src="/lib/bridge-debug-panel.js?v=2.0.1"></script>
     <script src="/iframe-language-bridge-v2.js?v=2.0.1"></script>
     
-    <!-- Initialize Bridge Debug -->
-    <script>
-    console.log('🚀 [INIT] Bridge System Loading...');
-    
-    // Wait for DOM + all scripts loaded
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initBridge);
-    } else {
-        initBridge();
-    }
-    
-    function initBridge() {
-        console.log('🔧 [INIT] DOMContentLoaded - Checking Bridge availability...');
-        console.log('  - BridgeMessage:', typeof window.BridgeMessage);
-        console.log('  - UnbreakBridgeDebug:', typeof window.UnbreakBridgeDebug);
-        console.log('  - UnbreakCheckout:', typeof window.UnbreakCheckout);
-        console.log('  - UnbreakCheckout.createCheckoutFromConfig:', typeof window.UnbreakCheckout?.createCheckoutFromConfig);
-        
-        // Enable debug logging
-        if (window.UnbreakBridgeDebug) {
-            window.UnbreakBridgeDebug.enable();
-            console.log('✅ [INIT] Bridge Debug enabled');
-        } else {
-            console.error('❌ [INIT] Bridge Debug NOT available!');
-        }
-    }
-    </script>
-    
-    <script src="configurator/configurator-new.js"></script>
-    
-    <!-- DEBUG MODE CONTROLLER -->
+    <!-- Initialize Bridge & Debug -->
     <script>
     (function() {
-        // Check if debug mode enabled
+        'use strict';
+        
+        // Check for debug mode
         const urlParams = new URLSearchParams(window.location.search);
         const debugMode = urlParams.get('debug') === '1';
         
-        if (!debugMode) return;
-        
-        console.log('🔧 [DEBUG MODE] Enabled - Failure-safe diagnostics active');
-        console.log('[DEBUG_INIT] URL:', window.location.href);
-        console.log('[DEBUG_INIT] Build:', window.UNBREAK_BUILD_INFO || 'unknown');
-        
-        // Show debug bar IMMEDIATELY (no dependencies)
-        const debugBar = document.getElementById('debug-bar');
-        if (debugBar) {
-            debugBar.style.display = 'block';
-            document.body.style.marginTop = '40px';
+        if (debugMode) {
+            document.getElementById('debug-bar')?.classList.add('active');
+            document.getElementById('debug-panel-toggle')?.addEventListener('click', function() {
+                if (window.UnbreakBridgeDebug) {
+                    // Toggle debug panel
+                    const panel = document.querySelector('.bridge-debug-panel');
+                    if (panel) {
+                        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                    }
+                }
+            });
         }
         
-        // State tracking
-        const state = {
-            iframeLoaded: false,
-            readyReceived: false,
-            lastConfigTs: null,
-            lastConfigVariant: null,
-            buttonVisible: false,
-            bridgeLogs: []
-        };
-        
-        // Update debug display
-        function updateDebug() {
-            const iframe = document.getElementById('configurator-iframe');
-            const button = document.getElementById('configurator-buy-now-btn');
-            
-            // Check iframe loaded
-            state.iframeLoaded = iframe && iframe.contentWindow != null;
-            document.querySelector('#debug-iframe-loaded span').textContent = state.iframeLoaded ? 'YES' : 'NO';
-            document.querySelector('#debug-iframe-loaded span').style.color = state.iframeLoaded ? '#10b981' : '#ef4444';
-            
-            // Check ready
-            const bridge = window.ConfiguratorBridge;
-            state.readyReceived = bridge && bridge.isReady && bridge.isReady();
-            document.querySelector('#debug-ready-received span').textContent = state.readyReceived ? 'YES' : 'NO';
-            document.querySelector('#debug-ready-received span').style.color = state.readyReceived ? '#10b981' : '#ef4444';
-            
-            // Check config
-            const lastConfig = bridge && bridge.lastConfig;
-            if (lastConfig) {
-                state.lastConfigTs = Date.now();
-                state.lastConfigVariant = lastConfig.variant;
-                const ago = state.lastConfigTs ? Math.round((Date.now() - state.lastConfigTs) / 1000) : 0;
-                document.querySelector('#debug-last-config span').textContent = `${state.lastConfigVariant} (${ago}s ago)`;
-                document.querySelector('#debug-last-config span').style.color = '#10b981';
-            } else {
-                document.querySelector('#debug-last-config span').textContent = 'none';
-                document.querySelector('#debug-last-config span').style.color = '#94a3b8';
-            }
-            
-            // Check button visible
-            state.buttonVisible = button && button.offsetParent !== null;
-            document.querySelector('#debug-button-visible span').textContent = state.buttonVisible ? 'YES' : 'NO';
-            document.querySelector('#debug-button-visible span').style.color = state.buttonVisible ? '#10b981' : '#ef4444';
-            
-            // Check scroll container
-            const container = document.querySelector('.checkout-button-container');
-            if (container) {
-                const rect = container.getBoundingClientRect();
-                const inView = rect.top < window.innerHeight && rect.bottom > 0;
-                document.querySelector('#debug-scroll span').textContent = inView ? 'in-view' : `${Math.round(rect.top)}px below`;
-                document.querySelector('#debug-scroll span').style.color = inView ? '#10b981' : '#f59e0b';
-            }
+        // Initialize when DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
         }
         
-        // Update every 500ms
-        setInterval(updateDebug, 500);
-        
-        // Intercept bridge logs
-        const originalLog = console.log;
-        console.log = function(...args) {
-            if (args[0] && typeof args[0] === 'string' && args[0].includes('[UNBREAK_PARENT]')) {
-                state.bridgeLogs.push({
-                    ts: Date.now(),
-                    msg: args.join(' ')
-                });
-                if (state.bridgeLogs.length > 30) state.bridgeLogs.shift();
-            }
-            originalLog.apply(console, args);
-        };
-        
-        // WATCHDOG: Detect stalled loading
-        let loadingStartTime = Date.now();
-        let isStalled = false;
-        setTimeout(function() {
-            const loadingOverlay = document.getElementById('loading-overlay');
-            if (loadingOverlay && !loadingOverlay.classList.contains('hidden')) {
-                isStalled = true;
-                console.error('[3D_LOAD_STALLED] Still loading after 10s', {
-                    trace_id: 'stall_' + Date.now(),
-                    stalled_ms: Date.now() - loadingStartTime,
-                    overlay_visible: true,
-                    last_error: window._lastConsoleError || 'none'
-                });
+        function init() {
+            console.log('🚀 [CONFIGURATOR] Initializing...');
+            
+            // Enable Bridge debug if available
+            if (window.UnbreakBridgeDebug) {
+                window.UnbreakBridgeDebug.enable();
+                console.log('✅ [CONFIGURATOR] Bridge debug enabled');
                 
-                // Add STALLED badge to debug bar
-                const stalledBadge = document.createElement('span');
-                stalledBadge.textContent = '🔴 STALLED';
-                stalledBadge.style.cssText = 'color: #ef4444; font-weight: bold; animation: pulse 1s infinite;';
-                document.getElementById('debug-bar').appendChild(stalledBadge);
-            }
-        }, 10000);
-        
-        // Capture console errors
-        window._lastConsoleError = null;
-        const originalError = console.error;
-        console.error = function(...args) {
-            window._lastConsoleError = args.join(' ');
-            originalError.apply(console, args);
-        };
-        
-        // Dump diagnostics button (ALWAYS ENABLED)
-        document.getElementById('dump-diagnostics').addEventListener('click', function() {
-            console.log('═══════════════════════════════════════════');
-            console.log('🔍 DIAGNOSTIC DUMP (FAILURE-SAFE)');
-            console.log('═══════════════════════════════════════════');
-            console.log('Timestamp:', new Date().toISOString());
-            console.log('Stalled:', isStalled);
-            console.log('Loading duration:', Date.now() - loadingStartTime, 'ms');
-            
-            // URL + Build
-            console.log('\n📍 ENVIRONMENT:');
-            console.log('- URL:', window.location.href);
-            console.log('- Pathname:', window.location.pathname);
-            console.log('- Is configurator.html:', window.location.pathname.includes('configurator.html'));
-            console.log('- Build info:', window.UNBREAK_BUILD_INFO);
-            console.log('- Last console error:', window._lastConsoleError || 'none');
-            
-            // 1. All buy button candidates
-            console.log('\n📍 BUY BUTTON ELEMENTS:');
-            const byDataAttr = document.querySelectorAll('[data-checkout]');
-            const byId = document.getElementById('configurator-buy-now-btn');
-            const byText = Array.from(document.querySelectorAll('button')).filter(b => b.textContent.includes('kaufen'));
-            
-            console.log('- By [data-checkout]:', byDataAttr.length, byDataAttr);
-            console.log('- By ID #configurator-buy-now-btn:', byId);
-            console.log('- By text "kaufen":', byText.length, byText);
-            
-            if (byId) {
-                const rect = byId.getBoundingClientRect();
-                console.log('  Button rect:', rect);
-                console.log('  Visible (offsetParent):', byId.offsetParent !== null);
-                console.log('  Computed display:', getComputedStyle(byId).display);
-                console.log('  Computed visibility:', getComputedStyle(byId).visibility);
-                console.log('  Z-index:', getComputedStyle(byId).zIndex);
+                if (debugMode) {
+                    document.getElementById('debug-status').textContent = 'Bridge: Ready';
+                }
             }
             
-            // 2. Iframe details + loading status
-            console.log('\n📍 IFRAME:');
-            const iframe = document.getElementById('configurator-iframe');
-            if (iframe) {
-                const rect = iframe.getBoundingClientRect();
-                console.log('- Element:', iframe);
-                console.log('- Src:', iframe.src);
-                console.log('- Rect:', rect);
-                console.log('- contentWindow exists:', !!iframe.contentWindow);
-                console.log('- readyState:', iframe.contentDocument?.readyState || 'no access');
-                console.log('- onload fired:', iframe._onloadFired || false);
-            } else {
-                console.log('- IFRAME NOT FOUND');
+            // Burger menu
+            const burgerMenu = document.getElementById('burgerMenu');
+            const navLinks = document.getElementById('navLinks');
+            
+            if (burgerMenu && navLinks) {
+                burgerMenu.addEventListener('click', function() {
+                    navLinks.classList.toggle('active');
+                });
             }
             
-            const loadingOverlay = document.getElementById('loading-overlay');
-            console.log('- Loading overlay visible:', loadingOverlay && !loadingOverlay.classList.contains('hidden'));
-            console.log('- Loading overlay classes:', loadingOverlay?.className);
+            // Auto-scroll to configurator if not already there
+            setTimeout(function() {
+                const configuratorSection = document.getElementById('configurator');
+                const rect = configuratorSection?.getBoundingClientRect();
+                
+                // If configurator not fully visible, scroll to it
+                if (rect && rect.top > window.innerHeight * 0.2) {
+                    configuratorSection.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }
+            }, 500);
             
-            // 3. Overlays covering button
-            console.log('\n📍 POTENTIAL OVERLAYS (z-index > 1000):');
-            const allElements = document.querySelectorAll('*');
-            const highZIndex = Array.from(allElements).filter(el => {
-                const z = parseInt(getComputedStyle(el).zIndex);
-                return z > 1000;
-            });
-            console.log('- Count:', highZIndex.length);
-            highZIndex.forEach(el => {
-                console.log(`  - ${el.tagName}#${el.id}.${el.className} z=${getComputedStyle(el).zIndex}`);
-            });
-            
-            // 4. Container overflow
-            console.log('\n📍 SCROLL CONTAINERS:');
-            const body = document.body;
-            const main = document.querySelector('main');
-            const container = document.querySelector('.checkout-button-container');
-            
-            console.log('- body overflow:', getComputedStyle(body).overflow, 'height:', getComputedStyle(body).height);
-            if (main) console.log('- main overflow:', getComputedStyle(main).overflow, 'height:', getComputedStyle(main).height);
-            if (container) {
-                console.log('- .checkout-button-container:', getComputedStyle(container).overflow, 'height:', getComputedStyle(container).height);
-                console.log('  Rect:', container.getBoundingClientRect());
-            }
-            
-            // 5. Bridge logs
-            console.log('\n📍 LAST 30 BRIDGE LOGS:');
-            state.bridgeLogs.forEach(log => {
-                console.log(`  ${new Date(log.ts).toISOString().substr(11, 12)} ${log.msg}`);
-            });
-            
-            // 6. Bridge state
-            console.log('\n📍 BRIDGE STATE:');
-            const bridge = window.ConfiguratorBridge;
-            if (bridge) {
-                console.log('- Exists:', true);
-                console.log('- isReady:', bridge.isReady ? bridge.isReady() : 'no method');
-                console.log('- lastConfig:', bridge.lastConfig);
-            } else {
-                console.log('- Exists:', false);
-            }
-            
-            // 7. WebGL capability
-            console.log('\n📍 WEBGL:');
-            const canvas = document.createElement('canvas');
-            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-            if (gl) {
-                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-                console.log('- WebGL supported:', true);
-                console.log('- Vendor:', gl.getParameter(gl.VENDOR));
-                console.log('- Renderer:', debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'N/A');
-                console.log('- Version:', gl.getParameter(gl.VERSION));
-            } else {
-                console.log('- WebGL supported:', false, '❌ THIS IS THE PROBLEM');
-            }
-            
-            // 8. Network requests (if available)
-            console.log('\n📍 NETWORK (from Performance API):');
-            const resources = performance.getEntriesByType('resource');
-            const modelAssets = resources.filter(r => 
-                r.name.includes('.glb') || 
-                r.name.includes('.gltf') || 
-                r.name.includes('draco') ||
-                r.name.includes('ktx2') ||
-                r.name.includes('vercel.app')
-            );
-            console.log('- Total resources loaded:', resources.length);
-            console.log('- 3D-related assets:', modelAssets.length);
-            modelAssets.forEach(asset => {
-                console.log(`  - ${asset.name}`);
-                console.log(`    Duration: ${asset.duration}ms, Size: ${asset.transferSize || 'unknown'} bytes`);
-            });
-            
-            console.log('\n═══════════════════════════════════════════');
-        });
-        
-        // Track iframe onload
-        const iframe = document.getElementById('configurator-iframe');
-        if (iframe) {
-            iframe.addEventListener('load', function() {
-                console.log('[3D_IFRAME_LOADED] onload event fired');
-                this._onloadFired = true;
-            });
+            console.log('✅ [CONFIGURATOR] Initialization complete');
         }
     })();
     </script>
-    
-    <!-- DEBUG: Button visibility check -->
-    <script>
-    console.log('🔍 [DEBUG] Checking button visibility...');
-    window.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            const btn = document.getElementById('configurator-buy-now-btn');
-            if (btn) {
-                const rect = btn.getBoundingClientRect();
-                const isVisible = rect.top < window.innerHeight;
-                console.log('✅ [DEBUG] Button exists!');
-                console.log('📏 [DEBUG] Button position:', {
-                    top: rect.top,
-                    bottom: rect.bottom,
-                    windowHeight: window.innerHeight,
-                    isVisibleInViewport: isVisible
-                });
-                console.log('🎨 [DEBUG] Button computed styles:', {
-                    display: window.getComputedStyle(btn).display,
-                    visibility: window.getComputedStyle(btn).visibility,
-                    opacity: window.getComputedStyle(btn).opacity,
-                    zIndex: window.getComputedStyle(btn).zIndex
-                });
-                
-                // Add visible marker above button
-                const marker = document.createElement('div');
-                marker.style.cssText = `
-                    position: fixed;
-                    top: 10px;
-                    right: 10px;
-                    background: #10b981;
-                    color: white;
-                    padding: 10px 20px;
-                    border-radius: 8px;
-                    font-weight: bold;
-                    z-index: 99999;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                `;
-                marker.textContent = '✅ Button ist im DOM!';
-                document.body.appendChild(marker);
-                
-                if (!isVisible) {
-                    marker.textContent = '⚠️ Button existiert, aber nicht im Viewport - bitte scrollen!';
-                    marker.style.background = '#f59e0b';
-                }
-            } else {
-                console.error('❌ [DEBUG] Button NOT found in DOM!');
-                const errorMarker = document.createElement('div');
-                errorMarker.style.cssText = `
-                    position: fixed;
-                    top: 10px;
-                    right: 10px;
-                    background: #ef4444;
-                    color: white;
-                    padding: 10px 20px;
-                    border-radius: 8px;
-                    font-weight: bold;
-                    z-index: 99999;
-                `;
-                errorMarker.textContent = '❌ Button NICHT im DOM!';
-                document.body.appendChild(errorMarker);
-            }
-        }, 1000);
-    });
-    </script>
-    
-    <!-- Legacy RELAY Handler removed - Now fully handled by Bridge v2.0 -->
-    <script>
-    console.log('✅ [BRIDGE] All iframe communication handled by iframe-language-bridge-v2.js');
-    </script>
-
 </body>
-
 </html>
