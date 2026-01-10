@@ -18,12 +18,6 @@
     <script src="/i18n.js?v=2.0.5"></script>
     <script src="/language-switch.js?v=2.0.5" defer></script>
     
-    <!-- Bridge Communication System v2.0 -->
-    <script src="/lib/bridge-schema.js?v=2.0.0"></script>
-    <script src="/lib/bridge-debug.js?v=2.0.0"></script>
-    <script src="/lib/bridge-debug-panel.js?v=2.0.0" defer></script>
-    <script src="/iframe-language-bridge-v2.js?v=2.0.0" defer></script>
-    
     <!-- CRITICAL: Test if JavaScript runs at all -->
     <script>
         console.log('🧪 [TEST] JavaScript IS executing!');
@@ -304,6 +298,41 @@
     </script>
     
     <script src="checkout.js"></script>
+    
+    <!-- Bridge Communication System v2.0 (MUST load after checkout.js) -->
+    <script src="/lib/bridge-schema.js?v=2.0.1"></script>
+    <script src="/lib/bridge-debug.js?v=2.0.1"></script>
+    <script src="/lib/bridge-debug-panel.js?v=2.0.1"></script>
+    <script src="/iframe-language-bridge-v2.js?v=2.0.1"></script>
+    
+    <!-- Initialize Bridge Debug -->
+    <script>
+    console.log('🚀 [INIT] Bridge System Loading...');
+    
+    // Wait for DOM + all scripts loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initBridge);
+    } else {
+        initBridge();
+    }
+    
+    function initBridge() {
+        console.log('🔧 [INIT] DOMContentLoaded - Checking Bridge availability...');
+        console.log('  - BridgeMessage:', typeof window.BridgeMessage);
+        console.log('  - UnbreakBridgeDebug:', typeof window.UnbreakBridgeDebug);
+        console.log('  - UnbreakCheckout:', typeof window.UnbreakCheckout);
+        console.log('  - UnbreakCheckout.createCheckoutFromConfig:', typeof window.UnbreakCheckout?.createCheckoutFromConfig);
+        
+        // Enable debug logging
+        if (window.UnbreakBridgeDebug) {
+            window.UnbreakBridgeDebug.enable();
+            console.log('✅ [INIT] Bridge Debug enabled');
+        } else {
+            console.error('❌ [INIT] Bridge Debug NOT available!');
+        }
+    }
+    </script>
+    
     <script src="configurator/configurator-new.js"></script>
     
     <!-- DEBUG MODE CONTROLLER -->
