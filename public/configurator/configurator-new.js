@@ -25,7 +25,7 @@
         const iframe = document.getElementById('configurator-iframe');
         const loadingOverlay = document.getElementById('loading-overlay');
         const errorContainer = document.getElementById('error-container');
-        const readyBadge = createReadyBadge();
+        const readyBadge = DEBUG_MODE ? createReadyBadge() : null; // Only show badge in debug mode
         const debugPanel = DEBUG_MODE ? createDebugPanel() : null;
         
         if (!iframe) {
@@ -84,6 +84,7 @@
         }
         
         function showReadyBadge() {
+            if (!readyBadge) return; // Skip if not in debug mode
             readyBadge.textContent = '✓ Ready';
             readyBadge.style.background = '#065f46';
             readyBadge.style.color = '#d1fae5';
