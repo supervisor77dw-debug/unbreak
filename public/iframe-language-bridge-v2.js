@@ -264,25 +264,19 @@
 
     try {
       // Check if UnbreakCheckout is available
-      if (!window.UnbreakCheckout?.createCheckoutSession) {
+      if (!window.UnbreakCheckout?.buyConfigured) {
         debug.log('ERROR', {
-          error: 'UnbreakCheckout.createCheckoutSession not available',
+          error: 'UnbreakCheckout.buyConfigured not available',
         });
         alert('Checkout-System nicht geladen. Bitte laden Sie die Seite neu.');
         return;
       }
 
-      // Call checkout API
-      const endpoint = '/api/checkout/create-checkout-session';
-      debug.logApiCall(endpoint, config);
+      // Call checkout function (handles API call internally)
+      debug.logCheckoutTrigger('buyConfigured', config);
 
-      const url = await window.UnbreakCheckout.createCheckoutSession(config);
-
-      debug.logApiResponse(endpoint, { url });
-
-      // Redirect to Stripe
-      debug.logRedirect(url);
-      window.location.href = url;
+      // buyConfigured handles loading state, API call, and redirect
+      await window.UnbreakCheckout.buyConfigured(config, null);
 
     } catch (error) {
       debug.logApiResponse('/api/checkout/create-checkout-session', null, error);
