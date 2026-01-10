@@ -128,7 +128,7 @@
     </header>
 
     <!-- Configurator Section -->
-    <section class="configurator-section">
+    <section class="configurator-section" id="configurator">
         <div class="container">
             <div class="configurator-header">
                 <h1 data-i18n="configurator.title">3D-Konfigurator</h1>
@@ -630,6 +630,31 @@
     <!-- Legacy RELAY Handler removed - Now fully handled by Bridge v2.0 -->
     <script>
     console.log('✅ [BRIDGE] All iframe communication handled by iframe-language-bridge-v2.js');
+    </script>
+    
+    <!-- Auto-Scroll to Configurator Section -->
+    <script>
+    (function() {
+        function scrollToConfigurator() {
+            const configuratorSection = document.getElementById('configurator');
+            if (configuratorSection) {
+                // Small delay to ensure page is fully rendered
+                setTimeout(() => {
+                    configuratorSection.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                    console.log('✅ [AUTO-SCROLL] Scrolled to configurator section');
+                }, 300);
+            }
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', scrollToConfigurator);
+        } else {
+            scrollToConfigurator();
+        }
+    })();
     </script>
 
 </body>
