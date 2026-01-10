@@ -17,6 +17,85 @@
     <!-- i18n System -->
     <script src="/i18n.js?v=2.0.5"></script>
     <script src="/language-switch.js?v=2.0.5" defer></script>
+    
+    <!-- Configurator Page: Direct text replacement (no i18n keys) -->
+    <script>
+    (function() {
+        const translations = {
+            de: {
+                'configurator.title': '3D-Konfigurator',
+                'configurator.subtitle': 'Gestalten Sie Ihren individuellen UNBREAK ONE Weinglashalter',
+                'configurator.loading': 'Konfigurator wird geladen...',
+                'configurator.infoMaterialTitle': 'Premium-Material',
+                'configurator.infoMaterialText': 'Hochwertige Verarbeitung aus robustem Material für langlebigen Halt.',
+                'configurator.infoDeliveryTitle': 'Schnelle Lieferung',
+                'configurator.infoDeliveryText': 'Ihre Bestellung wird innerhalb von 3-5 Tagen bearbeitet und versendet.',
+                'configurator.infoCustomTitle': 'Individuell',
+                'configurator.infoCustomText': 'Jedes Stück wird nach Ihren Wünschen gefertigt.',
+                'nav.product': 'Produkt',
+                'nav.useCases': 'Einsatzbereiche',
+                'nav.tech': 'Technologie',
+                'nav.howTo': 'Anwendung',
+                'nav.configurator': 'Konfigurator',
+                'nav.shop': 'Shop',
+                'nav.contact': 'Kontakt',
+                'footer.imprint': 'Impressum',
+                'footer.privacy': 'Datenschutz',
+                'footer.terms': 'AGB'
+            },
+            en: {
+                'configurator.title': '3D Configurator',
+                'configurator.subtitle': 'Design your individual UNBREAK ONE wine glass holder',
+                'configurator.loading': 'Loading configurator...',
+                'configurator.infoMaterialTitle': 'Premium Material',
+                'configurator.infoMaterialText': 'High-quality construction from robust material for lasting hold.',
+                'configurator.infoDeliveryTitle': 'Fast Delivery',
+                'configurator.infoDeliveryText': 'Your order will be processed and shipped within 3-5 days.',
+                'configurator.infoCustomTitle': 'Individual',
+                'configurator.infoCustomText': 'Each piece is crafted according to your wishes.',
+                'nav.product': 'Product',
+                'nav.useCases': 'Use Cases',
+                'nav.tech': 'Technology',
+                'nav.howTo': 'Application',
+                'nav.configurator': 'Configurator',
+                'nav.shop': 'Shop',
+                'nav.contact': 'Contact',
+                'footer.imprint': 'Imprint',
+                'footer.privacy': 'Privacy',
+                'footer.terms': 'Terms'
+            }
+        };
+        
+        function applyTranslations() {
+            const lang = document.documentElement.lang || 'de';
+            const texts = translations[lang] || translations.de;
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (texts[key]) {
+                    el.textContent = texts[key];
+                }
+            });
+        }
+        
+        // Apply on load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyTranslations);
+        } else {
+            applyTranslations();
+        }
+        
+        // Re-apply when language changes (watch html lang attribute)
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'lang') {
+                    applyTranslations();
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+    })();
+    </script>
 </head>
 
 <body>
