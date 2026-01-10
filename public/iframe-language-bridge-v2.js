@@ -78,6 +78,57 @@
   }
 
   /**
+   * Convert legacy message format to Bridge v2.0 format
+   */
+  function convertLegacyMessage(data) {
+    // Legacy format: {type: 'configChanged', config: {...}, reason: 'add_to_cart'}
+    if (data.type === 'configChanged' && data.reason === 'add_to_cart') {
+      const config = data.config || {};
+      return {
+        event: 'UNBREAK_ADD_TO_CART',
+        schemaVersion: '1.0',
+        correlationId: 'legacy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        timestamp: new Date().toISOString(),
+        payload: {
+          variant: config.product_type || 'glass_holder',
+          sku: config.product_type === 'bottle_holder' ? 'UNBREAK-WEIN-01' : 'UNBREAK-GLAS-01',
+          colors: {
+            base: config.base || 'mint',
+            arm: config.arm || 'darkBlue',
+            module: config.module || 'black',
+            pattern: config.pattern || 'red'
+          },
+          finish: config.finish || 'matte',
+          quantity: config.quantity || 1,
+          locale: config.lang || 'de',
+          pricing: {
+            basePrice: 4900,
+            totalPrice: 4900
+          }
+        }
+      };
+    }
+
+    // Legacy READY: {type: 'UNBREAK_CONFIG_READY', version: '...'}
+    if (data.type === 'UNBREAK_CONFIG_READY') {
+      return {
+        event: 'UNBREAK_IFRAME_READY',
+        schemaVersion: '1.0',
+        correlationId: 'legacy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        timestamp: new Date().toISOString(),
+        payload: {
+          iframeVersion: data.version || '1.0.0',
+          supportedSchemaVersion: '1.0',
+          supportedLocales: ['de', 'en']
+        }
+      };
+    }
+
+    // Not a legacy format
+    return null;
+  }
+
+  /**
    * Handle incoming messages from iframe
    */
   function handleMessage(event) {
@@ -108,14 +159,22 @@
       return;
     }
 
+    // Try to convert legacy format
+    let messageData = event.data;
+    const legacyConverted = convertLegacyMessage(event.data);
+    if (legacyConverted) {
+      console.log('[BRIDGE] 🔄 Converted legacy message:', event.data.type, '→', legacyConverted.event);
+      messageData = legacyConverted;
+    }
+
     // Parse message
     let message;
     try {
-      message = BridgeMessage.fromJSON(event.data);
+      message = BridgeMessage.fromJSON(messageData);
     } catch (error) {
       debug.logDrop('message_parse_failed', { 
         error: error.message,
-        rawData: event.data 
+        rawData: messageData 
       });
       return;
     }
