@@ -15,9 +15,14 @@
     <link rel="stylesheet" href="/configurator/configurator.css">
 
     <!-- i18n System -->
-    <script src="/i18n.js?v=2.0.4"></script>
-    <script src="/language-switch.js?v=2.0.4" defer></script>
-    <script src="/iframe-language-bridge.js?v=2.0.4" defer></script>
+    <script src="/i18n.js?v=2.0.5"></script>
+    <script src="/language-switch.js?v=2.0.5" defer></script>
+    
+    <!-- Bridge Communication System v2.0 -->
+    <script src="/lib/bridge-schema.js?v=2.0.0"></script>
+    <script src="/lib/bridge-debug.js?v=2.0.0"></script>
+    <script src="/lib/bridge-debug-panel.js?v=2.0.0" defer></script>
+    <script src="/iframe-language-bridge-v2.js?v=2.0.0" defer></script>
     
     <!-- CRITICAL: Test if JavaScript runs at all -->
     <script>
@@ -628,76 +633,16 @@
     });
     </script>
     
-    <!-- Direct iframe message relay -->
+    <!-- Legacy RELAY Handler - Now handled by Bridge v2.0 -->
     <script>
-    console.log('🔧 [RELAY] Setting up direct iframe message relay');
-    
-    window.addEventListener('message', function(event) {
-        console.log('🔔 [RELAY] Message received:', {
-            origin: event.origin,
-            data: event.data
-        });
-        
-        // Check if this is from the configurator iframe
-        if (event.origin === 'https://unbreak-3-d-konfigurator.vercel.app') {
-            console.log('✅ [RELAY] Message from configurator iframe!');
-            
-            // Handle different message types
-            const data = event.data;
-            
-            // Extract config from various message shapes
-            const cfg = data.config ?? data.payload?.config ?? data.payload ?? null;
-            const reason = data.reason ?? data.payload?.reason ?? data.action ?? null;
-            const messageType = data.type ?? 'unknown';
-            
-            console.log('📦 [RELAY] Extracted:', { messageType, reason, hasConfig: !!cfg });
-            
-            // TRIGGER: Add to Cart
-            if (reason === 'add_to_cart' && cfg) {
-                console.log('🛒 [RELAY] ADD TO CART detected! Starting checkout...');
-                
-                // Call checkout directly with config
-                if (window.UnbreakCheckout?.createCheckoutSession) {
-                    console.log('🔧 [RELAY] Calling UnbreakCheckout.createCheckoutSession');
-                    
-                    window.UnbreakCheckout.createCheckoutSession(cfg)
-                        .then(url => {
-                            console.log('✅ [RELAY] Checkout URL received, redirecting:', url);
-                            window.location.href = url;
-                        })
-                        .catch(err => {
-                            console.error('❌ [RELAY] Checkout failed:', err);
-                            alert('Checkout-Fehler: ' + err.message);
-                        });
-                } else {
-                    console.error('❌ [RELAY] UnbreakCheckout.createCheckoutSession not available!');
-                    alert('Checkout-System nicht geladen. Bitte Seite neu laden.');
-                }
-                return;
-            }
-                return;
-            }
-            
-            // Legacy: If message has a payload with config data
-            if (data.payload && (data.payload.product_name || data.payload.product_variant || data.payload.colors)) {
-                console.log('📦 [RELAY] Found config in payload, dispatching...');
-                
-                window.postMessage({
-                    type: 'checkout_configuration',
-                    ...data.payload
-                }, window.location.origin);
-                
-                console.log('✅ [RELAY] Config from payload relayed');
-            }
-            // Legacy: If data itself contains product config
-            else if (data.product_name || data.product_variant || data.colors) {
-                console.log('📦 [RELAY] Found config data in root, dispatching...');
-                
-                window.postMessage({
-                    type: 'checkout_configuration',
-                    ...data
-                }, window.location.origin);
-                
+    // NOTE: This is now handled by iframe-language-bridge-v2.js
+    // Keeping minimal fallback for old iframe format during migration
+    console.log('🔧 [LEGACY_RELAY] Loaded (Bridge v2.0 handles most cases)');
+    </script>
+
+</body>
+
+</html>
                 console.log('✅ [RELAY] Config relayed to checkout.js');
             }
             // Special handling for error messages that might contain config

@@ -1,0 +1,212 @@
+/**
+ * UNBREAK ONE - Bridge Message Schema v1.0
+ * 
+ * Verbindliches Contract für iframe↔parent Kommunikation
+ * 
+ * @version 1.0.0
+ * @since 2026-01-09
+ */
+
+(function() {
+  'use strict';
+
+  const SCHEMA_VERSION = '1.0';
+
+  /**
+   * Valid event types
+   */
+  const EventTypes = {
+    // Parent → iframe
+    PARENT_HELLO: 'UNBREAK_PARENT_HELLO',
+    SET_LOCALE: 'UNBREAK_SET_LOCALE',
+    GET_CONFIG: 'UNBREAK_GET_CONFIG',
+    
+    // iframe → Parent
+    IFRAME_READY: 'UNBREAK_IFRAME_READY',
+    ACK: 'UNBREAK_ACK',
+    CONFIG_CHANGED: 'UNBREAK_CONFIG_CHANGED',
+    ADD_TO_CART: 'UNBREAK_ADD_TO_CART',
+    RESET_VIEW: 'UNBREAK_RESET_VIEW',
+    ERROR: 'UNBREAK_ERROR',
+  };
+
+  /**
+   * Message structure
+   */
+  class BridgeMessage {
+    constructor(event, payload = {}, options = {}) {
+      this.event = event;
+      this.schemaVersion = SCHEMA_VERSION;
+      this.correlationId = options.correlationId || this.generateCorrelationId();
+      this.timestamp = new Date().toISOString();
+      this.payload = payload;
+      
+      // Optional metadata
+      if (options.replyTo) this.replyTo = options.replyTo;
+      if (options.error) this.error = options.error;
+    }
+
+    generateCorrelationId() {
+      return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    }
+
+    toJSON() {
+      return {
+        event: this.event,
+        schemaVersion: this.schemaVersion,
+        correlationId: this.correlationId,
+        timestamp: this.timestamp,
+        payload: this.payload,
+        ...(this.replyTo && { replyTo: this.replyTo }),
+        ...(this.error && { error: this.error })
+      };
+    }
+
+    static fromJSON(data) {
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid message data');
+      }
+
+      const msg = new BridgeMessage(data.event, data.payload, {
+        correlationId: data.correlationId
+      });
+
+      msg.schemaVersion = data.schemaVersion || '0.0'; // Legacy support
+      msg.timestamp = data.timestamp;
+      if (data.replyTo) msg.replyTo = data.replyTo;
+      if (data.error) msg.error = data.error;
+
+      return msg;
+    }
+
+    validate() {
+      const errors = [];
+
+      // Check required fields
+      if (!this.event) errors.push('Missing required field: event');
+      if (!this.schemaVersion) errors.push('Missing required field: schemaVersion');
+      if (!this.correlationId) errors.push('Missing required field: correlationId');
+      if (!this.timestamp) errors.push('Missing required field: timestamp');
+
+      // Check event type
+      const validEvents = Object.values(EventTypes);
+      if (!validEvents.includes(this.event)) {
+        errors.push(`Invalid event type: ${this.event} (must be one of: ${validEvents.join(', ')})`);
+      }
+
+      // Check schema version
+      if (this.schemaVersion !== SCHEMA_VERSION) {
+        errors.push(`Schema version mismatch: expected ${SCHEMA_VERSION}, got ${this.schemaVersion}`);
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors: errors
+      };
+    }
+  }
+
+  /**
+   * Origin validation
+   */
+  const AllowedOrigins = {
+    PRODUCTION: [
+      'https://unbreak-3-d-konfigurator.vercel.app',
+      'https://unbreak-one.vercel.app',
+    ],
+    
+    DEVELOPMENT: [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://127.0.0.1:3000',
+    ],
+    
+    // Vercel preview deployments
+    VERCEL_PREVIEW_PATTERN: /^https:\/\/unbreak-[a-z0-9-]+\.vercel\.app$/,
+  };
+
+  /**
+   * Check if origin is allowed
+   */
+  function isOriginAllowed(origin) {
+    // Exact match
+    const allAllowed = [
+      ...AllowedOrigins.PRODUCTION,
+      ...AllowedOrigins.DEVELOPMENT
+    ];
+
+    if (allAllowed.includes(origin)) {
+      return true;
+    }
+
+    // Pattern match for Vercel previews
+    if (AllowedOrigins.VERCEL_PREVIEW_PATTERN.test(origin)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Payload schemas for each event type
+   */
+  const PayloadSchemas = {
+    [EventTypes.PARENT_HELLO]: {
+      locale: 'string',
+      parentVersion: 'string',
+      supportedSchemaVersion: 'string',
+    },
+
+    [EventTypes.IFRAME_READY]: {
+      iframeVersion: 'string',
+      supportedSchemaVersion: 'string',
+      supportedLocales: 'array',
+    },
+
+    [EventTypes.ACK]: {
+      acknowledges: 'string', // correlationId of message being acknowledged
+      status: 'string', // 'success' | 'error'
+      message: 'string?',
+    },
+
+    [EventTypes.SET_LOCALE]: {
+      locale: 'string', // 'de' | 'en'
+    },
+
+    [EventTypes.CONFIG_CHANGED]: {
+      variant: 'string', // 'glass_holder' | 'bottle_holder'
+      colors: 'object',
+      finish: 'string',
+      quantity: 'number',
+    },
+
+    [EventTypes.ADD_TO_CART]: {
+      variant: 'string',
+      sku: 'string',
+      colors: 'object',
+      finish: 'string',
+      quantity: 'number',
+      pricing: 'object?',
+      locale: 'string',
+    },
+
+    [EventTypes.ERROR]: {
+      code: 'string',
+      message: 'string',
+      details: 'object?',
+    },
+  };
+
+  // Export to global scope
+  window.UnbreakBridge = {
+    SCHEMA_VERSION,
+    EventTypes,
+    AllowedOrigins,
+    BridgeMessage,
+    isOriginAllowed,
+    PayloadSchemas,
+  };
+
+  console.log('[BRIDGE_SCHEMA] v' + SCHEMA_VERSION + ' loaded');
+
+})();
