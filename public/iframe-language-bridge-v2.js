@@ -93,8 +93,18 @@
     }
 
     // Verify message source
-    if (iframe && event.source !== iframe.contentWindow) {
-      debug.logDrop('source_mismatch', {});
+    // Allow messages from:
+    // 1. iframe (production)
+    // 2. Same origin (test/debug mode)
+    const isFromIframe = iframe && event.source === iframe.contentWindow;
+    const isFromSameOrigin = event.origin === window.location.origin;
+    
+    if (!isFromIframe && !isFromSameOrigin) {
+      debug.logDrop('source_mismatch', { 
+        isFromIframe,
+        isFromSameOrigin,
+        source: event.source?.location?.href || 'unknown'
+      });
       return;
     }
 
