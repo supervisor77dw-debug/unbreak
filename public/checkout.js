@@ -519,44 +519,9 @@ function initConfiguratorListener() {
     return;
   }
   
-  window.addEventListener('message', (event) => {
-    console.log('📨 [MESSAGE] Received:', {
-      origin: event.origin,
-      type: event.data?.type,
-      data: event.data
-    });
-    
-    // Security: Check origin (adjust for your configurator domain)
-    const allowedOrigins = [
-      'https://unbreak-3-d-konfigurator.vercel.app',
-      window.location.origin,
-    ];
-    
-    if (!allowedOrigins.includes(event.origin)) {
-      console.warn('⚠️ [MESSAGE] Blocked - unknown origin:', event.origin);
-      console.log('⚠️ [MESSAGE] Allowed origins are:', allowedOrigins);
-      console.log('⚠️ [MESSAGE] Full event data:', event.data);
-      return; // Ignore messages from unknown origins
-    }
-    
-    console.log('✅ [MESSAGE] Origin allowed, processing message');
-    
-    // Handle config updates from configurator
-    // NOTE: ConfiguratorBridge now handles all config updates - this is legacy fallback
-    if (event.data.type === 'configChanged' || event.data.type === 'checkout_configuration') {
-      console.log('📦 [CONFIG] configChanged received (handled by ConfiguratorBridge)');
-      
-      // Bridge validates and stores - we just log
-      if (window.UnbreakTrace) {
-        window.UnbreakTrace.log('POSTMESSAGE_CONFIG_CHANGED', {
-          type: event.data.type,
-          hasConfig: !!event.data.config
-        });
-      }
-    }
-  });
-  
-  console.log('✅ [INIT] postMessage listener attached');
+  // REMOVED: Legacy postMessage listener - now handled by Bridge v2.0 (iframe-language-bridge-v2.js)
+  // Bridge v2.0 handles all iframe communication and calls UnbreakCheckout.createCheckoutFromConfig()
+  console.log('✅ [INIT] checkout.js loaded (Bridge v2.0 handles iframe messages)');
   window.UnbreakCheckoutState.initialized = true;
 }
 
