@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Script from 'next/script';
 
 export default function Header() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [scriptsLoaded, setScriptsLoaded] = useState(false);
 
   // Close menu on route change
   useEffect(() => {
@@ -27,7 +29,19 @@ export default function Header() {
   };
 
   return (
-    <header>
+    <>
+      {/* i18n Scripts - Load on all pages */}
+      <Script
+        src="/i18n.js?v=2.0.4"
+        strategy="afterInteractive"
+        onLoad={() => setScriptsLoaded(true)}
+      />
+      <Script
+        src="/language-switch.js?v=2.0.4"
+        strategy="afterInteractive"
+      />
+
+      <header>
       <nav>
         <div className="logo">
           <a href="/index.html" className="logo-link">
@@ -63,8 +77,11 @@ export default function Header() {
           <li className="mobile-only"><a href="/agb.html" data-page="agb">AGB</a></li>
 
           <li><a href="/shop" className="btn btn-nav">Jetzt kaufen</a></li>
+          
+          {/* Language Switch will be injected here by language-switch.js */}
         </ul>
       </nav>
     </header>
+    </>
   );
 }
