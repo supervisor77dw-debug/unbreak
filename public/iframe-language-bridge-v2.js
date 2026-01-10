@@ -184,8 +184,18 @@
     debug.logValidation(message, validation);
 
     if (!validation.valid) {
+      // Log detailed errors for debugging
+      console.warn('[BRIDGE] ⚠️ Message validation failed:', {
+        event: message.event,
+        errors: validation.errors,
+        payload: message.payload,
+        rawData: messageData
+      });
+      
       debug.logDrop('message_validation_failed', { 
-        errors: validation.errors 
+        event: message.event,
+        errors: validation.errors,
+        payload: message.payload
       });
       return;
     }
