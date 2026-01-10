@@ -17,46 +17,11 @@
     <!-- i18n System -->
     <script src="/i18n.js?v=2.0.5"></script>
     <script src="/language-switch.js?v=2.0.5" defer></script>
-    
-    <!-- CRITICAL: Test if JavaScript runs at all -->
-    <script>
-        console.log('🧪 [TEST] JavaScript IS executing!');
-        console.log('🧪 [TEST] Window object exists:', typeof window);
-        console.log('🧪 [TEST] Document ready state:', document.readyState);
-        
-        // Show deployment info for cache busting verification
-        console.log('🔍 [DEPLOY] Built at:', document.currentScript?.getAttribute('data-build-time') || 'unknown');
-        console.log('🔍 [DEPLOY] Commit:', '{{BUILD_HASH}}' || 'local');
-    </script>
-    
-    <!-- Build Info Footer (for cache verification) -->
-    <script>
-        window.UNBREAK_BUILD_INFO = {
-            timestamp: new Date().toISOString(),
-            commit: 'bc16910',
-            deployed: true
-        };
-    </script>
 </head>
 
 <body>
-
-    <!-- DEBUG BAR (visible when ?debug=1) -->
-    <div id="debug-bar" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: #1e293b; color: #fff; padding: 8px 12px; z-index: 999999; font-family: monospace; font-size: 11px; border-bottom: 2px solid #0891b2;">
-        <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
-            <strong style="color: #0891b2;">🔧 DEBUG MODE</strong>
-            <span id="debug-iframe-loaded">iframe: <span style="color: #ef4444;">NO</span></span>
-            <span id="debug-ready-received">ready: <span style="color: #ef4444;">NO</span></span>
-            <span id="debug-last-config">lastConfig: <span style="color: #94a3b8;">none</span></span>
-            <span id="debug-button-visible">button: <span style="color: #ef4444;">NO</span></span>
-            <span id="debug-scroll">scroll: <span style="color: #94a3b8;">-</span></span>
-            <button id="dump-diagnostics" style="background: #0891b2; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Dump Diagnostics</button>
-        </div>
-    </div>
-
     <!-- Header / Navigation -->
-    <header style="margin-top: 0;">
-    <!-- Adjust for debug bar if active -->
+    <header>
         <nav>
             <div class="logo">
                 <a href="index.html" class="logo-link">
@@ -122,13 +87,6 @@
                                 <button id="reload-button" class="reload-button">Neu laden</button>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Debug Mode: Event Log (?debug=1 in URL) -->
-                    <div id="debug-log" class="debug-log" style="display: none;">
-                        <h4>Event Log</h4>
-                        <div id="debug-events" class="debug-events"></div>
-                        <button id="debug-clear" class="debug-clear-btn">Clear Log</button>
                     </div>
                 </div>
             </div>
@@ -208,10 +166,6 @@
     <!-- Footer -->
     <footer>
         <div class="container">
-            <p style="margin: 0.5rem 0; color: #666; font-size: 11px; font-family: monospace;">
-                🔧 Build: <strong>bc16910</strong> • Deployed: <span id="deploy-time"></span> •
-                <a href="#" onclick="location.reload(true); return false;" style="color: #0891b2; text-decoration: underline;">Hard Refresh</a>
-            </p>
             <p>&copy; 2024 UNBREAK ONE. Alle Rechte vorbehalten.</p>
             <p>
                 <a href="impressum.html" data-i18n="footer.imprint">Impressum</a> |
@@ -219,9 +173,6 @@
                 <a href="agb.html" data-i18n="footer.terms">AGB</a>
             </p>
         </div>
-        <script>
-            document.getElementById('deploy-time').textContent = new Date().toLocaleTimeString('de-DE');
-        </script>
     </footer>
 
     <!-- Scripts - CRITICAL ORDER: Bridge MUST load before configurator-new.js -->
@@ -595,71 +546,6 @@
             });
         }
     })();
-    </script>
-    
-    <!-- DEBUG: Button visibility check -->
-    <script>
-    console.log('🔍 [DEBUG] Checking button visibility...');
-    window.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-            const btn = document.getElementById('configurator-buy-now-btn');
-            if (btn) {
-                const rect = btn.getBoundingClientRect();
-                const isVisible = rect.top < window.innerHeight;
-                console.log('✅ [DEBUG] Button exists!');
-                console.log('📏 [DEBUG] Button position:', {
-                    top: rect.top,
-                    bottom: rect.bottom,
-                    windowHeight: window.innerHeight,
-                    isVisibleInViewport: isVisible
-                });
-                console.log('🎨 [DEBUG] Button computed styles:', {
-                    display: window.getComputedStyle(btn).display,
-                    visibility: window.getComputedStyle(btn).visibility,
-                    opacity: window.getComputedStyle(btn).opacity,
-                    zIndex: window.getComputedStyle(btn).zIndex
-                });
-                
-                // Add visible marker above button
-                const marker = document.createElement('div');
-                marker.style.cssText = `
-                    position: fixed;
-                    top: 10px;
-                    right: 10px;
-                    background: #10b981;
-                    color: white;
-                    padding: 10px 20px;
-                    border-radius: 8px;
-                    font-weight: bold;
-                    z-index: 99999;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                `;
-                marker.textContent = '✅ Button ist im DOM!';
-                document.body.appendChild(marker);
-                
-                if (!isVisible) {
-                    marker.textContent = '⚠️ Button existiert, aber nicht im Viewport - bitte scrollen!';
-                    marker.style.background = '#f59e0b';
-                }
-            } else {
-                console.error('❌ [DEBUG] Button NOT found in DOM!');
-                const errorMarker = document.createElement('div');
-                errorMarker.style.cssText = `
-                    position: fixed;
-                    top: 10px;
-                    right: 10px;
-                    background: #ef4444;
-                    color: white;
-                    padding: 10px 20px;
-                    border-radius: 8px;
-                    font-weight: bold;
-                    z-index: 99999;
-                `;
-                errorMarker.textContent = '❌ Button NICHT im DOM!';
-                document.body.appendChild(errorMarker);
-            }
-        }, 1000);
-    });
     </script>
     
     <!-- Legacy RELAY Handler removed - Now fully handled by Bridge v2.0 -->
