@@ -238,6 +238,11 @@
         handleIframeReady(message);
         break;
 
+      case EventTypes.GET_LANG:
+        debug.logHandlerMatched('handleGetLang', message);
+        handleGetLang(message);
+        break;
+
       case EventTypes.ACK:
         debug.logHandlerMatched('handleAck', message);
         handleAck(message);
@@ -295,6 +300,21 @@
     });
 
     handshakeComplete = true;
+  }
+
+  /**
+   * Handler: Get Language
+   * iframe requests current language - respond with SET_LOCALE
+   */
+  function handleGetLang(message) {
+    console.log('[BRIDGE] 🌐 iframe requests language, sending:', currentLang);
+    
+    // Respond with current language
+    sendToIframe(EventTypes.SET_LOCALE, {
+      locale: currentLang
+    }, {
+      replyTo: message.correlationId
+    });
   }
 
   /**

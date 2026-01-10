@@ -23,6 +23,7 @@
     
     // iframe → Parent
     IFRAME_READY: 'UNBREAK_IFRAME_READY',
+    GET_LANG: 'UNBREAK_GET_LANG', // iframe requests current language
     ACK: 'UNBREAK_ACK',
     CONFIG_CHANGED: 'UNBREAK_CONFIG_CHANGED',
     ADD_TO_CART: 'UNBREAK_ADD_TO_CART',
@@ -171,6 +172,10 @@
 
     [EventTypes.SET_LOCALE]: {
       locale: 'string', // 'de' | 'en'
+    },
+
+    [EventTypes.GET_LANG]: {
+      // iframe requests current language - no payload required
     },
 
     [EventTypes.CONFIG_CHANGED]: {
