@@ -633,50 +633,9 @@
     });
     </script>
     
-    <!-- Legacy RELAY Handler - Now handled by Bridge v2.0 -->
+    <!-- Legacy RELAY Handler removed - Now fully handled by Bridge v2.0 -->
     <script>
-    // NOTE: This is now handled by iframe-language-bridge-v2.js
-    // Keeping minimal fallback for old iframe format during migration
-    console.log('🔧 [LEGACY_RELAY] Loaded (Bridge v2.0 handles most cases)');
-    </script>
-
-</body>
-
-</html>
-                console.log('✅ [RELAY] Config relayed to checkout.js');
-            }
-            // Special handling for error messages that might contain config
-            else if (data.type === 'UNBREAK_CONFIG_ERROR') {
-                console.log('⚠️ [RELAY] Error message received, checking for config in payload...');
-                
-                // Some iframes send config even in error payload
-                if (data.payload && typeof data.payload === 'object') {
-                    console.log('📦 [RELAY] Payload exists:', data.payload);
-                    
-                    // Try to use default config
-                    const fallbackConfig = {
-                        product_name: 'UNBREAK ONE',
-                        product_variant: 'glass_holder',
-                        colors: { selected: 'petrol' },
-                    };
-                    
-                    console.log('📦 [RELAY] Using fallback config after error');
-                    
-                    window.postMessage({
-                        type: 'checkout_configuration',
-                        ...fallbackConfig
-                    }, window.location.origin);
-                }
-            } else if (cfg) {
-                console.log('ℹ️ [RELAY] Config found but no add_to_cart action, storing in bridge');
-                // Let ConfiguratorBridge handle config updates
-            } else {
-                console.log('ℹ️ [RELAY] No config found in message, ignoring');
-            }
-        }
-    }, true); // Use capture phase to catch before other handlers
-    
-    console.log('✅ [RELAY] Direct relay listener attached');
+    console.log('✅ [BRIDGE] All iframe communication handled by iframe-language-bridge-v2.js');
     </script>
 
 </body>
