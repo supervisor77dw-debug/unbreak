@@ -81,6 +81,45 @@
    * Convert legacy message format to Bridge v2.0 format
    */
   function convertLegacyMessage(data) {
+    // GENERIC: Any message with 'type' instead of 'event'
+    // Convert type → event if message doesn't have 'event' field
+    if (data.type && !data.event) {
+      // Map common type names to event names
+      const typeToEventMap = {
+        'UNBREAK_CONFIG_READY': 'UNBREAK_IFRAME_READY',
+        'configChanged': 'UNBREAK_CONFIG_CHANGED',
+        'addToCart': 'UNBREAK_ADD_TO_CART',
+        'resetView': 'UNBREAK_RESET_VIEW',
+        'error': 'UNBREAK_ERROR',
+        'ready': 'UNBREAK_IFRAME_READY',
+        'langAck': 'UNBREAK_ACK',
+        'languageChanged': 'UNBREAK_ACK',
+      };
+
+      const eventName = typeToEventMap[data.type] || data.type;
+      
+      // Build v2.0 compliant message
+      const converted = {
+        event: eventName,
+        schemaVersion: data.schemaVersion || '1.0',
+        correlationId: data.correlationId || 'legacy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        timestamp: data.timestamp || new Date().toISOString(),
+        payload: data.payload || data.config || data.data || {}
+      };
+
+      // Special handling for specific types
+      if (data.type === 'UNBREAK_CONFIG_READY' || data.type === 'ready') {
+        converted.payload = {
+          iframeVersion: data.version || data.payload?.version || '1.0.0',
+          supportedSchemaVersion: data.supportedSchemaVersion || '1.0',
+          supportedLocales: data.supportedLocales || data.payload?.supportedLocales || ['de', 'en']
+        };
+      }
+
+      console.log('[BRIDGE] 🔄 Generic legacy conversion:', data.type, '→', eventName);
+      return converted;
+    }
+
     // Legacy format: {type: 'configChanged', config: {...}, reason: 'add_to_cart'}
     if (data.type === 'configChanged' && data.reason === 'add_to_cart') {
       const config = data.config || {};
@@ -105,21 +144,6 @@
             basePrice: 4900,
             totalPrice: 4900
           }
-        }
-      };
-    }
-
-    // Legacy READY: {type: 'UNBREAK_CONFIG_READY', version: '...'}
-    if (data.type === 'UNBREAK_CONFIG_READY') {
-      return {
-        event: 'UNBREAK_IFRAME_READY',
-        schemaVersion: '1.0',
-        correlationId: 'legacy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-        timestamp: new Date().toISOString(),
-        payload: {
-          iframeVersion: data.version || '1.0.0',
-          supportedSchemaVersion: '1.0',
-          supportedLocales: ['de', 'en']
         }
       };
     }
