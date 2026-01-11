@@ -202,18 +202,34 @@ export default function Shop({ initialProducts }) {
    * Build configurator URL with language and return URL
    * Now using central utility function
    */
-  function getConfiguratorUrl() {
+  const getConfiguratorUrl = () => {
+    if (typeof window === 'undefined') return '#';
     const currentLang = getCurrentLanguage();
     return buildConfiguratorUrl(currentLang, `${window.location.origin}/shop`);
-  }
+  };
   
   /**
    * Handle configurator click - navigate in same tab
    */
-  const handleConfiguratorClick = createConfiguratorClickHandler(
-    null, // use current language
-    `${typeof window !== 'undefined' ? window.location.origin : ''}/shop`
-  );
+  const handleConfiguratorClick = (e) => {
+    if (e) e.preventDefault();
+    if (typeof window === 'undefined') return;
+    
+    const currentLang = getCurrentLanguage();
+    const returnUrl = `${window.location.origin}/shop`;
+    const configUrl = buildConfiguratorUrl(currentLang, returnUrl);
+    
+    // Debug logging (only in dev/preview)
+    const isDev = process.env.NODE_ENV === 'development' || 
+                  window.location.hostname.includes('vercel.app');
+    
+    if (isDev) {
+      console.log('[NAV] Configurator click -> resolvedUrl=', configUrl);
+      console.log('[NAV] external=true');
+    }
+    
+    window.location.assign(configUrl);
+  };
 
   function handleAddToCart(product) {
     console.log('🛒 [SHOP] handleAddToCart called with:', product);
