@@ -334,6 +334,12 @@
       const BUILD_ID = '2025-01-10T15:30:00Z';
       const BUILD_COMMIT = 'language-fix-v2.2';
       console.info('[PARENT][BUILD]', BUILD_ID, 'commit:', BUILD_COMMIT);
+      
+      // VERIFY: Checkout is loaded and available
+      console.info('[PARENT][CHECKOUT]', {
+        UnbreakCheckout: typeof window.UnbreakCheckout,
+        createFn: typeof window.UnbreakCheckout?.createCheckoutFromConfig
+      });
     </script>
     
     <!-- Bridge Communication System v2.2 (MUST load after checkout.js) -->

@@ -79,8 +79,18 @@
     }
 
     const targetOrigin = CONFIGURATOR_ORIGIN;
-    iframe.contentWindow.postMessage(message.toJSON(), targetOrigin);
+    const payload = message.toJSON();
     
+    // DETAILED MSG_OUT LOG
+    console.info('[PARENT][MSG_OUT]', {
+      event: payload.event,
+      type: payload.type,
+      payload: payload.payload,
+      correlationId: payload.correlationId,
+      targetOrigin
+    });
+    
+    iframe.contentWindow.postMessage(payload, targetOrigin);
     debug.logMessageSent(message, targetOrigin);
   }
 
@@ -285,6 +295,14 @@
     
     // ROBUST: Normalize message type IMMEDIATELY
     const msgType = event.data?.type || event.data?.event;
+    const d = event.data;
+    
+    // DETAILED MSG_IN LOG (compact format)
+    console.info('[PARENT][MSG_IN]', {
+      origin: event.origin,
+      type: msgType,
+      d: d
+    });
     
     console.info('[PARENT][MSG_IN] Raw message received:', {
       origin: event.origin,
@@ -462,6 +480,12 @@
     });
 
     handshakeComplete = true;
+    
+    // CRITICAL: Send language IMMEDIATELY after handshake
+    const lang = getCurrentLanguage();
+    currentLang = lang; // Update cache
+    console.info('[PARENT][READY_ACK] 🌐 Sending language after handshake:', lang);
+    sendLanguageToIframe(lang);
   }
 
   /**
