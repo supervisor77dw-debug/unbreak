@@ -4,6 +4,8 @@
  * GET /api/config-session/[cfgId] - Retrieve session
  * DELETE /api/config-session/[cfgId] - Delete session (cleanup)
  * 
+ * Supports both cfgId and sessionId for backward compatibility
+ * 
  * Response (GET):
  * { lang: "de"|"en", config: object }
  * 
@@ -11,38 +13,45 @@
  * { success: true }
  */
 
-import { handleCors } from '../../../lib/cors-config';
+import { applyCorsHeaders, handlePreflight } from '../../../lib/cors-config';
 import { getSessionStore } from '../../../lib/session-store';
 
 export default async function handler(req, res) {
-  const { cfgId } = req.query;
+  // Support both cfgId and sessionId param names
+  const sessionId = req.query.cfgId || req.query.sessionId;
 
-  // Handle CORS with preflight
-  if (handleCors(req, res)) return;
+  // CORS headers for all responses
+  applyCorsHeaders(req, res, {
+    methods: 'GET, DELETE, OPTIONS',
+    headers: 'Content-Type',
+  });
+  
+  // Handle OPTIONS preflight
+  if (handlePreflight(req, res)) return;
 
-  if (!cfgId) {
-    return res.status(400).json({ error: 'Missing cfgId' });
+  if (!sessionId) {
+    return res.status(400).json({ error: 'Missing sessionId or cfgId' });
   }
 
   const sessionStore = getSessionStore();
 
   // GET - Retrieve session
   if (req.method === 'GET') {
-    const session = sessionStore.get(cfgId);
+    const session = sessionStore.get(sessionId);
 
     if (!session) {
-      console.warn('[CONFIG_SESSION] Session not found:', cfgId);
+      console.warn('[CONFIG_SESSION][GET] Session not found:', sessionId);
       return res.status(404).json({ error: 'Session not found or expired' });
     }
 
     // Check expiry
     if (Date.now() > session.expiresAt) {
-      sessionStore.delete(cfgId);
-      console.warn('[CONFIG_SESSION] Session expired:', cfgId);
+      sessionStore.delete(sessionId);
+      console.warn('[CONFIG_SESSION][GET] Session expired:', sessionId);
       return res.status(404).json({ error: 'Session expired' });
     }
 
-    console.info('[CONFIG_SESSION] Retrieved:', cfgId);
+    console.info('[CONFIG_SESSION][GET] Retrieved:', sessionId);
     
     // Return lang and config (updated key name)
     return res.status(200).json({
@@ -53,10 +62,10 @@ export default async function handler(req, res) {
 
   // DELETE - Cleanup after successful add-to-cart
   if (req.method === 'DELETE') {
-    const existed = sessionStore.has(cfgId);
-    sessionStore.delete(cfgId);
+    const existed = sessionStore.has(sessionId);
+    sessionStore.delete(sessionId);
 
-    console.info('[CONFIG_SESSION] Deleted:', cfgId, existed ? '(existed)' : '(not found)');
+    console.info('[CONFIG_SESSION][DELETE] Deleted:', sessionId, existed ? '(existed)' : '(not found)');
     return res.status(200).json({ success: true, existed });
   }
 

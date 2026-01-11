@@ -18,6 +18,7 @@ export default function Shop({ initialProducts }) {
   const [error, setError] = useState(null);
   const [cartCount, setCartCount] = useState(0);
   const [currentLang, setCurrentLang] = useState('de');
+  const [returnDebug, setReturnDebug] = useState(null); // Debug info for configurator return
   const cart = typeof window !== 'undefined' ? getCart() : null;
 
   useEffect(() => {
@@ -70,56 +71,69 @@ export default function Shop({ initialProducts }) {
     }
   }, [initialProducts]);
 
-  // COMMIT 2: cfgId detection + logging ONLY (no add-to-cart yet)
+  // Configurator Return Handler: sessionId detection
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const cfgId = urlParams.get('cfgId');
+    if (typeof window === 'undefined') return;
     
-    if (cfgId) {
-      console.info('[SHOP] cfgId detected', cfgId);
-      loadConfigSession(cfgId);
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('sessionId');
+    
+    if (sessionId) {
+      console.log('[SHOP][RETURN] sessionId=', sessionId);
+      setReturnDebug({ sessionId, status: 'loading' });
+      loadConfigSession(sessionId);
     }
   }, []);
 
-  async function loadConfigSession(cfgId) {
+  async function loadConfigSession(sessionId) {
     try {
-      // a) Fetch session
-      const response = await fetch(`/api/config-session/${cfgId}`);
+      // 1. Fetch session from API
+      console.log('[SHOP][RETURN] Loading session...');
+      const response = await fetch(`/api/config-session/${sessionId}`);
       
       if (!response.ok) {
-        console.error('[SHOP] config-session not found or expired');
-        // Clean URL on error
+        const errorText = await response.text();
+        console.error('[SHOP][RETURN] Session not found or expired:', errorText);
+        setReturnDebug({ sessionId, status: 'error', error: 'Session not found' });
+        
+        // Show error toast
+        showToast('❌ Konfiguration nicht gefunden', 'error');
+        
+        // Clean URL
         window.history.replaceState({}, '', '/shop');
         return;
       }
       
       const data = await response.json();
-      console.info('[SHOP] session loaded', data);
+      const { lang, config } = data;
       
-      // b) Map payload → cart item
-      const { lang, payload } = data;
+      console.log('[SHOP][RETURN] Session loaded:', { lang, configKeys: Object.keys(config || {}) });
+      setReturnDebug({ sessionId, status: 'loaded', config });
       
-      // Extract SKU/variant from payload (configurator defines this structure)
-      const sku = payload.product_sku || payload.sku || 'UNBREAK-GLAS-01';
-      const variant = payload.variant || payload.variantKey || 'glass_holder';
-      const name = variant === 'bottle_holder' 
-        ? 'UNBREAK ONE Weinglashalter' 
-        : 'UNBREAK ONE Glashalter';
-      
+      // 2. Map config → cart item
       const cartItem = {
-        id: sku,
-        sku: sku,
-        name: name,
-        price: 4900, // 49€
-        variant: variant,
-        config: payload.config || payload, // Full config data
-        configured: true,
+        id: 'glass_configurator',
+        sku: 'glass_configurator',
+        name: lang === 'en' ? 'Glass Holder – Custom' : 'Glashalter – Konfigurator',
+        price: 4900, // 49€ (can be from config later)
         quantity: 1,
+        configured: true,
+        config: config, // Store full config for order processing
+        meta: {
+          source: 'configurator',
+          sessionId: sessionId,
+          colors: config.colors || {},
+          pattern: config.pattern || null,
+        }
       };
       
-      // c) Add to cart
+      console.log('[SHOP][RETURN] Cart item prepared:', cartItem);
+      
+      // 3. Add to cart (NO CHECKOUT)
       if (!cart) {
-        console.error('[SHOP] add-to-cart failed - cart not initialized');
+        console.error('[SHOP][CART] Cart not initialized!');
+        setReturnDebug({ sessionId, status: 'error', error: 'Cart not initialized' });
+        showToast('❌ Warenkorb konnte nicht geladen werden', 'error');
         window.history.replaceState({}, '', '/shop');
         return;
       }
@@ -127,48 +141,64 @@ export default function Shop({ initialProducts }) {
       const success = cart.addItem(cartItem);
       
       if (success) {
-        console.info('[SHOP] add-to-cart ok');
+        const newCount = cart.getItemCount();
+        console.log('[SHOP][CART] Add OK (cartCount=', newCount, ')');
+        setReturnDebug({ sessionId, status: 'success', cartCount: newCount });
+        setCartCount(newCount);
         
-        // d) Clean URL
+        // 4. Clean URL (remove sessionId)
         window.history.replaceState({}, '', '/shop');
         
-        // e) Optional: Delete session (cleanup)
-        fetch(`/api/config-session/${cfgId}`, { method: 'DELETE' })
-          .catch(err => console.warn('[SHOP] cleanup failed:', err));
+        // 5. Delete session (cleanup)
+        fetch(`/api/config-session/${sessionId}`, { method: 'DELETE' })
+          .catch(err => console.warn('[SHOP][RETURN] Cleanup failed:', err));
         
-        // f) User feedback (non-blocking)
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-          position: fixed;
-          top: 80px;
-          right: 20px;
-          background: #059669;
-          color: white;
-          padding: 16px 24px;
-          border-radius: 8px;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-          z-index: 10000;
-          font-family: sans-serif;
-          animation: slideIn 0.3s ease-out;
-        `;
-        notification.textContent = '✓ Konfiguration wurde in den Warenkorb gelegt';
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-          notification.style.opacity = '0';
-          notification.style.transition = 'opacity 0.3s';
-          setTimeout(() => notification.remove(), 300);
-        }, 2500);
+        // 6. Success toast
+        showToast('✓ In den Warenkorb gelegt', 'success');
         
       } else {
-        console.error('[SHOP] add-to-cart failed - cart.addItem returned false');
+        console.error('[SHOP][CART] Add failed - cart.addItem returned false');
+        setReturnDebug({ sessionId, status: 'error', error: 'Add to cart failed' });
+        showToast('❌ Fehler beim Hinzufügen', 'error');
         window.history.replaceState({}, '', '/shop');
       }
       
     } catch (error) {
-      console.error('[SHOP] add-to-cart failed', error);
+      console.error('[SHOP][RETURN] Error:', error);
+      setReturnDebug({ sessionId, status: 'error', error: error.message });
+      showToast('❌ Fehler beim Laden der Konfiguration', 'error');
       window.history.replaceState({}, '', '/shop');
     }
+  }
+  
+  /**
+   * Show toast notification
+   */
+  function showToast(message, type = 'success') {
+    const bgColor = type === 'success' ? '#059669' : '#dc2626';
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: ${bgColor};
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 10000;
+      font-family: sans-serif;
+      font-size: 14px;
+      animation: slideIn 0.3s ease-out;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transition = 'opacity 0.3s';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
   }
 
   async function loadProducts() {
@@ -338,6 +368,51 @@ export default function Shop({ initialProducts }) {
       </Head>
 
       <main className="page-content">
+        
+        {/* Debug Box for Configurator Return (only in dev/preview) */}
+        {returnDebug && (typeof window !== 'undefined' && 
+          (process.env.NODE_ENV === 'development' || window.location.hostname.includes('vercel.app'))) && (
+          <div style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '20px',
+            background: returnDebug.status === 'error' ? '#fef2f2' : returnDebug.status === 'success' ? '#f0fdf4' : '#fffbeb',
+            border: `2px solid ${returnDebug.status === 'error' ? '#dc2626' : returnDebug.status === 'success' ? '#059669' : '#f59e0b'}`,
+            padding: '16px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            zIndex: 9999,
+            maxWidth: '300px',
+            fontSize: '12px',
+            fontFamily: 'monospace'
+          }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#111' }}>
+              🔍 Configurator Return Debug
+            </div>
+            <div style={{ color: '#666' }}>
+              <div><strong>SessionId:</strong> {returnDebug.sessionId?.substring(0, 8)}...</div>
+              <div><strong>Status:</strong> {returnDebug.status}</div>
+              {returnDebug.error && <div style={{ color: '#dc2626' }}><strong>Error:</strong> {returnDebug.error}</div>}
+              {returnDebug.cartCount && <div><strong>Cart Count:</strong> {returnDebug.cartCount}</div>}
+            </div>
+            <button 
+              onClick={() => setReturnDebug(null)}
+              style={{
+                marginTop: '8px',
+                padding: '4px 8px',
+                background: '#666',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '11px'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        )}
+        
         {/* Cart Badge in Header */}
         {cartCount > 0 && (
           <a href="/cart" className="cart-badge-float">
