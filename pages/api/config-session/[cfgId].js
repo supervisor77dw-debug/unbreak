@@ -2,12 +2,10 @@
  * Config Session API - GET/DELETE endpoint
  * 
  * GET /api/config-session/[cfgId] - Retrieve session
- * DELETE /api/config-session/[cfgId] - Delete session (cleanup after add-to-cart)
+ * DELETE /api/config-session/[cfgId] - Delete session (cleanup)
  * 
  * Response (GET):
- * {
- *   cfgId, lang, variantKey, product_sku, config, meta, createdAt, expiresAt
- * }
+ * { lang: "de"|"en", payload: object }
  * 
  * Response (DELETE):
  * { success: true }
@@ -49,8 +47,13 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Session expired' });
     }
 
-    console.info('[CONFIG_SESSION] Retrieved session:', cfgId);
-    return res.status(200).json(session);
+    console.info('[CONFIG_SESSION] Retrieved:', cfgId);
+    
+    // Return only lang and payload (simplified response)
+    return res.status(200).json({
+      lang: session.lang,
+      payload: session.payload
+    });
   }
 
   // DELETE - Cleanup after successful add-to-cart
@@ -58,7 +61,7 @@ export default async function handler(req, res) {
     const existed = sessionStore.has(cfgId);
     sessionStore.delete(cfgId);
 
-    console.info('[CONFIG_SESSION] Deleted session:', cfgId, existed ? '(existed)' : '(not found)');
+    console.info('[CONFIG_SESSION] Deleted:', cfgId, existed ? '(existed)' : '(not found)');
     return res.status(200).json({ success: true, existed });
   }
 

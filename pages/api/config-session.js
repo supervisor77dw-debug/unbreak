@@ -1,20 +1,17 @@
 /**
  * Config Session API - POST endpoint
  * 
- * Stores configurator session for redirect flow
+ * Simplified session storage for configurator → shop flow
  * POST /api/config-session
  * 
  * Request Body:
  * {
  *   lang: 'de' | 'en',
- *   variantKey: 'glass_holder' | 'bottle_holder',
- *   product_sku: 'UNBREAK-GLAS-01' | 'UNBREAK-WEIN-01',
- *   config: { colors, finish, quantity, ... },
- *   meta: { ... }
+ *   payload: object  // Arbitrary config data from configurator
  * }
  * 
  * Response:
- * { cfgId: 'uuid-v4' }
+ * { cfgId: string }
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -22,7 +19,7 @@ import { v4 as uuidv4 } from 'uuid';
 // In-memory storage (for development)
 // PRODUCTION: Replace with Vercel KV, Upstash Redis, or Database
 const sessionStore = new Map();
-const TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const TTL_MS = 45 * 60 * 1000; // 45 minutes (30-60 min range)
 
 // Cleanup expired sessions every 10 minutes
 setInterval(() => {
@@ -50,23 +47,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { lang, variantKey, product_sku, config, meta } = req.body;
+    const { lang, payload } = req.body;
 
     // Validation
     if (!lang || !['de', 'en'].includes(lang)) {
-      return res.status(400).json({ error: 'Invalid language' });
+      return res.status(400).json({ error: 'Invalid or missing lang (must be "de" or "en")' });
     }
 
-    if (!variantKey || !['glass_holder', 'bottle_holder'].includes(variantKey)) {
-      return res.status(400).json({ error: 'Invalid variantKey' });
-    }
-
-    if (!product_sku || !['UNBREAK-GLAS-01', 'UNBREAK-WEIN-01'].includes(product_sku)) {
-      return res.status(400).json({ error: 'Invalid product_sku' });
-    }
-
-    if (!config || typeof config !== 'object') {
-      return res.status(400).json({ error: 'Invalid config' });
+    if (!payload || typeof payload !== 'object') {
+      return res.status(400).json({ error: 'Invalid or missing payload (must be object)' });
     }
 
     // Generate unique session ID
@@ -75,24 +64,19 @@ export default async function handler(req, res) {
 
     // Store session
     const session = {
-      cfgId,
       lang,
-      variantKey,
-      product_sku,
-      config,
-      meta: meta || {},
+      payload,
       createdAt: new Date().toISOString(),
       expiresAt,
     };
 
     sessionStore.set(cfgId, session);
 
-    console.info('[CONFIG_SESSION] Created session:', {
+    console.info('[CONFIG_SESSION] Created:', {
       cfgId,
       lang,
-      variantKey,
-      product_sku,
-      ttl: '2h',
+      payloadKeys: Object.keys(payload),
+      ttl: '45min',
     });
 
     return res.status(201).json({ cfgId });
