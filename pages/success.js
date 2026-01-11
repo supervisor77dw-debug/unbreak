@@ -1,22 +1,120 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { getCart } from '../lib/cart';
 
 export default function Success() {
   const router = useRouter();
-  const { session_id, order_id } = router.query;
+  const { session_id } = router.query;
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (session_id) {
-      // Optional: Fetch order details from backend
-      console.log('✅ Payment successful!');
-      console.log('Session ID:', session_id);
-      console.log('Order ID:', order_id);
-      setLoading(false);
-    }
-  }, [session_id, order_id]);
+    // Add spinner animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
+  useEffect(() => {
+    if (!session_id) return;
+
+    const finalize = async () => {
+      try {
+        const isPreview = window.location.hostname.includes('vercel.app');
+        if (isPreview) {
+          console.log('[SUCCESS] session_id=%s', session_id);
+        }
+
+        // Call finalize API to verify payment and update order
+        const response = await fetch('/api/checkout/finalize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ session_id }),
+        });
+
+        const data = await response.json();
+
+        if (isPreview) {
+          console.log('[SUCCESS] finalize status=%d', response.status);
+          console.log('[SUCCESS] finalize data:', data);
+        }
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Finalize failed');
+        }
+
+        if (data.cleared) {
+          // Clear cart (only after payment verified)
+          const cart = getCart();
+          cart.clear();
+          
+          if (isPreview) {
+            console.log('[SUCCESS] cart cleared');
+          }
+        }
+
+        setOrderData(data.order);
+        setLoading(false);
+
+      } catch (err) {
+        console.error('[SUCCESS] Finalize error:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    finalize();
+  }, [session_id]);
+
+  if (loading) {
+    return (
+      <>
+        <Head>
+          <title>Bestellung wird verarbeitet – UNBREAK ONE</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Head>
+        <div style={styles.container}>
+          <div style={styles.card}>
+            <div style={styles.spinner}></div>
+            <p style={styles.loadingText}>Bestellung wird verarbeitet...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <Head>
+          <title>Fehler – UNBREAK ONE</title>
+          <meta name="robots" content="noindex, nofollow" />
+        </Head>
+        <div style={styles.container}>
+          <div style={styles.card}>
+            <h1 style={styles.title}>Fehler bei der Bestellverarbeitung</h1>
+            <p style={styles.message}>{error}</p>
+            <button 
+              onClick={() => router.push('/shop')}
+              style={styles.primaryButton}
+            >
+              Zurück zum Shop
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -39,10 +137,18 @@ export default function Success() {
             Vielen Dank für Ihre Bestellung. Wir haben eine Bestätigungs-E-Mail an Ihre angegebene Adresse gesendet.
           </p>
 
-          {order_id && (
+          {orderData?.id && (
             <div style={styles.orderInfo}>
               <p style={styles.orderLabel}>Bestellnummer:</p>
-              <p style={styles.orderId}>{order_id}</p>
+              <p style={styles.orderId}>{orderData.id}</p>
+              {orderData.total_amount_cents && (
+                <>
+                  <p style={styles.orderLabel}>Gesamtbetrag:</p>
+                  <p style={styles.orderId}>
+                    €{(orderData.total_amount_cents / 100).toFixed(2)}
+                  </p>
+                </>
+              )}
             </div>
           )}
 
@@ -198,6 +304,19 @@ const styles = {
   support: {
     paddingTop: '20px',
     borderTop: '1px solid #E2E8F0',
+  spinner: {
+    width: '50px',
+    height: '50px',
+    border: '4px solid #E2E8F0',
+    borderTop: '4px solid #0A6C74',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
+    margin: '0 auto 20px',
+  },
+  loadingText: {
+    fontSize: '16px',
+    color: '#4A5568',
+  },
     fontSize: '14px',
     color: '#718096',
   },

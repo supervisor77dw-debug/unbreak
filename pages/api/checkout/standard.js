@@ -328,8 +328,8 @@ export default async function handler(req, res) {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
-      success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/cancel.html`,
+      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cart`,
       
       // SHIPPING: Address collection + rates
       shipping_address_collection: {
@@ -361,6 +361,8 @@ export default async function handler(req, res) {
     // Debug logging (preview only)
     const isPreview = origin.includes('vercel.app');
     if (isPreview) {
+      console.log('[CHECKOUT] success_url=%s', sessionData.success_url.replace('{CHECKOUT_SESSION_ID}', '<session_id>'));
+      console.log('[CHECKOUT] cancel_url=%s', sessionData.cancel_url);
       console.log('[CHECKOUT] mode=%s', sessionData.mode === 'payment' ? 'payment' : sessionData.mode);
       console.log('[CHECKOUT] locale=%s', 'de'); // Default locale
       console.log('[CHECKOUT] items=%s', JSON.stringify(lineItems.map(li => ({
@@ -368,15 +370,17 @@ export default async function handler(req, res) {
         qty: li.quantity,
         priceId: li.price || 'price_data',
       }))));
-      console.log('[CHECKOUT] shipping=%s', shippingOptions.length > 0 ? 'configured' : 'none');
+      console.log('[CHECKOUT] shipping_options_count=%d', shippingOptions.length);
       console.log('[CHECKOUT] automatic_tax=%s', sessionData.automatic_tax?.enabled ? 'enabled' : 'disabled');
+      console.log('[CHECKOUT] metadata.order_id=%s', sessionData.metadata.order_id);
     }
 
     console.log('💳 [Checkout] Stripe session data:', {
       mode: sessionData.mode,
       line_items: sessionData.line_items.length,
       total_items: cartItems.reduce((sum, item) => sum + item.quantity, 0),
-      success_url: sessionData.success_url,
+      success_url: sessionData.success_url.substring(0, 80) + '...',
+      cancel_url: sessionData.cancel_url,
       customer_email: sessionData.customer_email,
       has_shipping: shippingOptions.length > 0,
       automatic_tax: sessionData.automatic_tax?.enabled,
