@@ -1,5 +1,5 @@
 /**
- * UNBREAK ONE - iFrame Communication Bridge v2.1
+ * UNBREAK ONE - iFrame Communication Bridge v2.2
  * 
  * Handles ALL communication with 3D configurator iframe
  * - Language synchronization with retry logic
@@ -7,12 +7,19 @@
  * - Add to Cart events
  * - Handshake & ACK protocol
  * 
- * @version 2.1.0
+ * @version 2.2.0
  * @requires bridge-schema.js
  * @requires bridge-debug.js
  * 
  * @changelog
- * v2.1.0 (2026-01-10):
+ * v2.2.0 (2025-01-10):
+ * - FOCUSED FIX: Language switching reliability
+ * - Robust message type normalization (type || event)
+ * - Enhanced GET_LANG handler with currentLang sync
+ * - iframe ID changed to 'unbreak-configurator-iframe'
+ * - Immediate language change logging on switch events
+ * 
+ * v2.1.0 (2025-01-10):
  * - Added retry logic: Max 10 retries @ 2s timeout
  * - Reduced warn-noise in production mode
  * - Support for multiple ACK formats (LANG_ACK, SET_LOCALE_ACK, SET_LOCALE)
@@ -32,7 +39,7 @@
   const debug = window.UnbreakBridgeDebug;
 
   // Configuration
-  const CONFIGURATOR_IFRAME_ID = 'configurator-iframe';
+  const CONFIGURATOR_IFRAME_ID = 'unbreak-configurator-iframe';
   const CONFIGURATOR_ORIGIN = 'https://unbreak-3-d-konfigurator.vercel.app';
   
   let iframe = null;
@@ -270,13 +277,18 @@
    * Handle incoming messages from iframe
    * 
    * KOMPATIBILITÄT: Akzeptiert BEIDE Felder (type + event)
+   * ROBUSTNESS: Normalisiert type||event VOR der Verarbeitung
    * IMPORTANT: Does NOT return true to avoid Chrome Extension conflicts
    */
   function handleMessage(event) {
     debug.logMessageReceived(event);
     
+    // ROBUST: Normalize message type IMMEDIATELY
+    const msgType = event.data?.type || event.data?.event;
+    
     console.info('[PARENT][MSG_IN] Raw message received:', {
       origin: event.origin,
+      normalizedType: msgType,
       hasType: !!event.data?.type,
       hasEvent: !!event.data?.event,
       type: event.data?.type,
@@ -457,8 +469,18 @@
    * iframe requests current language - respond with SET_LANG
    */
   function handleGetLang(message) {
-    console.log('[BRIDGE] 🌐 iframe requests language, sending:', currentLang);
+    // SYNC: Ensure currentLang is up-to-date from i18n
+    const freshLang = getCurrentLanguage();
+    if (freshLang !== currentLang) {
+      console.warn('[PARENT][GET_LANG] currentLang was stale! Updating:', currentLang, '→', freshLang);
+      currentLang = freshLang;
+    }
     
+    console.info('[PARENT][GET_LANG] 🌐 iframe requests language, responding with:', currentLang, {
+      fromCache: currentLang,
+      fromI18n: freshLang,
+      correlationId: message.correlationId
+    });
     // Respond with current language using new protocol
     sendLanguageToIframe(currentLang);
   }
@@ -694,9 +716,27 @@
     // Listen for language changes from i18n system
     document.addEventListener('languageChanged', function(e) {
       const newLang = e.detail?.language || e.detail?.lang || getCurrentLanguage();
+      const oldLang = currentLang;
       currentLang = newLang;
-      console.log('[LANG] Language switched to:', newLang);
+      
+      console.info('[PARENT][LANG_SWITCH] 🌍 Language switched:', {
+        from: oldLang,
+        to: newLang,
+        eventDetail: e.detail,
+        timestamp: new Date().toISOString()
+      });
+      
       sendLanguageToIframe(newLang);
+      
+      // Wait 1s for ACK, warn if not received
+      const ackCheckTimeout = setTimeout(() => {
+        const hasRecentAck = window.UnbreakBridgeDebug?.lastAckReceived?.lang === newLang;
+        if (!hasRecentAck) {
+          console.warn('[PARENT][LANG_SWITCH] ⚠️ No ACK received within 1s for language:', newLang);
+        } else {
+          console.info('[PARENT][LANG_SWITCH] ✅ ACK confirmed for language:', newLang);
+        }
+      }, 1000);
     });
 
     // AKTIV: Send initial language immediately when iframe loads
