@@ -121,9 +121,12 @@ export default function Shop({ initialProducts }) {
       // 2. Map config → cart item
       const cartItem = {
         id: 'glass_configurator',
+        product_id: 'glass_configurator', // For cart compatibility
         sku: 'glass_configurator',
         name: lang === 'en' ? 'Glass Holder – Custom' : 'Glashalter – Konfigurator',
-        price: 4900, // 49€ (can be from config later)
+        price: 19900, // €199.00 in cents (default configurator price)
+        unit_amount: 19900, // Stripe format: price in cents
+        currency: 'EUR',
         quantity: 1,
         configured: true,
         config: config, // Store full config for order processing

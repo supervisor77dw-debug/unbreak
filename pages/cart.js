@@ -26,6 +26,25 @@ export default function CartPage() {
     return unsubscribe;
   }, []);
 
+  // Debug logging (preview only)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+      const locale = window.i18n?.getCurrentLanguage() || 
+                     document.cookie.match(/unbreakone_lang=([^;]+)/)?.[1] || 
+                     localStorage.getItem('unbreakone_lang') || 
+                     'default';
+      const cookieSource = document.cookie.includes('unbreakone_lang') ? 'cookie' : 
+                          localStorage.getItem('unbreakone_lang') ? 'localStorage' : 'default';
+      
+      console.log('[I18N] locale=%s source=%s', locale, cookieSource);
+      console.log('[CART] items=%d subtotal=%d total=%d', 
+        cartItems.length, 
+        cart.getTotal(), 
+        cart.getTotal()
+      );
+    }
+  }, [cartItems]);
+
   const handleQuantityChange = (productId, newQuantity) => {
     if (cart.updateQuantity(productId, newQuantity)) {
       setCartItems(cart.getItems());
@@ -41,6 +60,11 @@ export default function CartPage() {
     if (cart.isEmpty()) {
       setError('Warenkorb ist leer');
       return;
+    }
+
+    // Debug log (preview only)
+    if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+      console.log('[CHECKOUT] start ok items=%d total=%d', cartItems.length, cart.getTotal());
     }
 
     setLoading(true);
@@ -93,6 +117,12 @@ export default function CartPage() {
   const subtotal = cart.getTotal();
   const shipping = 0; // TODO: calculate shipping
   const total = subtotal + shipping;
+
+  // Defensive checks for NaN
+  const isValidPrice = (val) => Number.isFinite(val) && val >= 0;
+  const safeSubtotal = isValidPrice(subtotal) ? subtotal : 0;
+  const safeShipping = isValidPrice(shipping) ? shipping : 0;
+  const safeTotal = isValidPrice(total) ? total : 0;
 
   if (cartItems.length === 0) {
     return (
@@ -241,11 +271,11 @@ export default function CartPage() {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
           <span>Zwischensumme:</span>
-          <span>€{formatPrice(subtotal)}</span>
+          <span>€{formatPrice(safeSubtotal)}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
           <span>Versand:</span>
-          <span>{shipping === 0 ? 'Kostenlos' : `€${formatPrice(shipping)}`}</span>
+          <span>{safeShipping === 0 ? 'Kostenlos' : `€${formatPrice(safeShipping)}`}</span>
         </div>
         <div style={{ 
           display: 'flex', 
@@ -256,7 +286,7 @@ export default function CartPage() {
           fontWeight: 'bold'
         }}>
           <span>Gesamt:</span>
-          <span>€{formatPrice(total)}</span>
+          <span>€{formatPrice(safeTotal)}</span>
         </div>
       </div>
 

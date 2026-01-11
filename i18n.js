@@ -14,7 +14,7 @@ class I18n {
 
   /**
    * Initialize i18n system
-   * Priority: URL param > localStorage > browser language > default (de)
+   * Priority: URL param > Cookie > localStorage > browser language > default (de)
    */
   async init() {
     // Check URL param first (?lang=en)
@@ -23,17 +23,25 @@ class I18n {
     
     if (urlLang && ['de', 'en'].includes(urlLang)) {
       this.currentLang = urlLang;
-      localStorage.setItem('unbreakone_lang', urlLang);
+      this.saveLocale(urlLang);
     } else {
-      // Check localStorage
-      const savedLang = localStorage.getItem('unbreakone_lang');
-      if (savedLang && ['de', 'en'].includes(savedLang)) {
-        this.currentLang = savedLang;
+      // Check cookie first (survives page transitions, SSR-compatible)
+      const cookieLang = this.getCookie('unbreakone_lang');
+      if (cookieLang && ['de', 'en'].includes(cookieLang)) {
+        this.currentLang = cookieLang;
       } else {
-        // Check browser language as fallback
-        const browserLang = navigator.language.split('-')[0];
-        if (browserLang === 'en') {
-          this.currentLang = 'en';
+        // Check localStorage (fallback)
+        const savedLang = localStorage.getItem('unbreakone_lang');
+        if (savedLang && ['de', 'en'].includes(savedLang)) {
+          this.currentLang = savedLang;
+          this.saveLocale(savedLang); // Sync to cookie
+        } else {
+          // Check browser language as fallback
+          const browserLang = navigator.language.split('-')[0];
+          if (browserLang === 'en') {
+            this.currentLang = 'en';
+          }
+          this.saveLocale(this.currentLang); // Save initial locale
         }
       }
     }
@@ -128,8 +136,10 @@ class I18n {
       }
     }
     
+    // If still not found, return the key itself (better than empty/crash)
     if (value === undefined) {
-      return key; // Return key as fallback
+      console.warn(`[I18N] Missing translation: ${key} (lang=${this.currentLang})`);
+      return key;
     }
     
     return value;
@@ -257,8 +267,8 @@ class I18n {
     
     this.currentLang = lang;
     
-    // Save to localStorage
-    localStorage.setItem('unbreakone_lang', lang);
+    // Save to both cookie and localStorage
+    this.saveLocale(lang);
     
     // Update HTML lang attribute
     document.documentElement.lang = lang;
@@ -272,6 +282,31 @@ class I18n {
     // Dispatch events for language change
     window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
     window.dispatchEvent(new CustomEvent('i18nLanguageChanged', { detail: { lang } }));
+  }
+
+  /**
+   * Save locale to both cookie and localStorage
+   */
+  saveLocale(lang) {
+    // Cookie (max-age 1 year, path /, SameSite=Lax for cross-page persistence)
+    document.cookie = `unbreakone_lang=${lang}; max-age=31536000; path=/; SameSite=Lax`;
+    
+    // localStorage (backup)
+    localStorage.setItem('unbreakone_lang', lang);
+    
+    console.log('[I18N] Saved locale:', lang);
+  }
+
+  /**
+   * Get cookie value by name
+   */
+  getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop().split(';').shift();
+    }
+    return null;
   }
 
   /**
