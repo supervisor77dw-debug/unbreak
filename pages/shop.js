@@ -111,8 +111,9 @@ export default function Shop({ initialProducts }) {
         return;
       }
       
-      const data = await response.json();
-      const { lang, config } = data;
+      const responseData = await response.json();
+      // Handle both old and new response formats
+      const { lang, config } = responseData.data || responseData;
       
       console.log('[SHOP][RETURN] Session loaded:', { lang, configKeys: Object.keys(config || {}) });
       setReturnDebug({ sessionId, status: 'loaded', config });

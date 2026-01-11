@@ -17,7 +17,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { applyCorsHeaders, handlePreflight } from '../../lib/cors-config';
-import { getSessionStore, getTTL } from '../../lib/session-store';
+import { saveSession, getTTL } from '../../lib/session-store';
 
 export default async function handler(req, res) {
   // CRITICAL: Apply CORS headers to ALL responses (including errors)
@@ -48,32 +48,35 @@ export default async function handler(req, res) {
 
     // Use provided sessionId or generate new one
     const finalSessionId = sessionId || uuidv4();
-    const sessionStore = getSessionStore();
     const ttl = getTTL();
     const expiresAt = Date.now() + ttl;
 
-    // Store session
+    // Store session in database
     const session = {
-      lang: lang || 'de',           // Default to DE
-      config,                        // Store as 'config' not 'payload'
+      lang: lang || 'de',
+      config,
       createdAt: new Date().toISOString(),
       expiresAt,
     };
 
-    sessionStore.set(finalSessionId, session);
+    const success = await saveSession(finalSessionId, session);
+    
+    if (!success) {
+      console.error('[API][CONFIG_SESSION][POST] Failed to save session');
+      return res.status(500).json({ error: 'Failed to save session' });
+    }
 
-    console.info('[CONFIG_SESSION] Created:', {
-      sessionId: finalSessionId,
+    console.info('[API][CONFIG_SESSION][POST] Saved sessionId=', finalSessionId, {
       lang: session.lang,
       configKeys: Object.keys(config),
-      ttl: '45min',
+      ttl: '2h',
       origin: req.headers.origin || 'unknown',
     });
 
     return res.status(201).json({ ok: true, sessionId: finalSessionId });
 
   } catch (error) {
-    console.error('[CONFIG_SESSION] Error:', error);
+    console.error('[API][CONFIG_SESSION][POST] Error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

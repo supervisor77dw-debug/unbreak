@@ -5,16 +5,17 @@
  * DELETE /api/config-session/[cfgId] - Delete session (cleanup)
  * 
  * Supports both cfgId and sessionId for backward compatibility
+ * Now uses Supabase for persistent storage (not in-memory)
  * 
  * Response (GET):
- * { lang: "de"|"en", config: object }
+ * { ok: true, data: { lang: "de"|"en", config: object } }
  * 
  * Response (DELETE):
- * { success: true }
+ * { ok: true, existed: boolean }
  */
 
 import { applyCorsHeaders, handlePreflight } from '../../../lib/cors-config';
-import { getSessionStore } from '../../../lib/session-store';
+import { getSession, deleteSession, hasSession } from '../../../lib/session-store';
 
 export default async function handler(req, res) {
   // Support both cfgId and sessionId param names
@@ -33,40 +34,43 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing sessionId or cfgId' });
   }
 
-  const sessionStore = getSessionStore();
-
   // GET - Retrieve session
   if (req.method === 'GET') {
-    const session = sessionStore.get(sessionId);
+    console.log('[API][CONFIG_SESSION][GET] Lookup sessionId=', sessionId);
+    
+    const session = await getSession(sessionId);
 
     if (!session) {
-      console.warn('[CONFIG_SESSION][GET] Session not found:', sessionId);
+      console.warn('[API][CONFIG_SESSION][GET] Not found: sessionId=', sessionId);
       return res.status(404).json({ error: 'Session not found or expired' });
     }
 
-    // Check expiry
+    // Check expiry (already filtered in getSession, but double-check)
     if (Date.now() > session.expiresAt) {
-      sessionStore.delete(sessionId);
-      console.warn('[CONFIG_SESSION][GET] Session expired:', sessionId);
+      await deleteSession(sessionId);
+      console.warn('[API][CONFIG_SESSION][GET] Expired: sessionId=', sessionId);
       return res.status(404).json({ error: 'Session expired' });
     }
 
-    console.info('[CONFIG_SESSION][GET] Retrieved:', sessionId);
+    console.info('[API][CONFIG_SESSION][GET] Found sessionId=', sessionId, 'found=true');
     
-    // Return lang and config (updated key name)
+    // Return in consistent format
     return res.status(200).json({
-      lang: session.lang,
-      config: session.config || session.payload  // Support both old and new
+      ok: true,
+      data: {
+        lang: session.lang,
+        config: session.config,
+      }
     });
   }
 
   // DELETE - Cleanup after successful add-to-cart
   if (req.method === 'DELETE') {
-    const existed = sessionStore.has(sessionId);
-    sessionStore.delete(sessionId);
+    const existed = await hasSession(sessionId);
+    const success = await deleteSession(sessionId);
 
-    console.info('[CONFIG_SESSION][DELETE] Deleted:', sessionId, existed ? '(existed)' : '(not found)');
-    return res.status(200).json({ success: true, existed });
+    console.info('[API][CONFIG_SESSION][DELETE] sessionId=', sessionId, existed ? '(existed)' : '(not found)');
+    return res.status(200).json({ ok: true, existed, success });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
