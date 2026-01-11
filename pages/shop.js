@@ -203,7 +203,10 @@ export default function Shop({ initialProducts }) {
    * Now using central utility function
    */
   const getConfiguratorUrl = () => {
-    if (typeof window === 'undefined') return '#';
+    // SSR-safe: Return placeholder during server-side rendering
+    if (typeof window === 'undefined') {
+      return buildConfiguratorUrl('de', 'https://unbreak-one.vercel.app/shop');
+    }
     const currentLang = getCurrentLanguage();
     return buildConfiguratorUrl(currentLang, `${window.location.origin}/shop`);
   };
