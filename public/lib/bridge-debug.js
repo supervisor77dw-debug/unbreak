@@ -33,6 +33,13 @@
       this.lastDropReason = null;
       this.lastCorrelationId = null;
       
+      // Language tracking
+      this.lastLangSent = null;
+      this.lastAckReceived = null;
+      this.langRetries = 0;
+      this.lastOrigin = null;
+      this.lastMessageType = null;
+      
       // Check URL params for debug mode
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('debug') === '1' || localStorage.getItem('unbreak_bridge_debug') === 'true') {
@@ -269,6 +276,12 @@
         lastCheckoutResponse: this.lastCheckoutResponse,
         lastDropReason: this.lastDropReason,
         lastCorrelationId: this.lastCorrelationId,
+        // Language tracking
+        lastLangSent: this.lastLangSent,
+        lastAckReceived: this.lastAckReceived,
+        retries: this.langRetries,
+        lastOrigin: this.lastOrigin,
+        lastMessageType: this.lastMessageType,
         recentLogs: this.logs.slice(-20),
         recentDrops: this.drops.slice(-10),
         timestamp: new Date().toISOString(),

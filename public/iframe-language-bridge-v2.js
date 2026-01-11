@@ -1,15 +1,22 @@
 /**
- * UNBREAK ONE - iFrame Communication Bridge v2.0
+ * UNBREAK ONE - iFrame Communication Bridge v2.1
  * 
  * Handles ALL communication with 3D configurator iframe
- * - Language synchronization
+ * - Language synchronization with retry logic
  * - Config updates
  * - Add to Cart events
  * - Handshake & ACK protocol
  * 
- * @version 2.0.0
+ * @version 2.1.0
  * @requires bridge-schema.js
  * @requires bridge-debug.js
+ * 
+ * @changelog
+ * v2.1.0 (2026-01-10):
+ * - Added retry logic: Max 10 retries @ 2s timeout
+ * - Reduced warn-noise in production mode
+ * - Support for multiple ACK formats (LANG_ACK, SET_LOCALE_ACK, SET_LOCALE)
+ * - Enhanced debug tracking (lastLangSent, lastAckReceived, retries)
  */
 
 (function() {
@@ -73,14 +80,24 @@
   /**
    * ACK tracking for language changes
    */
-  const pendingAcks = new Map(); // correlationId → {lang, sentAt, timeoutId}
-  const ACK_TIMEOUT_MS = 3000; // 3 seconds
+  const pendingAcks = new Map(); // correlationId → {lang, sentAt, timeoutId, retries}
+  const ACK_TIMEOUT_MS = 2000; // 2 seconds (war 3000)
+  const MAX_RETRIES = 10; // Max retries (=> max ~20s)
+  
+  /**
+   * Check if in production mode (no debug enabled)
+   */
+  function isProduction() {
+    return !window.__UNBREAK_BRIDGE_DEBUG__ && 
+           !localStorage.getItem('unbreak_bridge_debug') &&
+           !new URLSearchParams(window.location.search).get('debug');
+  }
 
   /**
-   * Send language to iframe with ACK tracking
+   * Send language to iframe with ACK tracking and retry logic
    */
-  function sendLanguageToIframe(lang) {
-    console.info('[LANG][PARENT→IFRAME]', lang);
+  function sendLanguageToIframe(lang, retryCount = 0) {
+    console.info('[LANG][PARENT→IFRAME]', lang, retryCount > 0 ? `(retry ${retryCount}/${MAX_RETRIES})` : '');
     
     const message = new BridgeMessage(EventTypes.SET_LANG, { lang });
     const validation = message.validate();
@@ -98,19 +115,51 @@
 
     iframe.contentWindow.postMessage(message.toJSON(), CONFIGURATOR_ORIGIN);
     debug.logMessageSent(message, CONFIGURATOR_ORIGIN);
+    
+    // Update debug tracking
+    if (window.UnbreakBridgeDebug) {
+      window.UnbreakBridgeDebug.lastLangSent = {
+        lang,
+        correlationId: message.correlationId,
+        timestamp: new Date().toISOString(),
+        retryCount
+      };
+      window.UnbreakBridgeDebug.langRetries = retryCount;
+    }
 
-    // Track pending ACK
+    // Track pending ACK with retry logic
     const timeoutId = setTimeout(() => {
       if (pendingAcks.has(message.correlationId)) {
-        console.warn('[LANG][NO_ACK] iframe did not confirm language:', lang);
-        pendingAcks.delete(message.correlationId);
+        const pending = pendingAcks.get(message.correlationId);
+        
+        // Check if we should retry
+        if (retryCount < MAX_RETRIES) {
+          // Retry: Send again
+          if (isProduction()) {
+            console.log('[LANG][RETRY]', lang, `attempt ${retryCount + 1}/${MAX_RETRIES}`);
+          } else {
+            console.warn('[LANG][RETRY]', lang, `attempt ${retryCount + 1}/${MAX_RETRIES}`);
+          }
+          
+          pendingAcks.delete(message.correlationId);
+          sendLanguageToIframe(lang, retryCount + 1);
+        } else {
+          // Max retries reached
+          if (isProduction()) {
+            console.log('[LANG][NO_ACK] Max retries reached for language:', lang);
+          } else {
+            console.warn('[LANG][NO_ACK] Max retries reached for language:', lang);
+          }
+          pendingAcks.delete(message.correlationId);
+        }
       }
     }, ACK_TIMEOUT_MS);
 
     pendingAcks.set(message.correlationId, {
       lang,
       sentAt: Date.now(),
-      timeoutId
+      timeoutId,
+      retries: retryCount
     });
   }
 
@@ -193,6 +242,9 @@
 
   /**
    * Handle incoming messages from iframe
+   * 
+   * IMPORTANT: Does NOT return true to avoid Chrome Extension conflicts
+   * ("A listener indicated an asynchronous response..." error)
    */
   function handleMessage(event) {
     debug.logMessageReceived(event);
@@ -203,7 +255,7 @@
         origin: event.origin,
         expected: CONFIGURATOR_ORIGIN 
       });
-      return;
+      return false; // Explicitly return false
     }
 
     // Verify message source
@@ -219,7 +271,7 @@
         isFromSameOrigin,
         source: event.source?.location?.href || 'unknown'
       });
-      return;
+      return false; // Explicitly return false
     }
 
     // Try to convert legacy format
@@ -239,7 +291,7 @@
         error: error.message,
         rawData: messageData 
       });
-      return;
+      return false; // Explicitly return false
     }
 
     // Validate message
@@ -260,17 +312,26 @@
         errors: validation.errors,
         payload: message.payload
       });
-      return;
+      return false; // Explicitly return false
     }
 
     // Route to handler
     routeMessage(message);
+    
+    // Return false to indicate synchronous handling (no async response expected)
+    return false;
   }
 
   /**
    * Route message to appropriate handler
    */
   function routeMessage(message) {
+    // Update debug tracking
+    if (window.UnbreakBridgeDebug) {
+      window.UnbreakBridgeDebug.lastMessageType = message.event;
+      window.UnbreakBridgeDebug.lastOrigin = CONFIGURATOR_ORIGIN;
+    }
+    
     switch (message.event) {
       case EventTypes.IFRAME_READY:
         debug.logHandlerMatched('handleIframeReady', message);
@@ -283,6 +344,8 @@
         break;
 
       case EventTypes.LANG_ACK:
+      case EventTypes.SET_LOCALE_ACK: // Support both ACK variants
+      case EventTypes.SET_LOCALE:     // Some iframes might echo SET_LOCALE as ACK
         debug.logHandlerMatched('handleLangAck', message);
         handleLangAck(message);
         break;
@@ -360,12 +423,28 @@
   /**
    * Handler: Language ACK
    * iframe confirms language change
+   * Supports multiple ACK formats: LANG_ACK, SET_LOCALE_ACK, SET_LOCALE
    */
   function handleLangAck(message) {
-    const lang = message.payload?.lang;
+    const lang = message.payload?.lang || message.payload?.locale;
     const replyTo = message.replyTo;
 
-    console.info('[LANG][IFRAME→PARENT][ACK]', lang);
+    console.info('[LANG][IFRAME→PARENT][ACK received]', {
+      event: message.event,
+      lang,
+      replyTo
+    });
+    
+    // Update debug tracking
+    if (window.UnbreakBridgeDebug) {
+      window.UnbreakBridgeDebug.lastAckReceived = {
+        event: message.event,
+        lang,
+        timestamp: new Date().toISOString(),
+        correlationId: message.correlationId,
+        replyTo
+      };
+    }
 
     // Clear timeout if this is a reply to our SET_LANG
     if (replyTo && pendingAcks.has(replyTo)) {
@@ -374,13 +453,16 @@
       pendingAcks.delete(replyTo);
 
       const latency = Date.now() - pending.sentAt;
-      console.log('[LANG][ACK] Confirmed in', latency, 'ms');
+      console.log(`[LANG][ACK] ✅ Confirmed in ${latency}ms (after ${pending.retries} retries)`);
+    } else {
+      // ACK without pending request - might be unsolicited update
+      console.log('[LANG][ACK] Received (no pending request)');
     }
 
     // Update current language if different
     if (lang && lang !== currentLang) {
       currentLang = lang;
-      console.log('[LANG] Language synchronized:', lang);
+      console.log('[LANG] ✅ Language synchronized:', lang);
     }
   }
 

@@ -26,6 +26,7 @@
     IFRAME_READY: 'UNBREAK_IFRAME_READY',
     GET_LANG: 'UNBREAK_GET_LANG', // iframe requests current language
     LANG_ACK: 'UNBREAK_LANG_ACK', // NEW: Language change acknowledged
+    SET_LOCALE_ACK: 'UNBREAK_SET_LOCALE_ACK', // Alternative ACK format
     ACK: 'UNBREAK_ACK',
     CONFIG_CHANGED: 'UNBREAK_CONFIG_CHANGED',
     ADD_TO_CART: 'UNBREAK_ADD_TO_CART',

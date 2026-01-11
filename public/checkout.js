@@ -470,14 +470,17 @@ function initCheckoutButtons() {
     }
     
     const productSku = button.dataset.productSku || 'UNBREAK-GLAS-01';
-    console.log('🔧 [INIT] Binding configured button with SKU:', productSku);
+    console.log('🔧 [INIT] Binding configured button with SKU:', productSku, 'ID:', button.id);
     
     button.addEventListener('click', async (e) => {
       e.preventDefault();
+      e.stopPropagation();
       
-      console.log('🛒 [CHECKOUT] Button clicked');
+      console.log('🛒🛒🛒 [CHECKOUT] *** BUTTON CLICKED *** ID:', button.id);
       console.log('🛒 [CHECKOUT] Button element:', button);
       console.log('🛒 [CHECKOUT] Product SKU:', productSku);
+      console.log('🛒 [CHECKOUT] Event target:', e.target);
+      console.log('🛒 [CHECKOUT] Current target:', e.currentTarget);
       
       // Get bridge reference
       const bridge = window.getConfiguratorBridge && window.getConfiguratorBridge();
@@ -488,6 +491,8 @@ function initCheckoutButtons() {
         return;
       }
       
+      console.log('✅ [CHECKOUT] Bridge found:', bridge);
+      
       // Check if ready
       if (!bridge.isReady()) {
         console.warn('⚠️ [CHECKOUT] Configurator not ready yet');
@@ -495,15 +500,27 @@ function initCheckoutButtons() {
         return;
       }
       
+      console.log('✅ [CHECKOUT] Bridge is ready');
+      
       // Call buyConfigured - it will request config from bridge itself
       console.log('📤 [CHECKOUT] Calling buyConfigured (will fetch config internally)...');
       
-      UnbreakCheckout.buyConfigured(null, e); // buyConfigured fetches config itself
-    });
+      try {
+        await UnbreakCheckout.buyConfigured(null, e); // buyConfigured fetches config itself
+        console.log('✅ [CHECKOUT] buyConfigured completed');
+      } catch (error) {
+        console.error('❌ [CHECKOUT] buyConfigured failed:', error);
+        alert('Fehler: ' + error.message);
+      }
+    }, { passive: false }); // Ensure we can preventDefault
     
     // Mark as bound
     button.dataset.bound = '1';
+    console.log('✅ [INIT] Button bound successfully:', button.id);
   });
+  
+  // Cart Buttons (Add to Cart functionality)
+  const cartButtons = document.querySelectorAll('[data-checkout="cart"]');
   
   console.log(`✓ Checkout buttons initialized: ${standardButtons.length + configuredButtons.length + cartButtons.length} buttons (${standardButtons.length} standard, ${configuredButtons.length} configured, ${cartButtons.length} cart)`);
 }
