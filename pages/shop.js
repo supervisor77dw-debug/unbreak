@@ -118,14 +118,46 @@ export default function Shop({ initialProducts }) {
       console.log('[SHOP][RETURN] Session loaded:', { lang, configKeys: Object.keys(config || {}) });
       setReturnDebug({ sessionId, status: 'loaded', config });
       
-      // 2. Map config → cart item
+      // 2. Calculate price from config (via API)
+      console.log('💰 [SHOP][PRICING] Calculating price for config...');
+      let priceCents = 4990; // Fallback: €49.90 (base price)
+      
+      try {
+        const pricingResponse = await fetch('/api/pricing/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productType: 'glass_holder',
+            config: config,
+            customFeeCents: 0,
+          }),
+        });
+        
+        if (pricingResponse.ok) {
+          const pricingData = await pricingResponse.json();
+          priceCents = pricingData.pricing.subtotal_cents;
+          console.log('✅ [SHOP][PRICING] Price calculated:', {
+            base_price_cents: pricingData.pricing.base_price_cents,
+            option_prices_cents: pricingData.pricing.option_prices_cents,
+            subtotal_cents: priceCents,
+            price_euros: pricingData.price_euros,
+          });
+        } else {
+          console.warn('⚠️ [SHOP][PRICING] Price calculation failed, using fallback:', priceCents);
+        }
+      } catch (pricingError) {
+        console.error('❌ [SHOP][PRICING] Error calculating price:', pricingError);
+        console.warn('⚠️ [SHOP][PRICING] Using fallback price:', priceCents);
+      }
+      
+      // 3. Map config → cart item
       const cartItem = {
         id: 'glass_configurator',
         product_id: 'glass_configurator', // For cart compatibility
         sku: 'glass_configurator',
         name: lang === 'en' ? 'Glass Holder – Custom' : 'Glashalter – Konfigurator',
-        price: 19900, // €199.00 in cents (default configurator price)
-        unit_amount: 19900, // Stripe format: price in cents
+        price: priceCents, // Calculated from DB pricing config
+        unit_amount: priceCents, // Stripe format: price in cents
         currency: 'EUR',
         quantity: 1,
         configured: true,
