@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { getCart } from '../../lib/cart';
+import { getCart } from '../lib/cart';
 
 /**
  * Config Return Page
