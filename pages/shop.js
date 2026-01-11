@@ -71,15 +71,22 @@ export default function Shop({ initialProducts }) {
     }
   }, [initialProducts]);
 
-  // Configurator Return Handler: sessionId detection
+  // Configurator Return Handler: session/sessionId/cfgId detection (robust)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get('sessionId');
+    // Support multiple param names for backward compatibility
+    const sessionId = 
+      urlParams.get('sessionId') || 
+      urlParams.get('session') || 
+      urlParams.get('cfgId');
     
     if (sessionId) {
-      console.log('[SHOP][RETURN] sessionId=', sessionId);
+      console.log('[SHOP][RETURN] sessionParam=', {
+        sessionId,
+        raw: window.location.search
+      });
       setReturnDebug({ sessionId, status: 'loading' });
       loadConfigSession(sessionId);
     }
