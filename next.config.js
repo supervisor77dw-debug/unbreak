@@ -44,10 +44,7 @@ const nextConfig = {
         source: '/kontakt',
         destination: '/kontakt.html',
       },
-      {
-        source: '/configurator',
-        destination: '/configurator.html',
-      },
+      // NOTE: /configurator is now handled by redirect below (external URL)
       {
         source: '/impressum',
         destination: '/impressum.html',
@@ -59,6 +56,25 @@ const nextConfig = {
       {
         source: '/agb',
         destination: '/agb.html',
+      },
+    ];
+  },
+  
+  // Redirect old /configurator route to external configurator
+  async redirects() {
+    const CONFIGURATOR_URL = process.env.NEXT_PUBLIC_CONFIGURATOR_DOMAIN || 'https://unbreak-3-d-konfigurator.vercel.app';
+    const SHOP_URL = process.env.NEXT_PUBLIC_SHOP_URL || 'https://unbreak-one.vercel.app/shop';
+    
+    return [
+      {
+        source: '/configurator',
+        destination: `${CONFIGURATOR_URL}/?lang=de&return=${encodeURIComponent(SHOP_URL)}`,
+        permanent: false, // 307 temporary redirect
+      },
+      {
+        source: '/configurator.html',
+        destination: `${CONFIGURATOR_URL}/?lang=de&return=${encodeURIComponent(SHOP_URL)}`,
+        permanent: false, // 307 temporary redirect
       },
     ];
   },

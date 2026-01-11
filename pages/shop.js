@@ -6,6 +6,7 @@ import { getCart } from '../lib/cart';
 import Layout from '../components/Layout';
 import ProductImage from '../components/ProductImage';
 import { getProductImageUrl } from '../lib/storage-utils';
+import { buildConfiguratorUrl, getCurrentLanguage, createConfiguratorClickHandler } from '../lib/configuratorLink';
 
 // CRITICAL: Force dynamic rendering - no ISR, no static, no edge cache
 export const dynamic = 'force-dynamic';
@@ -199,12 +200,20 @@ export default function Shop({ initialProducts }) {
 
   /**
    * Build configurator URL with language and return URL
+   * Now using central utility function
    */
   function getConfiguratorUrl() {
-    const configBaseUrl = 'https://config.unbreak-one.com';
-    const returnUrl = encodeURIComponent('https://unbreak-one.vercel.app/config-return');
-    return `${configBaseUrl}/?lang=${currentLang}&return=${returnUrl}`;
+    const currentLang = getCurrentLanguage();
+    return buildConfiguratorUrl(currentLang, `${window.location.origin}/shop`);
   }
+  
+  /**
+   * Handle configurator click - navigate in same tab
+   */
+  const handleConfiguratorClick = createConfiguratorClickHandler(
+    null, // use current language
+    `${typeof window !== 'undefined' ? window.location.origin : ''}/shop`
+  );
 
   function handleAddToCart(product) {
     console.log('🛒 [SHOP] handleAddToCart called with:', product);
@@ -368,7 +377,7 @@ export default function Shop({ initialProducts }) {
               <div className="empty-state">
                 <h2>Bald verfügbar</h2>
                 <p>Unsere Produkte werden gerade vorbereitet.</p>
-                <a href={getConfiguratorUrl()} className="btn-primary">
+                <a href={getConfiguratorUrl()} onClick={handleConfiguratorClick} className="btn-primary">
                   Zum Konfigurator
                 </a>
               </div>
@@ -505,7 +514,7 @@ export default function Shop({ initialProducts }) {
                   Perfekt abgestimmt auf deine Einrichtung.
                 </p>
                 <div className="configurator-actions">
-                  <a href={getConfiguratorUrl()} className="btn-configurator-primary">
+                  <a href={getConfiguratorUrl()} onClick={handleConfiguratorClick} className="btn-configurator-primary">
                     Jetzt gestalten
                   </a>
                   <a href="#products" className="btn-configurator-secondary">
