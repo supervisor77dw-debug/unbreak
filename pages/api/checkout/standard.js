@@ -387,10 +387,7 @@ export default async function handler(req, res) {
       status: 'pending',
       order_type: 'standard',
       
-      // Store pricing snapshot in dedicated column (SINGLE SOURCE OF TRUTH)
-      price_breakdown_json: orderPricingSnapshot,
-      
-      // Also store in metadata for backwards compatibility
+      // Store pricing snapshot in metadata (will add price_breakdown_json later after DB migration confirmed)
       metadata: {
         pricing_snapshot: orderPricingSnapshot,
         source: 'shop_checkout',
