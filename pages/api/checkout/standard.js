@@ -119,11 +119,30 @@ export default async function handler(req, res) {
           if (!item.config) {
             console.error('❌ [Checkout] Configurator item missing config');
             return res.status(400).json({ 
-              error: 'Configurator item must include config object with colors',
+              error: 'Configurator item must include config object',
+              message: 'Configuration data is required for custom products',
               product_id: item.product_id,
               build_id: BUILD_ID,
             });
           }
+
+          // Validate config structure
+          if (!item.config.colors || typeof item.config.colors !== 'object') {
+            console.error('❌ [Checkout] Config missing colors object:', item.config);
+            return res.status(400).json({ 
+              error: 'Invalid config structure',
+              message: 'Config must include colors object with base, arm, module, pattern',
+              received_config_keys: Object.keys(item.config),
+              expected_structure: { colors: { base: '...', arm: '...', module: '...', pattern: '...' }, finish: '...' },
+              build_id: BUILD_ID,
+            });
+          }
+
+          console.log('🔍 [Checkout] Config structure:', {
+            colors: Object.keys(item.config.colors),
+            finish: item.config.finish,
+            variant: item.config.variant,
+          });
 
           // Calculate price using DB pricing engine (source of truth)
           let pricing;

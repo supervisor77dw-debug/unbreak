@@ -118,6 +118,25 @@ export default function Shop({ initialProducts }) {
       console.log('[SHOP][RETURN] Session loaded:', { lang, configKeys: Object.keys(config || {}) });
       setReturnDebug({ sessionId, status: 'loaded', config });
       
+      // 1.5. Transform config structure for pricing engine
+      // Konfigurator sends: { base, arm, module, pattern, finish, ... }
+      // Pricing engine expects: { colors: { base, arm, module, pattern }, finish, ... }
+      const transformedConfig = {
+        colors: {
+          base: config.base || null,
+          arm: config.arm || null,
+          module: config.module || null,
+          pattern: config.pattern || null,
+        },
+        finish: config.finish || 'matte',
+        variant: config.variant || 'standard',
+      };
+      
+      console.log('🔄 [SHOP][CONFIG] Transformed:', {
+        original: Object.keys(config),
+        transformed: transformedConfig,
+      });
+      
       // 2. Calculate price from config (via API)
       console.log('💰 [SHOP][PRICING] Calculating price for config...');
       let priceCents = 4990; // Fallback: €49.90 (base price)
@@ -128,7 +147,7 @@ export default function Shop({ initialProducts }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             productType: 'glass_holder',
-            config: config,
+            config: transformedConfig, // Use transformed structure
             customFeeCents: 0,
           }),
         });
@@ -143,7 +162,9 @@ export default function Shop({ initialProducts }) {
             price_euros: pricingData.price_euros,
           });
         } else {
-          console.warn('⚠️ [SHOP][PRICING] Price calculation failed, using fallback:', priceCents);
+          const errorData = await pricingResponse.json().catch(() => ({}));
+          console.error('❌ [SHOP][PRICING] Price calculation failed:', errorData);
+          console.warn('⚠️ [SHOP][PRICING] Using fallback:', priceCents);
         }
       } catch (pricingError) {
         console.error('❌ [SHOP][PRICING] Error calculating price:', pricingError);
@@ -161,12 +182,12 @@ export default function Shop({ initialProducts }) {
         currency: 'EUR',
         quantity: 1,
         configured: true,
-        config: config, // Store full config for order processing
+        config: transformedConfig, // Use transformed structure for checkout
         meta: {
           source: 'configurator',
           sessionId: sessionId,
-          colors: config.colors || {},
-          pattern: config.pattern || null,
+          colors: transformedConfig.colors,
+          finish: transformedConfig.finish,
         }
       };
       
