@@ -461,68 +461,64 @@ function initCheckoutButtons() {
 
   // Configured Product Buttons (Configurator)
   const configuredButtons = document.querySelectorAll('[data-checkout="configured"]');
-  console.log('🔧 [INIT] Found configured buttons:', configuredButtons.length);
+  console.log('[PARENT][INIT] Found configured buttons:', configuredButtons.length);
+  
+  // WICHTIG: Im Hauptmenü-Konfigurator gibt es KEINEN Button!
+  // Der Checkout wird durch ADD_TO_CART Event vom iframe getriggert
+  // Diese Buttons sind nur für Standalone-Seiten/Tests
+  
   configuredButtons.forEach(button => {
     // Skip if already bound
     if (button.dataset.bound === '1') {
-      console.log('⏭️ [INIT] Button already bound, skipping');
+      console.log('[PARENT][INIT] ⏭️ Button already bound, skipping:', button.id);
       return;
     }
     
     const productSku = button.dataset.productSku || 'UNBREAK-GLAS-01';
-    console.log('🔧 [INIT] Binding configured button with SKU:', productSku, 'ID:', button.id);
+    console.log('[PARENT][INIT] Binding configured button with SKU:', productSku, 'ID:', button.id);
     
     button.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
       
-      console.log('🛒🛒🛒 [CHECKOUT] *** BUTTON CLICKED *** ID:', button.id);
-      console.log('🛒 [CHECKOUT] Button element:', button);
-      console.log('🛒 [CHECKOUT] Product SKU:', productSku);
-      console.log('🛒 [CHECKOUT] Event target:', e.target);
-      console.log('🛒 [CHECKOUT] Current target:', e.currentTarget);
+      console.log('[PARENT][BUTTON] *** BUTTON CLICKED *** ID:', button.id);
       
       // Get bridge reference
       const bridge = window.getConfiguratorBridge && window.getConfiguratorBridge();
       
       if (!bridge) {
-        console.error('❌ [CHECKOUT] ConfiguratorBridge not found!');
-        alert('Fehler: Konfigurator-Verbindung nicht gefunden');
+        console.error('[PARENT][BUTTON] ❌ ConfiguratorBridge not found!');
         return;
       }
       
-      console.log('✅ [CHECKOUT] Bridge found:', bridge);
+      console.log('[PARENT][BUTTON] ✅ Bridge found:', bridge);
       
       // Check if ready
       if (!bridge.isReady()) {
-        console.warn('⚠️ [CHECKOUT] Configurator not ready yet');
-        alert('Bitte warten Sie, bis der Konfigurator vollständig geladen ist');
+        console.warn('[PARENT][BUTTON] ⚠️ Configurator not ready yet');
         return;
       }
       
-      console.log('✅ [CHECKOUT] Bridge is ready');
-      
-      // Call buyConfigured - it will request config from bridge itself
-      console.log('📤 [CHECKOUT] Calling buyConfigured (will fetch config internally)...');
+      console.log('[PARENT][BUTTON] ✅ Bridge is ready');
+      console.log('[PARENT][BUTTON] 📤 Calling buyConfigured...');
       
       try {
-        await UnbreakCheckout.buyConfigured(null, e); // buyConfigured fetches config itself
-        console.log('✅ [CHECKOUT] buyConfigured completed');
+        await UnbreakCheckout.buyConfigured(null, e);
+        console.log('[PARENT][BUTTON] ✅ buyConfigured completed');
       } catch (error) {
-        console.error('❌ [CHECKOUT] buyConfigured failed:', error);
-        alert('Fehler: ' + error.message);
+        console.error('[PARENT][BUTTON] ❌ buyConfigured failed:', error);
       }
-    }, { passive: false }); // Ensure we can preventDefault
+    }, { passive: false });
     
     // Mark as bound
     button.dataset.bound = '1';
-    console.log('✅ [INIT] Button bound successfully:', button.id);
+    console.log('[PARENT][INIT] ✅ Button bound successfully:', button.id);
   });
   
   // Cart Buttons (Add to Cart functionality)
   const cartButtons = document.querySelectorAll('[data-checkout="cart"]');
   
-  console.log(`✓ Checkout buttons initialized: ${standardButtons.length + configuredButtons.length + cartButtons.length} buttons (${standardButtons.length} standard, ${configuredButtons.length} configured, ${cartButtons.length} cart)`);
+  console.log(`[PARENT][INIT] ✓ Checkout buttons initialized: ${standardButtons.length + configuredButtons.length + cartButtons.length} buttons (${standardButtons.length} standard, ${configuredButtons.length} configured, ${cartButtons.length} cart)`);
 }
 
 /**

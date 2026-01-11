@@ -95,25 +95,37 @@
 
   /**
    * Send language to iframe with ACK tracking and retry logic
+   * KOMPATIBILITÄT: Sendet BEIDE Felder (type + event) für maximale Kompatibilität
    */
   function sendLanguageToIframe(lang, retryCount = 0) {
-    console.info('[LANG][PARENT→IFRAME]', lang, retryCount > 0 ? `(retry ${retryCount}/${MAX_RETRIES})` : '');
+    console.info('[PARENT][LANG] Sending language to iframe:', lang, retryCount > 0 ? `(retry ${retryCount}/${MAX_RETRIES})` : '');
     
     const message = new BridgeMessage(EventTypes.SET_LANG, { lang });
     const validation = message.validate();
 
     if (!validation.valid) {
-      console.error('[LANG] Invalid message:', validation.errors);
+      console.error('[PARENT][LANG] Invalid message:', validation.errors);
       return;
     }
 
     // Send to iframe
     if (!iframe || !iframe.contentWindow) {
-      console.warn('[LANG] iframe not ready, cannot send');
+      console.warn('[PARENT][LANG] iframe not ready, cannot send');
       return;
     }
 
-    iframe.contentWindow.postMessage(message.toJSON(), CONFIGURATOR_ORIGIN);
+    // KRITISCH: Sende BEIDE Felder für Kompatibilität
+    const messageData = message.toJSON();
+    messageData.type = messageData.event; // Duplicate event → type
+    
+    console.info('[PARENT][LANG] Message structure:', {
+      event: messageData.event,
+      type: messageData.type,
+      lang: messageData.payload.lang,
+      correlationId: messageData.correlationId
+    });
+
+    iframe.contentWindow.postMessage(messageData, CONFIGURATOR_ORIGIN);
     debug.logMessageSent(message, CONFIGURATOR_ORIGIN);
     
     // Update debug tracking
@@ -243,11 +255,20 @@
   /**
    * Handle incoming messages from iframe
    * 
+   * KOMPATIBILITÄT: Akzeptiert BEIDE Felder (type + event)
    * IMPORTANT: Does NOT return true to avoid Chrome Extension conflicts
-   * ("A listener indicated an asynchronous response..." error)
    */
   function handleMessage(event) {
     debug.logMessageReceived(event);
+    
+    console.info('[PARENT][MSG_IN] Message received:', {
+      origin: event.origin,
+      hasType: !!event.data?.type,
+      hasEvent: !!event.data?.event,
+      type: event.data?.type,
+      event: event.data?.event,
+      payload: event.data?.payload
+    });
 
     // Security: Check origin
     if (!isOriginAllowed(event.origin)) {
@@ -255,30 +276,36 @@
         origin: event.origin,
         expected: CONFIGURATOR_ORIGIN 
       });
-      return false; // Explicitly return false
+      return false;
     }
 
     // Verify message source
-    // Allow messages from:
-    // 1. iframe (production)
-    // 2. Same origin (test/debug mode)
     const isFromIframe = iframe && event.source === iframe.contentWindow;
     const isFromSameOrigin = event.origin === window.location.origin;
     
     if (!isFromIframe && !isFromSameOrigin) {
       debug.logDrop('source_mismatch', { 
         isFromIframe,
-        isFromSameOrigin,
-        source: event.source?.location?.href || 'unknown'
+        isFromSameOrigin
       });
-      return false; // Explicitly return false
+      return false;
+    }
+
+    // KOMPATIBILITÄT: Normalisiere type/event
+    let messageData = event.data;
+    if (messageData && !messageData.event && messageData.type) {
+      console.info('[PARENT][MSG_IN] Converting type→event:', messageData.type);
+      messageData = { ...messageData, event: messageData.type };
+    }
+    if (messageData && !messageData.type && messageData.event) {
+      console.info('[PARENT][MSG_IN] Converting event→type:', messageData.event);
+      messageData = { ...messageData, type: messageData.event };
     }
 
     // Try to convert legacy format
-    let messageData = event.data;
-    const legacyConverted = convertLegacyMessage(event.data);
+    const legacyConverted = convertLegacyMessage(messageData);
     if (legacyConverted) {
-      console.log('[BRIDGE] 🔄 Converted legacy message:', event.data.type, '→', legacyConverted.event);
+      console.log('[PARENT][BRIDGE] Converted legacy message:', messageData.type, '→', legacyConverted.event);
       messageData = legacyConverted;
     }
 
@@ -291,7 +318,7 @@
         error: error.message,
         rawData: messageData 
       });
-      return false; // Explicitly return false
+      return false;
     }
 
     // Validate message
@@ -299,20 +326,17 @@
     debug.logValidation(message, validation);
 
     if (!validation.valid) {
-      // Log detailed errors for debugging
-      console.warn('[BRIDGE] ⚠️ Message validation failed:', {
-        event: message.event,
-        errors: validation.errors,
-        payload: message.payload,
-        rawData: messageData
-      });
-      
-      debug.logDrop('message_validation_failed', { 
+      console.warn('[PARENT][BRIDGE] Message validation failed:', {
         event: message.event,
         errors: validation.errors,
         payload: message.payload
       });
-      return false; // Explicitly return false
+      
+      debug.logDrop('message_validation_failed', { 
+        event: message.event,
+        errors: validation.errors
+      });
+      return false;
     }
 
     // Route to handler
@@ -423,15 +447,19 @@
   /**
    * Handler: Language ACK
    * iframe confirms language change
-   * Supports multiple ACK formats: LANG_ACK, SET_LOCALE_ACK, SET_LOCALE
+   * KOMPATIBILITÄT: Akzeptiert LANG_ACK, SET_LOCALE_ACK, SET_LOCALE
+   * Prüft lang ODER locale im payload
    */
   function handleLangAck(message) {
     const lang = message.payload?.lang || message.payload?.locale;
     const replyTo = message.replyTo;
 
-    console.info('[LANG][IFRAME→PARENT][ACK received]', {
-      event: message.event,
+    console.info('[PARENT][LANG][ACK] ✅ ACK received from iframe:', {
+      eventField: message.event,
+      typeField: message.type,
+      checkingField: message.event ? 'event' : 'type',
       lang,
+      correlationId: message.correlationId,
       replyTo
     });
     
@@ -439,6 +467,7 @@
     if (window.UnbreakBridgeDebug) {
       window.UnbreakBridgeDebug.lastAckReceived = {
         event: message.event,
+        type: message.type,
         lang,
         timestamp: new Date().toISOString(),
         correlationId: message.correlationId,
@@ -453,7 +482,19 @@
       pendingAcks.delete(replyTo);
 
       const latency = Date.now() - pending.sentAt;
-      console.log(`[LANG][ACK] ✅ Confirmed in ${latency}ms (after ${pending.retries} retries)`);
+      console.log(`[PARENT][LANG][ACK] ✅ Confirmed in ${latency}ms (after ${pending.retries} retries)`);
+      console.log(`[PARENT][LANG][ACK] ✅ Language synchronized: ${lang}`);
+    } else {
+      // ACK without pending request
+      console.log('[PARENT][LANG][ACK] Received ACK (no pending request, might be unsolicited update)');
+    }
+
+    // Update current language
+    if (lang && lang !== currentLang) {
+      currentLang = lang;
+      console.log('[PARENT][LANG] Language updated:', currentLang);
+    }
+  }
     } else {
       // ACK without pending request - might be unsolicited update
       console.log('[LANG][ACK] Received (no pending request)');
@@ -512,49 +553,67 @@
 
   /**
    * Handler: Add to Cart
+   * KRITISCH: Triggert Checkout-Flow
    */
   async function handleAddToCart(message) {
     const config = message.payload;
 
+    console.log('[PARENT][CART] *** ADD_TO_CART received ***');
+    console.table({
+      'SKU': config.variant === 'bottle_holder' ? 'UNBREAK-WEIN-01' : 'UNBREAK-GLAS-01',
+      'Variant': config.variant,
+      'Base Color': config.colors?.base,
+      'Arm Color': config.colors?.arm,
+      'Module Color': config.colors?.module,
+      'Pattern Color': config.colors?.pattern,
+      'Finish': config.finish,
+      'Quantity': config.quantity,
+      'Language': config.locale || config.lang || 'de',
+      'Price': config.pricing?.totalPrice || 4900
+    });
+
     debug.logCheckoutTrigger(config);
 
     if (!config || !config.variant) {
+      console.error('[PARENT][CART] ❌ Invalid config - missing variant');
       debug.logDrop('add_to_cart_invalid_config', { config });
-      alert('Ungültige Konfiguration. Bitte versuchen Sie es erneut.');
       return;
     }
 
     try {
       // Check if UnbreakCheckout is available
       if (!window.UnbreakCheckout?.createCheckoutFromConfig) {
+        console.error('[PARENT][CHECKOUT] ❌ UnbreakCheckout.createCheckoutFromConfig not available!');
+        console.error('[PARENT][CHECKOUT] Available:', {
+          UnbreakCheckout: !!window.UnbreakCheckout,
+          createCheckoutFromConfig: typeof window.UnbreakCheckout?.createCheckoutFromConfig
+        });
         debug.log('ERROR', {
           error: 'UnbreakCheckout.createCheckoutFromConfig not available',
         });
-        alert('Checkout-System nicht geladen. Bitte laden Sie die Seite neu.');
         return;
       }
 
+      console.log('[PARENT][CHECKOUT] ✅ Calling createCheckoutFromConfig...');
+      
       // Call checkout API
       const endpoint = '/api/checkout/create';
       debug.logApiCall(endpoint, config);
 
       const checkoutUrl = await window.UnbreakCheckout.createCheckoutFromConfig(config);
 
+      console.log('[PARENT][CHECKOUT] ✅ Checkout URL received:', checkoutUrl);
       debug.logApiResponse(endpoint, { url: checkoutUrl });
 
       // Redirect to Stripe
+      console.log('[PARENT][STRIPE] 🔄 Redirecting to:', checkoutUrl);
       debug.logRedirect(checkoutUrl);
       window.location.href = checkoutUrl;
 
     } catch (error) {
-      debug.logApiResponse('/api/checkout/create-checkout-session', null, error);
-      
-      console.error('[BRIDGE] ❌ Checkout failed:', error);
-      alert(
-        currentLang === 'de' 
-          ? 'Fehler beim Checkout. Bitte versuchen Sie es erneut.' 
-          : 'Checkout error. Please try again.'
-      );
+      console.error('[PARENT][CHECKOUT] ❌ Error:', error);
+      console.error('[PARENT][CHECKOUT] ❌ Stack:', error.stack);
+      debug.logApiResponse('/api/checkout/create', null, error);
     }
   }
 
