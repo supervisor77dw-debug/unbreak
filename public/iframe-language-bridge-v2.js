@@ -715,6 +715,12 @@
    * Initialize iframe bridge
    */
   function initializeIframe() {
+    // 1) SOFORT-DEBUG: Init logging
+    console.info('[LANG][PARENT] init binding', {
+      url: location.href,
+      ready: document.readyState
+    });
+    
     iframe = document.getElementById(CONFIGURATOR_IFRAME_ID);
 
     if (!iframe) {
@@ -729,6 +735,51 @@
     });
 
     currentLang = getCurrentLanguage();
+    
+    // 1) GLOBALER CLICK-TRACER (capture phase, temporary debug)
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest?.('[data-lang],[data-language],#langSwitch,.lang-switch,button,a');
+      if (el && /DE|EN/i.test(el.innerText || '')) {
+        console.info('[LANG][PARENT][CLICK]', {
+          text: el.innerText.trim(),
+          id: el.id,
+          cls: el.className
+        });
+      }
+    }, true);
+    
+    // 2) ROBUST EVENT DELEGATION für Language Switch
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest?.('[data-lang="de"],[data-lang="en"],#langSwitch .de,#langSwitch .en,.lang-switch button');
+      if (!btn) return;
+      
+      const lang = btn.dataset.lang || (btn.innerText.trim().toLowerCase().includes('en') ? 'en' : 'de');
+      console.info('[LANG][PARENT] switch ->', lang);
+      
+      // Update via i18n if available
+      if (window.i18n?.setLanguage) {
+        window.i18n.setLanguage(lang);
+      }
+      
+      // Update currentLang
+      currentLang = lang;
+      
+      // DIRECT send to iframe
+      const targetIframe = document.getElementById(CONFIGURATOR_IFRAME_ID) || document.querySelector('iframe');
+      if (targetIframe?.contentWindow) {
+        const message = {
+          type: 'UNBREAK_SET_LANG',
+          event: 'UNBREAK_SET_LANG', // Both fields for compatibility
+          lang: lang,
+          correlationId: Date.now() + '',
+          timestamp: new Date().toISOString(),
+          payload: { lang }
+        };
+        
+        targetIframe.contentWindow.postMessage(message, CONFIGURATOR_ORIGIN);
+        console.info('[LANG][PARENT][MSG_OUT] UNBREAK_SET_LANG', lang);
+      }
+    }, true);
 
     // Register message listener ONCE (prevent spam)
     if (!messageListener) {
