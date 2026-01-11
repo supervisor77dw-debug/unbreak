@@ -62,21 +62,91 @@ export default function Shop({ initialProducts }) {
 
   async function loadConfigSession(cfgId) {
     try {
+      // a) Fetch session
       const response = await fetch(`/api/config-session/${cfgId}`);
       
       if (!response.ok) {
         console.error('[SHOP] config-session not found or expired');
+        // Clean URL on error
+        window.history.replaceState({}, '', '/shop');
         return;
       }
       
       const data = await response.json();
       console.info('[SHOP] session loaded', data);
-      console.info('[SHOP] payload keys:', Object.keys(data.payload || {}));
       
-      // TODO (Commit 4): Add to cart logic here
+      // b) Map payload → cart item
+      const { lang, payload } = data;
+      
+      // Extract SKU/variant from payload (configurator defines this structure)
+      const sku = payload.product_sku || payload.sku || 'UNBREAK-GLAS-01';
+      const variant = payload.variant || payload.variantKey || 'glass_holder';
+      const name = variant === 'bottle_holder' 
+        ? 'UNBREAK ONE Weinglashalter' 
+        : 'UNBREAK ONE Glashalter';
+      
+      const cartItem = {
+        id: sku,
+        sku: sku,
+        name: name,
+        price: 4900, // 49€
+        variant: variant,
+        config: payload.config || payload, // Full config data
+        configured: true,
+        quantity: 1,
+      };
+      
+      // c) Add to cart
+      if (!cart) {
+        console.error('[SHOP] add-to-cart failed - cart not initialized');
+        window.history.replaceState({}, '', '/shop');
+        return;
+      }
+      
+      const success = cart.addItem(cartItem);
+      
+      if (success) {
+        console.info('[SHOP] add-to-cart ok');
+        
+        // d) Clean URL
+        window.history.replaceState({}, '', '/shop');
+        
+        // e) Optional: Delete session (cleanup)
+        fetch(`/api/config-session/${cfgId}`, { method: 'DELETE' })
+          .catch(err => console.warn('[SHOP] cleanup failed:', err));
+        
+        // f) User feedback (non-blocking)
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 80px;
+          right: 20px;
+          background: #059669;
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          z-index: 10000;
+          font-family: sans-serif;
+          animation: slideIn 0.3s ease-out;
+        `;
+        notification.textContent = '✓ Konfiguration wurde in den Warenkorb gelegt';
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          notification.style.opacity = '0';
+          notification.style.transition = 'opacity 0.3s';
+          setTimeout(() => notification.remove(), 300);
+        }, 2500);
+        
+      } else {
+        console.error('[SHOP] add-to-cart failed - cart.addItem returned false');
+        window.history.replaceState({}, '', '/shop');
+      }
       
     } catch (error) {
-      console.error('[SHOP] error loading config-session:', error);
+      console.error('[SHOP] add-to-cart failed', error);
+      window.history.replaceState({}, '', '/shop');
     }
   }
 
