@@ -44,7 +44,7 @@
 ### Test 1: Health Check ✅
 ```bash
 # PowerShell
-Invoke-RestMethod -Uri 'https://www.unbreak-one.com/api/health'
+Invoke-RestMethod -Uri 'https://unbreak-one.vercel.app/api/health'
 
 # Expected:
 {
@@ -59,7 +59,7 @@ Invoke-RestMethod -Uri 'https://www.unbreak-one.com/api/health'
 ```
 
 ### Test 2: Clean Console ✅
-1. Open https://www.unbreak-one.com/shop
+1. Open https://unbreak-one.vercel.app/shop
 2. Open Browser Console (F12)
 3. Reload page (Ctrl+R)
 
@@ -78,20 +78,20 @@ Invoke-RestMethod -Uri 'https://www.unbreak-one.com/api/health'
 ```
 
 ### Test 3: Debug Page ✅
-1. Open https://www.unbreak-one.com/debug/config-session
+1. Open https://unbreak-one.vercel.app/debug/config-session
 2. Click "Check /api/health" → Should show health info
 3. Click "1. Create Session" → Should show `{ ok: true, sessionId: "..." }`
 4. Click "2. Read Session" → Should show config data
 5. Click "3. Delete Session" → Should show `{ success: true }`
 
 ### Test 4: Config Return Page ✅
-- URL: https://www.unbreak-one.com/config-return
+- URL: https://unbreak-one.vercel.app/config-return
 - Should show: "Fehlende Session-ID" error (because no ?session= param)
 - With session param: Should process and redirect to cart
 
 ### Test 5: API Direct Test ✅
 ```javascript
-// Browser console on www.unbreak-one.com
+// Browser console on unbreak-one.vercel.app
 fetch('/api/config-session', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
@@ -137,9 +137,9 @@ All must pass:
 ## URLs for Testing
 
 ### Production
-- Shop: https://www.unbreak-one.com/shop
-- Health: https://www.unbreak-one.com/api/health
-- Debug: https://www.unbreak-one.com/debug/config-session
+- Shop: https://unbreak-one.vercel.app/shop
+- Health: https://unbreak-one.vercel.app/api/health
+- Debug: https://unbreak-one.vercel.app/debug/config-session
 
 ### Vercel Preview (check deployment)
 - Will be: https://unbreak-[hash].vercel.app

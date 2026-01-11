@@ -72,7 +72,7 @@ async function saveAndReturnToShop() {
     setButtonText('Wird gespeichert...');
     
     // POST to shop API
-    const response = await fetch('https://www.unbreak-one.com/api/config-session', {
+    const response = await fetch('https://unbreak-one.vercel.app/api/config-session', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -258,7 +258,7 @@ export default function Configurator() {
     try {
       console.info('[CONFIG] Saving session...');
       
-      const response = await fetch('https://www.unbreak-one.com/api/config-session', {
+      const response = await fetch('https://unbreak-one.vercel.app/api/config-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -356,13 +356,13 @@ http://localhost:3001/?lang=en&return=http://localhost:3000/shop/config-return
 
 ### Production
 ```
-https://unbreak-3-d-konfigurator.vercel.app/?lang=de&return=https://www.unbreak-one.com/shop/config-return
-https://unbreak-3-d-konfigurator.vercel.app/?lang=en&return=https://www.unbreak-one.com/shop/config-return
+https://unbreak-3-d-konfigurator.vercel.app/?lang=de&return=https://unbreak-one.vercel.app/config-return
+https://unbreak-3-d-konfigurator.vercel.app/?lang=en&return=https://unbreak-one.vercel.app/config-return
 ```
 
 ### With source parameter (optional)
 ```
-https://unbreak-3-d-konfigurator.vercel.app/?lang=de&return=https://www.unbreak-one.com/shop/config-return&source=shop
+https://unbreak-3-d-konfigurator.vercel.app/?lang=de&return=https://unbreak-one.vercel.app/config-return&source=shop
 ```
 
 ## Testing
@@ -388,7 +388,7 @@ Check Network tab:
 - Browser redirects to: `${returnUrl}?session=${sessionId}`
 
 ### 3. Test Complete Flow
-1. Open shop: https://www.unbreak-one.com/shop
+1. Open shop: https://unbreak-one.vercel.app/shop
 2. Switch to EN
 3. Click "Jetzt gestalten"
 4. Config opens with `?lang=en&return=...`
@@ -453,7 +453,7 @@ Check:
 
 **API Endpoint:**
 ```
-POST https://www.unbreak-one.com/api/config-session
+POST https://unbreak-one.vercel.app/api/config-session
 Content-Type: application/json
 
 {

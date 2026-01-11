@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Diese Integration ermöglicht eine saubere Trennung zwischen dem Shop (www.unbreak-one.com) als **Source of Truth** für Sprache, Cart und Checkout, und dem externen Konfigurator (config.unbreak-one.com) als dedizierte Konfigurations-App.
+Diese Integration ermöglicht eine saubere Trennung zwischen dem Shop (unbreak-one.vercel.app) als **Source of Truth** für Sprache, Cart und Checkout, und dem externen Konfigurator (config.unbreak-one.com) als dedizierte Konfigurations-App.
 
 **KEINE iFrame-Integration**, **KEINE postMessage-Bridge**, **KEINE CORS-Experimente**.
 
@@ -13,7 +13,7 @@ Diese Integration ermöglicht eine saubere Trennung zwischen dem Shop (www.unbre
 │                         User Journey                             │
 └─────────────────────────────────────────────────────────────────┘
 
-1. Shop (www.unbreak-one.com/shop)
+1. Shop (unbreak-one.vercel.app/shop)
    ↓ Klick "Zum Konfigurator" mit ?lang=en&return=...
    
 2. Konfigurator (config.unbreak-one.com)
@@ -21,13 +21,13 @@ Diese Integration ermöglicht eine saubere Trennung zwischen dem Shop (www.unbre
    ↓ Speichert via POST /api/config-session
    ↓ Erhält sessionId
    
-3. Return URL (www.unbreak-one.com/shop/config-return?session=xyz)
+3. Return URL (unbreak-one.vercel.app/config-return?session=xyz)
    ↓ Lädt Session via GET /api/config-session/xyz
    ↓ Validiert & mappt Config
    ↓ Fügt zu Warenkorb hinzu
    ↓ Löscht Session via DELETE
    
-4. Cart (www.unbreak-one.com/cart)
+4. Cart (unbreak-one.vercel.app/cart)
    ✓ Konfiguriertes Produkt im Warenkorb
 ```
 
@@ -138,7 +138,7 @@ Diese Integration ermöglicht eine saubere Trennung zwischen dem Shop (www.unbre
 - Tracked Sprachwechsel via Event Listener
 - Generiert Konfigurator-URL mit:
   ```
-  https://config.unbreak-one.com/?lang=en&return=https%3A%2F%2Fwww.unbreak-one.com%2Fshop%2Fconfig-return
+  https://config.unbreak-one.com/?lang=en&return=https%3A%2F%2Funbreak-one.vercel.app%2Fconfig-return
   ```
 
 **Verwendung:**
@@ -351,7 +351,7 @@ setCurrentLanguage(lang);
 
 // 3. On save, create session
 async function handleSave(config) {
-  const response = await fetch('https://www.unbreak-one.com/api/config-session', {
+  const response = await fetch('https://unbreak-one.vercel.app/api/config-session', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

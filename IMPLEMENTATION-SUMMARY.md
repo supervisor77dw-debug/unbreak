@@ -53,7 +53,7 @@
 
 **Beispiel URL:**
 ```
-https://config.unbreak-one.com/?lang=en&return=https%3A%2F%2Fwww.unbreak-one.com%2Fshop%2Fconfig-return
+https://config.unbreak-one.com/?lang=en&return=https%3A%2F%2Funbreak-one.vercel.app%2Fconfig-return
 ```
 
 ## 🧪 Testing
@@ -171,7 +171,7 @@ setCurrentLanguage(lang); // Eure Sprach-Logik
 ### 3. Save Handler
 ```js
 async function handleSave(config) {
-  const response = await fetch('https://www.unbreak-one.com/api/config-session', {
+  const response = await fetch('https://unbreak-one.vercel.app/api/config-session', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
