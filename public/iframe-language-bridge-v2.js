@@ -177,17 +177,59 @@
 
   /**
    * Convert legacy message format to Bridge v2.0 format
+   * PRIORITÄT: Spezifische Konvertierungen VOR generischen
    */
   function convertLegacyMessage(data) {
-    // GENERIC: Any message with 'type' instead of 'event'
-    // Convert type → event if message doesn't have 'event' field
+    // PRIO 1: Legacy format mit reason (SEHR SPEZIFISCH)
+    // {type: 'configChanged', config: {...}, reason: 'add_to_cart'}
+    if (data.type === 'configChanged' && data.reason === 'add_to_cart') {
+      const config = data.config || {};
+      console.log('[PARENT][BRIDGE] 🔄 Legacy ADD_TO_CART detected:', data.reason);
+      return {
+        event: 'UNBREAK_ADD_TO_CART',
+        schemaVersion: '1.0',
+        correlationId: 'legacy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        timestamp: new Date().toISOString(),
+        payload: {
+          variant: config.product_type || config.variant || 'glass_holder',
+          sku: config.product_type === 'bottle_holder' ? 'UNBREAK-WEIN-01' : 'UNBREAK-GLAS-01',
+          colors: {
+            base: config.base || 'mint',
+            arm: config.arm || 'darkBlue',
+            module: config.module || 'black',
+            pattern: config.pattern || 'red'
+          },
+          finish: config.finish || 'matte',
+          quantity: config.quantity || 1,
+          locale: config.lang || 'de',
+          pricing: {
+            basePrice: 4900,
+            totalPrice: 4900
+          }
+        }
+      };
+    }
+
+    // PRIO 2: configChanged OHNE reason → CONFIG_CHANGED (nicht ADD_TO_CART!)
+    if (data.type === 'configChanged' && !data.reason) {
+      const config = data.config || {};
+      console.log('[PARENT][BRIDGE] 🔄 Legacy CONFIG_CHANGED detected');
+      return {
+        event: 'UNBREAK_CONFIG_CHANGED',
+        schemaVersion: '1.0',
+        correlationId: 'legacy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        timestamp: new Date().toISOString(),
+        payload: config
+      };
+    }
+
+    // PRIO 3: GENERIC - Any message with 'type' instead of 'event'
     if (data.type && !data.event) {
       // Map common type names to event names
       const typeToEventMap = {
         'UNBREAK_CONFIG_READY': 'UNBREAK_IFRAME_READY',
         'UNBREAK_SET_LANG': 'UNBREAK_SET_LANG',
         'UNBREAK_LANG_ACK': 'UNBREAK_LANG_ACK',
-        'configChanged': 'UNBREAK_CONFIG_CHANGED',
         'addToCart': 'UNBREAK_ADD_TO_CART',
         'resetView': 'UNBREAK_RESET_VIEW',
         'error': 'UNBREAK_ERROR',
@@ -216,36 +258,8 @@
         };
       }
 
-      console.log('[BRIDGE] 🔄 Generic legacy conversion:', data.type, '→', eventName);
+      console.log('[PARENT][BRIDGE] 🔄 Generic legacy conversion:', data.type, '→', eventName);
       return converted;
-    }
-
-    // Legacy format: {type: 'configChanged', config: {...}, reason: 'add_to_cart'}
-    if (data.type === 'configChanged' && data.reason === 'add_to_cart') {
-      const config = data.config || {};
-      return {
-        event: 'UNBREAK_ADD_TO_CART',
-        schemaVersion: '1.0',
-        correlationId: 'legacy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-        timestamp: new Date().toISOString(),
-        payload: {
-          variant: config.product_type || 'glass_holder',
-          sku: config.product_type === 'bottle_holder' ? 'UNBREAK-WEIN-01' : 'UNBREAK-GLAS-01',
-          colors: {
-            base: config.base || 'mint',
-            arm: config.arm || 'darkBlue',
-            module: config.module || 'black',
-            pattern: config.pattern || 'red'
-          },
-          finish: config.finish || 'matte',
-          quantity: config.quantity || 1,
-          locale: config.lang || 'de',
-          pricing: {
-            basePrice: 4900,
-            totalPrice: 4900
-          }
-        }
-      };
     }
 
     // Not a legacy format
@@ -261,13 +275,15 @@
   function handleMessage(event) {
     debug.logMessageReceived(event);
     
-    console.info('[PARENT][MSG_IN] Message received:', {
+    console.info('[PARENT][MSG_IN] Raw message received:', {
       origin: event.origin,
       hasType: !!event.data?.type,
       hasEvent: !!event.data?.event,
       type: event.data?.type,
       event: event.data?.event,
-      payload: event.data?.payload
+      reason: event.data?.reason,
+      payload: event.data?.payload,
+      config: event.data?.config ? 'present' : 'missing'
     });
 
     // Security: Check origin
@@ -291,22 +307,22 @@
       return false;
     }
 
-    // KOMPATIBILITÄT: Normalisiere type/event
+    // KRITISCH: Try legacy conversion FIRST (before normalization)
     let messageData = event.data;
-    if (messageData && !messageData.event && messageData.type) {
-      console.info('[PARENT][MSG_IN] Converting type→event:', messageData.type);
-      messageData = { ...messageData, event: messageData.type };
-    }
-    if (messageData && !messageData.type && messageData.event) {
-      console.info('[PARENT][MSG_IN] Converting event→type:', messageData.event);
-      messageData = { ...messageData, type: messageData.event };
-    }
-
-    // Try to convert legacy format
     const legacyConverted = convertLegacyMessage(messageData);
     if (legacyConverted) {
-      console.log('[PARENT][BRIDGE] Converted legacy message:', messageData.type, '→', legacyConverted.event);
+      console.log('[PARENT][BRIDGE] ✅ Converted legacy message:', messageData.type, '→', legacyConverted.event);
       messageData = legacyConverted;
+    } else {
+      // KOMPATIBILITÄT: Normalisiere type/event nur wenn KEINE Legacy-Konvertierung
+      if (messageData && !messageData.event && messageData.type) {
+        console.info('[PARENT][MSG_IN] Converting type→event:', messageData.type);
+        messageData = { ...messageData, event: messageData.type };
+      }
+      if (messageData && !messageData.type && messageData.event) {
+        console.info('[PARENT][MSG_IN] Converting event→type:', messageData.event);
+        messageData = { ...messageData, type: messageData.event };
+      }
     }
 
     // Parse message
@@ -314,6 +330,7 @@
     try {
       message = BridgeMessage.fromJSON(messageData);
     } catch (error) {
+      console.error('[PARENT][BRIDGE] ❌ Parse failed:', error.message, 'Data:', messageData);
       debug.logDrop('message_parse_failed', { 
         error: error.message,
         rawData: messageData 
@@ -326,7 +343,7 @@
     debug.logValidation(message, validation);
 
     if (!validation.valid) {
-      console.warn('[PARENT][BRIDGE] Message validation failed:', {
+      console.warn('[PARENT][BRIDGE] ⚠️ Validation failed:', {
         event: message.event,
         errors: validation.errors,
         payload: message.payload
@@ -338,6 +355,8 @@
       });
       return false;
     }
+
+    console.info('[PARENT][BRIDGE] ✅ Message validated, routing to handler:', message.event);
 
     // Route to handler
     routeMessage(message);
