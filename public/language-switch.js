@@ -43,6 +43,17 @@
     // Event handlers
     btnDe.addEventListener('click', () => switchLanguage('de', btnDe, btnEn));
     btnEn.addEventListener('click', () => switchLanguage('en', btnEn, btnDe));
+    
+    // ADDITIONAL: Pointer Events (for React/modern frameworks)
+    btnDe.addEventListener('pointerdown', () => {
+      console.info('[LANG_SWITCH] pointerdown on DE');
+    });
+    btnDe.addEventListener('pointerup', () => switchLanguage('de', btnDe, btnEn));
+    
+    btnEn.addEventListener('pointerdown', () => {
+      console.info('[LANG_SWITCH] pointerdown on EN');
+    });
+    btnEn.addEventListener('pointerup', () => switchLanguage('en', btnEn, btnDe));
 
     // Keyboard navigation
     [btnDe, btnEn].forEach(btn => {
@@ -62,6 +73,8 @@
    * Switch language with visual feedback
    */
   function switchLanguage(lang, activeBtn, inactiveBtn) {
+    console.info('[PARENT][LANG_SWITCH_CLICKED]', lang); // Explicit confirmation
+    
     if (!window.i18n) {
       console.error('i18n system not loaded');
       return;
@@ -69,6 +82,7 @@
 
     // Don't switch if already active
     if (activeBtn.classList.contains('active')) {
+      console.info('[LANG_SWITCH] Already active:', lang);
       return;
     }
 

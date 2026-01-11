@@ -755,6 +755,7 @@
       
       const lang = btn.dataset.lang || (btn.innerText.trim().toLowerCase().includes('en') ? 'en' : 'de');
       console.info('[LANG][PARENT] switch ->', lang);
+      console.info('[PARENT][LANG_SWITCH_CLICKED]', lang); // Explicit click confirmation
       
       // Update via i18n if available
       if (window.i18n?.setLanguage) {
@@ -780,6 +781,48 @@
         console.info('[LANG][PARENT][MSG_OUT] UNBREAK_SET_LANG', lang);
       }
     }, true);
+    
+    // 1) OVERLAY DIAGNOSE (delayed until DOM is fully rendered)
+    setTimeout(() => {
+      const langButtons = document.querySelectorAll('[data-lang="de"],[data-lang="en"],.lang-switch button');
+      console.info('[OVERLAY_CHECK] Found', langButtons.length, 'language buttons');
+      
+      langButtons.forEach((btn, idx) => {
+        const rect = btn.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        const elementAtPoint = document.elementFromPoint(centerX, centerY);
+        const isSameOrChild = elementAtPoint === btn || btn.contains(elementAtPoint);
+        
+        console.info(`[OVERLAY_CHECK] Button ${idx} (${btn.textContent?.trim()}):`, {
+          rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+          center: { x: centerX, y: centerY },
+          isSameOrChild,
+          elementAtPoint: elementAtPoint?.tagName + (elementAtPoint?.className ? '.' + elementAtPoint.className : ''),
+          topElement: !isSameOrChild ? {
+            tag: elementAtPoint?.tagName,
+            class: elementAtPoint?.className,
+            id: elementAtPoint?.id,
+            zIndex: elementAtPoint ? window.getComputedStyle(elementAtPoint).zIndex : null,
+            pointerEvents: elementAtPoint ? window.getComputedStyle(elementAtPoint).pointerEvents : null,
+            position: elementAtPoint ? window.getComputedStyle(elementAtPoint).position : null
+          } : null
+        });
+        
+        // If overlay detected, try to fix it
+        if (!isSameOrChild && elementAtPoint) {
+          console.warn('[OVERLAY_CHECK] ⚠️ Button is covered by:', elementAtPoint);
+          
+          // Try to fix: set pointer-events: none on covering element
+          const pointerEvents = window.getComputedStyle(elementAtPoint).pointerEvents;
+          if (pointerEvents !== 'none') {
+            console.info('[OVERLAY_CHECK] Attempting to fix: setting pointer-events: none on covering element');
+            elementAtPoint.style.pointerEvents = 'none';
+          }
+        }
+      });
+    }, 500); // Wait 500ms for DOM to be fully rendered
 
     // Register message listener ONCE (prevent spam)
     if (!messageListener) {
