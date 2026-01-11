@@ -14,6 +14,27 @@ export default function Header() {
     return () => router.events.off('routeChangeStart', handleRouteChange);
   }, [router.events]);
 
+  // NEW: Handle configurator link click with redirect to external configurator
+  const handleConfiguratorClick = (e) => {
+    e.preventDefault();
+    
+    // Get current language from i18n or default to 'de'
+    const currentLang = (typeof window !== 'undefined' && window.i18n?.getCurrentLanguage) 
+      ? window.i18n.getCurrentLanguage() 
+      : 'de';
+    
+    // Return URL after configuration
+    const returnUrl = encodeURIComponent(`${window.location.origin}/shop`);
+    
+    // Redirect to external configurator
+    // PRODUCTION: Replace with actual domain
+    const configDomain = process.env.NEXT_PUBLIC_CONFIGURATOR_DOMAIN || 'https://unbreak-3-d-konfigurator.vercel.app';
+    const redirectUrl = `${configDomain}/?lang=${currentLang}&return=${returnUrl}`;
+    
+    console.info('[MENU] Redirecting to configurator:', redirectUrl);
+    window.location.href = redirectUrl;
+  };
+
   // Determine active page
   const getActivePage = () => {
     const path = router.pathname;
@@ -67,7 +88,7 @@ export default function Header() {
           <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
           <li><a href="/gastro-edition.html" data-page="gastro-edition" className={activePage === 'gastro-edition' ? 'active' : ''}>Gastro Edition</a></li>
           <li><a href="/technik.html" data-page="technik" className={activePage === 'technik' ? 'active' : ''}>Technik</a></li>
-          <li><a href="/configurator.html" data-page="configurator" className={activePage === 'configurator' ? 'active' : ''}>Konfigurator</a></li>
+          <li><a href="#" onClick={handleConfiguratorClick} data-page="configurator" className={activePage === 'configurator' ? 'active' : ''}>Konfigurator</a></li>
           <li><a href="/shop" data-page="shop" className={activePage === 'shop' ? 'active' : ''}>Shop</a></li>
           <li><a href="/kontakt.html" data-page="kontakt" className={activePage === 'kontakt' ? 'active' : ''}>Kontakt</a></li>
 

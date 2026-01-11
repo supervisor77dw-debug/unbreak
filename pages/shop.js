@@ -49,6 +49,105 @@ export default function Shop({ initialProducts }) {
     }
   }, [initialProducts]);
 
+  // NEW: Handle cfgId redirect flow from configurator
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const cfgId = urlParams.get('cfgId');
+    
+    if (cfgId) {
+      console.info('[SHOP] cfgId detected:', cfgId);
+      handleConfigSessionRedirect(cfgId);
+    }
+  }, []);
+
+  async function handleConfigSessionRedirect(cfgId) {
+    try {
+      // 1) Fetch session from API
+      const response = await fetch(`/api/config-session/${cfgId}`);
+      
+      if (!response.ok) {
+        console.error('[SHOP] Config session not found or expired');
+        // Remove cfgId from URL
+        window.history.replaceState({}, '', '/shop');
+        alert('Konfigurationssession nicht gefunden oder abgelaufen. Bitte neu konfigurieren.');
+        return;
+      }
+      
+      const session = await response.json();
+      console.info('[SHOP] session loaded:', {
+        variantKey: session.variantKey,
+        sku: session.product_sku
+      });
+      
+      // 2) Validate
+      if (!session.config || !session.product_sku) {
+        console.error('[SHOP] Invalid session data');
+        window.history.replaceState({}, '', '/shop');
+        return;
+      }
+      
+      // 3) Add to cart using existing shop logic
+      if (!cart) {
+        console.error('[SHOP] Cart not initialized');
+        alert('Warenkorb konnte nicht geladen werden. Bitte Seite neu laden.');
+        return;
+      }
+      
+      // Create product item from session
+      const configProduct = {
+        id: session.product_sku,
+        sku: session.product_sku,
+        name: session.variantKey === 'bottle_holder' ? 'UNBREAK ONE Weinglashalter' : 'UNBREAK ONE Glashalter',
+        price: 4900, // 49€
+        variant: session.variantKey,
+        config: session.config,
+        configured: true,
+      };
+      
+      const success = cart.addItem(configProduct);
+      
+      if (success) {
+        console.info('[SHOP] add-to-cart done');
+        
+        // 4) Clean up URL (remove cfgId)
+        window.history.replaceState({}, '', '/shop');
+        
+        // 5) User feedback (non-blocking)
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #059669;
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          z-index: 10000;
+          font-family: sans-serif;
+        `;
+        notification.textContent = '✓ Konfiguration wurde in den Warenkorb gelegt';
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 3000);
+        
+        // 6) Delete session (cleanup)
+        fetch(`/api/config-session/${cfgId}`, { method: 'DELETE' })
+          .catch(err => console.warn('[SHOP] Failed to delete session:', err));
+          
+      } else {
+        console.error('[SHOP] Failed to add configured product to cart');
+        window.history.replaceState({}, '', '/shop');
+        alert('Fehler beim Hinzufügen zum Warenkorb');
+      }
+      
+    } catch (error) {
+      console.error('[SHOP] Error handling config session:', error);
+      window.history.replaceState({}, '', '/shop');
+      alert('Fehler beim Laden der Konfiguration');
+    }
+  }
+
   async function loadProducts() {
     try {
       const supabase = getSupabasePublic();

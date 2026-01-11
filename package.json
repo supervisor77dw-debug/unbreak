@@ -44,7 +44,8 @@
     "react-dom": "^18.2.0",
     "resend": "^6.6.0",
     "sharp": "^0.34.5",
-    "stripe": "^14.25.0"
+    "stripe": "^14.25.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",
