@@ -16,7 +16,27 @@ export default function Shop({ initialProducts }) {
   const [loading, setLoading] = useState(!initialProducts);
   const [error, setError] = useState(null);
   const [cartCount, setCartCount] = useState(0);
+  const [currentLang, setCurrentLang] = useState('de');
   const cart = typeof window !== 'undefined' ? getCart() : null;
+
+  useEffect(() => {
+    // Detect current language from i18n system
+    if (typeof window !== 'undefined' && window.i18n) {
+      setCurrentLang(window.i18n.getCurrentLanguage() || 'de');
+      
+      // Listen for language changes
+      const handleLangChange = (e) => {
+        setCurrentLang(e.detail?.lang || 'de');
+      };
+      window.addEventListener('languageChanged', handleLangChange);
+      window.addEventListener('i18nReady', handleLangChange);
+      
+      return () => {
+        window.removeEventListener('languageChanged', handleLangChange);
+        window.removeEventListener('i18nReady', handleLangChange);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     // Update cart count on mount and when cart changes
@@ -175,6 +195,15 @@ export default function Shop({ initialProducts }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  /**
+   * Build configurator URL with language and return URL
+   */
+  function getConfiguratorUrl() {
+    const configBaseUrl = 'https://config.unbreak-one.com';
+    const returnUrl = encodeURIComponent('https://www.unbreak-one.com/shop/config-return');
+    return `${configBaseUrl}/?lang=${currentLang}&return=${returnUrl}`;
   }
 
   function handleAddToCart(product) {
@@ -339,7 +368,7 @@ export default function Shop({ initialProducts }) {
               <div className="empty-state">
                 <h2>Bald verfügbar</h2>
                 <p>Unsere Produkte werden gerade vorbereitet.</p>
-                <a href="/configurator.html" className="btn-primary">
+                <a href={getConfiguratorUrl()} className="btn-primary">
                   Zum Konfigurator
                 </a>
               </div>
@@ -476,7 +505,7 @@ export default function Shop({ initialProducts }) {
                   Perfekt abgestimmt auf deine Einrichtung.
                 </p>
                 <div className="configurator-actions">
-                  <a href="/configurator.html" className="btn-configurator-primary">
+                  <a href={getConfiguratorUrl()} className="btn-configurator-primary">
                     Jetzt gestalten
                   </a>
                   <a href="#products" className="btn-configurator-secondary">

@@ -5,31 +5,26 @@
  * DELETE /api/config-session/[cfgId] - Delete session (cleanup)
  * 
  * Response (GET):
- * { lang: "de"|"en", payload: object }
+ * { lang: "de"|"en", config: object }
  * 
  * Response (DELETE):
  * { success: true }
  */
 
-// Import the same store from parent route
-// NOTE: In production, use external storage (Vercel KV, Redis, DB)
-const sessionStore = new Map();
+import { handleCors } from '../../../lib/cors-config';
+import { getSessionStore } from '../../../lib/session-store';
 
 export default async function handler(req, res) {
   const { cfgId } = req.query;
 
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  // Handle CORS with preflight
+  if (handleCors(req, res)) return;
 
   if (!cfgId) {
     return res.status(400).json({ error: 'Missing cfgId' });
   }
+
+  const sessionStore = getSessionStore();
 
   // GET - Retrieve session
   if (req.method === 'GET') {
@@ -49,10 +44,10 @@ export default async function handler(req, res) {
 
     console.info('[CONFIG_SESSION] Retrieved:', cfgId);
     
-    // Return only lang and payload (simplified response)
+    // Return lang and config (updated key name)
     return res.status(200).json({
       lang: session.lang,
-      payload: session.payload
+      config: session.config || session.payload  // Support both old and new
     });
   }
 

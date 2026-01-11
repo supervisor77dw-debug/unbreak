@@ -1,85 +1,70 @@
 /**
  * Config Session API - POST endpoint
  * 
- * Simplified session storage for configurator → shop flow
+ * Session storage for configurator → shop flow
  * POST /api/config-session
  * 
  * Request Body:
  * {
- *   lang: 'de' | 'en',
- *   payload: object  // Arbitrary config data from configurator
+ *   sessionId?: string,           // Optional: reuse existing session
+ *   lang?: 'de' | 'en',           // Optional: language preference
+ *   config: object                // Required: configuration data
  * }
  * 
  * Response:
- * { cfgId: string }
+ * { ok: true, sessionId: string }
  */
 
 import { v4 as uuidv4 } from 'uuid';
-
-// In-memory storage (for development)
-// PRODUCTION: Replace with Vercel KV, Upstash Redis, or Database
-const sessionStore = new Map();
-const TTL_MS = 45 * 60 * 1000; // 45 minutes (30-60 min range)
-
-// Cleanup expired sessions every 10 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [cfgId, session] of sessionStore.entries()) {
-    if (now > session.expiresAt) {
-      sessionStore.delete(cfgId);
-      console.log('[CONFIG_SESSION] Cleaned up expired session:', cfgId);
-    }
-  }
-}, 10 * 60 * 1000);
+import { handleCors } from '../../lib/cors-config';
+import { getSessionStore, getTTL } from '../../lib/session-store';
 
 export default async function handler(req, res) {
-  // CORS headers for cross-domain configurator
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  // Handle CORS with preflight
+  if (handleCors(req, res)) return;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { lang, payload } = req.body;
+    const { sessionId, lang, config } = req.body;
 
-    // Validation
-    if (!lang || !['de', 'en'].includes(lang)) {
-      return res.status(400).json({ error: 'Invalid or missing lang (must be "de" or "en")' });
+    // Validation: config is required
+    if (!config || typeof config !== 'object') {
+      return res.status(400).json({ error: 'Invalid or missing config (must be object)' });
     }
 
-    if (!payload || typeof payload !== 'object') {
-      return res.status(400).json({ error: 'Invalid or missing payload (must be object)' });
+    // Validation: lang is optional but must be valid if provided
+    if (lang && !['de', 'en'].includes(lang)) {
+      return res.status(400).json({ error: 'Invalid lang (must be "de" or "en")' });
     }
 
-    // Generate unique session ID
-    const cfgId = uuidv4();
-    const expiresAt = Date.now() + TTL_MS;
+    // Use provided sessionId or generate new one
+    const finalSessionId = sessionId || uuidv4();
+    const sessionStore = getSessionStore();
+    const ttl = getTTL();
+    const expiresAt = Date.now() + ttl;
 
     // Store session
     const session = {
-      lang,
-      payload,
+      lang: lang || 'de',           // Default to DE
+      config,                        // Store as 'config' not 'payload'
       createdAt: new Date().toISOString(),
       expiresAt,
     };
 
-    sessionStore.set(cfgId, session);
+    sessionStore.set(finalSessionId, session);
 
     console.info('[CONFIG_SESSION] Created:', {
-      cfgId,
-      lang,
-      payloadKeys: Object.keys(payload),
+      sessionId: finalSessionId,
+      lang: session.lang,
+      configKeys: Object.keys(config),
       ttl: '45min',
+      origin: req.headers.origin || 'unknown',
     });
 
-    return res.status(201).json({ cfgId });
+    return res.status(201).json({ ok: true, sessionId: finalSessionId });
 
   } catch (error) {
     console.error('[CONFIG_SESSION] Error:', error);
