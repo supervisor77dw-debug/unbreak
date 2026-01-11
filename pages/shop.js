@@ -202,7 +202,7 @@ export default function Shop({ initialProducts }) {
    */
   function getConfiguratorUrl() {
     const configBaseUrl = 'https://config.unbreak-one.com';
-    const returnUrl = encodeURIComponent('https://www.unbreak-one.com/shop/config-return');
+    const returnUrl = encodeURIComponent('https://www.unbreak-one.com/config-return');
     return `${configBaseUrl}/?lang=${currentLang}&return=${returnUrl}`;
   }
 
