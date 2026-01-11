@@ -1,8 +1,16 @@
 # Stable Baseline - Verification Guide
 
-## Commit: 40394d0
+## Commit: 823e427
 
 ## Critical Fixes Applied
+
+### ✅ 0. Fixed Next.js Routing Conflict (CRITICAL)
+- **Issue:** pages/shop.js AND pages/shop/ directory caused 404 on /shop
+- **Fix:** Moved pages/shop/config-return.js → pages/config-return.js
+- **Result:** Routes now work correctly
+  - /shop → ✅
+  - /config-return → ✅ (was /shop/config-return)
+  - /debug/config-session → ✅
 
 ### ✅ 1. Removed ALL iframe Bridge Code
 - **Removed:** iframe-language-bridge-v2.js script tag
@@ -76,7 +84,12 @@ Invoke-RestMethod -Uri 'https://www.unbreak-one.com/api/health'
 4. Click "2. Read Session" → Should show config data
 5. Click "3. Delete Session" → Should show `{ success: true }`
 
-### Test 4: API Direct Test ✅
+### Test 4: Config Return Page ✅
+- URL: https://www.unbreak-one.com/config-return
+- Should show: "Fehlende Session-ID" error (because no ?session= param)
+- With session param: Should process and redirect to cart
+
+### Test 5: API Direct Test ✅
 ```javascript
 // Browser console on www.unbreak-one.com
 fetch('/api/config-session', {
