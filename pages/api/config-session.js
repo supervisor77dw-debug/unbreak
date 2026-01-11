@@ -16,12 +16,18 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { handleCors } from '../../lib/cors-config';
+import { applyCorsHeaders, handlePreflight } from '../../lib/cors-config';
 import { getSessionStore, getTTL } from '../../lib/session-store';
 
 export default async function handler(req, res) {
-  // Handle CORS with preflight
-  if (handleCors(req, res)) return;
+  // CRITICAL: Apply CORS headers to ALL responses (including errors)
+  applyCorsHeaders(req, res, {
+    methods: 'POST, OPTIONS',
+    headers: 'Content-Type',
+  });
+  
+  // Handle OPTIONS preflight
+  if (handlePreflight(req, res)) return;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });

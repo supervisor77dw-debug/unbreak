@@ -207,14 +207,13 @@
             </div>
         </div>
     </div>
-    <!-- Load Supabase config -->
-    <script src="/api/config"></script>
     
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
         
-        // Supabase client setup from generated config
-        const { url: supabaseUrl, anonKey: supabaseAnonKey } = window.SUPABASE_CONFIG;
+        // Supabase client setup
+        const supabaseUrl = 'https://qnzsdytdghfukrqpscsg.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFuenNkeXRkZ2hmdWtycXBzY3NnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjQ0OTg3MjksImV4cCI6MjA0MDA3NDcyOX0.fWBwA-CU-DzBdRXf3uSnRQQbGpxZH2r5FnxjRqrRAUs';
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
         
         const loginForm = document.getElementById('loginForm');
@@ -232,9 +231,24 @@
         }
         
         async function redirectUser(userId) {
-            // Unified redirect - always go to /backend after successful login
-            const redirect = new URLSearchParams(window.location.search).get('redirect');
-            window.location.href = redirect || '/backend';
+            try {
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', userId)
+                    .single();
+                
+                if (error) throw error;
+                
+                if (profile.role === 'admin') {
+                    window.location.href = '/admin.html';
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (err) {
+                console.error('Profile fetch error:', err);
+                showError('Profil konnte nicht geladen werden');
+            }
         }
         
         loginForm.addEventListener('submit', async (e) => {
