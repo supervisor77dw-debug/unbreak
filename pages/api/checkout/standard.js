@@ -320,30 +320,61 @@ export default async function handler(req, res) {
 
     console.log('👤 [Checkout] Customer email:', customerEmail || 'none provided');
 
-    // 2.5. Calculate shipping and create pricing snapshot
+    // 2.5. Calculate shipping and create comprehensive pricing snapshot
     const shippingCountry = 'DE'; // TODO: Get from user selection or session
     const shippingCents = calculateShipping(shippingCountry);
-    const taxCents = 0; // Stripe automatic_tax handles this
-    const grandTotalCents = totalAmount + shippingCents;
+    
+    // Tax will be calculated by Stripe automatic_tax
+    // We store 0 here and update after payment with actual amount
+    const taxCents = 0;
+    const subtotalCents = totalAmount;
+    const grandTotalCents = totalAmount + shippingCents; // Pre-tax total
 
-    // Create order metadata with pricing snapshot
-    const orderMetadata = {
-      source: 'shop_checkout',
-      cart_items_count: cartItems.length,
-      total_quantity: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+    // Build comprehensive order pricing snapshot
+    const orderPricingSnapshot = {
+      // Pricing source
+      pricing_source: PRICING_SOURCE,
       build_id: BUILD_ID,
-      pricing_snapshot: {
-        pricing_source: PRICING_SOURCE,
-        computed_subtotal_cents: totalAmount,
-        shipping_cents: shippingCents,
-        tax_cents: taxCents, // Calculated by Stripe
-        grand_total_cents: grandTotalCents,
-        build_id: BUILD_ID,
-        calculated_at: new Date().toISOString(),
-      },
+      calculated_at: new Date().toISOString(),
+      
+      // Items breakdown
+      items: cartItems.map(item => ({
+        product_id: item.product_id,
+        sku: item.sku,
+        name: item.name,
+        quantity: item.quantity,
+        unit_price_cents: item.unit_price_cents,
+        line_total_cents: item.unit_price_cents * item.quantity,
+        
+        // Configurator-specific data
+        ...(item.is_configurator && {
+          is_configurator: true,
+          config: item.config,
+          pricing_breakdown: item.pricing_snapshot,
+        }),
+      })),
+      
+      // Totals
+      subtotal_cents: subtotalCents,
+      shipping_cents: shippingCents,
+      shipping_country: shippingCountry,
+      tax_cents: taxCents, // Updated after Stripe payment
+      grand_total_cents: grandTotalCents, // Pre-tax
+      
+      // Currency
+      currency: 'EUR',
+      
+      // Version for future compatibility
+      snapshot_version: '1.0',
     };
 
-    console.log('💰 [Checkout] Pricing snapshot:', orderMetadata.pricing_snapshot);
+    console.log('💰 [Checkout] Order pricing snapshot:', {
+      items_count: orderPricingSnapshot.items.length,
+      subtotal_cents: orderPricingSnapshot.subtotal_cents,
+      shipping_cents: orderPricingSnapshot.shipping_cents,
+      grand_total_cents: orderPricingSnapshot.grand_total_cents,
+      has_configurator_items: orderPricingSnapshot.items.some(i => i.is_configurator),
+    });
 
     // 3. Create order record with pricing snapshot
     console.log('📝 [Checkout] Creating order record');
