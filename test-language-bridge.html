@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Bridge Retry Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .controls {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        button {
+            padding: 12px 24px;
+            margin: 5px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #0b7dda;
+        }
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #e68900;
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .debug-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 500px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .debug-output pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+        .metric {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            background: #e3f2fd;
+            border-radius: 5px;
+            border-left: 4px solid #2196F3;
+        }
+        .metric strong {
+            color: #1976d2;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border-left: 4px solid #4CAF50;
+            background: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Language Bridge Retry Test</h1>
+        
+        <div class="status info">
+            <strong>ℹ️ Test-Umgebung:</strong> Dieser Test simuliert die Language-Bridge Kommunikation
+        </div>
+
+        <div class="section">
+            <h2>🎮 Controls</h2>
+            <div class="controls">
+                <button class="btn-primary" onclick="testSendLanguage('de')">
+                    🇩🇪 Send DE
+                </button>
+                <button class="btn-primary" onclick="testSendLanguage('en')">
+                    🇬🇧 Send EN
+                </button>
+                <button class="btn-secondary" onclick="simulateAck()">
+                    ✅ Simulate ACK
+                </button>
+                <button class="btn-secondary" onclick="getDump()">
+                    📊 Get Debug Dump
+                </button>
+                <button class="btn-warning" onclick="clearConsole()">
+                    🗑️ Clear Console
+                </button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Metrics</h2>
+            <div id="metrics">
+                <div class="metric">
+                    <strong>Sent:</strong> <span id="sent-count">0</span>
+                </div>
+                <div class="metric">
+                    <strong>Received ACK:</strong> <span id="ack-count">0</span>
+                </div>
+                <div class="metric">
+                    <strong>Retries:</strong> <span id="retry-count">0</span>
+                </div>
+                <div class="metric">
+                    <strong>Pending:</strong> <span id="pending-count">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🖥️ Console Output</h2>
+            <div class="debug-output" id="console-output">
+                <pre>Waiting for messages...</pre>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Debug Info</h2>
+            <div class="debug-output" id="debug-info">
+                <pre>Click "Get Debug Dump" to see detailed information</pre>
+            </div>
+        </div>
+
+        <div class="status warning">
+            <strong>⚠️ Hinweis:</strong> Dies ist ein lokaler Test. Um die tatsächliche Integration zu testen,
+            öffnen Sie die Homepage mit <code>?debug=1</code> Parameter.
+        </div>
+    </div>
+
+    <script>
+        // Mock Bridge if not loaded
+        if (!window.UnbreakBridge) {
+            window.UnbreakBridge = {
+                SCHEMA_VERSION: '1.0',
+                EventTypes: {
+                    SET_LANG: 'UNBREAK_SET_LANG',
+                    LANG_ACK: 'UNBREAK_LANG_ACK',
+                    SET_LOCALE_ACK: 'UNBREAK_SET_LOCALE_ACK'
+                }
+            };
+        }
+
+        if (!window.UnbreakBridgeDebug) {
+            window.UnbreakBridgeDebug = {
+                enabled: true,
+                lastLangSent: null,
+                lastAckReceived: null,
+                langRetries: 0,
+                lastOrigin: null,
+                lastMessageType: null,
+                getDump: function() {
+                    return {
+                        lastLangSent: this.lastLangSent,
+                        lastAckReceived: this.lastAckReceived,
+                        retries: this.langRetries,
+                        lastOrigin: this.lastOrigin,
+                        lastMessageType: this.lastMessageType
+                    };
+                }
+            };
+        }
+
+        // Mock stats
+        let stats = {
+            sent: 0,
+            ackReceived: 0,
+            retries: 0,
+            pending: 0
+        };
+
+        let consoleLog = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('de-DE');
+            const emoji = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            const logEntry = `[${timestamp}] ${emoji} ${message}`;
+            
+            consoleLog.push(logEntry);
+            updateConsoleOutput();
+            
+            console.log(message);
+        }
+
+        function updateConsoleOutput() {
+            const output = document.getElementById('console-output');
+            output.innerHTML = '<pre>' + consoleLog.slice(-50).join('\n') + '</pre>';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function updateMetrics() {
+            document.getElementById('sent-count').textContent = stats.sent;
+            document.getElementById('ack-count').textContent = stats.ackReceived;
+            document.getElementById('retry-count').textContent = stats.retries;
+            document.getElementById('pending-count').textContent = stats.pending;
+        }
+
+        function testSendLanguage(lang) {
+            stats.sent++;
+            stats.pending++;
+            updateMetrics();
+
+            log(`[LANG][PARENT→IFRAME] Sending language: ${lang}`, 'info');
+            
+            // Mock: Update debug tracking
+            window.UnbreakBridgeDebug.lastLangSent = {
+                lang: lang,
+                correlationId: 'msg_' + Date.now(),
+                timestamp: new Date().toISOString(),
+                retryCount: 0
+            };
+            window.UnbreakBridgeDebug.langRetries = 0;
+
+            log(`Message sent with correlationId: ${window.UnbreakBridgeDebug.lastLangSent.correlationId}`, 'success');
+            
+            // Simulate no response (to test retry)
+            setTimeout(() => {
+                if (stats.pending > 0) {
+                    stats.retries++;
+                    updateMetrics();
+                    log(`[LANG][RETRY] No ACK received, retry attempt ${stats.retries}`, 'warning');
+                }
+            }, 2000);
+        }
+
+        function simulateAck() {
+            if (!window.UnbreakBridgeDebug.lastLangSent) {
+                log('[ERROR] No pending language change to acknowledge', 'warning');
+                return;
+            }
+
+            stats.ackReceived++;
+            stats.pending = Math.max(0, stats.pending - 1);
+            updateMetrics();
+
+            const lang = window.UnbreakBridgeDebug.lastLangSent.lang;
+            
+            window.UnbreakBridgeDebug.lastAckReceived = {
+                event: 'UNBREAK_LANG_ACK',
+                lang: lang,
+                timestamp: new Date().toISOString(),
+                correlationId: 'msg_' + Date.now(),
+                replyTo: window.UnbreakBridgeDebug.lastLangSent.correlationId
+            };
+
+            const latency = Math.floor(Math.random() * 200 + 50);
+            log(`[LANG][ACK] ✅ Confirmed in ${latency}ms (after ${stats.retries} retries)`, 'success');
+            log(`[LANG] ✅ Language synchronized: ${lang}`, 'success');
+            
+            stats.retries = 0;
+            updateMetrics();
+        }
+
+        function getDump() {
+            const dump = window.UnbreakBridgeDebug.getDump();
+            const output = document.getElementById('debug-info');
+            output.innerHTML = '<pre>' + JSON.stringify(dump, null, 2) + '</pre>';
+            
+            log('[DEBUG] Dump generated', 'info');
+        }
+
+        function clearConsole() {
+            consoleLog = [];
+            updateConsoleOutput();
+            log('[SYSTEM] Console cleared', 'info');
+        }
+
+        // Initialize
+        log('[SYSTEM] Language Bridge Test initialized', 'success');
+        log('[INFO] Timeout: 2000ms, Max Retries: 10', 'info');
+        updateMetrics();
+    </script>
+</body>
+</html>

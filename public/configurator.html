@@ -342,95 +342,15 @@
       });
     </script>
     
-    <!-- Bridge Communication System v2.2 (MUST load after checkout.js) -->
-    <script src="/lib/bridge-schema.js?v=2.0.1"></script>
-    <script src="/lib/bridge-debug.js?v=2.0.1"></script>
-    <script src="/lib/bridge-debug-panel.js?v=2.0.1"></script>
-    <script src="/iframe-language-bridge-v2.js?v=2.2.0"></script>
-    
-    <!-- Initialize Bridge Debug -->
+    <!-- NO iframe bridge - external configurator handles its own integration -->
     <script>
-    console.log('🚀 [INIT] Bridge System Loading...');
-    
-    // Wait for DOM + all scripts loaded
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initBridge);
-    } else {
-        initBridge();
-    }
-    
-    function initBridge() {
-        console.log('🔧 [INIT] DOMContentLoaded - Checking Bridge availability...');
-        console.log('  - BridgeMessage:', typeof window.BridgeMessage);
-        console.log('  - UnbreakBridgeDebug:', typeof window.UnbreakBridgeDebug);
-        console.log('  - UnbreakCheckout:', typeof window.UnbreakCheckout);
-        console.log('  - UnbreakCheckout.createCheckoutFromConfig:', typeof window.UnbreakCheckout?.createCheckoutFromConfig);
-        
-        // Enable debug logging
-        if (window.UnbreakBridgeDebug) {
-            window.UnbreakBridgeDebug.enable();
-            console.log('✅ [INIT] Bridge Debug enabled');
-        } else {
-            console.error('❌ [INIT] Bridge Debug NOT available!');
-        }
-    }
+    console.log('✅ [INIT] Shop-only mode - no iframe bridge needed');
     </script>
     
-    <script src="configurator/configurator-new.js"></script>
-    
-    <!-- DEBUG MODE CONTROLLER -->
+    <!-- Legacy RELAY Handler removed - Now fully handled by external configurator -->
     <script>
-    (function() {
-        // Check if debug mode enabled
-        const urlParams = new URLSearchParams(window.location.search);
-        const debugMode = urlParams.get('debug') === '1';
-        
-        if (!debugMode) return;
-        
-        console.log('🔧 [DEBUG MODE] Enabled - Failure-safe diagnostics active');
-        console.log('[DEBUG_INIT] URL:', window.location.href);
-        console.log('[DEBUG_INIT] Build:', window.UNBREAK_BUILD_INFO || 'unknown');
-        
-        // Show debug bar IMMEDIATELY (no dependencies)
-        const debugBar = document.getElementById('debug-bar');
-        if (debugBar) {
-            debugBar.style.display = 'block';
-            document.body.style.marginTop = '40px';
-        }
-        
-        // State tracking
-        const state = {
-            iframeLoaded: false,
-            readyReceived: false,
-            lastConfigTs: null,
-            lastConfigVariant: null,
-            buttonVisible: false,
-            bridgeLogs: []
-        };
-        
-        // Update debug display
-        function updateDebug() {
-            const iframe = document.getElementById('configurator-iframe');
-            const button = document.getElementById('configurator-buy-now-btn');
-            
-            // Check iframe loaded
-            state.iframeLoaded = iframe && iframe.contentWindow != null;
-            document.querySelector('#debug-iframe-loaded span').textContent = state.iframeLoaded ? 'YES' : 'NO';
-            document.querySelector('#debug-iframe-loaded span').style.color = state.iframeLoaded ? '#10b981' : '#ef4444';
-            
-            // Check ready
-            const bridge = window.ConfiguratorBridge;
-            state.readyReceived = bridge && bridge.isReady && bridge.isReady();
-            document.querySelector('#debug-ready-received span').textContent = state.readyReceived ? 'YES' : 'NO';
-            document.querySelector('#debug-ready-received span').style.color = state.readyReceived ? '#10b981' : '#ef4444';
-            
-            // Check config
-            const lastConfig = bridge && bridge.lastConfig;
-            if (lastConfig) {
-                state.lastConfigTs = Date.now();
-                state.lastConfigVariant = lastConfig.variant;
-                const ago = state.lastConfigTs ? Math.round((Date.now() - state.lastConfigTs) / 1000) : 0;
-                document.querySelector('#debug-last-config span').textContent = `${state.lastConfigVariant} (${ago}s ago)`;
+    console.log('✅ [CONFIG] External configurator integration - no shop-side bridge needed');
+    </script>
                 document.querySelector('#debug-last-config span').style.color = '#10b981';
             } else {
                 document.querySelector('#debug-last-config span').textContent = 'none';
@@ -640,9 +560,9 @@
     })();
     </script>
     
-    <!-- Legacy RELAY Handler removed - Now fully handled by Bridge v2.0 -->
+    <!-- Legacy RELAY Handler removed - Now fully handled by external configurator -->
     <script>
-    console.log('✅ [BRIDGE] All iframe communication handled by iframe-language-bridge-v2.js');
+    console.log('✅ [CONFIG] External configurator integration - no shop-side bridge needed');
     </script>
     
     <!-- Auto-Scroll to Configurator Section -->
