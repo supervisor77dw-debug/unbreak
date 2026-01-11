@@ -12,6 +12,8 @@ export default function CartPage() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [pricingSnapshot, setPricingSnapshot] = useState(null);
+  const [loadingPricing, setLoadingPricing] = useState(false);
   const cart = getCart();
 
   // Load cart items on mount
@@ -25,6 +27,41 @@ export default function CartPage() {
 
     return unsubscribe;
   }, []);
+
+  // Fetch pricing from server when cart changes
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      setPricingSnapshot(null);
+      return;
+    }
+
+    async function fetchPricing() {
+      setLoadingPricing(true);
+      try {
+        const response = await fetch('/api/pricing/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: cart.getCheckoutPayload() }),
+        });
+
+        if (!response.ok) {
+          console.error('[Cart] Pricing fetch failed:', response.status);
+          setPricingSnapshot(null);
+          return;
+        }
+
+        const data = await response.json();
+        setPricingSnapshot(data);
+      } catch (err) {
+        console.error('[Cart] Pricing error:', err);
+        setPricingSnapshot(null);
+      } finally {
+        setLoadingPricing(false);
+      }
+    }
+
+    fetchPricing();
+  }, [cartItems]);
 
   // Debug logging (preview only)
   useEffect(() => {
@@ -114,9 +151,11 @@ export default function CartPage() {
     }
   };
 
-  const subtotal = cart.getTotal();
-  const shipping = 0; // TODO: calculate shipping
-  const total = subtotal + shipping;
+  // Use pricing snapshot from server (SINGLE SOURCE OF TRUTH)
+  // Fallback to local calculation if snapshot not available yet
+  const subtotal = pricingSnapshot?.subtotal_cents || cart.getTotal();
+  const shipping = pricingSnapshot?.shipping_cents || 0;
+  const total = pricingSnapshot?.grand_total_cents || (subtotal + shipping);
 
   // Defensive checks for NaN
   const isValidPrice = (val) => Number.isFinite(val) && val >= 0;

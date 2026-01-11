@@ -148,6 +148,70 @@ export default function OrderDetail() {
     });
   };
 
+  // Render legacy items (fallback for orders without pricing snapshot)
+  const renderLegacyItems = (items) => {
+    const itemsArray = typeof items === 'string' ? JSON.parse(items) : items;
+    
+    return (
+      <div className="items-table">
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid #404040' }}>
+              <th style={{ textAlign: 'left', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Produkt</th>
+              <th style={{ textAlign: 'center', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>SKU</th>
+              <th style={{ textAlign: 'center', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Menge</th>
+              <th style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Stückpreis</th>
+              <th style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Gesamt</th>
+            </tr>
+          </thead>
+          <tbody>
+            {itemsArray.map((item, idx) => (
+              <tr key={idx} style={{ borderBottom: '1px solid #2a2a2a' }}>
+                <td style={{ padding: '12px 8px' }}>
+                  <div style={{ color: '#d4f1f1', fontWeight: '500' }}>
+                    {item?.name || item?.product_name || 'Produkt'}
+                  </div>
+                  {item?.config && (
+                    <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                      {item?.config?.colors && (
+                        <span>🎨 {Object.entries(item.config.colors).map(([area, color]) => `${area}: ${color}`).join(', ')}</span>
+                      )}
+                      {item?.config?.finish && <span> • {item.config.finish}</span>}
+                    </div>
+                  )}
+                </td>
+                <td style={{ textAlign: 'center', padding: '12px 8px' }}>
+                  <code style={{ background: '#1a1a1a', padding: '2px 6px', borderRadius: '3px', fontSize: '11px', color: '#0891b2' }}>
+                    {item.sku || item.product_sku || '—'}
+                  </code>
+                </td>
+                <td style={{ textAlign: 'center', padding: '12px 8px', color: '#d4f1f1' }}>
+                  {item?.quantity || 1}
+                </td>
+                <td style={{ textAlign: 'right', padding: '12px 8px', color: '#d4f1f1', fontFamily: 'monospace' }}>
+                  {formatCurrency(item?.unitPrice || item?.unit_price_cents || 0)}
+                </td>
+                <td style={{ textAlign: 'right', padding: '12px 8px', color: '#d4f1f1', fontWeight: '600', fontFamily: 'monospace' }}>
+                  {formatCurrency((item?.unitPrice || item?.unit_price_cents || 0) * (item?.quantity || 1))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr style={{ borderTop: '2px solid #404040' }}>
+              <td colSpan="4" style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontWeight: '600' }}>
+                Gesamtsumme (Brutto):
+              </td>
+              <td style={{ textAlign: 'right', padding: '12px 8px', color: '#0891b2', fontWeight: '700', fontSize: '16px', fontFamily: 'monospace' }}>
+                {formatCurrency(order.totalGross || order.amountTotal || 0)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    );
+  };
+
   const getPaymentBadge = (status) => {
     const styles = {
       PAID: { bg: '#065f46', text: '#d1fae5' },
@@ -284,20 +348,226 @@ export default function OrderDetail() {
             </div>
           </div>
 
-          {/* Order Items */}
+          {/* Order Items - Display from Pricing Snapshot ONLY */}
           <div className="info-card">
             <h2>📦 Bestellte Produkte</h2>
-            {(order.items || order.items_json) ? (
-              <div className="items-table">
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid #404040' }}>
-                      <th style={{ textAlign: 'left', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Produkt</th>
-                      <th style={{ textAlign: 'center', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>SKU</th>
-                      <th style={{ textAlign: 'center', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Menge</th>
-                      <th style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Stückpreis</th>
-                      <th style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Gesamt</th>
-                    </tr>
+            {(() => {
+              // 🚨 CRITICAL: Use pricing_snapshot as SINGLE SOURCE OF TRUTH
+              // Backend does NOT calculate prices - only displays snapshot
+              // Try multiple sources (fallback chain):
+              // 1. price_breakdown_json (dedicated column)
+              // 2. metadata.pricing_snapshot (legacy location)
+              const snapshot = order.price_breakdown_json || 
+                              order.priceBreakdownJson || 
+                              order.metadata?.pricing_snapshot;
+              
+              if (!snapshot || !snapshot.items || snapshot.items.length === 0) {
+                // Fallback for legacy orders without snapshot
+                const legacyItems = order.items || order.items_json;
+                if (!legacyItems || legacyItems.length === 0) {
+                  return (
+                    <div style={{ padding: '12px', background: '#7c2d12', borderRadius: '6px' }}>
+                      <strong style={{ color: '#fed7aa' }}>⚠️ Keine Items vorhanden</strong>
+                      <p style={{ color: '#fed7aa', fontSize: '13px', margin: '4px 0 0 0' }}>
+                        Diese Bestellung hat keine Items-Daten. Möglicherweise vor Migration erstellt.
+                      </p>
+                    </div>
+                  );
+                }
+                
+                // Show warning for legacy order
+                return (
+                  <div>
+                    <div style={{ padding: '12px', background: '#854d0e', borderRadius: '6px', marginBottom: '16px' }}>
+                      <strong style={{ color: '#fef3c7' }}>⚠️ Legacy-Bestellung (kein Pricing Snapshot)</strong>
+                      <p style={{ color: '#fef3c7', fontSize: '13px', margin: '4px 0 0 0' }}>
+                        Diese Bestellung wurde vor Einführung des Pricing Snapshot Systems erstellt.
+                      </p>
+                    </div>
+                    {renderLegacyItems(legacyItems)}
+                  </div>
+                );
+              }
+              
+              // ✅ DISPLAY SNAPSHOT (SINGLE SOURCE OF TRUTH)
+              return (
+                <div>
+                  {/* Snapshot Metadata */}
+                  <div style={{ 
+                    padding: '8px 12px', 
+                    background: '#134e4a', 
+                    borderRadius: '6px', 
+                    marginBottom: '12px',
+                    fontSize: '11px',
+                    color: '#5eead4',
+                    fontFamily: 'monospace'
+                  }}>
+                    ✅ Pricing Snapshot v{snapshot.snapshot_version || '1.0'} • 
+                    Source: {snapshot.pricing_source || 'unknown'} • 
+                    Calculated: {snapshot.calculated_at ? new Date(snapshot.calculated_at).toLocaleString('de-DE') : 'unknown'}
+                  </div>
+                  
+                  {/* Items Table */}
+                  <div className="items-table">
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #404040' }}>
+                          <th style={{ textAlign: 'left', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Produkt</th>
+                          <th style={{ textAlign: 'center', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>SKU</th>
+                          <th style={{ textAlign: 'center', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Menge</th>
+                          <th style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Stückpreis</th>
+                          <th style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontSize: '12px', fontWeight: '600' }}>Gesamt</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {snapshot.items.map((item, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #2a2a2a' }}>
+                            <td style={{ padding: '12px 8px' }}>
+                              <div style={{ color: '#d4f1f1', fontWeight: '500' }}>
+                                {item.name}
+                              </div>
+                              
+                              {/* Configuration Display */}
+                              {item.is_configurator && item.config && (
+                                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                                  {item.config.colors && (
+                                    <div>
+                                      🎨 {Object.entries(item.config.colors).map(([area, color]) => {
+                                        const displayName = getColorDisplayName(color);
+                                        return `${area}: ${displayName}`;
+                                      }).join(' • ')}
+                                    </div>
+                                  )}
+                                  {item.config.finish && (
+                                    <div>✨ Finish: {item.config.finish}</div>
+                                  )}
+                                  
+                                  {/* Pricing Breakdown from Snapshot */}
+                                  {item.pricing_breakdown && (
+                                    <div style={{ 
+                                      marginTop: '8px', 
+                                      padding: '8px', 
+                                      background: '#1a1a1a', 
+                                      borderRadius: '4px', 
+                                      borderLeft: '2px solid #0891b2' 
+                                    }}>
+                                      <div style={{ color: '#0891b2', fontWeight: '600', marginBottom: '4px', fontSize: '11px' }}>
+                                        💰 PRICING BREAKDOWN (Snapshot v{item.pricing_breakdown.pricing_version || 'N/A'})
+                                      </div>
+                                      <div style={{ fontFamily: 'monospace', fontSize: '11px', lineHeight: '1.6' }}>
+                                        <div>Basis: {formatCurrency(item.pricing_breakdown.admin_base_price_cents || 0)}</div>
+                                        {item.pricing_breakdown.option_prices_cents?.base > 0 && (
+                                          <div style={{ color: '#fbbf24' }}>+ Base-Farbe: {formatCurrency(item.pricing_breakdown.option_prices_cents.base)}</div>
+                                        )}
+                                        {item.pricing_breakdown.option_prices_cents?.arm > 0 && (
+                                          <div style={{ color: '#fbbf24' }}>+ Arm-Farbe: {formatCurrency(item.pricing_breakdown.option_prices_cents.arm)}</div>
+                                        )}
+                                        {item.pricing_breakdown.option_prices_cents?.module > 0 && (
+                                          <div style={{ color: '#fbbf24' }}>+ Modul-Farbe: {formatCurrency(item.pricing_breakdown.option_prices_cents.module)}</div>
+                                        )}
+                                        {item.pricing_breakdown.option_prices_cents?.pattern > 0 && (
+                                          <div style={{ color: '#fbbf24' }}>+ Pattern-Farbe: {formatCurrency(item.pricing_breakdown.option_prices_cents.pattern)}</div>
+                                        )}
+                                        {item.pricing_breakdown.option_prices_cents?.finish > 0 && (
+                                          <div style={{ color: '#fbbf24' }}>+ Finish: {formatCurrency(item.pricing_breakdown.option_prices_cents.finish)}</div>
+                                        )}
+                                        {item.pricing_breakdown.custom_fee_cents > 0 && (
+                                          <div style={{ color: '#fbbf24' }}>+ Custom Fee: {formatCurrency(item.pricing_breakdown.custom_fee_cents)}</div>
+                                        )}
+                                        <div style={{ 
+                                          borderTop: '1px solid #404040', 
+                                          marginTop: '4px', 
+                                          paddingTop: '4px', 
+                                          color: '#0891b2', 
+                                          fontWeight: '600' 
+                                        }}>
+                                          = Subtotal: {formatCurrency(item.pricing_breakdown.computed_subtotal_cents || 0)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'center', padding: '12px 8px' }}>
+                              <code style={{ 
+                                background: '#1a1a1a', 
+                                padding: '2px 6px', 
+                                borderRadius: '3px', 
+                                fontSize: '11px', 
+                                color: '#0891b2' 
+                              }}>
+                                {item.sku || '—'}
+                              </code>
+                            </td>
+                            <td style={{ textAlign: 'center', padding: '12px 8px', color: '#d4f1f1' }}>
+                              {item.quantity}
+                            </td>
+                            <td style={{ textAlign: 'right', padding: '12px 8px', color: '#d4f1f1', fontFamily: 'monospace' }}>
+                              {formatCurrency(item.unit_price_cents)}
+                            </td>
+                            <td style={{ textAlign: 'right', padding: '12px 8px', color: '#d4f1f1', fontWeight: '600', fontFamily: 'monospace' }}>
+                              {formatCurrency(item.line_total_cents)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        {/* Subtotal */}
+                        <tr style={{ borderTop: '1px solid #2a2a2a' }}>
+                          <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
+                            Zwischensumme:
+                          </td>
+                          <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#d4f1f1' }}>
+                            {formatCurrency(snapshot.subtotal_cents)}
+                          </td>
+                        </tr>
+                        
+                        {/* Shipping */}
+                        <tr>
+                          <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
+                            Versand ({snapshot.shipping_country || 'DE'}):
+                          </td>
+                          <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#d4f1f1' }}>
+                            {formatCurrency(snapshot.shipping_cents)}
+                          </td>
+                        </tr>
+                        
+                        {/* Tax */}
+                        {snapshot.tax_cents > 0 && (
+                          <tr>
+                            <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
+                              MwSt. (inkl.):
+                            </td>
+                            <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#94a3b8' }}>
+                              {formatCurrency(snapshot.tax_cents)}
+                            </td>
+                          </tr>
+                        )}
+                        
+                        {/* Grand Total */}
+                        <tr style={{ borderTop: '2px solid #404040' }}>
+                          <td colSpan="4" style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontWeight: '600' }}>
+                            Gesamtsumme (Brutto):
+                          </td>
+                          <td style={{ 
+                            textAlign: 'right', 
+                            padding: '12px 8px', 
+                            color: '#0891b2', 
+                            fontWeight: '700', 
+                            fontSize: '16px', 
+                            fontFamily: 'monospace' 
+                          }}>
+                            {formatCurrency(snapshot.grand_total_cents)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
                   </thead>
                   <tbody>
                     {(() => {

@@ -345,16 +345,27 @@ export default async function handler(req, res) {
 
     console.log('💰 [Checkout] Pricing snapshot:', orderMetadata.pricing_snapshot);
 
-    // 3. Create order record
+    // 3. Create order record with pricing snapshot
     console.log('📝 [Checkout] Creating order record');
     const orderData = {
       customer_user_id: userId,
       customer_email: customerEmail,
       items: cartItems, // JSON array of cart items
-      total_amount_cents: totalAmount,
+      total_amount_cents: grandTotalCents,
       currency: 'EUR',
       status: 'pending',
       order_type: 'standard',
+      
+      // Store pricing snapshot in dedicated column (SINGLE SOURCE OF TRUTH)
+      price_breakdown_json: orderPricingSnapshot,
+      
+      // Also store in metadata for backwards compatibility
+      metadata: {
+        pricing_snapshot: orderPricingSnapshot,
+        source: 'shop_checkout',
+        build_id: BUILD_ID,
+      },
+      
       // Legacy fields for backwards compatibility
       product_sku: cartItems[0]?.sku || null,
       quantity: items ? items.reduce((sum, item) => sum + item.quantity, 0) : 1,
@@ -440,6 +451,28 @@ export default async function handler(req, res) {
     });
     
     console.log('📦 [Checkout] Shipping calculated:', { country: shippingCountry, amount_cents: shippingCents });
+
+    // SAFETY CHECK: Verify Stripe amount matches pricing snapshot
+    const calculatedStripeAmountCents = lineItems.reduce((sum, item) => {
+      return sum + (item.price_data.unit_amount * item.quantity);
+    }, 0);
+    
+    if (calculatedStripeAmountCents !== orderPricingSnapshot.grand_total_cents) {
+      console.error('❌ [Checkout] CRITICAL: Stripe amount mismatch!', {
+        stripe_calculated: calculatedStripeAmountCents,
+        snapshot_grand_total: orderPricingSnapshot.grand_total_cents,
+        diff: Math.abs(calculatedStripeAmountCents - orderPricingSnapshot.grand_total_cents),
+      });
+      return res.status(500).json({ 
+        error: 'Pricing verification failed',
+        details: 'Amount mismatch between cart and checkout calculation'
+      });
+    }
+    
+    console.log('✅ [Checkout] Stripe amount verified:', { 
+      amount_cents: calculatedStripeAmountCents,
+      matches_snapshot: true 
+    });
 
     const sessionData = {
       payment_method_types: ['card'],

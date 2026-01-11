@@ -1,12 +1,30 @@
 /**
- * API Endpoint: Calculate Configurator Price
+ * API Endpoint: Calculate Cart Pricing Snapshot
  * POST /api/pricing/calculate
  * 
- * Calculates configured product price from DB pricing config
+ * Calculates complete cart pricing from DB pricing config
  * Used by frontend Cart to get accurate price before checkout
+ * Returns same structure as checkout pricing snapshot
  */
 
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
+
+// Shipping calculation (same as checkout)
+function calculateShipping(country = 'DE') {
+  const shippingRates = {
+    'DE': 490,  // €4.90
+    'AT': 590,
+    'CH': 790,
+    'NL': 690,
+    'BE': 690,
+    'LU': 690,
+    'FR': 790,
+    'IT': 890,
+    'ES': 990,
+    'PT': 990,
+  };
+  return shippingRates[country] || 1290; // Default international
+}
 
 export default async function handler(req, res) {
   // CORS headers
@@ -23,66 +41,104 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { productType, config, customFeeCents } = req.body;
+    const { items } = req.body;
 
     // Validation
-    if (!productType || !['glass_holder', 'bottle_holder'].includes(productType)) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ 
-        error: 'Invalid productType',
-        message: 'Must be glass_holder or bottle_holder'
+        error: 'Invalid items',
+        message: 'Items array required'
       });
     }
 
-    if (!config || typeof config !== 'object') {
-      return res.status(400).json({ 
-        error: 'Invalid config',
-        message: 'Config object required'
-      });
+    console.log('💰 [PRICING API] Calculate cart request:', { 
+      items_count: items.length,
+    });
+
+    // Calculate pricing for each item
+    const itemPricing = [];
+    let subtotalCents = 0;
+
+    for (const item of items) {
+      // Handle configurator items
+      if (item.product_id === 'glass_configurator' && item.config) {
+        const variant = item.config.variant || 'glass_holder';
+        
+        const pricing = await calcConfiguredPrice({
+          productType: variant,
+          config: item.config,
+          customFeeCents: 0,
+        });
+
+        if (!pricing || !pricing.subtotal_cents || pricing.subtotal_cents <= 0) {
+          console.error('❌ [PRICING API] Invalid pricing for item:', item);
+          return res.status(500).json({ 
+            error: 'Pricing calculation failed',
+            message: 'Unable to calculate valid price for configurator item'
+          });
+        }
+
+        const quantity = item.quantity || 1;
+        const lineTotalCents = pricing.subtotal_cents * quantity;
+        subtotalCents += lineTotalCents;
+
+        itemPricing.push({
+          product_id: item.product_id,
+          sku: item.sku || pricing.sku,
+          name: pricing.display_title || 'Glashalter (konfiguriert)',
+          quantity,
+          unit_price_cents: pricing.subtotal_cents,
+          line_total_cents: lineTotalCents,
+          pricing_breakdown: {
+            pricing_version: pricing.pricing_version,
+            base_price_cents: pricing.base_price_cents,
+            option_prices_cents: pricing.option_prices_cents,
+            custom_fee_cents: pricing.custom_fee_cents,
+            computed_subtotal_cents: pricing.subtotal_cents,
+          },
+        });
+      } else {
+        // Handle other product types (if any)
+        const unitPrice = item.price_cents || 0;
+        const quantity = item.quantity || 1;
+        const lineTotalCents = unitPrice * quantity;
+        subtotalCents += lineTotalCents;
+
+        itemPricing.push({
+          product_id: item.product_id,
+          sku: item.sku || 'UNKNOWN',
+          name: item.name || 'Product',
+          quantity,
+          unit_price_cents: unitPrice,
+          line_total_cents: lineTotalCents,
+        });
+      }
     }
 
-    console.log('💰 [PRICING API] Calculate request:', { 
-      productType, 
-      configKeys: Object.keys(config),
-      customFeeCents: customFeeCents || 0
+    // Calculate shipping
+    const shippingCents = calculateShipping('DE'); // TODO: Get from user selection
+    const taxCents = 0; // Tax calculated at checkout by Stripe
+    const grandTotalCents = subtotalCents + shippingCents;
+
+    console.log('✅ [PRICING API] Cart pricing calculated:', {
+      items_count: itemPricing.length,
+      subtotal_cents: subtotalCents,
+      shipping_cents: shippingCents,
+      grand_total_cents: grandTotalCents,
     });
 
-    // Calculate price from DB
-    const pricing = await calcConfiguredPrice({
-      productType,
-      config,
-      customFeeCents: customFeeCents || 0,
-    });
-
-    if (!pricing || !pricing.subtotal_cents || pricing.subtotal_cents <= 0) {
-      console.error('❌ [PRICING API] Invalid pricing result:', pricing);
-      return res.status(500).json({ 
-        error: 'Pricing calculation failed',
-        message: 'Unable to calculate valid price'
-      });
-    }
-
-    console.log('✅ [PRICING API] Price calculated:', {
-      base_price_cents: pricing.base_price_cents,
-      option_prices_cents: pricing.option_prices_cents,
-      subtotal_cents: pricing.subtotal_cents,
-      pricing_version: pricing.pricing_version,
-    });
-
-    // Return pricing breakdown
+    // Return pricing snapshot (same structure as checkout)
     return res.status(200).json({
       success: true,
-      pricing: {
-        pricing_version: pricing.pricing_version,
-        base_price_cents: pricing.base_price_cents,
-        option_prices_cents: pricing.option_prices_cents,
-        custom_fee_cents: pricing.custom_fee_cents,
-        subtotal_cents: pricing.subtotal_cents,
-        display_title: pricing.display_title,
-        sku: pricing.sku,
-      },
-      // Convenience fields for frontend
-      price_euros: (pricing.subtotal_cents / 100).toFixed(2),
+      items: itemPricing,
+      subtotal_cents: subtotalCents,
+      shipping_cents: shippingCents,
+      shipping_country: 'DE',
+      tax_cents: taxCents,
+      grand_total_cents: grandTotalCents,
       currency: 'EUR',
+      pricing_source: 'adminpanel_db',
+      calculated_at: new Date().toISOString(),
     });
 
   } catch (error) {
