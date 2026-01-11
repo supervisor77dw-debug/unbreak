@@ -1,21 +1,28 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Stripe Price ID mapping (env vars)
-const STRIPE_PRICES = {
-  glass_configurator: process.env.STRIPE_PRICE_GLASS_CONFIGURATOR || null,
-  // Add more as needed
-};
+// Build ID from environment (for traceability)
+const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 7) || 'local-dev';
+const PRICING_SOURCE = 'adminpanel_db';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-// Shipping rates (from Stripe Dashboard)
-const SHIPPING_RATES = {
-  de_standard: process.env.STRIPE_SHIPPING_RATE_DE || null,
-};
+// Shipping calculation (from DB rules - TODO: fetch from shipping_rules table)
+function calculateShipping(country = 'DE') {
+  const SHIPPING_RULES = {
+    DE: 490, // €4.90 for Germany
+    AT: 790, // €7.90 for Austria
+    CH: 990, // €9.90 for Switzerland
+    EU: 690, // €6.90 for EU
+    DEFAULT: 990, // €9.90 for rest
+  };
+  return SHIPPING_RULES[country] || SHIPPING_RULES.DEFAULT;
+}
 
 // Helper: Get origin from request (no hardcoded domains)
 function getOrigin(req) {
@@ -105,35 +112,101 @@ export default async function handler(req, res) {
           });
         }
 
-        // SPECIAL CASE: Configurator items (not in products table)
+        // CONFIGURATOR ITEMS: Calculate price from config using DB pricing engine
         if (item.product_id === 'glass_configurator' || item.sku === 'glass_configurator') {
           console.log('🎨 [Checkout] Configurator item detected');
           
-          const itemTotal = (item.price || item.unit_amount || 19900) * item.quantity;
+          if (!item.config) {
+            console.error('❌ [Checkout] Configurator item missing config');
+            return res.status(400).json({ 
+              error: 'Configurator item must include config object with colors',
+              product_id: item.product_id,
+              build_id: BUILD_ID,
+            });
+          }
+
+          // Calculate price using DB pricing engine (source of truth)
+          let pricing;
+          try {
+            pricing = await calcConfiguredPrice({
+              productType: 'glass_holder',
+              config: item.config,
+              customFeeCents: 0,
+            });
+          } catch (error) {
+            console.error('❌ [Checkout] Pricing calculation failed:', error);
+            if (IS_PRODUCTION) {
+              // FAIL-CLOSED: No fallback in production
+              return res.status(500).json({ 
+                error: 'Pricing configuration not available',
+                message: 'Unable to calculate product price. Please contact support.',
+                build_id: BUILD_ID,
+              });
+            } else {
+              // DEV: Log and continue with minimal price for testing
+              console.warn('⚠️ [DEV] Using fallback pricing for development');
+              pricing = {
+                pricing_version: 'dev-fallback',
+                base_price_cents: 4990,
+                option_prices_cents: { base: 0, arm: 0, module: 0, pattern: 0, finish: 0 },
+                custom_fee_cents: 0,
+                subtotal_cents: 4990,
+                display_title: 'Glashalter (konfiguriert)',
+                sku: 'UNBREAK-GLAS-CONFIG',
+              };
+            }
+          }
+
+          // Validate pricing result
+          if (!pricing || !pricing.subtotal_cents || pricing.subtotal_cents <= 0) {
+            console.error('❌ [Checkout] Invalid pricing result:', pricing);
+            return res.status(500).json({ 
+              error: 'Invalid pricing calculation',
+              message: 'Calculated price is invalid. Please contact support.',
+              build_id: BUILD_ID,
+            });
+          }
+
+          // Create pricing snapshot for order
+          const pricingSnapshot = {
+            pricing_source: PRICING_SOURCE,
+            pricing_version: pricing.pricing_version,
+            admin_base_price_cents: pricing.base_price_cents,
+            option_prices_cents: pricing.option_prices_cents,
+            custom_fee_cents: pricing.custom_fee_cents,
+            computed_subtotal_cents: pricing.subtotal_cents,
+            build_id: BUILD_ID,
+            calculated_at: new Date().toISOString(),
+          };
+
+          const itemTotal = pricing.subtotal_cents * item.quantity;
           totalAmount += itemTotal;
 
           cartItems.push({
             product_id: 'glass_configurator',
-            sku: 'glass_configurator',
-            name: item.name || 'Glashalter – Konfigurator',
-            unit_price_cents: item.price || item.unit_amount || 19900,
+            sku: pricing.sku,
+            name: pricing.display_title,
+            unit_price_cents: pricing.subtotal_cents,
             quantity: item.quantity,
             image_url: null,
-            stripe_price_id: STRIPE_PRICES.glass_configurator, // May be null if not configured
             is_configurator: true,
-            config: item.config || null,
+            config: item.config,
+            pricing_snapshot: pricingSnapshot,
           });
 
-          console.log('✅ [Checkout] Configurator item added:', {
-            sku: 'glass_configurator',
+          console.log('✅ [Checkout] Configurator price calculated:', {
+            sku: pricing.sku,
             quantity: item.quantity,
-            unit_price: item.price || item.unit_amount || 19900,
-            has_stripe_price_id: !!STRIPE_PRICES.glass_configurator
+            unit_price_cents: pricing.subtotal_cents,
+            admin_base_price_cents: pricing.base_price_cents,
+            option_prices_cents: pricing.option_prices_cents,
+            pricing_version: pricing.pricing_version,
+            build_id: BUILD_ID,
           });
           continue; // Skip DB lookup
         }
 
-        // Fetch product from database (server-side price validation)
+        // STANDARD PRODUCTS: Fetch from database
         const { data: product, error: productError } = await supabase
           .from('products')
           .select('*')
@@ -145,7 +218,8 @@ export default async function handler(req, res) {
           console.error('❌ [Checkout] Product not found:', item.product_id);
           return res.status(404).json({ 
             error: 'Product not found or inactive',
-            product_id: item.product_id 
+            product_id: item.product_id,
+            build_id: BUILD_ID,
           });
         }
 
@@ -227,6 +301,31 @@ export default async function handler(req, res) {
 
     console.log('👤 [Checkout] Customer email:', customerEmail || 'none provided');
 
+    // 2.5. Calculate shipping and create pricing snapshot
+    const shippingCountry = 'DE'; // TODO: Get from user selection or session
+    const shippingCents = calculateShipping(shippingCountry);
+    const taxCents = 0; // Stripe automatic_tax handles this
+    const grandTotalCents = totalAmount + shippingCents;
+
+    // Create order metadata with pricing snapshot
+    const orderMetadata = {
+      source: 'shop_checkout',
+      cart_items_count: cartItems.length,
+      total_quantity: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      build_id: BUILD_ID,
+      pricing_snapshot: {
+        pricing_source: PRICING_SOURCE,
+        computed_subtotal_cents: totalAmount,
+        shipping_cents: shippingCents,
+        tax_cents: taxCents, // Calculated by Stripe
+        grand_total_cents: grandTotalCents,
+        build_id: BUILD_ID,
+        calculated_at: new Date().toISOString(),
+      },
+    };
+
+    console.log('💰 [Checkout] Pricing snapshot:', orderMetadata.pricing_snapshot);
+
     // 3. Create order record
     console.log('📝 [Checkout] Creating order record');
     const orderData = {
@@ -288,41 +387,40 @@ export default async function handler(req, res) {
     const origin = getOrigin(req);
     console.log('🌐 [Checkout] Origin:', origin);
 
-    // Build line_items from cart
+    // Build line_items from cart (always use price_data for dynamic pricing)
     const lineItems = cartItems.map(item => {
-      // Use Stripe Price ID if available, otherwise use price_data
-      if (item.stripe_price_id) {
-        console.log(`💰 [Checkout] Using Stripe Price ID for ${item.sku}: ${item.stripe_price_id}`);
-        return {
-          price: item.stripe_price_id,
-          quantity: item.quantity,
-        };
-      } else {
-        console.log(`💰 [Checkout] Using price_data for ${item.sku} (no Price ID configured)`);
-        return {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: item.name,
-              images: item.image_url ? [item.image_url] : undefined,
+      console.log(`💰 [Checkout] Creating line item for ${item.sku}: €${(item.unit_price_cents / 100).toFixed(2)}`);
+      return {
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: item.name,
+            images: item.image_url ? [item.image_url] : undefined,
+            metadata: {
+              sku: item.sku,
+              is_configurator: item.is_configurator ? 'true' : 'false',
             },
-            unit_amount: item.unit_price_cents,
           },
-          quantity: item.quantity,
-        };
-      }
+          unit_amount: item.unit_price_cents,
+        },
+        quantity: item.quantity,
+      };
     });
 
-    // Shipping options (if configured)
-    const shippingOptions = [];
-    if (SHIPPING_RATES.de_standard) {
-      shippingOptions.push({
-        shipping_rate: SHIPPING_RATES.de_standard,
-      });
-      console.log('📦 [Checkout] Shipping rate configured:', SHIPPING_RATES.de_standard);
-    } else {
-      console.warn('⚠️ [Checkout] No shipping rate configured (STRIPE_SHIPPING_RATE_DE missing)');
-    }
+    // Shipping: Add as separate line item with calculated amount
+    lineItems.push({
+      price_data: {
+        currency: 'eur',
+        product_data: {
+          name: `Versand (${shippingCountry})`,
+          description: 'Standard shipping',
+        },
+        unit_amount: shippingCents,
+      },
+      quantity: 1,
+    });
+    
+    console.log('📦 [Checkout] Shipping calculated:', { country: shippingCountry, amount_cents: shippingCents });
 
     const sessionData = {
       payment_method_types: ['card'],
@@ -331,13 +429,12 @@ export default async function handler(req, res) {
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart`,
       
-      // SHIPPING: Address collection + rates
+      // SHIPPING: Address collection (for fulfillment, not pricing)
       shipping_address_collection: {
         allowed_countries: ['DE', 'AT', 'CH', 'NL', 'BE', 'LU', 'FR', 'IT', 'ES', 'PT'],
       },
-      ...(shippingOptions.length > 0 && { shipping_options: shippingOptions }),
       
-      // TAX: Automatic tax calculation (recommended)
+      // TAX: Automatic tax calculation
       automatic_tax: {
         enabled: true,
       },
@@ -350,12 +447,13 @@ export default async function handler(req, res) {
         customer_email: customerEmail || undefined,
       }),
       
+      // METADATA: Link session to order in DB
       metadata: {
         order_id: order.id,
-        type: 'standard',
-        user_id: userId || 'guest',
-        item_count: cartItems.length,
-        supabase_user_id: userId || null,
+        customer_email: customerEmail || 'guest',
+        source: 'shop_checkout',
+        build_id: BUILD_ID,
+        pricing_source: PRICING_SOURCE,
       },
     };
     // Debug logging (preview only)
@@ -364,28 +462,35 @@ export default async function handler(req, res) {
       console.log('[CHECKOUT] success_url=%s', sessionData.success_url.replace('{CHECKOUT_SESSION_ID}', '<session_id>'));
       console.log('[CHECKOUT] cancel_url=%s', sessionData.cancel_url);
       console.log('[CHECKOUT] mode=%s', sessionData.mode === 'payment' ? 'payment' : sessionData.mode);
-      console.log('[CHECKOUT] locale=%s', 'de'); // Default locale
-      console.log('[CHECKOUT] items=%s', JSON.stringify(lineItems.map(li => ({
-        sku: cartItems.find(ci => ci.quantity === li.quantity)?.sku,
+      console.log('[CHECKOUT] locale=%s', 'de');
+      console.log('[CHECKOUT] line_items=%s', JSON.stringify(lineItems.map(li => ({
+        name: li.price_data.product_data.name,
+        amount_cents: li.price_data.unit_amount,
         qty: li.quantity,
-        priceId: li.price || 'price_data',
       }))));
-      console.log('[CHECKOUT] shipping_options_count=%d', shippingOptions.length);
+      console.log('[CHECKOUT] pricing_snapshot=%s', JSON.stringify(orderMetadata.pricing_snapshot));
+      console.log('[CHECKOUT] build_id=%s', BUILD_ID);
+      console.log('[CHECKOUT] pricing_source=%s', PRICING_SOURCE);
       console.log('[CHECKOUT] automatic_tax=%s', sessionData.automatic_tax?.enabled ? 'enabled' : 'disabled');
       console.log('[CHECKOUT] metadata.order_id=%s', sessionData.metadata.order_id);
     }
 
     console.log('💳 [Checkout] Stripe session data:', {
       mode: sessionData.mode,
-      line_items: sessionData.line_items.length,
-      total_items: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      line_items_count: sessionData.line_items.length,
+      subtotal_cents: totalAmount,
+      shipping_cents: shippingCents,
+      grand_total_cents: grandTotalCents,
       success_url: sessionData.success_url.substring(0, 80) + '...',
       cancel_url: sessionData.cancel_url,
       customer_email: sessionData.customer_email,
-      has_shipping: shippingOptions.length > 0,
+      shipping_included: true,
       automatic_tax: sessionData.automatic_tax?.enabled,
+      build_id: BUILD_ID,
+      pricing_source: PRICING_SOURCE,
     });
 
+    // 6. Create Stripe checkout session
     const session = await stripe.checkout.sessions.create(sessionData);
     
     console.log('✅ [Checkout] Stripe session created:', session.id);
