@@ -414,11 +414,7 @@ export default async function handler(req, res) {
       // CRITICAL: Store pricing snapshot in dedicated column (primary source)
       price_breakdown_json: orderPricingSnapshot,
       
-      // Traceability fields
-      trace_id: traceId,
-      snapshot_id: snapshotId,
-      
-      // Also store in metadata for fallback/compatibility
+      // Traceability stored in metadata (DB columns may not exist yet)
       metadata: {
         pricing_snapshot: orderPricingSnapshot,
         source: 'shop_checkout',
