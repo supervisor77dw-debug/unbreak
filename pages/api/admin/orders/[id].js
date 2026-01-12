@@ -55,12 +55,32 @@ export default async function handler(req, res) {
         // Transform simple_order to match order structure for frontend compatibility
         return res.status(200).json({
           ...simpleOrder,
-          // Ensure pricing snapshot fields are accessible
+          
+          // Pricing snapshot fields
           price_breakdown_json: simpleOrder.price_breakdown_json,
-          priceBreakdownJson: simpleOrder.price_breakdown_json, // Alias
+          priceBreakdownJson: simpleOrder.price_breakdown_json, // Alias for camelCase
           trace_id: simpleOrder.trace_id || simpleOrder.metadata?.trace_id,
           snapshot_id: simpleOrder.snapshot_id || simpleOrder.metadata?.snapshot_id,
           has_snapshot: simpleOrder.has_snapshot || !!simpleOrder.price_breakdown_json,
+          
+          // Field name normalization (simple_orders uses different column names than Prisma orders)
+          stripeCheckoutSessionId: simpleOrder.stripe_checkout_session_id || simpleOrder.stripe_session_id,
+          stripe_checkout_session_id: simpleOrder.stripe_checkout_session_id || simpleOrder.stripe_session_id,
+          
+          // Timestamps (normalize to camelCase)
+          createdAt: simpleOrder.created_at,
+          updatedAt: simpleOrder.updated_at,
+          created_at: simpleOrder.created_at,
+          updated_at: simpleOrder.updated_at,
+          
+          // Amounts (already in cents)
+          amountTotal: simpleOrder.total_amount_cents,
+          totalGross: simpleOrder.total_amount_cents,
+          
+          // Customer info (may be null if webhook hasn't processed)
+          customerId: simpleOrder.customer_id,
+          email: simpleOrder.customer_email,
+          
           // Source indicator
           _source: 'simple_orders',
         });
