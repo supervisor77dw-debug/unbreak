@@ -428,6 +428,15 @@ export default async function handler(req, res) {
       quantity: items ? items.reduce((sum, item) => sum + item.quantity, 0) : 1,
     };
 
+    // DEBUG: Log what we're trying to save
+    log('order_data_prepared', {
+      has_price_breakdown_json: !!orderData.price_breakdown_json,
+      has_metadata: !!orderData.metadata,
+      has_metadata_pricing_snapshot: !!orderData.metadata?.pricing_snapshot,
+      price_breakdown_keys: Object.keys(orderData.price_breakdown_json || {}),
+      metadata_keys: Object.keys(orderData.metadata || {}),
+    });
+
     const { data: order, error: orderError } = await supabase
       .from('simple_orders')
       .insert(orderData)
@@ -465,12 +474,21 @@ export default async function handler(req, res) {
       snapshot_saved: snapshotSaved,
       snapshot_in_price_breakdown: !!order.price_breakdown_json,
       snapshot_in_metadata: !!order.metadata?.pricing_snapshot,
+      // CRITICAL DEBUG: Log what Supabase returned
+      returned_fields: Object.keys(order),
+      price_breakdown_type: typeof order.price_breakdown_json,
+      metadata_type: typeof order.metadata,
     });
 
     if (!snapshotSaved) {
       log('WARNING_SNAPSHOT_NOT_SAVED', {
         order_id: order.id,
         fields_checked: ['price_breakdown_json', 'metadata.pricing_snapshot'],
+        // Check if fields are undefined vs null
+        price_breakdown_is_null: order.price_breakdown_json === null,
+        price_breakdown_is_undefined: order.price_breakdown_json === undefined,
+        metadata_is_null: order.metadata === null,
+        metadata_is_undefined: order.metadata === undefined,
       });
     }
 
