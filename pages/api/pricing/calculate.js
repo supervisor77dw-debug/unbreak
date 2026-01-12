@@ -41,23 +41,80 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { items } = req.body;
+    const { items, productType, config, customFeeCents } = req.body;
 
-    // Validation
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    // DUAL MODE: Support both cart pricing and single-product pricing
+    // Mode 1: Cart pricing (items array)
+    // Mode 2: Single product pricing (productType + config)
+    
+    if (items && Array.isArray(items) && items.length > 0) {
+      // MODE 1: CART PRICING
+      return await handleCartPricing(items, res);
+    } else if (productType && config) {
+      // MODE 2: SINGLE PRODUCT PRICING
+      return await handleSingleProductPricing(productType, config, customFeeCents || 0, res);
+    } else {
       return res.status(400).json({ 
-        error: 'Invalid items',
-        message: 'Items array required'
+        error: 'Invalid request',
+        message: 'Either items array OR (productType + config) required'
       });
     }
 
-    console.log('💰 [PRICING API] Calculate cart request:', { 
-      items_count: items.length,
+  } catch (error) {
+    console.error('❌ [PRICING API] Error:', error);
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message
     });
+  }
+}
 
-    // Calculate pricing for each item
-    const itemPricing = [];
-    let subtotalCents = 0;
+// Handle single product pricing (for shop page)
+async function handleSingleProductPricing(productType, config, customFeeCents, res) {
+  console.log('💰 [PRICING API] Single product pricing:', { productType });
+  
+  const pricing = await calcConfiguredPrice({
+    productType,
+    config,
+    customFeeCents,
+  });
+
+  if (!pricing || !pricing.subtotal_cents || pricing.subtotal_cents <= 0) {
+    console.error('❌ [PRICING API] Invalid pricing result');
+    return res.status(500).json({ 
+      error: 'Pricing calculation failed',
+      message: 'Unable to calculate valid price'
+    });
+  }
+
+  console.log('✅ [PRICING API] Single product priced:', {
+    subtotal_cents: pricing.subtotal_cents,
+    base: pricing.base_price_cents,
+    options: pricing.option_prices_cents,
+  });
+
+  return res.status(200).json({
+    success: true,
+    pricing: {
+      base_price_cents: pricing.base_price_cents,
+      option_prices_cents: pricing.option_prices_cents,
+      custom_fee_cents: pricing.custom_fee_cents || 0,
+      subtotal_cents: pricing.subtotal_cents,
+    },
+    price_euros: (pricing.subtotal_cents / 100).toFixed(2),
+    sku: pricing.sku,
+    display_title: pricing.display_title,
+    pricing_version: pricing.pricing_version,
+  });
+}
+
+// Handle cart pricing (for cart page)
+async function handleCartPricing(items, res) {
+  console.log('💰 [PRICING API] Cart pricing:', { items_count: items.length });
+
+  // Calculate pricing for each item
+  const itemPricing = [];
+  let subtotalCents = 0;
 
     for (const item of items) {
       // Handle configurator items
@@ -140,12 +197,4 @@ export default async function handler(req, res) {
       pricing_source: 'adminpanel_db',
       calculated_at: new Date().toISOString(),
     });
-
-  } catch (error) {
-    console.error('❌ [PRICING API] Error:', error);
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message
-    });
-  }
 }
