@@ -548,7 +548,7 @@ export default async function handler(req, res) {
         amount_cents: li.price_data.unit_amount,
         qty: li.quantity,
       }))));
-      console.log('[CHECKOUT] pricing_snapshot=%s', JSON.stringify(orderMetadata.pricing_snapshot));
+      console.log('[CHECKOUT] pricing_snapshot=%s', JSON.stringify(orderPricingSnapshot));
       console.log('[CHECKOUT] build_id=%s', BUILD_ID);
       console.log('[CHECKOUT] pricing_source=%s', PRICING_SOURCE);
       console.log('[CHECKOUT] automatic_tax=%s', sessionData.automatic_tax?.enabled ? 'enabled' : 'disabled');
