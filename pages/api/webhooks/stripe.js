@@ -124,36 +124,75 @@ async function handleCheckoutSessionCompleted(session, trace_id) {
   };
 
   try {
-    // 1. Try to find order - check both tables (configurator vs standard shop)
-    console.log('🔍 [DB QUERY] Looking for order with session:', session.id);
+    // 1. Try to find order - PRIORITY: Use metadata.order_id (UUID) from Stripe
+    console.log('🔍 [DB QUERY] Looking for order...');
+    console.log('🔍 [METADATA] order_id:', session.metadata?.order_id);
+    console.log('🔍 [METADATA] order_number:', session.metadata?.order_number);
+    console.log('🔍 [FALLBACK] stripe_session_id:', session.id);
     
     let order = null;
     let orderSource = null;
     
-    // First try: Configurator orders (orders table)
-    const { data: configuratorOrder } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('stripe_checkout_session_id', session.id)
-      .maybeSingle();
-    
-    if (configuratorOrder) {
-      order = configuratorOrder;
-      orderSource = 'configurator';
-      console.log('✅ [DB QUERY] Found in CONFIGURATOR orders table');
-    } else {
-      // Second try: Standard shop orders (simple_orders table)
-      // CRITICAL: Check BOTH column names (stripe_session_id AND stripe_checkout_session_id)
+    // CRITICAL: First try to find by metadata.order_id (UUID) - MOST RELIABLE
+    if (session.metadata?.order_id) {
+      console.log('✅ [DB QUERY] Using metadata.order_id (UUID):', session.metadata.order_id);
+      
+      // Try simple_orders first (shop orders)
       const { data: shopOrder } = await supabase
         .from('simple_orders')
         .select('*')
-        .or(`stripe_session_id.eq.${session.id},stripe_checkout_session_id.eq.${session.id}`)
+        .eq('id', session.metadata.order_id)
         .maybeSingle();
       
       if (shopOrder) {
         order = shopOrder;
         orderSource = 'simple_orders';
-        console.log('✅ [DB QUERY] Found in SIMPLE_ORDERS table (standard shop)');
+        console.log('✅ [DB QUERY] Found in SIMPLE_ORDERS by UUID');
+      } else {
+        // Try configurator orders
+        const { data: configuratorOrder } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('id', session.metadata.order_id)
+          .maybeSingle();
+        
+        if (configuratorOrder) {
+          order = configuratorOrder;
+          orderSource = 'configurator';
+          console.log('✅ [DB QUERY] Found in ORDERS (configurator) by UUID');
+        }
+      }
+    }
+    
+    // FALLBACK: Try to find by Stripe session ID (legacy orders without metadata)
+    if (!order) {
+      console.log('⚠️ [DB QUERY] metadata.order_id not found or missing, falling back to session ID lookup');
+      
+      // First try: Configurator orders (orders table)
+      const { data: configuratorOrder } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('stripe_checkout_session_id', session.id)
+        .maybeSingle();
+      
+      if (configuratorOrder) {
+        order = configuratorOrder;
+        orderSource = 'configurator';
+        console.log('✅ [DB QUERY] Found in CONFIGURATOR orders table (by session ID)');
+      } else {
+        // Second try: Standard shop orders (simple_orders table)
+        // CRITICAL: Check BOTH column names (stripe_session_id AND stripe_checkout_session_id)
+        const { data: shopOrder } = await supabase
+          .from('simple_orders')
+          .select('*')
+          .or(`stripe_session_id.eq.${session.id},stripe_checkout_session_id.eq.${session.id}`)
+          .maybeSingle();
+        
+        if (shopOrder) {
+          order = shopOrder;
+          orderSource = 'simple_orders';
+          console.log('✅ [DB QUERY] Found in SIMPLE_ORDERS table (by session ID)');
+        }
       }
     }
 

@@ -266,11 +266,140 @@ export default function OrderDetail() {
           </button>
           <div className="title-section">
             <h1>Bestelldetails</h1>
-            <div className="order-id">ID: {order.id.substring(0, 8)}...</div>
+            <div className="order-id">
+              {order.order_number ? (
+                <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#0891b2' }}>
+                  {order.order_number}
+                </span>
+              ) : (
+                <span>ID: {order.id.substring(0, 8)}...</span>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="content">
+          {/* 🆔 ORDER IDENTIFIERS DEBUG PANEL */}
+          {order._debug && (
+            <div className="info-card" style={{ background: '#1a1a1a', borderLeft: '4px solid #0891b2' }}>
+              <h2>🔍 Bestellnummern & IDs</h2>
+              <div className="info-grid">
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <strong>Bestellnummer (Order Number):</strong>
+                  <div style={{ 
+                    fontSize: '20px', 
+                    color: '#0891b2', 
+                    fontWeight: 'bold', 
+                    fontFamily: 'monospace',
+                    marginTop: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    {order._debug.order_number}
+                    <button 
+                      onClick={() => navigator.clipboard.writeText(order._debug.order_number)}
+                      style={{
+                        background: '#0891b2',
+                        border: 'none',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      📋 Kopieren
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <strong>UUID (Primäre ID):</strong>
+                  <div style={{ 
+                    fontFamily: 'monospace', 
+                    fontSize: '11px', 
+                    color: '#94a3b8',
+                    marginTop: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <span style={{ wordBreak: 'break-all' }}>{order._debug.uuid}</span>
+                    <button 
+                      onClick={() => navigator.clipboard.writeText(order._debug.uuid)}
+                      style={{
+                        background: '#334155',
+                        border: 'none',
+                        color: 'white',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '10px',
+                        flexShrink: 0
+                      }}
+                    >
+                      📋
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <strong>Public ID (Kurz-ID):</strong>
+                  <span className="mono" style={{ color: '#0891b2' }}>{order._debug.public_id}</span>
+                </div>
+
+                <div>
+                  <strong>Stripe Session ID:</strong>
+                  <span className="mono" style={{ fontSize: '11px', color: '#94a3b8', wordBreak: 'break-all' }}>
+                    {order._debug.stripe_session_id}
+                  </span>
+                </div>
+
+                <div>
+                  <strong>Stripe Payment Intent:</strong>
+                  <span className="mono" style={{ fontSize: '11px', color: '#94a3b8', wordBreak: 'break-all' }}>
+                    {order._debug.stripe_payment_intent}
+                  </span>
+                </div>
+
+                <div>
+                  <strong>Trace ID:</strong>
+                  <span className="mono" style={{ fontSize: '11px', color: order._debug.trace_id !== '(not set)' ? '#10b981' : '#ef4444' }}>
+                    {order._debug.trace_id}
+                  </span>
+                </div>
+
+                <div>
+                  <strong>Snapshot ID:</strong>
+                  <span className="mono" style={{ fontSize: '11px', color: order._debug.snapshot_id !== '(not set)' ? '#10b981' : '#ef4444' }}>
+                    {order._debug.snapshot_id}
+                  </span>
+                </div>
+
+                <div>
+                  <strong>Pricing Snapshot:</strong>
+                  <span style={{ 
+                    color: order._debug.has_snapshot ? '#10b981' : '#ef4444',
+                    fontWeight: 'bold'
+                  }}>
+                    {order._debug.has_snapshot ? '✅ Vorhanden' : '❌ Fehlt'}
+                  </span>
+                </div>
+
+                <div>
+                  <strong>Customer ID:</strong>
+                  <span className="mono" style={{ fontSize: '11px' }}>{order._debug.customer_id}</span>
+                </div>
+
+                <div>
+                  <strong>Erstellt:</strong>
+                  <span>{formatDate(order._debug.created_at)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Status Cards */}
           <div className="status-section">
             <div className="status-card">

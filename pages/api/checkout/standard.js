@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
 import { getEnvFingerprint, formatFingerprintLog } from '../../../lib/utils/envFingerprint.js';
+import { generateOrderNumber, generatePublicId } from '../../../lib/utils/orderNumber.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -407,8 +408,23 @@ export default async function handler(req, res) {
         .map(i => i.config?.colors?.base || 'unknown'),
     });
 
+    // 2.5 Generate order identifiers BEFORE creating order
+    const orderId = randomUUID(); // Generate UUID upfront
+    const orderNumber = await generateOrderNumber(); // UO-2026-000123
+    const publicId = generatePublicId(orderId); // First 8 chars of UUID
+    
+    log('identifiers_generated', {
+      order_id: orderId,
+      order_number: orderNumber,
+      public_id: publicId,
+    });
+
     // 3. Create order record with pricing snapshot
     const orderData = {
+      id: orderId, // Explicitly set UUID
+      order_number: orderNumber, // Human-readable order number
+      public_id: publicId, // Short public ID
+      
       customer_user_id: userId,
       customer_email: customerEmail,
       items: cartItems, // JSON array of cart items
@@ -432,6 +448,8 @@ export default async function handler(req, res) {
         build_id: BUILD_ID,
         trace_id: traceId,
         snapshot_id: snapshotId,
+        order_number: orderNumber, // Also in metadata for easy access
+        public_id: publicId,
         
         // DIAGNOSTIC: Environment fingerprint for mismatch detection
         env_source: ENV_FINGERPRINT,
@@ -444,6 +462,9 @@ export default async function handler(req, res) {
 
     // DEBUG: Log what we're trying to save
     log('order_data_prepared', {
+      order_id: orderId,
+      order_number: orderNumber,
+      public_id: publicId,
       has_price_breakdown_json: !!orderData.price_breakdown_json,
       has_metadata: !!orderData.metadata,
       has_metadata_pricing_snapshot: !!orderData.metadata?.pricing_snapshot,
@@ -607,9 +628,11 @@ export default async function handler(req, res) {
         customer_email: customerEmail || undefined,
       }),
       
-      // METADATA: Link session to order in DB
+      // METADATA: Link session to order in DB (SINGLE SOURCE OF TRUTH)
       metadata: {
-        order_id: order.id,
+        order_id: order.id, // UUID - PRIMARY identifier for webhook lookup
+        order_number: order.order_number, // Human-readable (UO-2026-000123)
+        public_id: order.public_id, // Short ID (8 chars)
         customer_email: customerEmail || 'guest',
         source: 'shop_checkout',
         build_id: BUILD_ID,

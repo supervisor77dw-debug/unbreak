@@ -56,6 +56,11 @@ export default async function handler(req, res) {
         return res.status(200).json({
           ...simpleOrder,
           
+          // ORDER IDENTIFICATION - All IDs normalized
+          id: simpleOrder.id, // UUID - PRIMARY IDENTIFIER
+          order_number: simpleOrder.order_number, // UO-2026-NNNNNN (human-readable)
+          public_id: simpleOrder.public_id, // 8-char short ID
+          
           // Pricing snapshot fields
           price_breakdown_json: simpleOrder.price_breakdown_json,
           priceBreakdownJson: simpleOrder.price_breakdown_json, // Alias for camelCase
@@ -83,6 +88,20 @@ export default async function handler(req, res) {
           
           // Source indicator
           _source: 'simple_orders',
+          
+          // DEBUG INFO - All identifiers and tracking IDs
+          _debug: {
+            uuid: simpleOrder.id,
+            order_number: simpleOrder.order_number || '(not set)',
+            public_id: simpleOrder.public_id || '(not set)',
+            stripe_session_id: simpleOrder.stripe_session_id || simpleOrder.stripe_checkout_session_id || '(not set)',
+            stripe_payment_intent: simpleOrder.stripe_payment_intent_id || '(not set)',
+            trace_id: simpleOrder.trace_id || '(not set)',
+            snapshot_id: simpleOrder.snapshot_id || '(not set)',
+            has_snapshot: simpleOrder.has_snapshot || false,
+            customer_id: simpleOrder.customer_id || '(not set)',
+            created_at: simpleOrder.created_at,
+          }
         });
       }
 
