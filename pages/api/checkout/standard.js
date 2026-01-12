@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -11,6 +12,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const BUILD_ID = process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 7) || 'local-dev';
 const PRICING_SOURCE = 'adminpanel_db';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const SNAPSHOT_VERSION = 'unbreak-one.pricing.v1';
 
 // Shipping calculation (from DB rules - TODO: fetch from shipping_rules table)
 function calculateShipping(country = 'DE') {
@@ -47,8 +49,26 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  console.log('🛒 [Checkout] Starting standard checkout');
-  console.log('📥 [Checkout] Request body:', req.body);
+  // TRACE ID: Client sends or we generate
+  const traceId = req.headers['x-trace-id'] || req.body.trace_id || randomUUID();
+  const snapshotId = randomUUID();
+  
+  // Structured log helper
+  const log = (step, data = {}) => {
+    console.log(JSON.stringify({
+      step,
+      trace_id: traceId,
+      snapshot_id: snapshotId,
+      build_id: BUILD_ID,
+      timestamp: new Date().toISOString(),
+      ...data,
+    }));
+  };
+
+  log('checkout_start', { 
+    items_count: req.body.items?.length || 1,
+    has_email: !!req.body.email,
+  });
 
   try {
     // ENV CHECK
@@ -332,6 +352,11 @@ export default async function handler(req, res) {
 
     // Build comprehensive order pricing snapshot
     const orderPricingSnapshot = {
+      // Snapshot metadata
+      snapshot_id: snapshotId,
+      snapshot_version: SNAPSHOT_VERSION,
+      trace_id: traceId,
+      
       // Pricing source
       pricing_source: PRICING_SOURCE,
       build_id: BUILD_ID,
@@ -363,21 +388,20 @@ export default async function handler(req, res) {
       
       // Currency
       currency: 'EUR',
-      
-      // Version for future compatibility
-      snapshot_version: '1.0',
     };
 
-    console.log('💰 [Checkout] Order pricing snapshot:', {
+    log('snapshot_created', {
       items_count: orderPricingSnapshot.items.length,
       subtotal_cents: orderPricingSnapshot.subtotal_cents,
       shipping_cents: orderPricingSnapshot.shipping_cents,
       grand_total_cents: orderPricingSnapshot.grand_total_cents,
       has_configurator_items: orderPricingSnapshot.items.some(i => i.is_configurator),
+      configurator_colors: orderPricingSnapshot.items
+        .filter(i => i.is_configurator)
+        .map(i => i.config?.colors?.base || 'unknown'),
     });
 
     // 3. Create order record with pricing snapshot
-    console.log('📝 [Checkout] Creating order record');
     const orderData = {
       customer_user_id: userId,
       customer_email: customerEmail,
@@ -390,22 +414,23 @@ export default async function handler(req, res) {
       // CRITICAL: Store pricing snapshot in dedicated column (primary source)
       price_breakdown_json: orderPricingSnapshot,
       
+      // Traceability fields
+      trace_id: traceId,
+      snapshot_id: snapshotId,
+      
       // Also store in metadata for fallback/compatibility
       metadata: {
         pricing_snapshot: orderPricingSnapshot,
         source: 'shop_checkout',
         build_id: BUILD_ID,
+        trace_id: traceId,
+        snapshot_id: snapshotId,
       },
       
       // Legacy fields for backwards compatibility
       product_sku: cartItems[0]?.sku || null,
       quantity: items ? items.reduce((sum, item) => sum + item.quantity, 0) : 1,
     };
-    console.log('📝 [Checkout] Order data:', {
-      items: orderData.items.length,
-      total: orderData.total_amount_cents,
-      customer: orderData.customer_email
-    });
 
     const { data: order, error: orderError } = await supabase
       .from('simple_orders')
@@ -414,20 +439,44 @@ export default async function handler(req, res) {
       .single();
 
     if (orderError) {
-      console.error('❌ [Checkout] Order creation failed:', orderError);
+      log('order_save_failed', { 
+        error: orderError.message,
+        code: orderError.code,
+        hint: orderError.hint,
+      });
       return res.status(500).json({ 
         error: 'Failed to create order', 
         details: orderError.message,
-        hint: orderError.hint 
+        hint: orderError.hint,
+        trace_id: traceId,
       });
     }
     
     if (!order) {
-      console.error('❌ [Checkout] Order created but not returned');
-      return res.status(500).json({ error: 'Order creation returned no data' });
+      log('order_save_no_data', {});
+      return res.status(500).json({ 
+        error: 'Order creation returned no data',
+        trace_id: traceId,
+      });
     }
 
-    console.log('✅ [Checkout] Order created:', order.id);
+    // Verify snapshot was saved
+    const snapshotSaved = !!(order.price_breakdown_json || order.metadata?.pricing_snapshot);
+    
+    log('order_saved', {
+      order_id: order.id,
+      table: 'simple_orders',
+      snapshot_saved: snapshotSaved,
+      snapshot_in_price_breakdown: !!order.price_breakdown_json,
+      snapshot_in_metadata: !!order.metadata?.pricing_snapshot,
+    });
+
+    if (!snapshotSaved) {
+      log('WARNING_SNAPSHOT_NOT_SAVED', {
+        order_id: order.id,
+        fields_checked: ['price_breakdown_json', 'metadata.pricing_snapshot'],
+      });
+    }
 
     // 4. Get existing Stripe customer ID (if user is logged in)
     let stripeCustomerId = null;
@@ -537,58 +586,24 @@ export default async function handler(req, res) {
         source: 'shop_checkout',
         build_id: BUILD_ID,
         pricing_source: PRICING_SOURCE,
+        trace_id: traceId,
+        snapshot_id: snapshotId,
       },
     };
-    // Debug logging (preview only)
-    const isPreview = origin.includes('vercel.app');
-    if (isPreview) {
-      console.log('[CHECKOUT] success_url=%s', sessionData.success_url.replace('{CHECKOUT_SESSION_ID}', '<session_id>'));
-      console.log('[CHECKOUT] cancel_url=%s', sessionData.cancel_url);
-      console.log('[CHECKOUT] mode=%s', sessionData.mode === 'payment' ? 'payment' : sessionData.mode);
-      console.log('[CHECKOUT] locale=%s', 'de');
-      console.log('[CHECKOUT] line_items=%s', JSON.stringify(lineItems.map(li => ({
-        name: li.price_data.product_data.name,
-        amount_cents: li.price_data.unit_amount,
-        qty: li.quantity,
-      }))));
-      console.log('[CHECKOUT] pricing_snapshot=%s', JSON.stringify(orderPricingSnapshot));
-      console.log('[CHECKOUT] build_id=%s', BUILD_ID);
-      console.log('[CHECKOUT] pricing_source=%s', PRICING_SOURCE);
-      console.log('[CHECKOUT] automatic_tax=%s', sessionData.automatic_tax?.enabled ? 'enabled' : 'disabled');
-      console.log('[CHECKOUT] metadata.order_id=%s', sessionData.metadata.order_id);
-    }
-
-    console.log('💳 [Checkout] Stripe session data:', {
-      mode: sessionData.mode,
-      line_items_count: sessionData.line_items.length,
-      subtotal_cents: totalAmount,
-      shipping_cents: shippingCents,
-      grand_total_cents: grandTotalCents,
-      success_url: sessionData.success_url.substring(0, 80) + '...',
-      cancel_url: sessionData.cancel_url,
-      customer_email: sessionData.customer_email,
-      shipping_included: true,
-      automatic_tax: sessionData.automatic_tax?.enabled,
-      build_id: BUILD_ID,
-      pricing_source: PRICING_SOURCE,
-    });
 
     // 6. Create Stripe checkout session
     const session = await stripe.checkout.sessions.create(sessionData);
     
-    console.log('✅ [Checkout] Stripe session created:', session.id);
-    console.log('🔍 [SESSION CREATED] ID:', session.id);
-    console.log('🔍 [SESSION CREATED] Mode:', session.mode);
-    console.log('🔍 [SESSION CREATED] URL:', session.url);
-    console.log('🔍 [SESSION CREATED] Amount total:', session.amount_total);
-    console.log('🔍 [SESSION CREATED] Currency:', session.currency);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📋 [ACTION REQUIRED] Search for this Session ID in Stripe Dashboard:');
-    console.log('📋 Session ID:', session.id);
-    console.log('📋 If NOT found in your dashboard → Wrong Stripe account/key!');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    log('stripe_session_created', {
+      order_id: order.id,
+      stripe_session_id: session.id,
+      stripe_amount_total: session.amount_total,
+      stripe_currency: session.currency,
+      expected_amount_cents: grandTotalCents,
+      amount_match: session.amount_total === grandTotalCents,
+    });
 
-    // 6. Update order with Stripe session ID
+    // 7. Update order with Stripe session ID
     console.log('📝 [Checkout] Updating order with session ID');
     const { error: updateError } = await supabase
       .from('simple_orders')
@@ -603,30 +618,42 @@ export default async function handler(req, res) {
       // Don't fail the request - session is created
     }
 
-    // 7. Return checkout URL
-    console.log('✅ [Checkout] Success! Returning session URL');
+    // 8. Return checkout URL
+    log('checkout_success', {
+      order_id: order.id,
+      stripe_session_id: session.id,
+      session_url_length: session.url?.length || 0,
+    });
+
     res.status(200).json({ 
       url: session.url,
       session_id: session.id,
       order_id: order.id,
+      trace_id: traceId,
+      snapshot_id: snapshotId,
     });
 
   } catch (error) {
-    console.error('❌ [Checkout] Fatal error:', error);
-    console.error('❌ [Checkout] Error stack:', error.stack);
+    log('checkout_error', {
+      error_type: error.type || error.name,
+      error_message: error.message,
+      error_code: error.code,
+    });
     
     // Specific error handling
     if (error.type === 'StripeInvalidRequestError') {
       return res.status(400).json({ 
         error: 'Invalid payment request',
         details: error.message,
+        trace_id: traceId,
       });
     }
     
     if (error.code === 'PGRST116') {
       return res.status(404).json({
         error: 'Database record not found',
-        details: error.message
+        details: error.message,
+        trace_id: traceId,
       });
     }
 
@@ -634,6 +661,7 @@ export default async function handler(req, res) {
       error: 'Checkout failed',
       message: error.message || 'Internal server error',
       type: error.type || 'UnknownError',
+      trace_id: traceId,
     });
   }
 }

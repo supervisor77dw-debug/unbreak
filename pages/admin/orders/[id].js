@@ -361,8 +361,13 @@ export default function OrderDetail() {
                               order.priceBreakdownJson || 
                               order.metadata?.pricing_snapshot;
               
+              // Determine if order is truly legacy (created before snapshot system)
+              const SNAPSHOT_ROLLOUT_DATE = new Date('2026-01-12'); // Date snapshot system was deployed
+              const orderDate = new Date(order.created_at || order.createdAt);
+              const isOldOrder = orderDate < SNAPSHOT_ROLLOUT_DATE;
+              
               if (!snapshot || !snapshot.items || snapshot.items.length === 0) {
-                // Fallback for legacy orders without snapshot
+                // NO SNAPSHOT FOUND
                 const legacyItems = order.items || order.items_json;
                 if (!legacyItems || legacyItems.length === 0) {
                   return (
@@ -375,18 +380,40 @@ export default function OrderDetail() {
                   );
                 }
                 
-                // Show warning for legacy order
-                return (
-                  <div>
-                    <div style={{ padding: '12px', background: '#854d0e', borderRadius: '6px', marginBottom: '16px' }}>
-                      <strong style={{ color: '#fef3c7' }}>⚠️ Legacy-Bestellung (kein Pricing Snapshot)</strong>
-                      <p style={{ color: '#fef3c7', fontSize: '13px', margin: '4px 0 0 0' }}>
-                        Diese Bestellung wurde vor Einführung des Pricing Snapshot Systems erstellt.
-                      </p>
+                // Show different warning based on order age
+                if (isOldOrder) {
+                  // TRUE LEGACY ORDER - before snapshot system
+                  return (
+                    <div>
+                      <div style={{ padding: '12px', background: '#854d0e', borderRadius: '6px', marginBottom: '16px' }}>
+                        <strong style={{ color: '#fef3c7' }}>⚠️ Legacy-Bestellung (kein Pricing Snapshot)</strong>
+                        <p style={{ color: '#fef3c7', fontSize: '13px', margin: '4px 0 0 0' }}>
+                          Diese Bestellung wurde vor Einführung des Pricing Snapshot Systems erstellt ({orderDate.toLocaleDateString('de-DE')}).
+                        </p>
+                      </div>
+                      {renderLegacyItems(legacyItems)}
                     </div>
-                    {renderLegacyItems(legacyItems)}
-                  </div>
-                );
+                  );
+                } else {
+                  // NEW ORDER WITHOUT SNAPSHOT - THIS IS A BUG!
+                  return (
+                    <div>
+                      <div style={{ padding: '12px', background: '#7c2d12', borderRadius: '6px', marginBottom: '16px' }}>
+                        <strong style={{ color: '#fed7aa' }}>🚨 FEHLER: Pricing Snapshot fehlt!</strong>
+                        <p style={{ color: '#fed7aa', fontSize: '13px', margin: '4px 0 0 0' }}>
+                          Diese neue Bestellung ({orderDate.toLocaleDateString('de-DE')}) sollte einen Pricing Snapshot haben, hat aber keinen.
+                          Dies ist ein Systemfehler. Bitte Trace ID {order.trace_id || order.metadata?.trace_id || 'N/A'} in Logs prüfen.
+                        </p>
+                        <p style={{ color: '#fed7aa', fontSize: '12px', margin: '8px 0 0 0', fontFamily: 'monospace' }}>
+                          Order ID: {order.id}<br/>
+                          Trace ID: {order.trace_id || order.metadata?.trace_id || 'N/A'}<br/>
+                          Snapshot ID: {order.snapshot_id || order.metadata?.snapshot_id || 'N/A'}
+                        </p>
+                      </div>
+                      {renderLegacyItems(legacyItems)}
+                    </div>
+                  );
+                }
               }
               
               // ✅ DISPLAY SNAPSHOT (SINGLE SOURCE OF TRUTH)
