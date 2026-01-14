@@ -35,16 +35,6 @@
     btnEn.setAttribute('data-lang', 'en');
     btnEn.className = window.i18n?.getCurrentLanguage() === 'en' ? 'active' : '';
 
-    // OPTION A: Disable EN button on /shop page (EN translations coming soon)
-    const isShopPage = window.location.pathname === '/shop' || window.location.pathname.includes('/shop');
-    if (isShopPage) {
-      btnEn.disabled = true;
-      btnEn.classList.add('disabled');
-      btnEn.title = 'Englisch folgt bald / English coming soon';
-      btnEn.style.cursor = 'not-allowed';
-      btnEn.style.opacity = '0.5';
-    }
-
     // Assemble
     switchContainer.appendChild(btnDe);
     switchContainer.appendChild(separator);
@@ -52,11 +42,7 @@
 
     // Event handlers
     btnDe.addEventListener('click', () => switchLanguage('de', btnDe, btnEn));
-    btnEn.addEventListener('click', () => {
-      if (!isShopPage) {
-        switchLanguage('en', btnEn, btnDe);
-      }
-    });
+    btnEn.addEventListener('click', () => switchLanguage('en', btnEn, btnDe));
     
     // ADDITIONAL: Pointer Events (for React/modern frameworks)
     btnDe.addEventListener('pointerdown', () => {
@@ -64,12 +50,10 @@
     });
     btnDe.addEventListener('pointerup', () => switchLanguage('de', btnDe, btnEn));
     
-    if (!isShopPage) {
-      btnEn.addEventListener('pointerdown', () => {
-        console.info('[LANG_SWITCH] pointerdown on EN');
-      });
-      btnEn.addEventListener('pointerup', () => switchLanguage('en', btnEn, btnDe));
-    }
+    btnEn.addEventListener('pointerdown', () => {
+      console.info('[LANG_SWITCH] pointerdown on EN');
+    });
+    btnEn.addEventListener('pointerup', () => switchLanguage('en', btnEn, btnDe));
 
     // Keyboard navigation
     [btnDe, btnEn].forEach(btn => {
@@ -77,10 +61,7 @@
         if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
           e.preventDefault();
           const otherBtn = btn === btnDe ? btnEn : btnDe;
-          // Skip to DE if EN is disabled on shop page
-          if (!otherBtn.disabled) {
-            otherBtn.focus();
-          }
+          otherBtn.focus();
         }
       });
     });
