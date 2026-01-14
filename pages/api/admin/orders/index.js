@@ -1,7 +1,11 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../auth/[...nextauth]';
+/**
+ * 🔥 MESSE-MVP: Admin Orders List API
+ * CANONICAL SOURCE: simple_orders (Supabase) via OrderRepository
+ * RULE: NO PRISMA, only Supabase
+ */
+
 import { requireAuth } from '../../../../lib/auth-helpers';
-import prisma from '../../../../lib/prisma';
+import { OrderRepository } from '../../../../lib/repositories';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -20,65 +24,47 @@ export default async function handler(req, res) {
       statusPayment,
       statusFulfillment,
       search,
-      sortBy = 'createdAt',
+      sortBy = 'created_at',
       sortOrder = 'desc',
     } = req.query;
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const take = parseInt(limit);
+    // 🔥 USE REPOSITORY - CANONICAL SOURCE (simple_orders with UO-numbers only)
+    const result = await OrderRepository.listOrders({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      statusPayment,
+      statusFulfillment,
+      search,
+      sortBy,
+      sortOrder,
+    });
 
-    // Build where clause
-    const where = {};
-
-    if (statusPayment) {
-      where.statusPayment = statusPayment;
-    }
-
-    if (statusFulfillment) {
-      where.statusFulfillment = statusFulfillment;
-    }
-
-    if (search) {
-      where.OR = [
-        { email: { contains: search, mode: 'insensitive' } },
-        { id: { contains: search, mode: 'insensitive' } },
-        { stripeCheckoutSessionId: { contains: search, mode: 'insensitive' } },
-      ];
-    }
-
-    // Get orders with customer
-    const [orders, total] = await Promise.all([
-      prisma.order.findMany({
-        where,
-        skip,
-        take,
-        orderBy: { [sortBy]: sortOrder },
-        include: {
-          customer: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
-          },
-          items: true,
-        },
-      }),
-      prisma.order.count({ where }),
-    ]);
+    // Normalize field names for frontend compatibility
+    const normalizedOrders = result.orders.map(order => ({
+      ...order,
+      // Ensure frontend gets expected field names
+      createdAt: order.created_at,
+      updatedAt: order.updated_at,
+      statusPayment: order.status_payment,
+      statusFulfillment: order.status_fulfillment,
+      stripeCheckoutSessionId: order.stripe_checkout_session_id || order.stripe_session_id,
+      totalGross: order.total_amount_cents,
+      email: order.customer_email || order.customers?.email,
+      customer: order.customers,
+    }));
 
     res.status(200).json({
-      orders,
+      orders: normalizedOrders,
       pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(total / parseInt(limit)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
       },
     });
 
   } catch (error) {
     console.error('❌ [ADMIN ORDERS] Error:', error);
-    res.status(500).json({ error: 'Failed to fetch orders' });
+    res.status(500).json({ error: 'Failed to fetch orders', details: error.message });
   }
 }

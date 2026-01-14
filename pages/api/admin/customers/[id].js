@@ -1,10 +1,12 @@
 /**
- * Admin API: Customer Details
- * GET /api/admin/customers/[id] - Get customer details with order history
+ * 🔥 MESSE-MVP: Admin Customer Details API
+ * CANONICAL SOURCE: customers + simple_orders (Supabase) via Repositories
+ * RULE: NO DUAL-SOURCE, only canonical simple_orders
  */
 
 import { getSupabaseAdmin } from '../../../../lib/supabase';
 import { requireAdmin } from '../../../../lib/adminAuth';
+import { OrderRepository, CustomerRepository } from '../../../../lib/repositories';
 
 export default async function handler(req, res) {
   // Require admin API key
@@ -27,48 +29,15 @@ async function handleGetCustomerDetails(req, res, customerId) {
   const supabaseAdmin = getSupabaseAdmin();
 
   try {
-    // Get customer with full details
-    const { data: customer, error: customerError } = await supabaseAdmin
-      .from('customers')
-      .select('*')
-      .eq('id', customerId)
-      .single();
+    // Get customer
+    const customer = await CustomerRepository.getCustomerById(customerId);
 
-    if (customerError || !customer) {
+    if (!customer) {
       return res.status(404).json({ error: 'Customer not found' });
     }
 
-    // Get order history (configurator orders)
-    // FALLBACK MATCHING: customer_id OR stripe_customer_id OR email
-    const { data: orders, error: ordersError } = await supabaseAdmin
-      .from('orders')
-      .select(`
-        id,
-        order_number,
-        status,
-        total_cents,
-        currency,
-        created_at,
-        updated_at,
-        customer_id,
-        stripe_customer_id,
-        customer_email,
-        configurations:configuration_id (
-          id,
-          config_json,
-          preview_image_url
-        )
-      `)
-      .or(`customer_id.eq.${customerId},stripe_customer_id.eq.${customer.stripe_customer_id},customer_email.ilike.${customer.email}`)
-      .order('created_at', { ascending: false });
-
-    // Get simple orders (shop orders)
-    // FALLBACK MATCHING: customer_id OR stripe_customer_id OR email
-    const { data: simpleOrders, error: simpleOrdersError } = await supabaseAdmin
-      .from('simple_orders')
-      .select('*')
-      .or(`customer_id.eq.${customerId},stripe_customer_id.eq.${customer.stripe_customer_id},customer_email.ilike.${customer.email}`)
-      .order('created_at', { ascending: false });
+    // 🔥 Get orders - ONLY FROM CANONICAL TABLE (simple_orders with UO-numbers)
+    const orders = await OrderRepository.listOrdersByCustomer(customer);
 
     // Get tickets
     const { data: tickets, error: ticketsError } = await supabaseAdmin
@@ -86,11 +55,10 @@ async function handleGetCustomerDetails(req, res, customerId) {
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false });
 
-    // Calculate stats
-    const allOrders = [...(orders || []), ...(simpleOrders || [])];
-    const totalOrders = allOrders.length;
-    const totalSpentCents = allOrders.reduce((sum, order) => {
-      return sum + (order.total_cents || order.total_amount_cents || 0);
+    // Calculate stats (only from canonical orders)
+    const totalOrders = orders.length;
+    const totalSpentCents = orders.reduce((sum, order) => {
+      return sum + (order.total_amount_cents || 0);
     }, 0);
 
     return res.status(200).json({
@@ -99,8 +67,7 @@ async function handleGetCustomerDetails(req, res, customerId) {
         ...customer,
         total_spent_eur: (totalSpentCents / 100).toFixed(2),
       },
-      orders: orders || [],
-      simple_orders: simpleOrders || [],
+      orders, // 🔥 CANONICAL ONLY - no more dual-source
       tickets: tickets || [],
       stats: {
         total_orders: totalOrders,

@@ -15,8 +15,7 @@ export default function CustomerDetailPage() {
   const { id } = router.query;
   
   const [customer, setCustomer] = useState(null);
-  const [orders, setOrders] = useState([]);
-  const [simpleOrders, setSimpleOrders] = useState([]);
+  const [orders, setOrders] = useState([]); // 🔥 SINGLE SOURCE - no more simpleOrders
   const [tickets, setTickets] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,8 +45,7 @@ export default function CustomerDetailPage() {
       if (res.ok) {
         const data = await res.json();
         setCustomer(data.customer);
-        setOrders(data.orders || []);
-        setSimpleOrders(data.simple_orders || []);
+        setOrders(data.orders || []); // 🔥 SINGLE SOURCE - canonical orders only
         setTickets(data.tickets || []);
         setStats(data.stats);
       } else if (res.status === 401) {
@@ -133,9 +131,8 @@ export default function CustomerDetailPage() {
     return priorityMap[priority] || 'priority-default';
   };
 
-  const allOrders = [...orders, ...simpleOrders].sort((a, b) => 
-    new Date(b.created_at) - new Date(a.created_at)
-  );
+  // 🔥 MESSE-FIX: No more merge - orders is already canonical only
+  const allOrders = orders;
 
   return (
     <AdminLayout>
@@ -251,20 +248,28 @@ export default function CustomerDetailPage() {
                   {allOrders.map((order) => (
                     <tr key={order.id}>
                       <td>
-                        <code>{order.order_number || order.id.substring(0, 8)}</code>
+                        <code style={{ color: '#0891b2', fontWeight: 'bold' }}>
+                          {order.order_number || order.id.substring(0, 8)}
+                        </code>
                       </td>
                       <td>
-                        <span className="order-type">
-                          {order.order_number ? 'Konfigurator' : 'Shop'}
+                        <span className="order-type" style={{ 
+                          background: '#0a4d4d', 
+                          color: '#d4f1f1',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px'
+                        }}>
+                          Shop Order
                         </span>
                       </td>
                       <td>
-                        <span className={`status-badge ${getStatusBadgeClass(order.status)}`}>
-                          {order.status}
+                        <span className={`status-badge ${getStatusBadgeClass(order.status_payment || order.status)}`}>
+                          {order.status_payment || order.status}
                         </span>
                       </td>
                       <td className="currency">
-                        {formatCurrency(order.total_cents || order.total_amount_cents || 0)}
+                        {formatCurrency(order.total_amount_cents || order.total_cents || 0)}
                       </td>
                       <td className="date-cell">
                         {formatDate(order.created_at)}
