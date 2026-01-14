@@ -38,7 +38,8 @@
         'iceBlue',   // #5499c7
         'darkBlue',  // #1b2631
         'red',       // #b03a2e
-        'black'      // #121212
+        'black',     // #121212
+        'grey'       // #888888 (Adapter-specific)
     ];
     
     /**
@@ -390,8 +391,15 @@
             
             // ADAPTER COLOR RESTRICTION: Validate module uses only 5 allowed colors
             if (colors.module && !this.isAdapterColorAllowed(colors.module)) {
-                this.log(`[WARNING] Invalid adapter color "${colors.module}" - falling back to black (allowed: red, black, darkBlue, green, mint)`);
-                colors.module = 'black';
+                // Migration: Legacy adapter with 'mint' -> convert to 'grey'
+                if (colors.module === 'mint') {
+                    this.log(`[MIGRATION] Legacy adapter color 'mint' -> 'grey'`);
+                    colors.module = 'grey';
+                } else {
+                    // Other invalid colors -> fallback to black
+                    this.log(`[WARNING] Invalid adapter color "${colors.module}" - falling back to black (allowed: red, black, iceBlue, green, grey)`);
+                    colors.module = 'black';
+                }
             }
             
             // Validate finish (optional)
@@ -439,10 +447,11 @@
 
         /**
          * Check if a color is valid for adapter/module part
-         * ADAPTER_ALLOWED_COLOR_IDS = ['red', 'black', 'darkBlue', 'green', 'mint']
+         * ADAPTER_ALLOWED_COLOR_IDS = ['red', 'black', 'iceBlue', 'green', 'grey']
+         * WICHTIG: ice_blue (nicht dark_blue!), grey (nicht mint!)
          */
         isAdapterColorAllowed(colorId) {
-            const ADAPTER_ALLOWED = ['red', 'black', 'darkBlue', 'green', 'mint'];
+            const ADAPTER_ALLOWED = ['red', 'black', 'iceBlue', 'green', 'grey'];
             return ADAPTER_ALLOWED.includes(colorId);
         }
         
