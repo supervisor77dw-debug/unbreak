@@ -6,6 +6,7 @@
 
 import { requireAuth } from '../../../../lib/auth-helpers';
 import { OrderRepository } from '../../../../lib/repositories';
+import { mapPaymentStatus } from '../../../../lib/utils/paymentStatusMapper';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -45,7 +46,7 @@ export default async function handler(req, res) {
       // Ensure frontend gets expected field names
       createdAt: order.created_at,
       updatedAt: order.updated_at,
-      statusPayment: order.status_payment,
+      statusPayment: mapPaymentStatus(order), // 🔥 MESSE-FIX: Consistent UPPERCASE status
       statusFulfillment: order.status_fulfillment,
       stripeCheckoutSessionId: order.stripe_checkout_session_id || order.stripe_session_id,
       totalGross: order.total_amount_cents,

@@ -496,7 +496,7 @@ export default function OrderDetail() {
               const isOldOrder = orderDate < SNAPSHOT_ROLLOUT_DATE;
               
               if (!snapshot || !snapshot.items || snapshot.items.length === 0) {
-                // NO SNAPSHOT FOUND
+                // NO SNAPSHOT FOUND - Show simplified view
                 const legacyItems = order.items || order.items_json;
                 if (!legacyItems || legacyItems.length === 0) {
                   return (
@@ -509,9 +509,17 @@ export default function OrderDetail() {
                   );
                 }
                 
-                // Show different warning based on order age
-                if (isOldOrder) {
-                  // TRUE LEGACY ORDER - before snapshot system
+                // Determine if order is truly legacy (created before snapshot system)
+                const SNAPSHOT_ROLLOUT_DATE = new Date('2026-01-12');
+                const orderDate = new Date(order.created_at || order.createdAt);
+                const isOldOrder = orderDate < SNAPSHOT_ROLLOUT_DATE;
+                
+                // 🔥 MESSE-FIX: Only show "Legacy" warning for truly old orders
+                // UO-orders without snapshots are ERRORS, not legacy
+                const isUnbreakOrder = order.order_number?.startsWith('UO-');
+                
+                if (!isUnbreakOrder && isOldOrder) {
+                  // TRUE LEGACY ORDER - before snapshot system, not Unbreak-One
                   return (
                     <div>
                       <div style={{ padding: '12px', background: '#854d0e', borderRadius: '6px', marginBottom: '16px' }}>
@@ -520,6 +528,13 @@ export default function OrderDetail() {
                           Diese Bestellung wurde vor Einführung des Pricing Snapshot Systems erstellt ({orderDate.toLocaleDateString('de-DE')}).
                         </p>
                       </div>
+                      {renderLegacyItems(legacyItems)}
+                    </div>
+                  );
+                } else if (isUnbreakOrder) {
+                  // 🔥 UO-ORDER WITHOUT SNAPSHOT - This is acceptable for simple products
+                  return (
+                    <div>
                       {renderLegacyItems(legacyItems)}
                     </div>
                   );

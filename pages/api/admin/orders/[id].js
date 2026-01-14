@@ -1,11 +1,13 @@
+/**
+ * 🔥 MESSE-MVP: Admin Order Details API
+ * CANONICAL SOURCE: simple_orders (Supabase) via OrderRepository
+ * RULE: NO PRISMA, NO FALLBACK, only Supabase
+ */
+
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
-import prisma from '../../../../lib/prisma';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { OrderRepository } from '../../../../lib/repositories';
+import { mapPaymentStatus } from '../../../../lib/utils/paymentStatusMapper';
 
 export default async function handler(req, res) {
   const session = await getServerSession(req, res, authOptions);
@@ -21,185 +23,108 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // Try Prisma first (configurator orders - admin_orders table)
-      const order = await prisma.order.findUnique({
-        where: { id },
-        include: {
-          customer: true,
-          items: true,
-          events: {
-            orderBy: { createdAt: 'desc' }
-          }
-        }
-      });
+      // 🔥 USE REPOSITORY - SINGLE SOURCE (simple_orders only)
+      const order = await OrderRepository.getOrderById(id);
 
-      if (order) {
-        // ✅ PRISMA IS NOW SINGLE SOURCE - config_json comes from Prisma
-        // Return order directly - config_json is already included from Prisma
-        return res.status(200).json(order);
-      }
-
-      // If not found in orders table, try simple_orders (shop orders)
-      const { data: simpleOrder, error: simpleOrderError } = await supabase
-        .from('simple_orders')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (simpleOrderError && simpleOrderError.code !== 'PGRST116') {
-        // PGRST116 = not found (acceptable), other errors are problems
-        console.error('[Admin Orders API] Supabase error:', simpleOrderError);
-      }
-
-      if (simpleOrder) {
-        // Transform simple_order to match order structure for frontend compatibility
-        return res.status(200).json({
-          ...simpleOrder,
-          
-          // ORDER IDENTIFICATION - All IDs normalized
-          id: simpleOrder.id, // UUID - PRIMARY IDENTIFIER
-          order_number: simpleOrder.order_number, // UO-2026-NNNNNN (human-readable)
-          public_id: simpleOrder.public_id, // 8-char short ID
-          
-          // Pricing snapshot fields
-          price_breakdown_json: simpleOrder.price_breakdown_json,
-          priceBreakdownJson: simpleOrder.price_breakdown_json, // Alias for camelCase
-          trace_id: simpleOrder.trace_id || simpleOrder.metadata?.trace_id,
-          snapshot_id: simpleOrder.snapshot_id || simpleOrder.metadata?.snapshot_id,
-          has_snapshot: simpleOrder.has_snapshot || !!simpleOrder.price_breakdown_json,
-          
-          // Field name normalization (simple_orders uses different column names than Prisma orders)
-          stripeCheckoutSessionId: simpleOrder.stripe_checkout_session_id || simpleOrder.stripe_session_id,
-          stripe_checkout_session_id: simpleOrder.stripe_checkout_session_id || simpleOrder.stripe_session_id,
-          
-          // Timestamps (normalize to camelCase)
-          createdAt: simpleOrder.created_at,
-          updatedAt: simpleOrder.updated_at,
-          created_at: simpleOrder.created_at,
-          updated_at: simpleOrder.updated_at,
-          
-          // Amounts (already in cents)
-          amountTotal: simpleOrder.total_amount_cents,
-          totalGross: simpleOrder.total_amount_cents,
-          
-          // Customer info (may be null if webhook hasn't processed)
-          customerId: simpleOrder.customer_id,
-          email: simpleOrder.customer_email,
-          
-          // Source indicator
-          _source: 'simple_orders',
-          
-          // DEBUG INFO - All identifiers and tracking IDs
-          _debug: {
-            uuid: simpleOrder.id,
-            order_number: simpleOrder.order_number || '(not set)',
-            public_id: simpleOrder.public_id || '(not set)',
-            stripe_session_id: simpleOrder.stripe_session_id || simpleOrder.stripe_checkout_session_id || '(not set)',
-            stripe_payment_intent: simpleOrder.stripe_payment_intent_id || '(not set)',
-            trace_id: simpleOrder.trace_id || '(not set)',
-            snapshot_id: simpleOrder.snapshot_id || '(not set)',
-            has_snapshot: simpleOrder.has_snapshot || false,
-            customer_id: simpleOrder.customer_id || '(not set)',
-            created_at: simpleOrder.created_at,
-          }
+      if (!order) {
+        return res.status(404).json({ 
+          error: 'NOT_FOUND',
+          message: 'Order not found in canonical orders table'
         });
       }
 
-      // Not found in either table
-      return res.status(404).json({ 
-        error: 'NOT_FOUND',
-        message: 'Order not found in orders or simple_orders tables'
+      // Normalize field names for frontend compatibility
+      return res.status(200).json({
+        ...order,
+        
+        // ORDER IDENTIFICATION - All IDs normalized
+        id: order.id,
+        order_number: order.order_number,
+        public_id: order.public_id,
+        
+        // Pricing snapshot fields (ensure proper parsing)
+        price_breakdown_json: order.price_breakdown_json,
+        priceBreakdownJson: order.price_breakdown_json,
+        trace_id: order.trace_id || order.metadata?.trace_id,
+        snapshot_id: order.snapshot_id || order.metadata?.snapshot_id,
+        has_snapshot: !!order.price_breakdown_json && !!order.price_breakdown_json.items,
+        
+        // Field name normalization
+        stripeCheckoutSessionId: order.stripe_checkout_session_id || order.stripe_session_id,
+        stripe_checkout_session_id: order.stripe_checkout_session_id || order.stripe_session_id,
+        
+        // Timestamps (normalize to camelCase)
+        createdAt: order.created_at,
+        updatedAt: order.updated_at,
+        created_at: order.created_at,
+        updated_at: order.updated_at,
+        
+        // Amounts (already in cents)
+        amountTotal: order.total_amount_cents,
+        totalGross: order.total_amount_cents,
+        
+        // Customer info
+        customerId: order.customer_id,
+        email: order.customer_email,
+        customer: order.customers,
+        
+        // 🔥 MESSE-FIX: PAYMENT STATUS - Single source mapper (UPPERCASE)
+        statusPayment: mapPaymentStatus(order),
+        statusFulfillment: order.status_fulfillment || 'NEW',
+        
+        // Source indicator
+        _source: 'simple_orders',
+        
+        // DEBUG INFO - All identifiers and tracking IDs
+        _debug: {
+          uuid: order.id,
+          order_number: order.order_number || '(not set)',
+          public_id: order.public_id || '(not set)',
+          stripe_session_id: order.stripe_session_id || order.stripe_checkout_session_id || '(not set)',
+          stripe_payment_intent: order.stripe_payment_intent_id || '(not set)',
+          trace_id: order.trace_id || '(not set)',
+          snapshot_id: order.snapshot_id || '(not set)',
+          has_snapshot: !!order.price_breakdown_json && !!order.price_breakdown_json.items,
+          customer_id: order.customer_id || '(not set)',
+          created_at: order.created_at,
+          // 🔥 MESSE-FIX: Payment status
+          status_raw: order.status,
+          status_mapped: mapPaymentStatus(order),
+          status_fulfillment_raw: order.status_fulfillment,
+        }
       });
     }
 
     if (req.method === 'PATCH') {
-      // Update order - try both tables
+      // Update order - use repository
       const updates = req.body;
       
-      // Only allow specific fields to be updated
-      const allowedFields = ['statusPayment', 'statusFulfillment', 'notes', 'status'];
-      const filteredUpdates = {};
-      
-      for (const field of allowedFields) {
-        if (updates[field] !== undefined) {
-          filteredUpdates[field] = updates[field];
-        }
-      }
+      // Map camelCase to snake_case for Supabase
+      const mappedUpdates = {};
+      if (updates.statusPayment !== undefined) mappedUpdates.status_payment = updates.statusPayment;
+      if (updates.statusFulfillment !== undefined) mappedUpdates.status_fulfillment = updates.statusFulfillment;
+      if (updates.notes !== undefined) mappedUpdates.notes = updates.notes;
+      if (updates.metadata !== undefined) mappedUpdates.metadata = updates.metadata;
 
-      // Try Prisma first (admin_orders)
-      try {
-        const order = await prisma.order.update({
-          where: { id },
-          data: {
-            ...filteredUpdates,
-            updatedAt: new Date(),
-          },
-          include: {
-            customer: true,
-            items: true,
-            events: {
-              orderBy: { createdAt: 'desc' }
-            }
-          }
-        });
+      const updatedOrder = await OrderRepository.updateOrderStatus(id, mappedUpdates);
 
-        // Log status change event
-        if (updates.statusPayment || updates.statusFulfillment) {
-          await prisma.orderEvent.create({
-            data: {
-              orderId: order.id,
-              type: 'STATUS_CHANGE',
-              source: 'admin_ui',
-              payload: {
-                changed_by: session.user.email,
-                changes: filteredUpdates,
-                timestamp: new Date().toISOString(),
-              },
-            },
-          });
-        }
-
-        return res.status(200).json(order);
-      } catch (prismaError) {
-        // Not in Prisma orders table, try simple_orders
-        if (prismaError.code === 'P2025') {
-          // Record not found in Prisma, try Supabase
-          const { data: simpleOrder, error: updateError } = await supabase
-            .from('simple_orders')
-            .update({
-              ...filteredUpdates,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', id)
-            .select()
-            .single();
-
-          if (updateError) {
-            console.error('[Admin Orders API] Failed to update simple_order:', updateError);
-            return res.status(404).json({ 
-              error: 'NOT_FOUND',
-              message: 'Order not found in either table for update'
-            });
-          }
-
-          return res.status(200).json({
-            ...simpleOrder,
-            price_breakdown_json: simpleOrder.price_breakdown_json,
-            priceBreakdownJson: simpleOrder.price_breakdown_json,
-            trace_id: simpleOrder.trace_id || simpleOrder.metadata?.trace_id,
-            snapshot_id: simpleOrder.snapshot_id || simpleOrder.metadata?.snapshot_id,
-            _source: 'simple_orders',
-          });
-        }
-        
-        // Other Prisma error
-        throw prismaError;
-      }
+      // Normalize response
+      return res.status(200).json({
+        ...updatedOrder,
+        statusPayment: updatedOrder.status_payment,
+        statusFulfillment: updatedOrder.status_fulfillment,
+        createdAt: updatedOrder.created_at,
+        updatedAt: updatedOrder.updated_at,
+      });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
+
   } catch (error) {
-    console.error('Order API error:', error);
-    return res.status(500).json({ error: 'Internal server error', details: error.message });
+    console.error('❌ [ADMIN ORDER DETAILS] Error:', error);
+    return res.status(500).json({ 
+      error: 'Failed to process order',
+      message: error.message 
+    });
   }
 }
