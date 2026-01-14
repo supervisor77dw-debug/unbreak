@@ -8,6 +8,7 @@ import ProductImage from '../components/ProductImage';
 import { getProductImageUrl } from '../lib/storage-utils';
 import { buildConfiguratorUrl, getCurrentLanguage, createConfiguratorClickHandler } from '../lib/configuratorLink';
 import { debugLog, debugWarn, errorLog } from '../lib/debugUtils';
+import { showUserMessage } from '../lib/uiMessages';
 
 // CRITICAL: Force dynamic rendering - no ISR, no static, no edge cache
 export const dynamic = 'force-dynamic';
@@ -143,8 +144,8 @@ export default function Shop({ initialProducts }) {
         errorLog('shop:return', 'Session not found or expired:', errorText);
         setReturnDebug({ sessionId, status: 'error', error: 'Session not found' });
         
-        // Show error toast
-        showToast('❌ Konfiguration nicht gefunden', 'error');
+        // Show error message
+        showUserMessage('configNotFound', 'error', currentLang);
         
         // Clean URL
         window.history.replaceState({}, '', '/shop');
@@ -237,7 +238,7 @@ export default function Shop({ initialProducts }) {
       if (!cart) {
         errorLog('shop:cart', 'Cart not initialized!');
         setReturnDebug({ sessionId, status: 'error', error: 'Cart not initialized' });
-        showToast('❌ Warenkorb konnte nicht geladen werden', 'error');
+        showUserMessage('cartLoadFailed', 'error', currentLang);
         window.history.replaceState({}, '', '/shop');
         return;
       }
@@ -257,52 +258,22 @@ export default function Shop({ initialProducts }) {
         fetch(`/api/config-session/${sessionId}`, { method: 'DELETE' })
           .catch(err => debugWarn('shop:return', 'Cleanup failed:', err));
         
-        // 6. Success toast
-        showToast('✓ In den Warenkorb gelegt', 'success');
+        // 6. Success message (optional - kann auch weg)
+        showUserMessage('addToCart', 'success', currentLang, 1500);
         
       } else {
         errorLog('shop:cart', 'Add failed - cart.addItem returned false');
         setReturnDebug({ sessionId, status: 'error', error: 'Add to cart failed' });
-        showToast('❌ Fehler beim Hinzufügen', 'error');
+        showUserMessage('cartAddFailed', 'error', currentLang);
         window.history.replaceState({}, '', '/shop');
       }
       
     } catch (error) {
       errorLog('shop:return', 'Error:', error);
       setReturnDebug({ sessionId, status: 'error', error: error.message });
-      showToast('❌ Fehler beim Laden der Konfiguration', 'error');
+      showUserMessage('configLoadFailed', 'error', currentLang);
       window.history.replaceState({}, '', '/shop');
     }
-  }
-  
-  /**
-   * Show toast notification
-   */
-  function showToast(message, type = 'success') {
-    const bgColor = type === 'success' ? '#059669' : '#dc2626';
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 80px;
-      right: 20px;
-      background: ${bgColor};
-      color: white;
-      padding: 16px 24px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      z-index: 10000;
-      font-family: sans-serif;
-      font-size: 14px;
-      animation: slideIn 0.3s ease-out;
-    `;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-      notification.style.opacity = '0';
-      notification.style.transition = 'opacity 0.3s';
-      setTimeout(() => notification.remove(), 300);
-    }, 3000);
   }
 
   /**
@@ -377,7 +348,7 @@ export default function Shop({ initialProducts }) {
     
     if (!cart) {
       errorLog('shop:cart', 'Cart not initialized!');
-      showToast('❌ Warenkorb konnte nicht geladen werden', 'error');
+      showUserMessage('cartLoadFailed', 'error', currentLang);
       return;
     }
     
@@ -407,7 +378,7 @@ export default function Shop({ initialProducts }) {
       // No popup - cart count updates automatically
     } else {
       errorLog('shop:cart', 'Failed to add item to cart');
-      showToast('❌ Fehler beim Hinzufügen', 'error');
+      showUserMessage('cartAddFailed', 'error', currentLang);
     }
   }
 
