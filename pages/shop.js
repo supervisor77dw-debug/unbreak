@@ -46,20 +46,34 @@ export default function Shop({ initialProducts }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Set initial language from window.i18n
-      if (window.i18n) {
-        setCurrentLang(window.i18n.getCurrentLanguage() || 'de');
-      }
-      
-      // Listen for language changes
-      const handleLanguageChange = (e) => {
-        setCurrentLang(e.detail?.lang || 'de');
+      const initLang = () => {
+        if (window.i18n) {
+          const lang = window.i18n.getCurrentLanguage() || 'de';
+          console.log('[SHOP] Setting initial language:', lang);
+          setCurrentLang(lang);
+        }
       };
       
+      // Try immediately if i18n already loaded
+      initLang();
+      
+      // Listen for language changes from vanilla toggle
+      const handleLanguageChange = (e) => {
+        const newLang = e.detail?.lang || 'de';
+        console.log('[SHOP] Language changed event:', newLang);
+        setCurrentLang(newLang);
+      };
+      
+      // Listen for both event types
       window.addEventListener('languageChanged', handleLanguageChange);
+      window.addEventListener('i18nLanguageChanged', handleLanguageChange);
+      
+      // Also listen for i18n ready (in case it loads after component mount)
       window.addEventListener('i18nReady', handleLanguageChange);
       
       return () => {
         window.removeEventListener('languageChanged', handleLanguageChange);
+        window.removeEventListener('i18nLanguageChanged', handleLanguageChange);
         window.removeEventListener('i18nReady', handleLanguageChange);
       };
     }
