@@ -7,20 +7,43 @@ import Layout from '../components/Layout';
 import ProductImage from '../components/ProductImage';
 import { getProductImageUrl } from '../lib/storage-utils';
 import { buildConfiguratorUrl, getCurrentLanguage, createConfiguratorClickHandler } from '../lib/configuratorLink';
-import { useTranslation } from '../lib/i18n/useTranslation';
 
 // CRITICAL: Force dynamic rendering - no ISR, no static, no edge cache
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default function Shop({ initialProducts }) {
-  const { t, locale } = useTranslation();
+  // Use vanilla i18n system (window.i18n) - synced with language-switch.js
+  const [currentLang, setCurrentLang] = useState('de');
   const [products, setProducts] = useState(initialProducts || []);
   const [loading, setLoading] = useState(!initialProducts);
   const [error, setError] = useState(null);
   const [cartCount, setCartCount] = useState(0);
   const [returnDebug, setReturnDebug] = useState(null); // Debug info for configurator return
   const cart = typeof window !== 'undefined' ? getCart() : null;
+
+  // Sync with window.i18n language changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Set initial language from window.i18n
+      if (window.i18n) {
+        setCurrentLang(window.i18n.getCurrentLanguage() || 'de');
+      }
+      
+      // Listen for language changes
+      const handleLanguageChange = (e) => {
+        setCurrentLang(e.detail?.lang || 'de');
+      };
+      
+      window.addEventListener('languageChanged', handleLanguageChange);
+      window.addEventListener('i18nReady', handleLanguageChange);
+      
+      return () => {
+        window.removeEventListener('languageChanged', handleLanguageChange);
+        window.removeEventListener('i18nReady', handleLanguageChange);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     // Update cart count on mount and when cart changes
@@ -246,6 +269,16 @@ export default function Shop({ initialProducts }) {
       setTimeout(() => notification.remove(), 300);
     }, 3000);
   }
+
+  /**
+   * Translation helper - uses window.i18n
+   */
+  const t = (key) => {
+    if (typeof window !== 'undefined' && window.i18n) {
+      return window.i18n.t(key);
+    }
+    return ''; // Fallback for SSR
+  };
 
   async function loadProducts() {
     try {
@@ -478,11 +511,11 @@ export default function Shop({ initialProducts }) {
             <div className="trust-bar">
               <div className="trust-item">
                 <span className="trust-icon">✓</span>
-                <span>{locale === 'de' ? 'Sicherer Checkout' : 'Secure Checkout'}</span>
+                <span>{currentLang === 'de' ? 'Sicherer Checkout' : 'Secure Checkout'}</span>
               </div>
               <div className="trust-item">
                 <span className="trust-icon">🚚</span>
-                <span>{locale === 'de' ? 'Versand 3–5 Tage' : 'Shipping 3–5 days'}</span>
+                <span>{currentLang === 'de' ? 'Versand 3–5 Tage' : 'Shipping 3–5 days'}</span>
               </div>
               <div className="trust-item">
                 <span className="trust-icon">🇩🇪</span>
@@ -490,7 +523,7 @@ export default function Shop({ initialProducts }) {
               </div>
               <div className="trust-item">
                 <span className="trust-icon">💬</span>
-                <span>{locale === 'de' ? 'Premium Support' : 'Premium Support'}</span>
+                <span>{currentLang === 'de' ? 'Premium Support' : 'Premium Support'}</span>
               </div>
             </div>
           </div>
@@ -507,16 +540,16 @@ export default function Shop({ initialProducts }) {
             ) : error ? (
               <div className="error-state">
                 <p className="error-message">
-                  {locale === 'de' ? 'Fehler beim Laden der Produkte:' : 'Error loading products:'} {error}
+                  {currentLang === 'de' ? 'Fehler beim Laden der Produkte:' : 'Error loading products:'} {error}
                 </p>
                 <button onClick={loadProducts} className="btn-retry">
-                  {locale === 'de' ? 'Erneut versuchen' : 'Retry'}
+                  {currentLang === 'de' ? 'Erneut versuchen' : 'Retry'}
                 </button>
               </div>
             ) : products.length === 0 ? (
               <div className="empty-state">
-                <h2>{locale === 'de' ? 'Bald verfügbar' : 'Coming Soon'}</h2>
-                <p>{locale === 'de' ? 'Unsere Produkte werden gerade vorbereitet.' : 'Our products are being prepared.'}</p>
+                <h2>{currentLang === 'de' ? 'Bald verfügbar' : 'Coming Soon'}</h2>
+                <p>{currentLang === 'de' ? 'Unsere Produkte werden gerade vorbereitet.' : 'Our products are being prepared.'}</p>
                 <a href={getConfiguratorUrl()} onClick={handleConfiguratorClick} className="btn-primary">
                   {t('shop.cta.button')}
                 </a>
@@ -539,7 +572,7 @@ export default function Shop({ initialProducts }) {
                   return (
                     <div key={product.id} className="product-card">
                       {product.badge_label && (
-                        <div className="product-badge">{product.badge_label}</div>
+                        <div className="product-badge">{translateBadge(product.badge_label)}</div>
                       )}
                       
                       {/* SHOP: Nutzt NUR shop_image_path (server-generiert 900x1125, 4:5, mit Crop) */}
@@ -604,7 +637,7 @@ export default function Shop({ initialProducts }) {
                       <div className="product-content">
                         <h3 className="product-title">{product.name}</h3>
                         <p className="product-description">
-                          {locale === 'de' 
+                          {currentLang === 'de' 
                             ? (product.short_description_de || product.description || 'Professioneller magnetischer Halter')
                             : (product.short_description_en || product.description_en || 'Professional magnetic holder')
                           }
@@ -623,10 +656,10 @@ export default function Shop({ initialProducts }) {
                             <span className="product-price">
                               {formatPrice(product.base_price_cents)} €
                             </span>
-                            <span className="price-label">{locale === 'de' ? 'inkl. MwSt.' : 'incl. VAT'}</span>
+                            <span className="price-label">{currentLang === 'de' ? 'inkl. MwSt.' : 'incl. VAT'}</span>
                           </div>
                           <div className="product-trust">
-                            <span className="trust-icon-small">🚚</span> {product.shipping_text || (locale === 'de' ? 'Versand 3–5 Tage' : 'Shipping 3–5 days')}
+                            <span className="trust-icon-small">🚚</span> {product.shipping_text || (currentLang === 'de' ? 'Versand 3–5 Tage' : 'Shipping 3–5 days')}
                           </div>
                         </div>
 
@@ -634,7 +667,7 @@ export default function Shop({ initialProducts }) {
                           className="btn-add-to-cart"
                           onClick={() => handleAddToCart(product)}
                         >
-                          {locale === 'de' ? 'In den Warenkorb' : 'Add to Cart'}
+                          {currentLang === 'de' ? 'In den Warenkorb' : 'Add to Cart'}
                         </button>
                       </div>
                     </div>
@@ -650,7 +683,7 @@ export default function Shop({ initialProducts }) {
           <div className="container">
             <div className="configurator-block">
               <div className="configurator-content">
-                <span className="configurator-badge">{locale === 'de' ? 'Individuell' : 'Custom'}</span>
+                <span className="configurator-badge">{currentLang === 'de' ? 'Individuell' : 'Custom'}</span>
                 <h2>{t('shop.cta.title')}</h2>
                 <p>
                   {t('shop.cta.text')}
@@ -660,13 +693,13 @@ export default function Shop({ initialProducts }) {
                     {t('shop.cta.button')}
                   </a>
                   <a href="#products" className="btn-configurator-secondary">
-                    {locale === 'de' ? 'Welche Varianten gibt es?' : 'What variants are available?'}
+                    {currentLang === 'de' ? 'Welche Varianten gibt es?' : 'What variants are available?'}
                   </a>
                 </div>
               </div>
               <div className="configurator-visual">
                 <div className="configurator-preview">
-                  <span className="preview-label">{locale === 'de' ? 'Live 3D Preview' : 'Live 3D Preview'}</span>
+                  <span className="preview-label">{currentLang === 'de' ? 'Live 3D Preview' : 'Live 3D Preview'}</span>
                 </div>
               </div>
             </div>

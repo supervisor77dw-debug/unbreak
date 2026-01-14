@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Script from 'next/script';
 import { navigateToConfigurator, getCurrentLanguage } from '../lib/configuratorLink';
-import LanguageToggle from './LanguageToggle';
 
 export default function Header() {
   const router = useRouter();
@@ -92,35 +91,7 @@ export default function Header() {
 
           <li><a href="/shop" className="btn btn-nav">Jetzt kaufen</a></li>
         </ul>
-
-        {/* Language Toggle - React Component */}
-        <div className="language-toggle-container">
-          <LanguageToggle />
-        </div>
       </nav>
-
-      <style jsx>{`
-        .language-toggle-container {
-          display: flex;
-          align-items: center;
-          margin-left: auto;
-          padding-left: 1rem;
-        }
-
-        @media (max-width: 1024px) {
-          .language-toggle-container {
-            position: absolute;
-            top: 1rem;
-            right: 4rem;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .language-toggle-container {
-            right: 3.5rem;
-          }
-        }
-      `}</style>
     </header>
     </>
   );
