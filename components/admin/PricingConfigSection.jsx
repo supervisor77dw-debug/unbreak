@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { CONFIGURATOR_COLORS } from '../../lib/constants/colors';
 import { PART_LABELS } from '../../lib/constants/parts';
 import { parseEuroToCents, formatCentsToEuro } from '../../lib/utils/currency';
 
 export default function PricingConfigSection() {
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeVariant, setActiveVariant] = useState('glass_holder');
@@ -14,9 +16,15 @@ export default function PricingConfigSection() {
   const [editedConfig, setEditedConfig] = useState(null);
   const [message, setMessage] = useState(null);
 
+  // Wait for session before fetching
   useEffect(() => {
+    if (status === 'loading') return; // Wait for session to load
+    if (!session) {
+      setMessage({ type: 'error', text: '⚠️ Nicht angemeldet. Bitte neu einloggen.' });
+      return;
+    }
     fetchConfigs();
-  }, []);
+  }, [session, status]);
 
   useEffect(() => {
     if (configs[activeVariant]) {
@@ -46,6 +54,12 @@ export default function PricingConfigSection() {
   }
 
   async function handleSave() {
+    // Check session before saving
+    if (!session) {
+      setMessage({ type: 'error', text: '⚠️ Session abgelaufen. Bitte Seite neu laden und erneut anmelden.' });
+      return;
+    }
+
     try {
       setSaving(true);
       setMessage(null);
@@ -59,7 +73,12 @@ export default function PricingConfigSection() {
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to save');
+      if (!res.ok) {
+        if (res.status === 401) {
+          throw new Error('Session abgelaufen - bitte neu anmelden');
+        }
+        throw new Error('Failed to save');
+      }
 
       setMessage({ type: 'success', text: '✅ Gespeichert! Neue Bestellungen verwenden diese Preise.' });
       await fetchConfigs();
