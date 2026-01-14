@@ -12,6 +12,26 @@ import { buildConfiguratorUrl, getCurrentLanguage, createConfiguratorClickHandle
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Translate badge labels (MVP: common badges only)
+ * MUST be outside component for SSR compatibility
+ */
+const translateBadge = (badgeLabel, currentLang = 'de') => {
+  if (!badgeLabel) return '';
+  
+  const badgeMap = {
+    // DE -> EN mapping
+    'Neu': currentLang === 'de' ? 'Neu' : 'New',
+    'Bestseller': currentLang === 'de' ? 'Bestseller' : 'Bestseller',
+    'Gastro Edition': currentLang === 'de' ? 'Gastro Edition' : 'Gastro Edition',
+    'Limitiert': currentLang === 'de' ? 'Limitiert' : 'Limited',
+    'Premium': currentLang === 'de' ? 'Premium' : 'Premium',
+    'Angebot': currentLang === 'de' ? 'Angebot' : 'Sale',
+  };
+  
+  return badgeMap[badgeLabel] || badgeLabel; // Fallback to original
+};
+
 export default function Shop({ initialProducts }) {
   // Use vanilla i18n system (window.i18n) - synced with language-switch.js
   const [currentLang, setCurrentLang] = useState('de');
@@ -572,7 +592,7 @@ export default function Shop({ initialProducts }) {
                   return (
                     <div key={product.id} className="product-card">
                       {product.badge_label && (
-                        <div className="product-badge">{translateBadge(product.badge_label)}</div>
+                        <div className="product-badge">{translateBadge(product.badge_label, currentLang)}</div>
                       )}
                       
                       {/* SHOP: Nutzt NUR shop_image_path (server-generiert 900x1125, 4:5, mit Crop) */}
