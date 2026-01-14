@@ -18,11 +18,17 @@ export default function PricingConfigSection() {
 
   // Wait for session before fetching
   useEffect(() => {
-    if (status === 'loading') return; // Wait for session to load
+    if (status === 'loading') {
+      setLoading(true);
+      return; // Wait for session to load
+    }
     if (!session) {
-      setMessage({ type: 'error', text: '⚠️ Nicht angemeldet. Bitte neu einloggen.' });
+      console.error('[PricingConfig] No session found:', { status, session });
+      setMessage({ type: 'error', text: '⚠️ Nicht angemeldet. Bitte /admin/login öffnen und neu einloggen.' });
+      setLoading(false);
       return;
     }
+    console.log('[PricingConfig] Session OK:', { email: session.user?.email, role: session.user?.role });
     fetchConfigs();
   }, [session, status]);
 
@@ -56,9 +62,12 @@ export default function PricingConfigSection() {
   async function handleSave() {
     // Check session before saving
     if (!session) {
-      setMessage({ type: 'error', text: '⚠️ Session abgelaufen. Bitte Seite neu laden und erneut anmelden.' });
+      console.error('[PricingConfig] Save failed: No session');
+      setMessage({ type: 'error', text: '⚠️ Session abgelaufen. Bitte zu /admin/login gehen und neu einloggen.' });
       return;
     }
+
+    console.log('[PricingConfig] Saving with session:', { email: session.user?.email });
 
     try {
       setSaving(true);
@@ -75,9 +84,12 @@ export default function PricingConfigSection() {
 
       if (!res.ok) {
         if (res.status === 401) {
-          throw new Error('Session abgelaufen - bitte neu anmelden');
+          console.error('[PricingConfig] 401 Unauthorized - Session invalid on server');
+          throw new Error('Session auf Server ungültig - bitte komplett neu einloggen (/admin/login)');
         }
-        throw new Error('Failed to save');
+        const errorText = await res.text();
+        console.error('[PricingConfig] Save failed:', res.status, errorText);
+        throw new Error(`Failed to save (${res.status})`);
       }
 
       setMessage({ type: 'success', text: '✅ Gespeichert! Neue Bestellungen verwenden diese Preise.' });

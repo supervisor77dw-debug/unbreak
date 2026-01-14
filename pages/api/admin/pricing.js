@@ -9,8 +9,15 @@ const supabase = createClient(
 export default async function handler(req, res) {
   const session = await getSession({ req });
 
+  console.log('[API][Pricing] Session check:', {
+    hasSession: !!session,
+    user: session?.user?.email || 'none',
+    method: req.method,
+  });
+
   if (!session) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    console.error('[API][Pricing] 401 - No session found');
+    return res.status(401).json({ error: 'Unauthorized - No session' });
   }
 
   // GET: Fetch active pricing configs
