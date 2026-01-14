@@ -367,7 +367,7 @@ export default function PricingConfigSection() {
               }}>
                 <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
                   ℹ️ <strong>Flaschenhalter</strong> besteht aus Grundplatte (Basispreis) + Muster (Aufschlag).
-                  <br />Keine Arm-/Gummilippen-Auswahl.
+                  <br />Keine Arm-/Adapter-Auswahl.
                 </p>
               </div>
             </div>

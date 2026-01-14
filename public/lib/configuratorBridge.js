@@ -388,6 +388,12 @@
                 colors.module = colors.module || 'black';
             }
             
+            // ADAPTER COLOR RESTRICTION: Validate module uses only 5 allowed colors
+            if (colors.module && !this.isAdapterColorAllowed(colors.module)) {
+                this.log(`[WARNING] Invalid adapter color "${colors.module}" - falling back to black (allowed: red, black, darkBlue, green, mint)`);
+                colors.module = 'black';
+            }
+            
             // Validate finish (optional)
             const finish = config.finish || 'matte';
             
@@ -429,6 +435,15 @@
             // Normalize snake_case to camelCase
             const normalized = value.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
             return CANONICAL_COLOR_IDS.includes(normalized);
+        }
+
+        /**
+         * Check if a color is valid for adapter/module part
+         * ADAPTER_ALLOWED_COLOR_IDS = ['red', 'black', 'darkBlue', 'green', 'mint']
+         */
+        isAdapterColorAllowed(colorId) {
+            const ADAPTER_ALLOWED = ['red', 'black', 'darkBlue', 'green', 'mint'];
+            return ADAPTER_ALLOWED.includes(colorId);
         }
         
         /**
