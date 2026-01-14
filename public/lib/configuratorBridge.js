@@ -30,7 +30,8 @@
     const SESSION_TTL = 10 * 60 * 1000; // 10 minutes
     const SESSION_KEY = 'unbreak_config';
     
-    // Canonical color IDs (matching configurator COLOR_PALETTE exactly)
+    // Canonical color IDs (7 colors for base/arm/pattern - NO grey!)
+    // Grey exists ONLY for adapter (see isAdapterColorAllowed)
     const CANONICAL_COLOR_IDS = [
         'mint',      // #a2d9ce
         'green',     // #145a32
@@ -38,8 +39,7 @@
         'iceBlue',   // #5499c7
         'darkBlue',  // #1b2631
         'red',       // #b03a2e
-        'black',     // #121212
-        'grey'       // #888888 (Adapter-specific)
+        'black'      // #121212
     ];
     
     /**
@@ -352,9 +352,23 @@
                     continue;
                 }
                 
-                // Only validate canonical IDs for 4part schema
-                if (schema === '4part' && !this.isCanonicalColorId(colorId)) {
-                    errors.push(`Invalid color ID for ${part}: "${colorId}" (must be one of: ${CANONICAL_COLOR_IDS.join(', ')})`);
+                // PART-SPECIFIC COLOR VALIDATION (only for 4part schema)
+                if (schema === '4part') {
+                    if (part === 'module') {
+                        // Adapter: Check against ADAPTER_ALLOWED (includes grey)
+                        if (!this.isAdapterColorAllowed(colorId)) {
+                            errors.push(`Invalid adapter color "${colorId}" (allowed: red, black, iceBlue, green, grey)`);
+                        }
+                    } else {
+                        // Base, Arm, Pattern: Check against CANONICAL (NO grey!)
+                        if (!this.isCanonicalColorId(colorId)) {
+                            errors.push(`Invalid color ID for ${part}: "${colorId}" (must be one of: ${CANONICAL_COLOR_IDS.join(', ')})`);
+                        }
+                        // KRITISCH: Explizit grey blockieren für base/arm/pattern
+                        if (colorId === 'grey') {
+                            errors.push(`INVALID: grey not allowed for ${part} (only for adapter/module)`);
+                        }
+                    }
                 }
             }
             
@@ -373,6 +387,14 @@
             const colors = {};
             for (const [part, colorId] of Object.entries(config.colors)) {
                 colors[part] = this.normalizeColorId(colorId);
+            }
+            
+            // KRITISCH: Wenn grey auf base/arm/pattern -> Fallback zu black
+            for (const part of ['base', 'arm', 'pattern']) {
+                if (colors[part] === 'grey') {
+                    this.log(`[ERROR] grey not allowed for ${part}. Falling back to black.`);
+                    colors[part] = 'black';
+                }
             }
             
             // For bottle_holder with legacy schema, ensure black defaults
