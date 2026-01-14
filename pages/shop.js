@@ -7,6 +7,7 @@ import Layout from '../components/Layout';
 import ProductImage from '../components/ProductImage';
 import { getProductImageUrl } from '../lib/storage-utils';
 import { buildConfiguratorUrl, getCurrentLanguage, createConfiguratorClickHandler } from '../lib/configuratorLink';
+import { debugLog, debugWarn, errorLog } from '../lib/debugUtils';
 
 // CRITICAL: Force dynamic rendering - no ISR, no static, no edge cache
 export const dynamic = 'force-dynamic';
@@ -49,7 +50,7 @@ export default function Shop({ initialProducts }) {
       const initLang = () => {
         if (window.i18n) {
           const lang = window.i18n.getCurrentLanguage() || 'de';
-          console.log('[SHOP] Setting initial language:', lang);
+          debugLog('shop', 'Setting initial language:', lang);
           setCurrentLang(lang);
         }
       };
@@ -60,7 +61,7 @@ export default function Shop({ initialProducts }) {
       // Listen for language changes from vanilla toggle
       const handleLanguageChange = (e) => {
         const newLang = e.detail?.lang || 'de';
-        console.log('[SHOP] Language changed event:', newLang);
+        debugLog('shop', 'Language changed event:', newLang);
         setCurrentLang(newLang);
       };
       
@@ -86,7 +87,7 @@ export default function Shop({ initialProducts }) {
       
       // Listen for cart cleared event (from success page)
       const handleCartCleared = () => {
-        console.log('🔄 [SHOP] Cart cleared event received - updating UI');
+        debugLog('shop', 'Cart cleared event received - updating UI');
         setCartCount(0);
       };
       
@@ -122,7 +123,7 @@ export default function Shop({ initialProducts }) {
       urlParams.get('cfgId');
     
     if (sessionId) {
-      console.log('[SHOP][RETURN] sessionParam=', {
+      debugLog('shop:return', 'sessionParam=', {
         sessionId,
         raw: window.location.search
       });
@@ -134,12 +135,12 @@ export default function Shop({ initialProducts }) {
   async function loadConfigSession(sessionId) {
     try {
       // 1. Fetch session from API
-      console.log('[SHOP][RETURN] Loading session...');
+      debugLog('shop:return', 'Loading session...');
       const response = await fetch(`/api/config-session/${sessionId}`);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[SHOP][RETURN] Session not found or expired:', errorText);
+        errorLog('shop:return', 'Session not found or expired:', errorText);
         setReturnDebug({ sessionId, status: 'error', error: 'Session not found' });
         
         // Show error toast
@@ -154,7 +155,7 @@ export default function Shop({ initialProducts }) {
       // Handle both old and new response formats
       const { lang, config } = responseData.data || responseData;
       
-      console.log('[SHOP][RETURN] Session loaded:', { lang, configKeys: Object.keys(config || {}) });
+      debugLog('shop:return', 'Session loaded:', { lang, configKeys: Object.keys(config || {}) });
       setReturnDebug({ sessionId, status: 'loaded', config });
       
       // 1.5. Transform config structure for pricing engine
@@ -171,13 +172,13 @@ export default function Shop({ initialProducts }) {
         variant: config.variant || 'standard',
       };
       
-      console.log('🔄 [SHOP][CONFIG] Transformed:', {
+      debugLog('shop:config', 'Transformed:', {
         original: Object.keys(config),
         transformed: transformedConfig,
       });
       
       // 2. Calculate price from config (via API)
-      console.log('💰 [SHOP][PRICING] Calculating price for config...');
+      debugLog('shop:pricing', 'Calculating price for config...');
       let priceCents = 4990; // Fallback: €49.90 (base price)
       
       try {
@@ -194,7 +195,7 @@ export default function Shop({ initialProducts }) {
         if (pricingResponse.ok) {
           const pricingData = await pricingResponse.json();
           priceCents = pricingData.pricing.subtotal_cents;
-          console.log('✅ [SHOP][PRICING] Price calculated:', {
+          debugLog('shop:pricing', 'Price calculated:', {
             base_price_cents: pricingData.pricing.base_price_cents,
             option_prices_cents: pricingData.pricing.option_prices_cents,
             subtotal_cents: priceCents,
@@ -202,12 +203,12 @@ export default function Shop({ initialProducts }) {
           });
         } else {
           const errorData = await pricingResponse.json().catch(() => ({}));
-          console.error('❌ [SHOP][PRICING] Price calculation failed:', errorData);
-          console.warn('⚠️ [SHOP][PRICING] Using fallback:', priceCents);
+          errorLog('shop:pricing', 'Price calculation failed:', errorData);
+          debugWarn('shop:pricing', 'Using fallback:', priceCents);
         }
       } catch (pricingError) {
-        console.error('❌ [SHOP][PRICING] Error calculating price:', pricingError);
-        console.warn('⚠️ [SHOP][PRICING] Using fallback price:', priceCents);
+        errorLog('shop:pricing', 'Error calculating price:', pricingError);
+        debugWarn('shop:pricing', 'Using fallback price:', priceCents);
       }
       
       // 3. Map config → cart item
@@ -230,11 +231,11 @@ export default function Shop({ initialProducts }) {
         }
       };
       
-      console.log('[SHOP][RETURN] Cart item prepared:', cartItem);
+      debugLog('shop:return', 'Cart item prepared:', cartItem);
       
       // 3. Add to cart (NO CHECKOUT)
       if (!cart) {
-        console.error('[SHOP][CART] Cart not initialized!');
+        errorLog('shop:cart', 'Cart not initialized!');
         setReturnDebug({ sessionId, status: 'error', error: 'Cart not initialized' });
         showToast('❌ Warenkorb konnte nicht geladen werden', 'error');
         window.history.replaceState({}, '', '/shop');
@@ -245,7 +246,7 @@ export default function Shop({ initialProducts }) {
       
       if (success) {
         const newCount = cart.getItemCount();
-        console.log('[SHOP][CART] Add OK (cartCount=', newCount, ')');
+        debugLog('shop:cart', 'Add OK (cartCount=', newCount, ')');
         setReturnDebug({ sessionId, status: 'success', cartCount: newCount });
         setCartCount(newCount);
         
@@ -254,20 +255,20 @@ export default function Shop({ initialProducts }) {
         
         // 5. Delete session (cleanup)
         fetch(`/api/config-session/${sessionId}`, { method: 'DELETE' })
-          .catch(err => console.warn('[SHOP][RETURN] Cleanup failed:', err));
+          .catch(err => debugWarn('shop:return', 'Cleanup failed:', err));
         
         // 6. Success toast
         showToast('✓ In den Warenkorb gelegt', 'success');
         
       } else {
-        console.error('[SHOP][CART] Add failed - cart.addItem returned false');
+        errorLog('shop:cart', 'Add failed - cart.addItem returned false');
         setReturnDebug({ sessionId, status: 'error', error: 'Add to cart failed' });
         showToast('❌ Fehler beim Hinzufügen', 'error');
         window.history.replaceState({}, '', '/shop');
       }
       
     } catch (error) {
-      console.error('[SHOP][RETURN] Error:', error);
+      errorLog('shop:return', 'Error:', error);
       setReturnDebug({ sessionId, status: 'error', error: error.message });
       showToast('❌ Fehler beim Laden der Konfiguration', 'error');
       window.history.replaceState({}, '', '/shop');
@@ -365,55 +366,48 @@ export default function Shop({ initialProducts }) {
     const returnUrl = `${window.location.origin}/shop`;
     const configUrl = buildConfiguratorUrl(currentLang, returnUrl);
     
-    // Debug logging (only in dev/preview)
-    const isDev = process.env.NODE_ENV === 'development' || 
-                  window.location.hostname.includes('vercel.app');
-    
-    if (isDev) {
-      console.log('[NAV] Configurator click -> resolvedUrl=', configUrl);
-      console.log('[NAV] external=true');
-    }
+    debugLog('shop:nav', 'Configurator click -> resolvedUrl=', configUrl);
+    debugLog('shop:nav', 'external=true');
     
     window.location.assign(configUrl);
   };
 
   function handleAddToCart(product) {
-    console.log('🛒 [SHOP] handleAddToCart called with:', product);
+    debugLog('shop:cart', 'handleAddToCart called with:', product);
     
     if (!cart) {
-      console.error('❌ [SHOP] Cart not initialized!');
-      alert('Warenkorb konnte nicht geladen werden. Bitte Seite neu laden.');
+      errorLog('shop:cart', 'Cart not initialized!');
+      showToast('❌ Warenkorb konnte nicht geladen werden', 'error');
       return;
     }
     
-    console.log('🛒 [SHOP] Cart instance:', cart);
-    console.log('🛒 [SHOP] Product ID:', product.id);
+    debugLog('shop:cart', 'Cart instance:', cart);
+    debugLog('shop:cart', 'Product ID:', product.id);
     
     const success = cart.addItem(product);
     
-    console.log('🛒 [SHOP] addItem result:', success);
+    debugLog('shop:cart', 'addItem result:', success);
     
     if (success) {
-      console.log('✅ [SHOP] Added to cart:', product.name || product.title_de);
+      debugLog('shop:cart', 'Added to cart:', product.name || product.title_de);
       
-      // Visual feedback
+      // Visual feedback on button (subtle)
       const btn = event?.target;
       if (btn) {
         const originalText = btn.textContent;
-        btn.textContent = '✓ Hinzugefügt!';
+        btn.textContent = '✓';
         btn.style.background = '#059669';
         
         setTimeout(() => {
           btn.textContent = originalText;
           btn.style.background = '';
-        }, 1500);
+        }, 1200);
       }
       
-      // Show cart count update
-      alert(`✓ ${product.title_de || product.name} wurde zum Warenkorb hinzugefügt!\n\nWarenkorb: ${cart.getItemCount()} Artikel`);
+      // No popup - cart count updates automatically
     } else {
-      console.error('❌ [SHOP] Failed to add item to cart');
-      alert('Fehler beim Hinzufügen zum Warenkorb');
+      errorLog('shop:cart', 'Failed to add item to cart');
+      showToast('❌ Fehler beim Hinzufügen', 'error');
     }
   }
 
