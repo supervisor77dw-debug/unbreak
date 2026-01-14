@@ -7,38 +7,20 @@ import Layout from '../components/Layout';
 import ProductImage from '../components/ProductImage';
 import { getProductImageUrl } from '../lib/storage-utils';
 import { buildConfiguratorUrl, getCurrentLanguage, createConfiguratorClickHandler } from '../lib/configuratorLink';
+import { useTranslation } from '../lib/i18n/useTranslation';
 
 // CRITICAL: Force dynamic rendering - no ISR, no static, no edge cache
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default function Shop({ initialProducts }) {
+  const { t, locale } = useTranslation();
   const [products, setProducts] = useState(initialProducts || []);
   const [loading, setLoading] = useState(!initialProducts);
   const [error, setError] = useState(null);
   const [cartCount, setCartCount] = useState(0);
-  const [currentLang, setCurrentLang] = useState('de');
   const [returnDebug, setReturnDebug] = useState(null); // Debug info for configurator return
   const cart = typeof window !== 'undefined' ? getCart() : null;
-
-  useEffect(() => {
-    // Detect current language from i18n system
-    if (typeof window !== 'undefined' && window.i18n) {
-      setCurrentLang(window.i18n.getCurrentLanguage() || 'de');
-      
-      // Listen for language changes
-      const handleLangChange = (e) => {
-        setCurrentLang(e.detail?.lang || 'de');
-      };
-      window.addEventListener('languageChanged', handleLangChange);
-      window.addEventListener('i18nReady', handleLangChange);
-      
-      return () => {
-        window.removeEventListener('languageChanged', handleLangChange);
-        window.removeEventListener('i18nReady', handleLangChange);
-      };
-    }
-  }, []);
 
   useEffect(() => {
     // Update cart count on mount and when cart changes
@@ -487,20 +469,20 @@ export default function Shop({ initialProducts }) {
         {/* Hero Section */}
         <section className="shop-hero">
           <div className="container">
-            <h1>UNBREAK ONE Shop</h1>
+            <h1>{t('shop.hero.title')}</h1>
             <p className="hero-subtitle">
-              Magnetische Halter für Gläser & Flaschen – Professionelle Qualität Made in Germany
+              {t('shop.hero.subtitle')}
             </p>
             
             {/* Trust Bar */}
             <div className="trust-bar">
               <div className="trust-item">
                 <span className="trust-icon">✓</span>
-                <span>Sicherer Checkout</span>
+                <span>{locale === 'de' ? 'Sicherer Checkout' : 'Secure Checkout'}</span>
               </div>
               <div className="trust-item">
                 <span className="trust-icon">🚚</span>
-                <span>Versand 3–5 Tage</span>
+                <span>{locale === 'de' ? 'Versand 3–5 Tage' : 'Shipping 3–5 days'}</span>
               </div>
               <div className="trust-item">
                 <span className="trust-icon">🇩🇪</span>
@@ -508,7 +490,7 @@ export default function Shop({ initialProducts }) {
               </div>
               <div className="trust-item">
                 <span className="trust-icon">💬</span>
-                <span>Premium Support</span>
+                <span>{locale === 'de' ? 'Premium Support' : 'Premium Support'}</span>
               </div>
             </div>
           </div>
@@ -520,23 +502,23 @@ export default function Shop({ initialProducts }) {
             {loading ? (
               <div className="loading-state">
                 <div className="spinner"></div>
-                <p>Produkte werden geladen...</p>
+                <p>{t('shop.loading')}</p>
               </div>
             ) : error ? (
               <div className="error-state">
                 <p className="error-message">
-                  Fehler beim Laden der Produkte: {error}
+                  {locale === 'de' ? 'Fehler beim Laden der Produkte:' : 'Error loading products:'} {error}
                 </p>
                 <button onClick={loadProducts} className="btn-retry">
-                  Erneut versuchen
+                  {locale === 'de' ? 'Erneut versuchen' : 'Retry'}
                 </button>
               </div>
             ) : products.length === 0 ? (
               <div className="empty-state">
-                <h2>Bald verfügbar</h2>
-                <p>Unsere Produkte werden gerade vorbereitet.</p>
+                <h2>{locale === 'de' ? 'Bald verfügbar' : 'Coming Soon'}</h2>
+                <p>{locale === 'de' ? 'Unsere Produkte werden gerade vorbereitet.' : 'Our products are being prepared.'}</p>
                 <a href={getConfiguratorUrl()} onClick={handleConfiguratorClick} className="btn-primary">
-                  Zum Konfigurator
+                  {t('shop.cta.button')}
                 </a>
               </div>
             ) : (
@@ -622,7 +604,10 @@ export default function Shop({ initialProducts }) {
                       <div className="product-content">
                         <h3 className="product-title">{product.name}</h3>
                         <p className="product-description">
-                          {product.short_description_de || product.description || 'Professioneller magnetischer Halter'}
+                          {locale === 'de' 
+                            ? (product.short_description_de || product.description || 'Professioneller magnetischer Halter')
+                            : (product.short_description_en || product.description_en || 'Professional magnetic holder')
+                          }
                         </p>
 
                         {Array.isArray(highlights) && highlights.length > 0 && (
@@ -638,10 +623,10 @@ export default function Shop({ initialProducts }) {
                             <span className="product-price">
                               {formatPrice(product.base_price_cents)} €
                             </span>
-                            <span className="price-label">inkl. MwSt.</span>
+                            <span className="price-label">{locale === 'de' ? 'inkl. MwSt.' : 'incl. VAT'}</span>
                           </div>
                           <div className="product-trust">
-                            <span className="trust-icon-small">🚚</span> {product.shipping_text || 'Versand 3–5 Tage'}
+                            <span className="trust-icon-small">🚚</span> {product.shipping_text || (locale === 'de' ? 'Versand 3–5 Tage' : 'Shipping 3–5 days')}
                           </div>
                         </div>
 
@@ -649,7 +634,7 @@ export default function Shop({ initialProducts }) {
                           className="btn-add-to-cart"
                           onClick={() => handleAddToCart(product)}
                         >
-                          In den Warenkorb
+                          {locale === 'de' ? 'In den Warenkorb' : 'Add to Cart'}
                         </button>
                       </div>
                     </div>
@@ -665,24 +650,23 @@ export default function Shop({ initialProducts }) {
           <div className="container">
             <div className="configurator-block">
               <div className="configurator-content">
-                <span className="configurator-badge">Individuell</span>
-                <h2>Gestalte deinen eigenen UNBREAK ONE</h2>
+                <span className="configurator-badge">{locale === 'de' ? 'Individuell' : 'Custom'}</span>
+                <h2>{t('shop.cta.title')}</h2>
                 <p>
-                  Wähle Farbe, Material und Größe in unserem 3D-Konfigurator.
-                  Perfekt abgestimmt auf deine Einrichtung.
+                  {t('shop.cta.text')}
                 </p>
                 <div className="configurator-actions">
                   <a href={getConfiguratorUrl()} onClick={handleConfiguratorClick} className="btn-configurator-primary">
-                    Jetzt gestalten
+                    {t('shop.cta.button')}
                   </a>
                   <a href="#products" className="btn-configurator-secondary">
-                    Welche Varianten gibt es?
+                    {locale === 'de' ? 'Welche Varianten gibt es?' : 'What variants are available?'}
                   </a>
                 </div>
               </div>
               <div className="configurator-visual">
                 <div className="configurator-preview">
-                  <span className="preview-label">Live 3D Preview</span>
+                  <span className="preview-label">{locale === 'de' ? 'Live 3D Preview' : 'Live 3D Preview'}</span>
                 </div>
               </div>
             </div>
