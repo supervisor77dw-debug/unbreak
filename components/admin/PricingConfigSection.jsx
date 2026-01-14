@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { CONFIGURATOR_COLORS } from '../../lib/constants/colors';
+import { CONFIGURATOR_COLORS, ADAPTER_ALLOWED_COLORS } from '../../lib/constants/colors';
 import { PART_LABELS } from '../../lib/constants/parts';
 import { parseEuroToCents, formatCentsToEuro } from '../../lib/utils/currency';
 
@@ -260,7 +260,7 @@ export default function PricingConfigSection() {
                     gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
                     gap: '12px',
                   }}>
-                    {CONFIGURATOR_COLORS.map(color => (
+                    {(part === 'module' ? ADAPTER_ALLOWED_COLORS : CONFIGURATOR_COLORS).map(color => (
                       <div key={color.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{
                           width: '20px',
