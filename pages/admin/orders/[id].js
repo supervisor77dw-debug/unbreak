@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import AdminLayout from '../../../components/AdminLayout';
 import { getColorHex, getColorDisplayName } from '../../../lib/configValidation';
+import { getPricingBreakdown, formatCurrency as formatPrice } from '../../../lib/utils/priceCalculator';
 
 export default function OrderDetail() {
   const router = useRouter();
@@ -152,6 +153,9 @@ export default function OrderDetail() {
   const renderLegacyItems = (items) => {
     const itemsArray = typeof items === 'string' ? JSON.parse(items) : items;
     
+    // 🔥 MESSE-FIX: Get pricing breakdown (calculate Netto/MwSt from Brutto)
+    const pricing = getPricingBreakdown(order);
+    
     return (
       <div className="items-table">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -198,14 +202,68 @@ export default function OrderDetail() {
             ))}
           </tbody>
           <tfoot>
-            <tr style={{ borderTop: '2px solid #404040' }}>
-              <td colSpan="4" style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontWeight: '600' }}>
-                Gesamtsumme (Brutto):
-              </td>
-              <td style={{ textAlign: 'right', padding: '12px 8px', color: '#0891b2', fontWeight: '700', fontSize: '16px', fontFamily: 'monospace' }}>
-                {formatCurrency(order.totalGross || order.amountTotal || 0)}
-              </td>
-            </tr>
+            {/* 🔥 MESSE-FIX: Show Netto/MwSt breakdown (calculated from Brutto) */}
+            {pricing.totalBrutto > 0 && (
+              <>
+                {/* Zwischensumme Netto */}
+                <tr style={{ borderTop: '1px solid #2a2a2a' }}>
+                  <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
+                    Zwischensumme (Netto):
+                  </td>
+                  <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#d4f1f1' }}>
+                    {formatPrice(pricing.subtotalNetto, pricing.currency)}
+                  </td>
+                </tr>
+                
+                {/* Versand (if available) */}
+                {pricing.shippingBrutto > 0 && (
+                  <tr>
+                    <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
+                      Versand (Netto):
+                    </td>
+                    <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#d4f1f1' }}>
+                      {formatPrice(pricing.shippingNetto, pricing.currency)}
+                    </td>
+                  </tr>
+                )}
+                
+                {/* MwSt */}
+                <tr>
+                  <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
+                    MwSt. ({Math.round(pricing.vatRate * 100)}% inkl.):
+                  </td>
+                  <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#94a3b8' }}>
+                    {formatPrice(pricing.totalVat, pricing.currency)}
+                  </td>
+                </tr>
+                
+                {/* Grand Total */}
+                <tr style={{ borderTop: '2px solid #404040' }}>
+                  <td colSpan="4" style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontWeight: '600' }}>
+                    Gesamtsumme (Brutto):
+                  </td>
+                  <td style={{ 
+                    textAlign: 'right', 
+                    padding: '12px 8px', 
+                    color: '#0891b2', 
+                    fontWeight: '700', 
+                    fontSize: '16px', 
+                    fontFamily: 'monospace' 
+                  }}>
+                    {formatPrice(pricing.totalBrutto, pricing.currency)}
+                  </td>
+                </tr>
+                
+                {/* Calculation hint for non-snapshot orders */}
+                {!pricing.hasSnapshot && (
+                  <tr>
+                    <td colSpan="5" style={{ padding: '8px', fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                      ℹ️ Netto/MwSt berechnet aus Gesamtbetrag (Standard-MwSt {Math.round(pricing.vatRate * 100)}%)
+                    </td>
+                  </tr>
+                )}
+              </>
+            )}
           </tfoot>
         </table>
       </div>
@@ -684,54 +742,63 @@ export default function OrderDetail() {
                         ))}
                       </tbody>
                       <tfoot>
-                        {/* Subtotal */}
-                        <tr style={{ borderTop: '1px solid #2a2a2a' }}>
-                          <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
-                            Zwischensumme:
-                          </td>
-                          <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#d4f1f1' }}>
-                            {formatCurrency(snapshot.subtotal_cents)}
-                          </td>
-                        </tr>
-                        
-                        {/* Shipping */}
-                        <tr>
-                          <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
-                            Versand ({snapshot.shipping_country || 'DE'}):
-                          </td>
-                          <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#d4f1f1' }}>
-                            {formatCurrency(snapshot.shipping_cents)}
-                          </td>
-                        </tr>
-                        
-                        {/* Tax */}
-                        {snapshot.tax_cents > 0 && (
-                          <tr>
-                            <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
-                              MwSt. (inkl.):
-                            </td>
-                            <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#94a3b8' }}>
-                              {formatCurrency(snapshot.tax_cents)}
-                            </td>
-                          </tr>
-                        )}
-                        
-                        {/* Grand Total */}
-                        <tr style={{ borderTop: '2px solid #404040' }}>
-                          <td colSpan="4" style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontWeight: '600' }}>
-                            Gesamtsumme (Brutto):
-                          </td>
-                          <td style={{ 
-                            textAlign: 'right', 
-                            padding: '12px 8px', 
-                            color: '#0891b2', 
-                            fontWeight: '700', 
-                            fontSize: '16px', 
-                            fontFamily: 'monospace' 
-                          }}>
-                            {formatCurrency(snapshot.grand_total_cents)}
-                          </td>
-                        </tr>
+                        {/* 🔥 MESSE-FIX: Show Netto/MwSt breakdown from snapshot */}
+                        {(() => {
+                          const pricing = getPricingBreakdown(order);
+                          
+                          return (
+                            <>
+                              {/* Zwischensumme Netto */}
+                              <tr style={{ borderTop: '1px solid #2a2a2a' }}>
+                                <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
+                                  Zwischensumme (Netto):
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#d4f1f1' }}>
+                                  {formatPrice(pricing.subtotalNetto, pricing.currency)}
+                                </td>
+                              </tr>
+                              
+                              {/* Shipping Netto */}
+                              {pricing.shippingBrutto > 0 && (
+                                <tr>
+                                  <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
+                                    Versand (Netto, {snapshot.shipping_country || 'DE'}):
+                                  </td>
+                                  <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#d4f1f1' }}>
+                                    {formatPrice(pricing.shippingNetto, pricing.currency)}
+                                  </td>
+                                </tr>
+                              )}
+                              
+                              {/* MwSt */}
+                              <tr>
+                                <td colSpan="4" style={{ textAlign: 'right', padding: '8px', color: '#94a3b8' }}>
+                                  MwSt. ({Math.round(pricing.vatRate * 100)}% inkl.):
+                                </td>
+                                <td style={{ textAlign: 'right', padding: '8px', fontFamily: 'monospace', color: '#94a3b8' }}>
+                                  {formatPrice(pricing.totalVat, pricing.currency)}
+                                </td>
+                              </tr>
+                              
+                              {/* Grand Total */}
+                              <tr style={{ borderTop: '2px solid #404040' }}>
+                                <td colSpan="4" style={{ textAlign: 'right', padding: '12px 8px', color: '#94a3b8', fontWeight: '600' }}>
+                                  Gesamtsumme (Brutto):
+                                </td>
+                                <td style={{ 
+                                  textAlign: 'right', 
+                                  padding: '12px 8px', 
+                                  color: '#0891b2', 
+                                  fontWeight: '700', 
+                                  fontSize: '16px', 
+                                  fontFamily: 'monospace' 
+                                }}>
+                                  {formatPrice(pricing.totalBrutto, pricing.currency)}
+                                </td>
+                              </tr>
+                            </>
+                          );
+                        })()}
                       </tfoot>
                     </table>
                   </div>
