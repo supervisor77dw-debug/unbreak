@@ -262,17 +262,21 @@ export default function AdminOrders() {
                       </td>
                       <td>
                         <Link href={`/admin/orders/${order.id}`} className="order-id-link">
-                          {order.id.substring(0, 8)}...
+                          {order.order_number || order.id.substring(0, 8) + '...'}
                         </Link>
                       </td>
                       <td>
                         <div className="customer-cell">
-                          <div className="customer-name">{order.customer.name || 'N/A'}</div>
-                          <div className="customer-email">{order.customer.email}</div>
+                          <div className="customer-name">
+                            {order.customer?.name || order.email || '(Kein Kunde)'}
+                          </div>
+                          <div className="customer-email">
+                            {order.customer?.email || order.email || '—'}
+                          </div>
                         </div>
                       </td>
-                      <td>{order.items.length} Artikel</td>
-                      <td className="amount-cell">{formatPrice(order.amountTotal)}</td>
+                      <td>{order.items?.length || 0} Artikel</td>
+                      <td className="amount-cell">{formatPrice(order.amountTotal || order.totalGross || 0)}</td>
                       <td>
                         <span
                           className="status-badge"
