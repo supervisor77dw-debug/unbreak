@@ -112,99 +112,183 @@ export default function Shop({ initialProducts }) {
     }
   }, [initialProducts]);
 
-  // Configurator Return Handler: Check for config in URL or localStorage
+  // Configurator Return Handler: Check for cfg in URL
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    // CRITICAL: Only run when cart is ready
-    if (!cart) {
-      console.log('[SHOP][CONFIGURATOR] Waiting for cart to initialize...');
+    const urlParams = new URLSearchParams(window.location.search);
+    const cfgParam = urlParams.get('cfg');
+    const debugMode = urlParams.get('debugCfg') === '1';
+    
+    // Debug state for overlay
+    const debugState = {
+      step1_cfgFound: false,
+      step2_decoded: null,
+      step3_parsed: null,
+      step4_cartReady: false,
+      step5_addItemCalled: false,
+      step6_cartAfter: null,
+      error: null,
+    };
+    
+    if (!cfgParam) {
+      console.log('[CFG2CART][0] No cfg parameter in URL');
       return;
     }
     
-    const urlParams = new URLSearchParams(window.location.search);
-    let cartItem = null;
-    let source = null;
-    
-    // METHOD 1: Check URL parameter (for cross-domain configurator)
-    const configParam = urlParams.get('config');
-    if (configParam) {
-      try {
-        console.log('[SHOP][CONFIGURATOR_URL] Config parameter found');
-        // Decode base64 or direct JSON
-        const decoded = configParam.startsWith('eyJ') || configParam.startsWith('ew') 
-          ? atob(configParam) 
-          : decodeURIComponent(configParam);
-        
-        cartItem = JSON.parse(decoded);
-        source = 'URL parameter';
-        console.log('[SHOP][CONFIGURATOR_ITEM]', cartItem);
-        console.log('[SHOP][CONFIGURATOR_SOURCE]', source);
-      } catch (err) {
-        console.error('[SHOP][CONFIGURATOR_URL_PARSE_FAILED]', err);
-        errorLog('shop:configurator', 'Failed to parse URL config:', err);
-      }
+    // CRITICAL: Only run when cart is ready
+    if (!cart) {
+      console.log('[CFG2CART][WAIT] Cart not ready yet');
+      return;
     }
     
-    // METHOD 2: Check localStorage (for same-domain configurator)
-    if (!cartItem) {
-      try {
-        const pendingItem = localStorage.getItem('pendingConfiguratorItem');
-        
-        if (pendingItem) {
-          console.log('[SHOP][CONFIGURATOR_LOCALSTORAGE] Found in localStorage');
-          cartItem = JSON.parse(pendingItem);
-          source = 'localStorage';
-          console.log('[SHOP][CONFIGURATOR_ITEM]', pendingItem);
-        } else {
-          console.log('[SHOP][CONFIGURATOR] No pending item in localStorage or URL');
-        }
-      } catch (err) {
-        console.error('[SHOP][CONFIGURATOR_ITEM_PARSE_FAILED]', err);
-        errorLog('shop:configurator', 'Failed to parse configurator item:', err);
-      }
+    debugState.step4_cartReady = true;
+    
+    // Anti-Double-Add: Check if already processed this config
+    const cfgHash = cfgParam.substring(0, 16); // First 16 chars as hash
+    const onceKey = `cfg2cart_done_${cfgHash}`;
+    
+    if (sessionStorage.getItem(onceKey)) {
+      console.log('[CFG2CART][SKIP] Already processed this config (anti-double-add)');
+      window.history.replaceState({}, '', '/shop');
+      return;
     }
     
-    // Add to cart if found
-    if (cartItem) {
-      try {
-        console.log('[SHOP][CONFIGURATOR_ITEM_PARSED]', cartItem);
-        debugLog('shop:configurator', `Loading configurator item from ${source}:`, cartItem);
-        
-        const success = cart.addItem(cartItem);
-        
-        if (success) {
-          console.log('[SHOP][CONFIGURATOR_ITEM_ADDED]');
-          debugLog('shop:cart', 'Configurator item added successfully');
-          setCartCount(cart.getItemCount());
-          showUserMessage('addToCart', 'success', currentLang, 1500);
-        } else {
-          console.error('[SHOP][CONFIGURATOR_ITEM_ADD_FAILED]');
-          errorLog('shop:cart', 'Failed to add configurator item to cart - validation failed');
-          showUserMessage('cartAddFailed', 'error', currentLang);
+    try {
+      // Step 1: cfg parameter found
+      console.log('[CFG2CART][1] cfg found', cfgParam.length);
+      debugState.step1_cfgFound = true;
+      
+      // Step 2: Decode (robust UTF-8 safe)
+      function decodeCfg(cfg) {
+        try {
+          const base64 = decodeURIComponent(cfg);
+          const binary = atob(base64);
+          const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+          const json = new TextDecoder('utf-8').decode(bytes);
+          return json;
+        } catch (e) {
+          // Fallback: direct atob
+          try {
+            return atob(cfg);
+          } catch (e2) {
+            // Fallback: direct JSON (not encoded)
+            return decodeURIComponent(cfg);
+          }
         }
-        
-        // Clean up
-        if (source === 'localStorage') {
-          localStorage.removeItem('pendingConfiguratorItem');
-        }
-        if (configParam) {
-          window.history.replaceState({}, '', '/shop');
-        }
-        
-        debugLog('shop:configurator', 'Cleaned up after adding item');
-      } catch (err) {
-        console.error('[SHOP][CONFIGURATOR_ADD_ERROR]', err);
       }
-    }
-    
-    // Handle error flags from URL
-    const error = urlParams.get('error');
-    if (error) {
-      errorLog('shop:return', 'Error flag in URL:', error);
-      showUserMessage('configLoadFailed', 'error', currentLang);
+      
+      const jsonString = decodeCfg(cfgParam);
+      console.log('[CFG2CART][2] decoded json', jsonString.slice(0, 200));
+      debugState.step2_decoded = jsonString.slice(0, 100);
+      
+      // Step 3: Parse JSON
+      const item = JSON.parse(jsonString);
+      console.log('[CFG2CART][3] parsed item', item);
+      debugState.step3_parsed = item;
+      
+      // Step 4: Cart ready check
+      console.log('[CFG2CART][4] cart ready?', !!cart, cart?.items?.length);
+      
+      // Normalize item to cart format
+      const cartItem = {
+        product_id: 'glass_configurator',
+        sku: item.config?.variant === 'bottle_holder' ? 'UNBREAK-WEIN-CONFIG' : 'UNBREAK-GLAS-CONFIG',
+        name: item.name || (currentLang === 'de' ? 'Individueller Glashalter' : 'Custom Glass Holder'),
+        price: 0, // Will be calculated server-side
+        quantity: 1,
+        image_url: item.image_url || null,
+        configured: true,
+        config: item.config,
+        meta: {
+          source: 'configurator_url',
+          received_at: new Date().toISOString(),
+          ...item.meta,
+        },
+      };
+      
+      console.log('[CFG2CART][PRICE] Using server-side calculation (price set to 0, calculated at checkout)');
+      
+      // Step 5: Add to cart
+      console.log('[CFG2CART][5] addItem called');
+      debugState.step5_addItemCalled = true;
+      
+      const success = cart.addItem(cartItem);
+      
+      // Step 6: Cart after add
+      console.log('[CFG2CART][6] cart after add', cart.items.length, cart.items);
+      debugState.step6_cartAfter = {
+        itemCount: cart.items.length,
+        success: success,
+      };
+      
+      if (success) {
+        console.log('[CFG2CART][SUCCESS] ✅ Item added to cart');
+        setCartCount(cart.getItemCount());
+        showUserMessage('addToCart', 'success', currentLang, 1500);
+        
+        // Mark as processed
+        sessionStorage.setItem(onceKey, '1');
+        
+        // Clean up URL
+        window.history.replaceState({}, '', '/shop');
+      } else {
+        console.error('[CFG2CART][FAILED] ❌ cart.addItem returned false');
+        debugState.error = 'addItem returned false - validation failed';
+        showUserMessage('cartAddFailed', 'error', currentLang);
+      }
+      
+    } catch (err) {
+      console.error('[CFG2CART][ERROR]', err);
+      debugState.error = err.message;
+      errorLog('shop:configurator', 'Failed to process cfg parameter:', err);
+      
+      // Clean up URL even on error
       window.history.replaceState({}, '', '/shop');
     }
+    
+    // Show debug overlay if enabled
+    if (debugMode && typeof window !== 'undefined') {
+      const overlay = document.createElement('div');
+      overlay.id = 'cfg-debug-overlay';
+      overlay.style.cssText = `
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.9);
+        color: #0f0;
+        padding: 20px;
+        border-radius: 8px;
+        font-family: monospace;
+        font-size: 12px;
+        z-index: 99999;
+        max-width: 400px;
+        max-height: 90vh;
+        overflow-y: auto;
+      `;
+      
+      overlay.innerHTML = `
+        <div style="color: #fff; font-weight: bold; margin-bottom: 10px;">
+          CFG2CART DEBUG
+          <button onclick="this.parentElement.parentElement.remove()" style="float:right;background:#f00;color:#fff;border:none;padding:2px 8px;cursor:pointer;">X</button>
+        </div>
+        <div style="line-height: 1.6;">
+          ${debugState.step1_cfgFound ? '✅' : '❌'} 1. cfg param found (${cfgParam ? cfgParam.length : 0} chars)<br>
+          ${debugState.step2_decoded ? '✅' : '❌'} 2. decoded: ${debugState.step2_decoded ? debugState.step2_decoded.substring(0, 50) + '...' : 'FAILED'}<br>
+          ${debugState.step3_parsed ? '✅' : '❌'} 3. parsed item: ${debugState.step3_parsed ? JSON.stringify(debugState.step3_parsed).substring(0, 80) + '...' : 'FAILED'}<br>
+          ${debugState.step4_cartReady ? '✅' : '❌'} 4. cart ready: ${cart ? 'YES (' + (cart.items?.length || 0) + ' items)' : 'NO'}<br>
+          ${debugState.step5_addItemCalled ? '✅' : '❌'} 5. addItem called<br>
+          ${debugState.step6_cartAfter ? (debugState.step6_cartAfter.success ? '✅' : '❌') : '⏳'} 6. cart after: ${debugState.step6_cartAfter ? debugState.step6_cartAfter.itemCount + ' items (success: ' + debugState.step6_cartAfter.success + ')' : 'NOT RUN'}<br>
+          ${debugState.error ? '<div style="color:#f00;margin-top:10px;">ERROR: ' + debugState.error + '</div>' : ''}
+        </div>
+      `;
+      
+      document.body.appendChild(overlay);
+      
+      // Auto-remove after 30 seconds
+      setTimeout(() => overlay.remove(), 30000);
+    }
+    
   }, [cart, currentLang]);
 
   /**
