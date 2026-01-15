@@ -302,14 +302,33 @@ export async function sendOrderConfirmation(params: {
 
   const isGerman = language === 'de';
 
-  // Build email HTML (simplified - move full template to separate file later)
-  const itemsHtml = items.map(item => `
+  // Safe currency formatter (no NaN)
+  const formatCurrency = (cents: number, locale: string = 'de-DE'): string => {
+    if (cents === null || cents === undefined || isNaN(cents)) {
+      return '—';
+    }
+    const formatter = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'EUR',
+    });
+    return formatter.format(cents / 100);
+  };
+
+  const currencyLocale = isGerman ? 'de-DE' : 'en-US';
+
+  // Build email HTML - Professional template
+  const itemsHtml = items.map(item => {
+    const unitPrice = formatCurrency(item.price_cents, currencyLocale);
+    const lineTotal = formatCurrency(item.line_total_cents || (item.price_cents * item.quantity), currencyLocale);
+    
+    return `
     <tr>
       <td style="padding: 12px; border-bottom: 1px solid #eee;">${item.name}</td>
       <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">€${(item.price_cents / 100).toFixed(2)}</td>
-    </tr>
-  `).join('');
+      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${unitPrice}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">${lineTotal}</td>
+    </tr>`;
+  }).join('');
 
   const greeting = isGerman 
     ? `Hallo${customerName ? ' ' + customerName : ''},`
@@ -320,52 +339,89 @@ export async function sendOrderConfirmation(params: {
     : 'Thank you for your order!';
 
   const subject = isGerman
-    ? `Bestellbestätigung - Bestellung #${orderNumber || orderId.substring(0, 8)}`
-    : `Order Confirmation - Order #${orderNumber || orderId.substring(0, 8)}`;
+    ? `Bestellbestätigung ${orderNumber || orderId.substring(0, 8)} – UNBREAK ONE`
+    : `Order confirmation ${orderNumber || orderId.substring(0, 8)} – UNBREAK ONE`;
+
+  const confirmationText = isGerman
+    ? 'Wir haben Ihre Bestellung erhalten und bestätigen den erfolgreichen Zahlungseingang.'
+    : 'We have received your order and confirm that payment was successful.';
+
+  const shippingNote = isGerman
+    ? 'Sie erhalten eine separate E-Mail, sobald Ihre Bestellung versendet wurde.'
+    : 'You will receive a separate email once your order has been shipped.';
+
+  const paymentStatus = isGerman ? 'Bezahlt' : 'Paid';
+  const contactText = isGerman
+    ? 'Bei Fragen kontaktieren Sie uns gerne unter'
+    : 'If you have any questions, please contact us at';
 
   const html = `
 <!DOCTYPE html>
 <html>
 <head><meta charset="UTF-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9f9f9;">
-  <div style="background: white; padding: 40px; border-radius: 8px;">
-    <h1 style="color: #0a4d4d; text-align: center; margin-bottom: 10px;">UNBREAK ONE</h1>
-    <p style="text-align: center; color: #666; margin-bottom: 30px;">${thankYou}</p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
+  <div style="background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="text-align: center; margin-bottom: 30px;">
+      <h1 style="color: #0a4d4d; font-size: 28px; margin: 0 0 10px 0; font-weight: 600;">UNBREAK ONE</h1>
+      <p style="color: #666; font-size: 14px; margin: 0;">${thankYou}</p>
+    </div>
     
-    <p style="font-size: 16px;">${greeting}</p>
-    <p>${isGerman ? 'Wir haben Ihre Bestellung erhalten und werden sie schnellstmöglich bearbeiten.' : 'We have received your order and will process it as soon as possible.'}</p>
+    <div style="background: #f9f9f9; padding: 20px; border-radius: 6px; margin-bottom: 30px;">
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #666;">${isGerman ? 'Bestellnummer' : 'Order number'}</p>
+      <p style="margin: 0; font-size: 20px; font-weight: 600; color: #0a4d4d;">${orderNumber || orderId.substring(0, 8)}</p>
+    </div>
     
-    <h2 style="color: #0a4d4d; margin-top: 30px;">${isGerman ? 'Bestellübersicht' : 'Order Summary'}</h2>
+    <p style="font-size: 16px; line-height: 24px; color: #333;">${greeting}</p>
+    <p style="font-size: 14px; line-height: 22px; color: #666; margin-bottom: 30px;">${confirmationText}</p>
+    
+    <h2 style="color: #0a4d4d; font-size: 18px; margin: 30px 0 15px 0; font-weight: 600;">${isGerman ? 'Bestellübersicht' : 'Order Summary'}</h2>
     <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
       <thead>
-        <tr style="background: #f5f5f5;">
-          <th style="padding: 12px; text-align: left;">${isGerman ? 'Produkt' : 'Product'}</th>
-          <th style="padding: 12px; text-align: center;">${isGerman ? 'Anzahl' : 'Quantity'}</th>
-          <th style="padding: 12px; text-align: right;">${isGerman ? 'Preis' : 'Price'}</th>
+        <tr style="background: #f5f5f5; border-bottom: 2px solid #0a4d4d;">
+          <th style="padding: 12px; text-align: left; font-size: 13px; font-weight: 600; color: #666;">${isGerman ? 'Produkt' : 'Product'}</th>
+          <th style="padding: 12px; text-align: center; font-size: 13px; font-weight: 600; color: #666;">${isGerman ? 'Menge' : 'Qty'}</th>
+          <th style="padding: 12px; text-align: right; font-size: 13px; font-weight: 600; color: #666;">${isGerman ? 'Einzelpreis' : 'Unit Price'}</th>
+          <th style="padding: 12px; text-align: right; font-size: 13px; font-weight: 600; color: #666;">${isGerman ? 'Summe' : 'Total'}</th>
         </tr>
       </thead>
       <tbody>${itemsHtml}</tbody>
       <tfoot>
+        <tr style="border-top: 2px solid #0a4d4d;">
+          <td colspan="3" style="padding: 15px; text-align: right; font-weight: 600; font-size: 16px; color: #333;">${isGerman ? 'Gesamtbetrag:' : 'Total Amount:'}</td>
+          <td style="padding: 15px; text-align: right; font-weight: 700; color: #0a4d4d; font-size: 20px;">${formatCurrency(totalAmount, currencyLocale)}</td>
+        </tr>
         <tr>
-          <td colspan="2" style="padding: 15px; text-align: right; font-weight: bold;">${isGerman ? 'Gesamt:' : 'Total:'}</td>
-          <td style="padding: 15px; text-align: right; font-weight: bold; color: #0a4d4d; font-size: 18px;">€${(totalAmount / 100).toFixed(2)}</td>
+          <td colspan="3" style="padding: 8px 15px; text-align: right; font-size: 14px; color: #666;">${isGerman ? 'Zahlungsstatus:' : 'Payment Status:'}</td>
+          <td style="padding: 8px 15px; text-align: right; font-size: 14px; color: #28a745; font-weight: 600;">✓ ${paymentStatus}</td>
         </tr>
       </tfoot>
     </table>
     
     ${shippingAddress ? `
-    <h3 style="color: #0a4d4d; margin-top: 30px;">${isGerman ? 'Lieferadresse' : 'Shipping Address'}</h3>
-    <p style="margin: 5px 0;">${shippingAddress.name || customerName || ''}</p>
-    <p style="margin: 5px 0;">${shippingAddress.line1 || ''}</p>
-    ${shippingAddress.line2 ? `<p style="margin: 5px 0;">${shippingAddress.line2}</p>` : ''}
-    <p style="margin: 5px 0;">${shippingAddress.postal_code || ''} ${shippingAddress.city || ''}</p>
-    <p style="margin: 5px 0;">${shippingAddress.country || ''}</p>
+    <div style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 6px;">
+      <h3 style="color: #0a4d4d; font-size: 16px; margin: 0 0 15px 0; font-weight: 600;">${isGerman ? 'Lieferadresse' : 'Shipping Address'}</h3>
+      <p style="margin: 0 0 5px 0; color: #333;">${shippingAddress.name || customerName || ''}</p>
+      <p style="margin: 0 0 5px 0; color: #666;">${shippingAddress.line1 || ''}</p>
+      ${shippingAddress.line2 ? `<p style="margin: 0 0 5px 0; color: #666;">${shippingAddress.line2}</p>` : ''}
+      <p style="margin: 0; color: #666;">${shippingAddress.postal_code || ''} ${shippingAddress.city || ''}</p>
+      <p style="margin: 0; color: #666;">${shippingAddress.country || ''}</p>
+    </div>
     ` : ''}
     
-    <p style="margin-top: 40px; color: #666; font-size: 14px;">
-      ${isGerman ? 'Bei Fragen kontaktieren Sie uns gerne unter' : 'If you have any questions, please contact us at'} 
-      <a href="mailto:support@unbreak.one" style="color: #0a4d4d;">support@unbreak.one</a>
-    </p>
+    <div style="margin-top: 30px; padding: 20px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+      <p style="margin: 0; font-size: 14px; color: #856404;">
+        <strong>${isGerman ? '📦 Versand' : '📦 Shipping'}:</strong> ${shippingNote}
+      </p>
+    </div>
+    
+    <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #eee; text-align: center;">
+      <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">
+        ${contactText} <a href="mailto:support@unbreak-one.com" style="color: #0a4d4d; text-decoration: none; font-weight: 600;">support@unbreak-one.com</a>
+      </p>
+      <p style="margin: 20px 0 0 0; color: #999; font-size: 12px;">
+        © ${new Date().getFullYear()} UNBREAK ONE · <a href="https://www.unbreak-one.com/impressum" style="color: #999; text-decoration: none;">Impressum</a>
+      </p>
+    </div>
   </div>
 </body>
 </html>

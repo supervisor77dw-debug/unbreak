@@ -420,13 +420,42 @@ async function sendOrderConfirmationEmail(session, order) {
     const customerName = session.customer_details?.name;
     const shippingAddress = session.shipping_details?.address;
 
-    // Parse items from order
+    // Load Line Items from Stripe (with proper amounts)
+    console.log('[MAIL] Loading line items from Stripe...');
     let items = [];
     try {
-      items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
+      console.log('[MAIL] lineItems count:', lineItems.data.length);
+      
+      items = lineItems.data.map(item => {
+        const unitAmount = item.price?.unit_amount || item.amount_total / item.quantity || 0;
+        const lineTotal = item.amount_total || unitAmount * item.quantity;
+        
+        console.log('[MAIL] item:', {
+          name: item.description,
+          unit: unitAmount,
+          qty: item.quantity,
+          lineTotal: lineTotal
+        });
+        
+        return {
+          name: item.description || 'Product',
+          quantity: item.quantity,
+          price_cents: unitAmount,
+          line_total_cents: lineTotal
+        };
+      });
+      
+      console.log('[MAIL] total:', session.amount_total);
     } catch (err) {
-      console.error('❌ [EMAIL] Failed to parse order items:', err.message);
-      items = [{ name: 'Order', quantity: 1, price_cents: order.total_amount_cents }];
+      console.error('❌ [EMAIL] Failed to load Stripe line items:', err.message);
+      // Fallback to order items from DB
+      try {
+        items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      } catch (parseErr) {
+        console.error('❌ [EMAIL] Failed to parse order items:', parseErr.message);
+        items = [{ name: 'Order', quantity: 1, price_cents: order.total_amount_cents }];
+      }
     }
 
     // Detect language from customer data (default to German)
@@ -441,7 +470,7 @@ async function sendOrderConfirmationEmail(session, order) {
     const orderNumber = order.id.substring(0, 8).toUpperCase();
 
     console.log(`📧 [EMAIL] Recipient: ${customerEmail} (${emailSource})`);
-    console.log(`📧 [EMAIL] BCC: admin@unbreak-one.com (Messe/Debug)`);
+    console.log(`📧 [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
     console.log(`📧 [EMAIL] Order: ${orderNumber} (${order.id})`);
     console.log(`📧 [EMAIL] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
     console.log(`📧 [EMAIL] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
@@ -463,8 +492,8 @@ async function sendOrderConfirmationEmail(session, order) {
       totalAmount: order.total_amount_cents,
       language,
       shippingAddress,
-      // BCC to admin for Messe/Debug
-      bcc: 'admin@unbreak-one.com'
+      // BCC to admin + orders for internal tracking
+      bcc: ['admin@unbreak-one.com', 'orders@unbreak-one.com']
     });
     console.log('[EMAIL SEND] Result:', emailResult);
 
@@ -473,8 +502,10 @@ async function sendOrderConfirmationEmail(session, order) {
       console.log('✅ [EMAIL SUCCESS] Order confirmation sent!');
       console.log(`✅ [EMAIL] Resend Email ID: ${emailResult.id}`);
       console.log(`✅ [EMAIL] TO: ${customerEmail} (${emailSource})`);
-      console.log(`✅ [EMAIL] BCC: admin@unbreak-one.com`);
+      console.log(`✅ [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
       console.log(`✅ [EMAIL] Order: ${orderNumber}`);
+      console.log('[MAIL] send customer ok');
+      console.log('[MAIL] send internal/bcc ok');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else if (emailResult.preview) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
