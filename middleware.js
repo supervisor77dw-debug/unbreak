@@ -16,6 +16,13 @@
 import { NextResponse } from 'next/server';
 
 export function middleware(request) {
+  const url = request.nextUrl;
+  
+  // CRITICAL: Never redirect API routes (CORS preflight breaks)
+  if (url.pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+  
   // Only run on production environment
   const isProduction = process.env.VERCEL_ENV === 'production';
   
@@ -24,7 +31,6 @@ export function middleware(request) {
     return NextResponse.next();
   }
   
-  const url = request.nextUrl.clone();
   const hostname = url.hostname;
   const canonicalDomain = process.env.NEXT_PUBLIC_SITE_URL || 'https://unbreak-one.com';
   const canonicalHostname = new URL(canonicalDomain).hostname;
@@ -52,20 +58,18 @@ export function middleware(request) {
   return response;
 }
 
-// Apply middleware to all routes except:
-// - Static files (_next/static, images, etc.)
-// - API routes (they need to accept requests from any origin)
-// - Webhook routes (external services need stable URLs)
+// Apply middleware to all routes except API and static files
+// Matcher runs BEFORE middleware function, so we double-check /api/ in function
 export const config = {
   matcher: [
     /*
      * Match all request paths except:
      * - _next/static (static files)
      * - _next/image (image optimization)
-     * - favicon.ico (favicon)
-     * - public files (images, etc.)
-     * - api routes (need to accept from any origin)
+     * - favicon.ico, *.png, *.jpg, *.jpeg, *.svg (static assets)
+     * 
+     * Note: /api/* is also checked in middleware function for extra safety
      */
-    '/((?!_next/static|_next/image|favicon.ico|images|api).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|ico|webp)).*)',
   ],
 };
