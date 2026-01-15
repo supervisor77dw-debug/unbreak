@@ -4,6 +4,7 @@ import { buffer } from 'micro';
 import prisma from '../../../lib/prisma';
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
 import { countryToRegion } from '../../../lib/utils/shipping.js';
+import { sendOrderConfirmation } from '../../../lib/email/emailService';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -334,15 +335,18 @@ async function logWebhookEvent(logData) {
 
 async function sendOrderConfirmationEmail(session, order) {
   try {
-    console.log('📧 [EMAIL] Preparing to send order confirmation...');
-
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📧 [EMAIL SEND ATTEMPT] Starting email send process');
+    
     // Extract customer data from Stripe session
     const customerEmail = session.customer_details?.email || session.customer_email;
     const customerName = session.customer_details?.name;
     const shippingAddress = session.shipping_details?.address;
 
     if (!customerEmail) {
-      console.warn('⚠️ [EMAIL] No customer email found in session - skipping email');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.warn('⚠️  [EMAIL SKIPPED] No customer email found in session');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return;
     }
 
@@ -364,50 +368,55 @@ async function sendOrderConfirmationEmail(session, order) {
       language = ['GB', 'US', 'CA', 'AU', 'NZ'].includes(shippingAddress.country) ? 'en' : 'de';
     }
 
-    const emailPayload = {
+    const orderNumber = order.id.substring(0, 8).toUpperCase();
+
+    console.log(`📧 [EMAIL] Recipient: ${customerEmail}`);
+    console.log(`📧 [EMAIL] Order: ${orderNumber} (${order.id})`);
+    console.log(`📧 [EMAIL] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
+    console.log(`📧 [EMAIL] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    // Direct call to emailService (no HTTP fetch!)
+    const emailResult = await sendOrderConfirmation({
       orderId: order.id,
-      orderNumber: order.id.substring(0, 8).toUpperCase(),
+      orderNumber: orderNumber,
       customerEmail,
       customerName,
       items,
       totalAmount: order.total_amount_cents,
       language,
       shippingAddress
-    };
-
-    console.log('📧 [EMAIL] Calling email API with payload:', JSON.stringify({
-      orderId: emailPayload.orderId,
-      customerEmail: emailPayload.customerEmail,
-      language: emailPayload.language,
-      itemCount: items.length
-    }));
-
-    // Call internal email API
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000';
-
-    const emailResponse = await fetch(`${baseUrl}/api/email/order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(emailPayload)
     });
 
-    if (!emailResponse.ok) {
-      const errorText = await emailResponse.text();
-      console.error('❌ [EMAIL] API returned error:', emailResponse.status, errorText);
-      // Don't throw - email failure shouldn't block webhook
-      return;
+    if (emailResult.sent) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('✅ [EMAIL SUCCESS] Order confirmation sent!');
+      console.log(`✅ [EMAIL] Resend Email ID: ${emailResult.id}`);
+      console.log(`✅ [EMAIL] Recipient: ${customerEmail}`);
+      console.log(`✅ [EMAIL] Order: ${orderNumber}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } else if (emailResult.preview) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📋 [EMAIL PREVIEW MODE] EMAILS_ENABLED=false');
+      console.log('📋 [EMAIL] Email NOT sent (preview mode)');
+      console.log('📋 [EMAIL] To enable: Set EMAILS_ENABLED=true in Vercel ENV');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } else {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ [EMAIL FAILED] Email send failed!');
+      console.error(`❌ [EMAIL] Error: ${emailResult.error}`);
+      console.error(`❌ [EMAIL] Recipient: ${customerEmail}`);
+      console.error(`❌ [EMAIL] Order: ${orderNumber}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     }
-
-    const emailResult = await emailResponse.json();
-    console.log('✅ [EMAIL] Order confirmation sent successfully:', emailResult.emailId);
 
   } catch (error) {
     // Log but don't throw - email failure shouldn't block webhook processing
-    console.error('❌ [EMAIL] Failed to send order confirmation:', error.message);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ [EMAIL EXCEPTION] Unexpected email error!');
+    console.error(`❌ [EMAIL] Error: ${error.message}`);
+    console.error(`❌ [EMAIL] Stack:`, error.stack);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   }
 }
 
