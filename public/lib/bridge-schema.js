@@ -130,6 +130,7 @@
       // Fallback to production domains if ENV not available
       if (origins.length === 0) {
         origins.push('https://unbreak-one.com');
+        origins.push('https://www.unbreak-one.com'); // BOTH variants
       }
       
       return origins;

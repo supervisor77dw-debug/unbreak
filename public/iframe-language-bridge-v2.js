@@ -194,6 +194,39 @@
   }
 
   /**
+   * Send ACK (Acknowledgment) to iframe
+   * @param {BridgeMessage} originalMessage - The message we're acknowledging
+   * @param {Object} ackPayload - ACK payload (status, message, etc.)
+   */
+  function sendAckToIframe(originalMessage, ackPayload) {
+    if (!iframe || !iframe.contentWindow) {
+      console.warn('[PARENT][ACK] Cannot send ACK - iframe not ready');
+      return;
+    }
+
+    const ackMessage = {
+      event: 'UNBREAK_ACK',
+      type: 'UNBREAK_ACK',
+      schemaVersion: '1.0',
+      correlationId: 'ack_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      replyTo: originalMessage.correlationId, // Link to original message
+      timestamp: new Date().toISOString(),
+      payload: {
+        originalEvent: originalMessage.event,
+        ...ackPayload
+      }
+    };
+
+    console.log('[PARENT][ACK] Sending ACK to iframe:', {
+      originalEvent: originalMessage.event,
+      status: ackPayload.status,
+      replyTo: originalMessage.correlationId
+    });
+
+    iframe.contentWindow.postMessage(ackMessage, CONFIGURATOR_ORIGIN);
+  }
+
+  /**
    * Convert legacy message format to Bridge v2.0 format
    * PRIORITÄT: Spezifische Konvertierungen VOR generischen
    */
@@ -674,6 +707,13 @@
 
     if (!config || !config.variant) {
       console.error('[PARENT][CART] ❌ Invalid config - missing variant');
+      
+      // Send error ACK to configurator
+      sendAckToIframe(message, {
+        status: 'error',
+        message: 'Invalid configuration - missing variant'
+      });
+      
       debug.logDrop('add_to_cart_invalid_config', { config });
       return;
     }
@@ -702,6 +742,13 @@
 
       if (!success) {
         console.error('[CONFIG_ADD_TO_CART_ERROR]', 'addItem returned false', { cartItem });
+        
+        // Send error ACK to configurator
+        sendAckToIframe(message, {
+          status: 'error',
+          message: 'Failed to add item to cart'
+        });
+        
         alert('Fehler beim Hinzufügen zum Warenkorb. Bitte versuchen Sie es erneut.');
         return;
       }
@@ -712,6 +759,13 @@
         cart_count: currentCart.length,
         items: currentCart.map(i => ({ sku: i.sku, qty: i.quantity })),
         timestamp: Date.now()
+      });
+
+      // CRITICAL: Send ACK to configurator BEFORE redirect
+      sendAckToIframe(message, {
+        status: 'success',
+        cart_count: currentCart.length,
+        message: 'Product added to cart successfully'
       });
 
       // CRITICAL: Force localStorage write completion before redirect
@@ -734,6 +788,13 @@
     } catch (error) {
       console.error('[CONFIG_ADD_TO_CART_ERROR]', error.message, error.stack);
       console.error('[PARENT][CHECKOUT] ❌ Stack:', error.stack);
+      
+      // Send error ACK to configurator
+      sendAckToIframe(message, {
+        status: 'error',
+        message: error.message || 'Unknown error adding to cart'
+      });
+      
       debug.logApiResponse('/api/checkout/create', null, error);
     }
   }
