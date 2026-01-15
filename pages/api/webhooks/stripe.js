@@ -394,7 +394,7 @@ async function sendOrderConfirmationEmail(session, order) {
 
       // Send admin notification
       try {
-        const orderNumber = order.id.substring(0, 8).toUpperCase();
+        const orderNumber = order.order_number || order.id.substring(0, 8).toUpperCase();
         await sendOrderConfirmation({
           orderId: order.id,
           orderNumber: orderNumber,
@@ -467,11 +467,13 @@ async function sendOrderConfirmationEmail(session, order) {
       language = ['GB', 'US', 'CA', 'AU', 'NZ'].includes(shippingAddress.country) ? 'en' : 'de';
     }
 
-    const orderNumber = order.id.substring(0, 8).toUpperCase();
+    // CRITICAL: Use order_number from DB (UO-2026-000123)
+    // Fallback to UUID substring only if order_number missing (legacy orders)
+    const orderNumber = order.order_number || order.id.substring(0, 8).toUpperCase();
 
     console.log(`📧 [EMAIL] Recipient: ${customerEmail} (${emailSource})`);
     console.log(`📧 [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
-    console.log(`📧 [EMAIL] Order: ${orderNumber} (${order.id})`);
+    console.log(`📧 [EMAIL] Order: ${orderNumber} (DB: ${order.order_number || 'MISSING'}, UUID: ${order.id})`);
     console.log(`📧 [EMAIL] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
     console.log(`📧 [EMAIL] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
