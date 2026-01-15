@@ -178,6 +178,10 @@
         <span class="status-value" id="message-count">0</span>
       </div>
       <div class="status-row">
+        <span class="status-label">Blocked Messages:</span>
+        <span class="status-value error" id="blocked-count">0</span>
+      </div>
+      <div class="status-row">
         <span class="status-label">Last Updated:</span>
         <span class="status-value" id="last-updated">Never</span>
       </div>
@@ -188,6 +192,9 @@
     </div>
 
     <div id="logs-container"></div>
+    
+    <h2 style="margin-top: 40px; color: #e53e3e;">🚫 Blocked Messages (Origin Mismatch)</h2>
+    <div id="blocked-container"></div>
   </div>
 
   <script>
@@ -248,24 +255,80 @@
       container.innerHTML = html;
     }
 
+    function loadBlockedLogs() {
+      const logKey = 'unbreak_blocked_messages';
+      const logsRaw = localStorage.getItem(logKey);
+      
+      const container = document.getElementById('blocked-container');
+      const countEl = document.getElementById('blocked-count');
+
+      if (!logsRaw) {
+        container.innerHTML = '<div class="empty">No blocked messages</div>';
+        countEl.textContent = '0';
+        return;
+      }
+
+      let logs;
+      try {
+        logs = JSON.parse(logsRaw);
+      } catch (e) {
+        container.innerHTML = '<div class="empty error">Error parsing logs: ' + e.message + '</div>';
+        return;
+      }
+
+      if (!logs || logs.length === 0) {
+        container.innerHTML = '<div class="empty">No blocked messages</div>';
+        countEl.textContent = '0';
+        return;
+      }
+
+      // Update count
+      countEl.textContent = logs.length;
+
+      // Render messages (newest first)
+      const html = logs.reverse().map((log, index) => {
+        const timestamp = new Date(log.timestamp).toLocaleString('de-DE');
+        const messageType = log.event || log.type || 'UNKNOWN';
+
+        return `
+          <div class="message" style="border-left-color: #e53e3e;">
+            <div class="message-header">
+              <div class="message-time">${timestamp}</div>
+              <div class="message-type" style="background: #e53e3e;">${messageType}</div>
+            </div>
+            <div class="message-origin error">❌ BLOCKED Origin: <strong>${log.origin}</strong></div>
+            <div class="message-origin">Expected: <strong>${log.expected}</strong></div>
+            ${log.reason ? `<div class="message-origin">Reason: <strong>${log.reason}</strong></div>` : ''}
+            <div class="message-data">${JSON.stringify(log.data, null, 2)}</div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
     function clearLogs() {
       if (!confirm('Are you sure you want to clear all logs?')) return;
       
       localStorage.removeItem('unbreak_postmessage_log');
+      localStorage.removeItem('unbreak_blocked_messages');
       loadLogs();
+      loadBlockedLogs();
       alert('Logs cleared!');
     }
 
     function exportLogs() {
       const logKey = 'unbreak_postmessage_log';
+      const blockedKey = 'unbreak_blocked_messages';
       const logsRaw = localStorage.getItem(logKey);
+      const blockedRaw = localStorage.getItem(blockedKey);
       
-      if (!logsRaw) {
-        alert('No logs to export');
-        return;
-      }
+      const exportData = {
+        accepted: logsRaw ? JSON.parse(logsRaw) : [],
+        blocked: blockedRaw ? JSON.parse(blockedRaw) : []
+      };
 
-      const blob = new Blob([logsRaw], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -276,9 +339,13 @@
 
     // Auto-load on page load
     loadLogs();
+    loadBlockedLogs();
 
     // Auto-refresh every 2 seconds
-    setInterval(loadLogs, 2000);
+    setInterval(() => {
+      loadLogs();
+      loadBlockedLogs();
+    }, 2000);
   </script>
 </body>
 </html>

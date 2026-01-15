@@ -384,6 +384,24 @@
       console.warn('[SHOP] ❌ BLOCKED - Origin not allowed');
       console.warn('[SHOP] Expected:', CONFIGURATOR_ORIGIN);
       console.warn('[SHOP] Received:', event.origin);
+      
+      // 🔥 TEMPORARY DEBUG: Log to localStorage even if blocked
+      try {
+        const blockedKey = 'unbreak_blocked_messages';
+        const blocked = JSON.parse(localStorage.getItem(blockedKey) || '[]');
+        blocked.push({
+          timestamp: new Date().toISOString(),
+          origin: event.origin,
+          type: event.data?.type,
+          event: event.data?.event,
+          reason: 'ORIGIN_BLOCKED',
+          expected: CONFIGURATOR_ORIGIN,
+          data: event.data
+        });
+        if (blocked.length > 10) blocked.shift();
+        localStorage.setItem(blockedKey, JSON.stringify(blocked));
+      } catch (e) {}
+      
       debug.logDrop('origin_not_allowed', { 
         origin: event.origin,
         expected: CONFIGURATOR_ORIGIN 
