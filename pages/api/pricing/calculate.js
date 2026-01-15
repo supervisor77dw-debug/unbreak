@@ -111,12 +111,19 @@ async function handleSingleProductPricing(productType, config, customFeeCents, r
 // Handle cart pricing (for cart page)
 async function handleCartPricing(items, res) {
   console.log('💰 [PRICING API] Cart pricing:', { items_count: items.length });
+  console.log('💰 [PRICING API] Items payload:', JSON.stringify(items, null, 2));
 
   // Calculate pricing for each item
   const itemPricing = [];
   let subtotalCents = 0;
 
     for (const item of items) {
+      console.log('💰 [PRICING API] Processing item:', { 
+        product_id: item.product_id, 
+        has_config: !!item.config,
+        config_variant: item.config?.variant 
+      });
+      
       // Handle configurator items
       if (item.product_id === 'glass_configurator' && item.config) {
         const variant = item.config.variant || 'glass_holder';
@@ -125,6 +132,12 @@ async function handleCartPricing(items, res) {
           productType: variant,
           config: item.config,
           customFeeCents: 0,
+        });
+
+        console.log('💰 [PRICING API] calcConfiguredPrice result:', {
+          variant,
+          pricing_result: pricing,
+          subtotal_cents: pricing?.subtotal_cents
         });
 
         if (!pricing || !pricing.subtotal_cents || pricing.subtotal_cents <= 0) {
