@@ -118,7 +118,7 @@ export default function Shop({ initialProducts }) {
     
     const urlParams = new URLSearchParams(window.location.search);
     const cfgParam = urlParams.get('cfg');
-    const debugMode = urlParams.get('debugCfg') === '1';
+    const debugMode = process.env.NEXT_PUBLIC_DEBUG === 'true' || urlParams.get('debugCfg') === '1';
     
     // Debug state for overlay
     const debugState = {
@@ -132,13 +132,13 @@ export default function Shop({ initialProducts }) {
     };
     
     if (!cfgParam) {
-      console.log('[CFG2CART][0] No cfg parameter in URL');
+      if (debugMode) console.log('[CFG2CART][0] No cfg parameter in URL');
       return;
     }
     
     // CRITICAL: Only run when cart is ready
     if (!cart) {
-      console.log('[CFG2CART][WAIT] Cart not ready yet');
+      if (debugMode) console.log('[CFG2CART][WAIT] Cart not ready yet');
       return;
     }
     
@@ -149,14 +149,14 @@ export default function Shop({ initialProducts }) {
     const onceKey = `cfg2cart_done_${cfgHash}`;
     
     if (sessionStorage.getItem(onceKey)) {
-      console.log('[CFG2CART][SKIP] Already processed this config (anti-double-add)');
+      if (debugMode) console.log('[CFG2CART][SKIP] Already processed this config (anti-double-add)');
       window.history.replaceState({}, '', '/shop');
       return;
     }
     
     try {
       // Step 1: cfg parameter found
-      console.log('[CFG2CART][1] cfg found', cfgParam.length);
+      if (debugMode) console.log('[CFG2CART][1] cfg found', cfgParam.length);
       debugState.step1_cfgFound = true;
       
       // Step 2: Decode (robust UTF-8 safe)
@@ -179,16 +179,16 @@ export default function Shop({ initialProducts }) {
       }
       
       const jsonString = decodeCfg(cfgParam);
-      console.log('[CFG2CART][2] decoded json', jsonString.slice(0, 200));
+      if (debugMode) console.log('[CFG2CART][2] decoded json', jsonString.slice(0, 200));
       debugState.step2_decoded = jsonString.slice(0, 100);
       
       // Step 3: Parse JSON
       const item = JSON.parse(jsonString);
-      console.log('[CFG2CART][3] parsed item', item);
+      if (debugMode) console.log('[CFG2CART][3] parsed item', item);
       debugState.step3_parsed = item;
       
       // Step 4: Cart ready check
-      console.log('[CFG2CART][4] cart ready?', !!cart, cart?.items?.length);
+      if (debugMode) console.log('[CFG2CART][4] cart ready?', !!cart, cart?.items?.length);
       
       // Normalize item to cart format
       const cartItem = {
@@ -207,23 +207,23 @@ export default function Shop({ initialProducts }) {
         },
       };
       
-      console.log('[CFG2CART][PRICE] Using server-side calculation (price set to 0, calculated at checkout)');
+      if (debugMode) console.log('[CFG2CART][PRICE] Using server-side calculation (price set to 0, calculated at checkout)');
       
       // Step 5: Add to cart
-      console.log('[CFG2CART][5] addItem called');
+      if (debugMode) console.log('[CFG2CART][5] addItem called');
       debugState.step5_addItemCalled = true;
       
       const success = cart.addItem(cartItem);
       
       // Step 6: Cart after add
-      console.log('[CFG2CART][6] cart after add', cart.items.length, cart.items);
+      if (debugMode) console.log('[CFG2CART][6] cart after add', cart.items.length, cart.items);
       debugState.step6_cartAfter = {
         itemCount: cart.items.length,
         success: success,
       };
       
       if (success) {
-        console.log('[CFG2CART][SUCCESS] ✅ Item added to cart');
+        if (debugMode) console.log('[CFG2CART][SUCCESS] ✅ Item added to cart');
         setCartCount(cart.getItemCount());
         showUserMessage('addToCart', 'success', currentLang, 1500);
         

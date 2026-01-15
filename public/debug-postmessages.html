@@ -4,6 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PostMessage Debug Log - UNBREAK ONE</title>
+  <script>
+    // DEBUG GUARD: Only accessible with debugKey parameter
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const debugKey = urlParams.get('debugKey');
+      const validKey = 'messe2026'; // Change for production
+      
+      if (debugKey !== validKey) {
+        document.documentElement.innerHTML = `
+          <style>
+            body { font-family: monospace; background: #000; color: #0f0; padding: 40px; }
+            h1 { color: #f00; }
+          </style>
+          <body>
+            <h1>Access Denied</h1>
+            <p>This debug page requires authentication.</p>
+            <p>Usage: ?debugKey=&lt;key&gt;</p>
+          </body>
+        `;
+        return;
+      }
+    })();
+  </script>
   <style>
     * {
       margin: 0;
