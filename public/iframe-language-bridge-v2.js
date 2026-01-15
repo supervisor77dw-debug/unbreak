@@ -317,8 +317,20 @@
       config: event.data?.config ? 'present' : 'missing'
     });
 
+    // 🔥 GLOBAL LOGGING - ALWAYS VISIBLE (even if message is blocked)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('[SHOP] 📨 postMessage received');
+    console.log('[SHOP] Origin:', event.origin);
+    console.log('[SHOP] Type/Event:', event.data?.type || event.data?.event || 'UNKNOWN');
+    console.log('[SHOP] Reason:', event.data?.reason || 'none');
+    console.log('[SHOP] Data:', event.data);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
     // Security: Check origin
     if (!isOriginAllowed(event.origin)) {
+      console.warn('[SHOP] ❌ BLOCKED - Origin not allowed');
+      console.warn('[SHOP] Expected:', CONFIGURATOR_ORIGIN);
+      console.warn('[SHOP] Received:', event.origin);
       debug.logDrop('origin_not_allowed', { 
         origin: event.origin,
         expected: CONFIGURATOR_ORIGIN 
