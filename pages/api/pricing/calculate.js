@@ -168,11 +168,20 @@ async function handleCartPricing(items, res) {
           },
         });
       } else {
-        // Handle other product types (if any)
-        const unitPrice = item.price_cents || 0;
+        // Handle other product types (standard products without config)
+        // These need price from database or from item payload
+        const unitPrice = item.price_cents || item.price || 0;
         const quantity = item.quantity || 1;
         const lineTotalCents = unitPrice * quantity;
         subtotalCents += lineTotalCents;
+
+        console.log('💰 [PRICING API] Standard product:', {
+          product_id: item.product_id,
+          sku: item.sku,
+          unit_price: unitPrice,
+          quantity,
+          line_total: lineTotalCents
+        });
 
         itemPricing.push({
           product_id: item.product_id,
