@@ -112,7 +112,7 @@ export default function Shop({ initialProducts }) {
     }
   }, [initialProducts]);
 
-  // Configurator Return Handler: Check for pending item from localStorage
+  // Configurator Return Handler: Check for config in URL or localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
@@ -122,19 +122,55 @@ export default function Shop({ initialProducts }) {
       return;
     }
     
-    // ALWAYS check for configurator item - don't require URL parameter
-    // External configurator may redirect without ?from=configurator
-    try {
-      const pendingItem = localStorage.getItem('pendingConfiguratorItem');
-      
-      if (pendingItem) {
-        console.log('[SHOP][CONFIGURATOR_ITEM]', pendingItem);
+    const urlParams = new URLSearchParams(window.location.search);
+    let cartItem = null;
+    let source = null;
+    
+    // METHOD 1: Check URL parameter (for cross-domain configurator)
+    const configParam = urlParams.get('config');
+    if (configParam) {
+      try {
+        console.log('[SHOP][CONFIGURATOR_URL] Config parameter found');
+        // Decode base64 or direct JSON
+        const decoded = configParam.startsWith('eyJ') || configParam.startsWith('ew') 
+          ? atob(configParam) 
+          : decodeURIComponent(configParam);
         
-        const cartItem = JSON.parse(pendingItem);
+        cartItem = JSON.parse(decoded);
+        source = 'URL parameter';
+        console.log('[SHOP][CONFIGURATOR_ITEM]', cartItem);
+        console.log('[SHOP][CONFIGURATOR_SOURCE]', source);
+      } catch (err) {
+        console.error('[SHOP][CONFIGURATOR_URL_PARSE_FAILED]', err);
+        errorLog('shop:configurator', 'Failed to parse URL config:', err);
+      }
+    }
+    
+    // METHOD 2: Check localStorage (for same-domain configurator)
+    if (!cartItem) {
+      try {
+        const pendingItem = localStorage.getItem('pendingConfiguratorItem');
+        
+        if (pendingItem) {
+          console.log('[SHOP][CONFIGURATOR_LOCALSTORAGE] Found in localStorage');
+          cartItem = JSON.parse(pendingItem);
+          source = 'localStorage';
+          console.log('[SHOP][CONFIGURATOR_ITEM]', pendingItem);
+        } else {
+          console.log('[SHOP][CONFIGURATOR] No pending item in localStorage or URL');
+        }
+      } catch (err) {
+        console.error('[SHOP][CONFIGURATOR_ITEM_PARSE_FAILED]', err);
+        errorLog('shop:configurator', 'Failed to parse configurator item:', err);
+      }
+    }
+    
+    // Add to cart if found
+    if (cartItem) {
+      try {
         console.log('[SHOP][CONFIGURATOR_ITEM_PARSED]', cartItem);
-        debugLog('shop:configurator', 'Loading configurator item from localStorage:', cartItem);
+        debugLog('shop:configurator', `Loading configurator item from ${source}:`, cartItem);
         
-        // Add to cart
         const success = cart.addItem(cartItem);
         
         if (success) {
@@ -148,21 +184,21 @@ export default function Shop({ initialProducts }) {
           showUserMessage('cartAddFailed', 'error', currentLang);
         }
         
-        // Clean up localStorage immediately
-        localStorage.removeItem('pendingConfiguratorItem');
-        debugLog('shop:configurator', 'Cleared pendingConfiguratorItem from localStorage');
-      } else {
-        console.log('[SHOP][CONFIGURATOR] No pending item in localStorage');
+        // Clean up
+        if (source === 'localStorage') {
+          localStorage.removeItem('pendingConfiguratorItem');
+        }
+        if (configParam) {
+          window.history.replaceState({}, '', '/shop');
+        }
+        
+        debugLog('shop:configurator', 'Cleaned up after adding item');
+      } catch (err) {
+        console.error('[SHOP][CONFIGURATOR_ADD_ERROR]', err);
       }
-    } catch (err) {
-      console.error('[SHOP][CONFIGURATOR_ITEM_PARSE_FAILED]', err);
-      errorLog('shop:configurator', 'Failed to parse configurator item:', err);
-      // Clean up broken data to prevent infinite errors
-      localStorage.removeItem('pendingConfiguratorItem');
     }
     
     // Handle error flags from URL
-    const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
     if (error) {
       errorLog('shop:return', 'Error flag in URL:', error);
