@@ -61,6 +61,11 @@ export default async function handler(req, res) {
     // Extract trace_id from event metadata (passed through from checkout)
     const trace_id = event.data.object.metadata?.trace_id;
     
+    console.log('[WEBHOOK HIT]', event.type);
+    console.log('[EMAILS_ENABLED]', process.env.EMAILS_ENABLED);
+    console.log('[RESEND_API_KEY]', process.env.RESEND_API_KEY ? 'SET' : 'MISSING');
+    console.log('[SESSION ID]', event.data.object.id);
+    console.log('[CUSTOMER EMAIL]', event.data.object.customer_details?.email);
     console.log('[TRACE] WEBHOOK_IN', {
       trace_id,
       event_id: event.id,
@@ -292,9 +297,15 @@ async function handleCheckoutSessionCompleted(session, trace_id) {
 
     // === SEND ORDER CONFIRMATION EMAIL ===
     try {
+      console.log('[EMAIL CALL] About to send order confirmation');
+      console.log('[EMAIL CALL] Order ID:', order.id);
+      console.log('[EMAIL CALL] Session ID:', session.id);
       await sendOrderConfirmationEmail(session, order);
+      console.log('[EMAIL CALL] sendOrderConfirmationEmail finished');
     } catch (emailError) {
       // Don't fail the entire webhook if email fails
+      console.error('[EMAIL CALL] EXCEPTION:', emailError.message);
+      console.error('[EMAIL CALL] Stack:', emailError.stack);
       console.error('⚠️ [EMAIL] Failed to send confirmation email:', emailError.message);
       console.error('⚠️ [EMAIL] Order was still created successfully');
     }
@@ -437,6 +448,12 @@ async function sendOrderConfirmationEmail(session, order) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Direct call to emailService (no HTTP fetch!)
+    console.log('[EMAIL SEND] Calling sendOrderConfirmation with:', {
+      customerEmail,
+      orderNumber,
+      itemCount: items.length,
+      totalAmount: order.total_amount_cents
+    });
     const emailResult = await sendOrderConfirmation({
       orderId: order.id,
       orderNumber: orderNumber,
@@ -449,6 +466,7 @@ async function sendOrderConfirmationEmail(session, order) {
       // BCC to admin for Messe/Debug
       bcc: 'admin@unbreak-one.com'
     });
+    console.log('[EMAIL SEND] Result:', emailResult);
 
     if (emailResult.sent) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

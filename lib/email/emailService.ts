@@ -225,6 +225,11 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     // Prepare BCC recipients
     const bccRecipients = bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined;
 
+    console.log('[RESEND CALL] Sending email...');
+    console.log('[RESEND CALL] To:', recipients);
+    console.log('[RESEND CALL] BCC:', bccRecipients);
+    console.log('[RESEND CALL] Subject:', subject);
+
     // Send email
     const result = await resend.emails.send({
       from: finalFrom,
@@ -236,9 +241,12 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
       ...(bccRecipients && { bcc: bccRecipients }),
     });
 
+    console.log('[RESEND RESULT]', result);
+
     // Check for error response
     if (result.error) {
       console.error(`❌ [EMAIL SEND] Resend API error:`, result.error);
+      console.error('[RESEND ERROR]', result.error);
       return {
         sent: false,
         error: result.error.message || 'Unknown Resend API error',
@@ -254,6 +262,8 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
 
   } catch (error: any) {
     console.error(`❌ [EMAIL SEND] Failed to send ${type}:`, error.message);
+    console.error('[RESEND ERROR]', error);
+    console.error('[RESEND ERROR] Stack:', error.stack);
     
     // Don't throw - return error result instead
     // This prevents webhook/order flows from failing due to email issues
