@@ -95,10 +95,13 @@ if (!cartItem) {
   "sku": "glass_configurator",
   
   // Display (REQUIRED)
-  "name": "Individueller Glashalter",
+  "name": "Individueller Glashalter",  // DE/EN based on lang
   
   // Pricing (REQUIRED)
   "price": 3900,  // CENTS
+  
+  // Language (REQUIRED for i18n)
+  "lang": "de",  // 'de' | 'en' - CRITICAL for emails & UI
   
   // Configurator Metadata (REQUIRED)
   "configured": true,
@@ -107,6 +110,11 @@ if (!cartItem) {
     "baseColor": "#1A1A1A",
     "accentColor": "#FFD700",
     "finish": "matte"
+  },
+  
+  // Meta (OPTIONAL)
+  "meta": {
+    "lang": "de"  // Redundant but safe fallback
   }
 }
 ```

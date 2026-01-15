@@ -458,14 +458,32 @@ async function sendOrderConfirmationEmail(session, order) {
       }
     }
 
-    // Detect language from customer data (default to German)
+    // Detect language from order data (priority: cart item > session locale > country > default DE)
     let language = 'de';
-    if (session.locale) {
-      language = session.locale.startsWith('en') ? 'en' : 'de';
-    } else if (shippingAddress?.country) {
-      // English for UK, US, etc.
-      language = ['GB', 'US', 'CA', 'AU', 'NZ'].includes(shippingAddress.country) ? 'en' : 'de';
+    
+    // PRIORITY 1: Cart item language (from configurator)
+    if (order.cart_items && Array.isArray(order.cart_items)) {
+      const firstItem = order.cart_items[0];
+      if (firstItem?.lang && ['de', 'en'].includes(firstItem.lang)) {
+        language = firstItem.lang;
+        console.log(`📧 [LANG] Detected from cart item: ${language}`);
+      } else if (firstItem?.meta?.lang && ['de', 'en'].includes(firstItem.meta.lang)) {
+        language = firstItem.meta.lang;
+        console.log(`📧 [LANG] Detected from cart item meta: ${language}`);
+      }
     }
+    // PRIORITY 2: Session locale (Stripe)
+    else if (session.locale) {
+      language = session.locale.startsWith('en') ? 'en' : 'de';
+      console.log(`📧 [LANG] Detected from Stripe session locale: ${language}`);
+    }
+    // PRIORITY 3: Shipping country
+    else if (shippingAddress?.country) {
+      language = ['GB', 'US', 'CA', 'AU', 'NZ'].includes(shippingAddress.country) ? 'en' : 'de';
+      console.log(`📧 [LANG] Detected from shipping country: ${language}`);
+    }
+    
+    console.log(`📧 [LANG] Final language for email: ${language}`);
 
     // CRITICAL: Use order_number from DB (UO-2026-000123)
     // Fallback to UUID substring only if order_number missing (legacy orders)

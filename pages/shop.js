@@ -200,9 +200,11 @@ export default function Shop({ initialProducts }) {
         image_url: item.image_url || null,
         configured: true,
         config: item.config,
+        lang: item.lang || currentLang, // CRITICAL: Preserve language from configurator
         meta: {
           source: 'configurator_url',
           received_at: new Date().toISOString(),
+          lang: item.lang || currentLang, // Redundant but explicit
           ...item.meta,
         },
       };

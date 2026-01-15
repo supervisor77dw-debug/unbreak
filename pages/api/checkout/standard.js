@@ -560,6 +560,21 @@ export default async function handler(req, res) {
     const origin = getOrigin(req);
     console.log('🌐 [Checkout] Origin:', origin);
 
+    // Detect user language from cart items (for Stripe locale)
+    let userLanguage = 'de'; // Default to German
+    if (items && items.length > 0) {
+      const firstItem = items[0];
+      if (firstItem.lang && ['de', 'en'].includes(firstItem.lang)) {
+        userLanguage = firstItem.lang;
+        console.log(`🌐 [Checkout] Language from cart item: ${userLanguage}`);
+      } else if (firstItem.meta?.lang && ['de', 'en'].includes(firstItem.meta.lang)) {
+        userLanguage = firstItem.meta.lang;
+        console.log(`🌐 [Checkout] Language from cart item meta: ${userLanguage}`);
+      }
+    }
+    const stripeLocale = userLanguage === 'en' ? 'en' : 'de';
+    console.log(`🌐 [Checkout] Stripe locale: ${stripeLocale}`);
+
     // Build line_items from cart (always use price_data for dynamic pricing)
     const lineItems = cartItems.map(item => {
       console.log(`💰 [Checkout] Creating line item for ${item.sku}: €${(item.unit_price_cents / 100).toFixed(2)}`);
@@ -621,6 +636,7 @@ export default async function handler(req, res) {
       payment_method_types: ['card'],
       line_items: lineItems,
       mode: 'payment',
+      locale: stripeLocale, // 'de' or 'en' based on cart language
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/cart`,
       
