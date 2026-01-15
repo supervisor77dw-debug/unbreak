@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getCart, formatPrice } from '../lib/cart';
 import { createClient } from '@supabase/supabase-js';
-import { CartManager } from '../lib/cart/CartManager';
-import { showUserMessage } from '../lib/uiMessages';
 import { isPreviewMode } from '../lib/urls';
 
 // Client-side Supabase client
