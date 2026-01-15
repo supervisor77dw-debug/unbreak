@@ -41,7 +41,6 @@ export default function Shop({ initialProducts }) {
   const [loading, setLoading] = useState(!initialProducts);
   const [error, setError] = useState(null);
   const [cartCount, setCartCount] = useState(0);
-  const [returnDebug, setReturnDebug] = useState(null); // Debug info for configurator return
   const cart = typeof window !== 'undefined' ? getCart() : null;
 
   // Sync with window.i18n language changes
@@ -128,7 +127,6 @@ export default function Shop({ initialProducts }) {
         sessionId,
         raw: window.location.search
       });
-      setReturnDebug({ sessionId, status: 'loading' });
       loadConfigSession(sessionId);
     }
   }, []);
@@ -142,7 +140,6 @@ export default function Shop({ initialProducts }) {
       if (!response.ok) {
         const errorText = await response.text();
         errorLog('shop:return', 'Session not found or expired:', errorText);
-        setReturnDebug({ sessionId, status: 'error', error: 'Session not found' });
         
         // Show error message
         showUserMessage('configNotFound', 'error', currentLang);
@@ -157,7 +154,6 @@ export default function Shop({ initialProducts }) {
       const { lang, config } = responseData.data || responseData;
       
       debugLog('shop:return', 'Session loaded:', { lang, configKeys: Object.keys(config || {}) });
-      setReturnDebug({ sessionId, status: 'loaded', config });
       
       // 1.5. Transform config structure for pricing engine
       // Konfigurator sends: { base, arm, module, pattern, finish, ... }
@@ -237,7 +233,6 @@ export default function Shop({ initialProducts }) {
       // 3. Add to cart (NO CHECKOUT)
       if (!cart) {
         errorLog('shop:cart', 'Cart not initialized!');
-        setReturnDebug({ sessionId, status: 'error', error: 'Cart not initialized' });
         showUserMessage('cartLoadFailed', 'error', currentLang);
         window.history.replaceState({}, '', '/shop');
         return;
@@ -248,7 +243,6 @@ export default function Shop({ initialProducts }) {
       if (success) {
         const newCount = cart.getItemCount();
         debugLog('shop:cart', 'Add OK (cartCount=', newCount, ')');
-        setReturnDebug({ sessionId, status: 'success', cartCount: newCount });
         setCartCount(newCount);
         
         // 4. Clean URL (remove sessionId)
@@ -263,14 +257,12 @@ export default function Shop({ initialProducts }) {
         
       } else {
         errorLog('shop:cart', 'Add failed - cart.addItem returned false');
-        setReturnDebug({ sessionId, status: 'error', error: 'Add to cart failed' });
         showUserMessage('cartAddFailed', 'error', currentLang);
         window.history.replaceState({}, '', '/shop');
       }
       
     } catch (error) {
       errorLog('shop:return', 'Error:', error);
-      setReturnDebug({ sessionId, status: 'error', error: error.message });
       showUserMessage('configLoadFailed', 'error', currentLang);
       window.history.replaceState({}, '', '/shop');
     }
@@ -446,50 +438,6 @@ export default function Shop({ initialProducts }) {
       </Head>
 
       <main className="page-content">
-        
-        {/* Debug Box for Configurator Return (only in dev/preview) */}
-        {returnDebug && (typeof window !== 'undefined' && 
-          (process.env.NODE_ENV === 'development' || window.location.hostname.includes('vercel.app'))) && (
-          <div style={{
-            position: 'fixed',
-            bottom: '20px',
-            left: '20px',
-            background: returnDebug.status === 'error' ? '#fef2f2' : returnDebug.status === 'success' ? '#f0fdf4' : '#fffbeb',
-            border: `2px solid ${returnDebug.status === 'error' ? '#dc2626' : returnDebug.status === 'success' ? '#059669' : '#f59e0b'}`,
-            padding: '16px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            zIndex: 9999,
-            maxWidth: '300px',
-            fontSize: '12px',
-            fontFamily: 'monospace'
-          }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#111' }}>
-              🔍 Configurator Return Debug
-            </div>
-            <div style={{ color: '#666' }}>
-              <div><strong>SessionId:</strong> {returnDebug.sessionId?.substring(0, 8)}...</div>
-              <div><strong>Status:</strong> {returnDebug.status}</div>
-              {returnDebug.error && <div style={{ color: '#dc2626' }}><strong>Error:</strong> {returnDebug.error}</div>}
-              {returnDebug.cartCount && <div><strong>Cart Count:</strong> {returnDebug.cartCount}</div>}
-            </div>
-            <button 
-              onClick={() => setReturnDebug(null)}
-              style={{
-                marginTop: '8px',
-                padding: '4px 8px',
-                background: '#666',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '11px'
-              }}
-            >
-              Close
-            </button>
-          </div>
-        )}
         
         {/* Cart Badge in Header */}
         {cartCount > 0 && (
