@@ -111,162 +111,61 @@ export default function Shop({ initialProducts }) {
     }
   }, [initialProducts]);
 
-  // Configurator Return Handler: session/sessionId/cfgId detection (robust)
+  // Configurator Return Handler: Check for pending item from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     const urlParams = new URLSearchParams(window.location.search);
-    // Support multiple param names for backward compatibility
-    const sessionId = 
-      urlParams.get('sessionId') || 
-      urlParams.get('session') || 
-      urlParams.get('cfgId');
+    const fromConfigurator = urlParams.get('from') === 'configurator';
     
-    if (sessionId) {
-      debugLog('shop:return', 'sessionParam=', {
-        sessionId,
-        raw: window.location.search
-      });
-      loadConfigSession(sessionId);
-    }
-  }, []);
-
-  async function loadConfigSession(sessionId) {
-    try {
-      // 1. Fetch session from API
-      debugLog('shop:return', 'Loading session...');
-      const response = await fetch(`/api/config-session/${sessionId}`);
+    if (fromConfigurator) {
+      debugLog('shop:return', 'Configurator return detected');
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        errorLog('shop:return', 'Session not found or expired:', errorText);
-        
-        // Show error message
-        showUserMessage('configNotFound', 'error', currentLang);
-        
-        // Clean URL
-        window.history.replaceState({}, '', '/shop');
-        return;
-      }
-      
-      const responseData = await response.json();
-      // Handle both old and new response formats
-      const { lang, config } = responseData.data || responseData;
-      
-      debugLog('shop:return', 'Session loaded:', { lang, configKeys: Object.keys(config || {}) });
-      
-      // 1.5. Transform config structure for pricing engine
-      // Konfigurator sends: { base, arm, module, pattern, finish, ... }
-      // Pricing engine expects: { colors: { base, arm, module, pattern }, finish, ... }
-      const transformedConfig = {
-        colors: {
-          base: config.base || null,
-          arm: config.arm || null,
-          module: config.module || null,
-          pattern: config.pattern || null,
-        },
-        finish: config.finish || 'matte',
-        variant: config.variant || 'standard',
-      };
-      
-      debugLog('shop:config', 'Transformed:', {
-        original: Object.keys(config),
-        transformed: transformedConfig,
-      });
-      
-      // 2. Calculate price from config (via API)
-      debugLog('shop:pricing', 'Calculating price for config...');
-      let priceCents = 4990; // Fallback: €49.90 (base price)
-      
+      // Load pending item from localStorage (set by /config-return page)
       try {
-        const pricingResponse = await fetch('/api/pricing/calculate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            productType: 'glass_holder',
-            config: transformedConfig, // Use transformed structure
-            customFeeCents: 0,
-          }),
-        });
+        const pendingItem = localStorage.getItem('pendingConfiguratorItem');
         
-        if (pricingResponse.ok) {
-          const pricingData = await pricingResponse.json();
-          priceCents = pricingData.pricing.subtotal_cents;
-          debugLog('shop:pricing', 'Price calculated:', {
-            base_price_cents: pricingData.pricing.base_price_cents,
-            option_prices_cents: pricingData.pricing.option_prices_cents,
-            subtotal_cents: priceCents,
-            price_euros: pricingData.price_euros,
-          });
+        if (pendingItem) {
+          const cartItem = JSON.parse(pendingItem);
+          debugLog('shop:return', 'Loading pending configurator item:', cartItem);
+          
+          // Add to cart
+          if (cart) {
+            const success = cart.addItem(cartItem);
+            
+            if (success) {
+              debugLog('shop:cart', 'Configurator item added successfully');
+              setCartCount(cart.getItemCount());
+              showUserMessage('addToCart', 'success', currentLang, 1500);
+            } else {
+              errorLog('shop:cart', 'Failed to add configurator item');
+              showUserMessage('cartAddFailed', 'error', currentLang);
+            }
+          } else {
+            errorLog('shop:cart', 'Cart not initialized');
+          }
+          
+          // Clean up
+          localStorage.removeItem('pendingConfiguratorItem');
+          window.history.replaceState({}, '', '/shop');
         } else {
-          const errorData = await pricingResponse.json().catch(() => ({}));
-          errorLog('shop:pricing', 'Price calculation failed:', errorData);
-          debugWarn('shop:pricing', 'Using fallback:', priceCents);
+          debugWarn('shop:return', 'No pending configurator item found');
+          window.history.replaceState({}, '', '/shop');
         }
-      } catch (pricingError) {
-        errorLog('shop:pricing', 'Error calculating price:', pricingError);
-        debugWarn('shop:pricing', 'Using fallback price:', priceCents);
-      }
-      
-      // 3. Map config → cart item
-      const cartItem = {
-        id: 'glass_configurator',
-        product_id: 'glass_configurator', // For cart compatibility
-        sku: 'glass_configurator',
-        name: lang === 'en' ? 'Glass Holder – Custom' : 'Glashalter – Konfigurator',
-        price: priceCents, // Calculated from DB pricing config
-        unit_amount: priceCents, // Stripe format: price in cents
-        currency: 'EUR',
-        quantity: 1,
-        configured: true,
-        config: transformedConfig, // Use transformed structure for checkout
-        meta: {
-          source: 'configurator',
-          sessionId: sessionId,
-          colors: transformedConfig.colors,
-          finish: transformedConfig.finish,
-        }
-      };
-      
-      debugLog('shop:return', 'Cart item prepared:', cartItem);
-      
-      // 3. Add to cart (NO CHECKOUT)
-      if (!cart) {
-        errorLog('shop:cart', 'Cart not initialized!');
-        showUserMessage('cartLoadFailed', 'error', currentLang);
-        window.history.replaceState({}, '', '/shop');
-        return;
-      }
-      
-      const success = cart.addItem(cartItem);
-      
-      if (success) {
-        const newCount = cart.getItemCount();
-        debugLog('shop:cart', 'Add OK (cartCount=', newCount, ')');
-        setCartCount(newCount);
-        
-        // 4. Clean URL (remove sessionId)
-        window.history.replaceState({}, '', '/shop');
-        
-        // 5. Delete session (cleanup)
-        fetch(`/api/config-session/${sessionId}`, { method: 'DELETE' })
-          .catch(err => debugWarn('shop:return', 'Cleanup failed:', err));
-        
-        // 6. Success message (optional - kann auch weg)
-        showUserMessage('addToCart', 'success', currentLang, 1500);
-        
-      } else {
-        errorLog('shop:cart', 'Add failed - cart.addItem returned false');
-        showUserMessage('cartAddFailed', 'error', currentLang);
+      } catch (err) {
+        errorLog('shop:return', 'Failed to load pending item:', err);
         window.history.replaceState({}, '', '/shop');
       }
-      
-    } catch (error) {
-      errorLog('shop:return', 'Error:', error);
+    }
+    
+    // Handle error flags
+    const error = urlParams.get('error');
+    if (error) {
+      errorLog('shop:return', 'Error flag:', error);
       showUserMessage('configLoadFailed', 'error', currentLang);
       window.history.replaceState({}, '', '/shop');
     }
-  }
+  }, [cart, currentLang]);
 
   /**
    * Translation helper - uses window.i18n
