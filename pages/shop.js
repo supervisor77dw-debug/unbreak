@@ -116,53 +116,50 @@ export default function Shop({ initialProducts }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    const urlParams = new URLSearchParams(window.location.search);
-    const fromConfigurator = urlParams.get('from') === 'configurator';
-    
-    if (fromConfigurator) {
-      debugLog('shop:return', 'Configurator return detected');
+    // ALWAYS check for configurator item - don't require URL parameter
+    // External configurator may redirect without ?from=configurator
+    try {
+      const pendingItem = localStorage.getItem('pendingConfiguratorItem');
       
-      // Load pending item from localStorage (set by /config-return page)
-      try {
-        const pendingItem = localStorage.getItem('pendingConfiguratorItem');
+      if (pendingItem) {
+        console.log('[SHOP][CONFIGURATOR_ITEM]', pendingItem);
         
-        if (pendingItem) {
-          const cartItem = JSON.parse(pendingItem);
-          debugLog('shop:return', 'Loading pending configurator item:', cartItem);
+        const cartItem = JSON.parse(pendingItem);
+        debugLog('shop:configurator', 'Loading configurator item from localStorage:', cartItem);
+        
+        // Add to cart
+        if (cart) {
+          const success = cart.addItem(cartItem);
           
-          // Add to cart
-          if (cart) {
-            const success = cart.addItem(cartItem);
-            
-            if (success) {
-              debugLog('shop:cart', 'Configurator item added successfully');
-              setCartCount(cart.getItemCount());
-              showUserMessage('addToCart', 'success', currentLang, 1500);
-            } else {
-              errorLog('shop:cart', 'Failed to add configurator item');
-              showUserMessage('cartAddFailed', 'error', currentLang);
-            }
+          if (success) {
+            console.log('[SHOP][CONFIGURATOR_ITEM_ADDED]');
+            debugLog('shop:cart', 'Configurator item added successfully');
+            setCartCount(cart.getItemCount());
+            showUserMessage('addToCart', 'success', currentLang, 1500);
           } else {
-            errorLog('shop:cart', 'Cart not initialized');
+            errorLog('shop:cart', 'Failed to add configurator item to cart');
+            showUserMessage('cartAddFailed', 'error', currentLang);
           }
-          
-          // Clean up
-          localStorage.removeItem('pendingConfiguratorItem');
-          window.history.replaceState({}, '', '/shop');
         } else {
-          debugWarn('shop:return', 'No pending configurator item found');
-          window.history.replaceState({}, '', '/shop');
+          errorLog('shop:cart', 'Cart not initialized yet');
         }
-      } catch (err) {
-        errorLog('shop:return', 'Failed to load pending item:', err);
-        window.history.replaceState({}, '', '/shop');
+        
+        // Clean up localStorage immediately
+        localStorage.removeItem('pendingConfiguratorItem');
+        debugLog('shop:configurator', 'Cleared pendingConfiguratorItem from localStorage');
       }
+    } catch (err) {
+      console.error('[SHOP][CONFIGURATOR_ITEM_PARSE_FAILED]', err);
+      errorLog('shop:configurator', 'Failed to parse configurator item:', err);
+      // Clean up broken data to prevent infinite errors
+      localStorage.removeItem('pendingConfiguratorItem');
     }
     
-    // Handle error flags
+    // Handle error flags from URL
+    const urlParams = new URLSearchParams(window.location.search);
     const error = urlParams.get('error');
     if (error) {
-      errorLog('shop:return', 'Error flag:', error);
+      errorLog('shop:return', 'Error flag in URL:', error);
       showUserMessage('configLoadFailed', 'error', currentLang);
       window.history.replaceState({}, '', '/shop');
     }
