@@ -32,7 +32,7 @@ export function middleware(request) {
   }
   
   const hostname = url.hostname;
-  const canonicalDomain = process.env.NEXT_PUBLIC_SITE_URL || 'https://unbreak-one.com';
+  const canonicalDomain = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.unbreak-one.com';
   const canonicalHostname = new URL(canonicalDomain).hostname;
   
   // Check if current hostname is NOT the canonical domain
