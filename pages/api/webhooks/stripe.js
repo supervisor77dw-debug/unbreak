@@ -903,23 +903,72 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
     console.log('👤 [CUSTOMER SYNC] Stripe Customer ID:', stripeCustomerId);
     console.log('👤 [CUSTOMER SYNC] Email:', customerEmail);
 
-    // Upsert customer - MINIMAL VERSION due to PostgREST schema cache issues
-    // Only use columns that existed BEFORE migration 008
-    const { data: customer, error: upsertError } = await supabase
+    // Upsert customer - Handle both stripe_customer_id and email conflicts
+    // Try by stripe_customer_id first
+    let customer;
+    let upsertError;
+    
+    const customerData = {
+      stripe_customer_id: stripeCustomerId,
+      email: customerEmail?.toLowerCase() || `stripe-${stripeCustomerId}@unknown.com`,
+      name: customerName,
+      phone: customerPhone,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Try upsert by stripe_customer_id
+    const { data: customerByStripe, error: stripeIdError } = await supabase
       .from('customers')
-      .upsert({
-        stripe_customer_id: stripeCustomerId,
-        email: customerEmail?.toLowerCase() || `stripe-${stripeCustomerId}@unknown.com`,
-        name: customerName,
-        phone: customerPhone,
-        // All other columns disabled until schema cache refreshes
-        updated_at: new Date().toISOString(),
-      }, {
+      .upsert(customerData, {
         onConflict: 'stripe_customer_id',
         ignoreDuplicates: false,
       })
       .select()
       .single();
+
+    if (stripeIdError) {
+      // Check if it's a duplicate email error
+      if (stripeIdError.message.includes('customers_email_key')) {
+        console.log('⚠️ [CUSTOMER SYNC] Email conflict, trying update by email');
+        
+        // Find existing customer by email and update
+        const { data: existingCustomer, error: findError } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('email', customerData.email)
+          .single();
+
+        if (!findError && existingCustomer) {
+          // Update existing customer with new Stripe ID
+          const { data: updatedCustomer, error: updateError } = await supabase
+            .from('customers')
+            .update({
+              stripe_customer_id: stripeCustomerId,
+              name: customerName,
+              phone: customerPhone,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingCustomer.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error('❌ [CUSTOMER SYNC] Update by email failed:', updateError.message);
+            upsertError = updateError;
+          } else {
+            customer = updatedCustomer;
+            console.log('✅ [CUSTOMER SYNC] Updated existing customer by email');
+          }
+        } else {
+          console.error('❌ [CUSTOMER SYNC] Could not find customer by email:', findError?.message);
+          upsertError = stripeIdError;
+        }
+      } else {
+        upsertError = stripeIdError;
+      }
+    } else {
+      customer = customerByStripe;
+    }
 
     if (upsertError) {
       console.log('[TRACE] CUSTOMER_UPSERT_ERROR', {
@@ -928,26 +977,37 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
         code: upsertError.code
       });
       console.error('❌ [CUSTOMER SYNC] Upsert failed:', upsertError.message);
-      throw upsertError;
+      console.warn('⚠️ [CUSTOMER SYNC] Failed but continuing:', upsertError.message);
+      // Don't throw - continue without customer_id
+      customer = null;
     }
 
-    console.log('[TRACE] CUSTOMER_UPSERT_SUCCESS', {
-      trace_id,
-      customer_id: customer.id,
-      email: customer.email
-    });
-    console.log('✅ [CUSTOMER SYNC] Customer synced - ID:', customer.id);
+    if (customer) {
+      console.log('[TRACE] CUSTOMER_UPSERT_SUCCESS', {
+        trace_id,
+        customer_id: customer.id,
+        email: customer.email
+      });
+      console.log('✅ [CUSTOMER SYNC] Customer synced - ID:', customer.id);
+    }
 
     // Update order with customer_id, stripe_customer_id and customer details
     const tableName = order.order_number ? 'orders' : 'simple_orders';
+    const orderUpdate = {
+      stripe_customer_id: stripeCustomerId,
+      customer_email: customerEmail,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+    };
+    
+    // Only add customer_id if sync succeeded
+    if (customer) {
+      orderUpdate.customer_id = customer.id;
+    }
+    
     const { error: orderUpdateError } = await supabase
       .from(tableName)
-      .update({
-        customer_id: customer.id,
-        stripe_customer_id: stripeCustomerId,
-        customer_email: customerEmail,
-        customer_name: customerName,
-        customer_phone: customerPhone,
+      .update(orderUpdate)
         shipping_address: defaultShipping,
         billing_address: defaultBilling,
         updated_at: new Date().toISOString(),
