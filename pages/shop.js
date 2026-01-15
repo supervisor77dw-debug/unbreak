@@ -116,6 +116,12 @@ export default function Shop({ initialProducts }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
+    // CRITICAL: Only run when cart is ready
+    if (!cart) {
+      console.log('[SHOP][CONFIGURATOR] Waiting for cart to initialize...');
+      return;
+    }
+    
     // ALWAYS check for configurator item - don't require URL parameter
     // External configurator may redirect without ?from=configurator
     try {
@@ -125,28 +131,28 @@ export default function Shop({ initialProducts }) {
         console.log('[SHOP][CONFIGURATOR_ITEM]', pendingItem);
         
         const cartItem = JSON.parse(pendingItem);
+        console.log('[SHOP][CONFIGURATOR_ITEM_PARSED]', cartItem);
         debugLog('shop:configurator', 'Loading configurator item from localStorage:', cartItem);
         
         // Add to cart
-        if (cart) {
-          const success = cart.addItem(cartItem);
-          
-          if (success) {
-            console.log('[SHOP][CONFIGURATOR_ITEM_ADDED]');
-            debugLog('shop:cart', 'Configurator item added successfully');
-            setCartCount(cart.getItemCount());
-            showUserMessage('addToCart', 'success', currentLang, 1500);
-          } else {
-            errorLog('shop:cart', 'Failed to add configurator item to cart');
-            showUserMessage('cartAddFailed', 'error', currentLang);
-          }
+        const success = cart.addItem(cartItem);
+        
+        if (success) {
+          console.log('[SHOP][CONFIGURATOR_ITEM_ADDED]');
+          debugLog('shop:cart', 'Configurator item added successfully');
+          setCartCount(cart.getItemCount());
+          showUserMessage('addToCart', 'success', currentLang, 1500);
         } else {
-          errorLog('shop:cart', 'Cart not initialized yet');
+          console.error('[SHOP][CONFIGURATOR_ITEM_ADD_FAILED]');
+          errorLog('shop:cart', 'Failed to add configurator item to cart - validation failed');
+          showUserMessage('cartAddFailed', 'error', currentLang);
         }
         
         // Clean up localStorage immediately
         localStorage.removeItem('pendingConfiguratorItem');
         debugLog('shop:configurator', 'Cleared pendingConfiguratorItem from localStorage');
+      } else {
+        console.log('[SHOP][CONFIGURATOR] No pending item in localStorage');
       }
     } catch (err) {
       console.error('[SHOP][CONFIGURATOR_ITEM_PARSE_FAILED]', err);
