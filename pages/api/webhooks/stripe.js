@@ -336,19 +336,78 @@ async function logWebhookEvent(logData) {
 async function sendOrderConfirmationEmail(session, order) {
   try {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📧 [EMAIL SEND ATTEMPT] Starting email send process');
+    console.log('📧 [EMAIL RESOLUTION] Determining recipient email...');
+    console.log(`📧 [EMAIL SOURCE] session.id: ${session.id}`);
+    console.log(`📧 [EMAIL SOURCE] session.customer_details?.email: ${session.customer_details?.email || 'EMPTY'}`);
+    console.log(`📧 [EMAIL SOURCE] session.customer_email: ${session.customer_email || 'EMPTY'}`);
+    console.log(`📧 [EMAIL SOURCE] session.metadata?.customer_email: ${session.metadata?.customer_email || 'EMPTY'}`);
     
-    // Extract customer data from Stripe session
-    const customerEmail = session.customer_details?.email || session.customer_email;
-    const customerName = session.customer_details?.name;
-    const shippingAddress = session.shipping_details?.address;
+    // Email validation helper
+    const isValidEmail = (email) => {
+      if (!email || typeof email !== 'string') return false;
+      // Simple validation: contains @ and .
+      return email.includes('@') && email.includes('.') && email.length > 5;
+    };
 
+    // Determine recipient email with priority
+    let customerEmail = null;
+    let emailSource = null;
+
+    // PRIORITY 1: session.customer_details?.email (most reliable from Stripe)
+    if (session.customer_details?.email && isValidEmail(session.customer_details.email)) {
+      customerEmail = session.customer_details.email;
+      emailSource = 'session.customer_details.email';
+    }
+    // PRIORITY 2: session.customer_email (fallback)
+    else if (session.customer_email && isValidEmail(session.customer_email)) {
+      customerEmail = session.customer_email;
+      emailSource = 'session.customer_email';
+    }
+    // PRIORITY 3: metadata.customer_email (only if valid email pattern)
+    else if (session.metadata?.customer_email && isValidEmail(session.metadata.customer_email)) {
+      customerEmail = session.metadata.customer_email;
+      emailSource = 'session.metadata.customer_email';
+    }
+
+    console.log(`📧 [EMAIL RESOLVED] Recipient: ${customerEmail || 'NONE'}`);
+    console.log(`📧 [EMAIL RESOLVED] Source: ${emailSource || 'NONE'}`);
+
+    // If no valid email found, NOTIFY ADMIN
     if (!customerEmail) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.warn('⚠️  [EMAIL SKIPPED] No customer email found in session');
+      console.error('⚠️  [EMAIL CRITICAL] NO VALID CUSTOMER EMAIL FOUND!');
+      console.error('⚠️  [EMAIL] Order ID:', order.id);
+      console.error('⚠️  [EMAIL] Session ID:', session.id);
+      console.error('⚠️  [EMAIL] Sending admin notification...');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      // Send admin notification
+      try {
+        const orderNumber = order.id.substring(0, 8).toUpperCase();
+        await sendOrderConfirmation({
+          orderId: order.id,
+          orderNumber: orderNumber,
+          customerEmail: 'admin@unbreak-one.com',
+          customerName: '⚠️ ADMIN ALERT - No Customer Email',
+          items: [{ 
+            name: '⚠️ ORDER WITHOUT CUSTOMER EMAIL', 
+            quantity: 1, 
+            price_cents: order.total_amount_cents 
+          }],
+          totalAmount: order.total_amount_cents,
+          language: 'de',
+          shippingAddress: session.shipping_details?.address
+        });
+        console.log('✅ [EMAIL] Admin notification sent');
+      } catch (adminEmailError) {
+        console.error('❌ [EMAIL] Failed to send admin notification:', adminEmailError.message);
+      }
       return;
     }
+
+    // Extract customer data from Stripe session
+    const customerName = session.customer_details?.name;
+    const shippingAddress = session.shipping_details?.address;
 
     // Parse items from order
     let items = [];
@@ -370,7 +429,8 @@ async function sendOrderConfirmationEmail(session, order) {
 
     const orderNumber = order.id.substring(0, 8).toUpperCase();
 
-    console.log(`📧 [EMAIL] Recipient: ${customerEmail}`);
+    console.log(`📧 [EMAIL] Recipient: ${customerEmail} (${emailSource})`);
+    console.log(`📧 [EMAIL] BCC: admin@unbreak-one.com (Messe/Debug)`);
     console.log(`📧 [EMAIL] Order: ${orderNumber} (${order.id})`);
     console.log(`📧 [EMAIL] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
     console.log(`📧 [EMAIL] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
@@ -385,29 +445,35 @@ async function sendOrderConfirmationEmail(session, order) {
       items,
       totalAmount: order.total_amount_cents,
       language,
-      shippingAddress
+      shippingAddress,
+      // BCC to admin for Messe/Debug
+      bcc: 'admin@unbreak-one.com'
     });
 
     if (emailResult.sent) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('✅ [EMAIL SUCCESS] Order confirmation sent!');
       console.log(`✅ [EMAIL] Resend Email ID: ${emailResult.id}`);
-      console.log(`✅ [EMAIL] Recipient: ${customerEmail}`);
+      console.log(`✅ [EMAIL] TO: ${customerEmail} (${emailSource})`);
+      console.log(`✅ [EMAIL] BCC: admin@unbreak-one.com`);
       console.log(`✅ [EMAIL] Order: ${orderNumber}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else if (emailResult.preview) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log('📋 [EMAIL PREVIEW MODE] EMAILS_ENABLED=false');
       console.log('📋 [EMAIL] Email NOT sent (preview mode)');
+      console.log('📋 [EMAIL] Would send to:', customerEmail);
+      console.log('📋 [EMAIL] Would BCC to: admin@unbreak-one.com');
       console.log('📋 [EMAIL] To enable: Set EMAILS_ENABLED=true in Vercel ENV');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.error('❌ [EMAIL FAILED] Email send failed!');
       console.error(`❌ [EMAIL] Error: ${emailResult.error}`);
-      console.error(`❌ [EMAIL] Recipient: ${customerEmail}`);
+      console.error(`❌ [EMAIL] TO: ${customerEmail} (${emailSource})`);
       console.error(`❌ [EMAIL] Order: ${orderNumber}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    }
     }
 
   } catch (error) {

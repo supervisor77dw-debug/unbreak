@@ -40,6 +40,7 @@ export interface SendEmailParams {
   text?: string;
   from?: string;
   replyTo?: string;
+  bcc?: string | string[];
   meta?: Record<string, any>;
 }
 
@@ -135,6 +136,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     text,
     from,
     replyTo,
+    bcc,
     meta = {}
   } = params;
 
@@ -208,6 +210,9 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   
   try {
     console.log(`📧 [EMAIL SEND] Sending ${type} to ${Array.isArray(to) ? to.join(', ') : to}`);
+    if (bcc) {
+      console.log(`📧 [EMAIL SEND] BCC: ${Array.isArray(bcc) ? bcc.join(', ') : bcc}`);
+    }
 
     // Check for API key
     if (!process.env.RESEND_API_KEY) {
@@ -217,6 +222,9 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     // Initialize Resend (only when actually sending)
     const resend = new Resend(process.env.RESEND_API_KEY);
 
+    // Prepare BCC recipients
+    const bccRecipients = bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined;
+
     // Send email
     const result = await resend.emails.send({
       from: finalFrom,
@@ -225,6 +233,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
       html,
       text: finalText,
       ...(finalReplyTo && { replyTo: finalReplyTo }),
+      ...(bccRecipients && { bcc: bccRecipients }),
     });
 
     // Check for error response
@@ -267,6 +276,7 @@ export async function sendOrderConfirmation(params: {
   totalAmount: number;
   language?: 'de' | 'en';
   shippingAddress?: any;
+  bcc?: string | string[]; // ← NEW: BCC support for admin@unbreak-one.com
 }) {
   const {
     orderId,
@@ -276,7 +286,8 @@ export async function sendOrderConfirmation(params: {
     items,
     totalAmount,
     language = 'de',
-    shippingAddress
+    shippingAddress,
+    bcc // ← NEW
   } = params;
 
   const isGerman = language === 'de';
@@ -355,6 +366,7 @@ export async function sendOrderConfirmation(params: {
     to: customerEmail,
     subject,
     html,
+    bcc, // ← NEW: Pass BCC through
     meta: {
       orderId,
       orderNumber,
