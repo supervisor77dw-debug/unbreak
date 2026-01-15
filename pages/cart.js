@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getCart, formatPrice } from '../lib/cart';
 import { createClient } from '@supabase/supabase-js';
+import { isPreviewMode } from '../lib/urls';
 
 // Client-side Supabase client
 const supabase = createClient(
@@ -65,7 +66,7 @@ export default function CartPage() {
 
   // Debug logging (preview only)
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+    if (isPreviewMode()) {
       const locale = window.i18n?.getCurrentLanguage() || 
                      document.cookie.match(/unbreakone_lang=([^;]+)/)?.[1] || 
                      localStorage.getItem('unbreakone_lang') || 
@@ -100,7 +101,7 @@ export default function CartPage() {
     }
 
     // Debug log (preview only)
-    if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+    if (isPreviewMode()) {
       console.log('[CHECKOUT] start ok items=%d total=%d', cartItems.length, cart.getTotal());
     }
 

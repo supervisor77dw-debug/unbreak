@@ -63,7 +63,9 @@ const nextConfig = {
   // Redirect old /configurator route to external configurator
   async redirects() {
     const CONFIGURATOR_URL = process.env.NEXT_PUBLIC_CONFIGURATOR_DOMAIN || 'https://unbreak-3-d-konfigurator.vercel.app';
-    const SHOP_URL = process.env.NEXT_PUBLIC_SHOP_URL || 'https://unbreak-one.vercel.app/shop';
+    const SHOP_URL = process.env.NEXT_PUBLIC_SITE_URL 
+      ? `${process.env.NEXT_PUBLIC_SITE_URL}/shop`
+      : 'https://unbreak-one.com/shop';
     
     return [
       {

@@ -40,7 +40,8 @@
 
   // Configuration
   const CONFIGURATOR_IFRAME_ID = 'unbreak-configurator-iframe';
-  const CONFIGURATOR_ORIGIN = 'https://unbreak-3-d-konfigurator.vercel.app';
+  const CONFIGURATOR_ORIGIN = window.ENV?.NEXT_PUBLIC_CONFIGURATOR_DOMAIN || 
+                               'https://unbreak-3-d-konfigurator.vercel.app';
   
   let iframe = null;
   let currentLang = 'de';

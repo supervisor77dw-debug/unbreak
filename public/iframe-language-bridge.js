@@ -9,12 +9,13 @@
 
   // Configuration
   const CONFIGURATOR_IFRAME_ID = 'configurator-iframe';
-  const CONFIGURATOR_ORIGIN = 'https://unbreak-3-d-konfigurator.vercel.app';
+  const CONFIGURATOR_ORIGIN = (typeof window !== 'undefined' && window.ENV?.NEXT_PUBLIC_CONFIGURATOR_DOMAIN) ||
+                               'https://unbreak-3-d-konfigurator.vercel.app';
   
   // Security: Allowed origins for postMessage
   const ALLOWED_ORIGINS = [
-    'https://unbreak-3-d-konfigurator.vercel.app',
-    'https://unbreak-one.vercel.app',
+    (typeof window !== 'undefined' && window.ENV?.NEXT_PUBLIC_CONFIGURATOR_DOMAIN) || 'https://unbreak-3-d-konfigurator.vercel.app',
+    typeof window !== 'undefined' ? window.location.origin : 'https://unbreak-one.com',
     'http://localhost:3000', // Dev
   ];
 

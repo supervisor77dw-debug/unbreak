@@ -8,8 +8,9 @@
 (function() {
   'use strict';
 
-  const CONFIGURATOR_BASE_URL = 'https://unbreak-3-d-konfigurator.vercel.app';
-  const DEFAULT_RETURN_URL = 'https://unbreak-one.vercel.app/shop';
+  const CONFIGURATOR_BASE_URL = window.ENV?.NEXT_PUBLIC_CONFIGURATOR_DOMAIN || 
+                                 'https://unbreak-3-d-konfigurator.vercel.app';
+  const DEFAULT_RETURN_URL = `${window.location.origin}/shop`;
 
   /**
    * Build configurator URL with language and return URL

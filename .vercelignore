@@ -29,7 +29,7 @@ playwright-report/
 
 # Development Folders
 docs/
-scripts/
+# scripts/ - NEEDED for prebuild (generate-build-info.js)
 
 # Misc Development Files
 *.txt

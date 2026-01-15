@@ -187,7 +187,8 @@
     const ctaButtons = document.querySelectorAll('a[href="configurator.html"]');
     
     // BUG B FIX: Direct Vercel URL (no homepage header)
-    const CONFIGURATOR_URL = 'https://unbreak-3-d-konfigurator.vercel.app/';
+    const CONFIGURATOR_URL = (typeof window !== 'undefined' && window.ENV?.NEXT_PUBLIC_CONFIGURATOR_DOMAIN) ||
+                              'https://unbreak-3-d-konfigurator.vercel.app/';
     
     if (!modalOverlay || !modalClose || !modalIframe) return;
     

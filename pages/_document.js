@@ -7,6 +7,9 @@ export default function Document() {
         {/* External Libraries */}
         <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/ScrollTrigger.min.js"></script>
+        
+        {/* Canonical URL - set dynamically by middleware */}
+        {/* Per-page canonical should be set in page component Head */}
       </Head>
       <body>
         <Main />
