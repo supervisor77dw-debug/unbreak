@@ -111,13 +111,29 @@
   }
 
   /**
-   * Origin validation
+   * Origin validation - Dynamic based on environment
    */
   const AllowedOrigins = {
-    PRODUCTION: [
-      'https://unbreak-3-d-konfigurator.vercel.app',
-      'https://unbreak-one.vercel.app',
-    ],
+    PRODUCTION: (function() {
+      const origins = [];
+      
+      // Try to get domains from window.__ENV__ (injected by Next.js)
+      if (typeof window !== 'undefined' && window.__ENV__) {
+        if (window.__ENV__.NEXT_PUBLIC_CONFIGURATOR_DOMAIN) {
+          origins.push(window.__ENV__.NEXT_PUBLIC_CONFIGURATOR_DOMAIN);
+        }
+        if (window.__ENV__.NEXT_PUBLIC_SITE_URL) {
+          origins.push(window.__ENV__.NEXT_PUBLIC_SITE_URL);
+        }
+      }
+      
+      // Fallback to production domains if ENV not available
+      if (origins.length === 0) {
+        origins.push('https://unbreak-one.com');
+      }
+      
+      return origins;
+    })(),
     
     DEVELOPMENT: [
       'http://localhost:3000',
