@@ -273,7 +273,13 @@ async function handleCheckoutCompleted(session) {
   // 6. SEND ORDER CONFIRMATION EMAIL
   // ========================================
   if (order.customer_email) {
-    console.log(`[Webhook] Sending order confirmation email to ${order.customer_email}`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`📧 [EMAIL SEND ATTEMPT] Starting email send process`);
+    console.log(`📧 [EMAIL] Recipient: ${order.customer_email}`);
+    console.log(`📧 [EMAIL] Order: ${orderNumber} (${orderId})`);
+    console.log(`📧 [EMAIL] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
+    console.log(`📧 [EMAIL] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     
     try {
       // Build items array for email
@@ -295,7 +301,12 @@ async function handleCheckoutCompleted(session) {
       });
 
       if (emailResult.sent) {
-        console.log(`[Webhook] ✅ Order confirmation sent - Email ID: ${emailResult.id}`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`✅ [EMAIL SUCCESS] Order confirmation sent!`);
+        console.log(`✅ [EMAIL] Resend Email ID: ${emailResult.id}`);
+        console.log(`✅ [EMAIL] Recipient: ${order.customer_email}`);
+        console.log(`✅ [EMAIL] Order: ${orderNumber}`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         
         // Update order with email status
         await supabaseAdmin
@@ -310,9 +321,18 @@ async function handleCheckoutCompleted(session) {
           })
           .eq('id', orderId);
       } else if (emailResult.preview) {
-        console.log(`[Webhook] 📧 Email preview mode (EMAILS_ENABLED=false)`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`📋 [EMAIL PREVIEW MODE] EMAILS_ENABLED=false`);
+        console.log(`📋 [EMAIL] Email NOT sent (preview mode)`);
+        console.log(`📋 [EMAIL] To enable: Set EMAILS_ENABLED=true in Vercel ENV`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       } else {
-        console.error(`[Webhook] ⚠️ Email failed: ${emailResult.error}`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.error(`❌ [EMAIL FAILED] Email send failed!`);
+        console.error(`❌ [EMAIL] Error: ${emailResult.error}`);
+        console.error(`❌ [EMAIL] Recipient: ${order.customer_email}`);
+        console.error(`❌ [EMAIL] Order: ${orderNumber}`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         
         // Update order with email error (but don't throw - order is still paid!)
         await supabaseAdmin
@@ -327,11 +347,19 @@ async function handleCheckoutCompleted(session) {
           .eq('id', orderId);
       }
     } catch (emailError) {
-      console.error(`[Webhook] ⚠️ Email error (non-fatal):`, emailError.message);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.error(`❌ [EMAIL EXCEPTION] Unexpected email error!`);
+      console.error(`❌ [EMAIL] Error: ${emailError.message}`);
+      console.error(`❌ [EMAIL] Stack:`, emailError.stack);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
       // Don't throw - email failure shouldn't fail the webhook
     }
   } else {
-    console.log(`[Webhook] ⚠️ No customer email - skipping order confirmation`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    console.log(`⚠️  [EMAIL SKIPPED] No customer email found`);
+    console.log(`⚠️  [EMAIL] Order: ${orderNumber}`);
+    console.log(`⚠️  [EMAIL] customer_email field is empty`);
+    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   }
 
   return {

@@ -40,6 +40,7 @@ export interface SendEmailParams {
   text?: string;
   from?: string;
   replyTo?: string;
+  bcc?: string | string[];
   meta?: Record<string, any>;
 }
 
@@ -66,21 +67,21 @@ function getDefaultFrom(type: EmailType): string {
     case 'order-confirmation':
     case 'order-shipped':
     case 'payment-received':
-      return process.env.EMAIL_FROM_ORDERS || process.env.RESEND_FROM || 'orders@unbreak.one';
+      return 'UNBREAK ONE <orders@unbreak-one.com>';
     
     case 'support-ticket':
-      return process.env.EMAIL_FROM_SUPPORT || process.env.RESEND_FROM || 'support@unbreak.one';
+      return 'UNBREAK ONE Support <support@unbreak-one.com>';
     
     case 'account-verification':
     case 'password-reset':
     case 'system-notification':
-      return process.env.EMAIL_FROM_NO_REPLY || process.env.RESEND_FROM || 'no-reply@unbreak.one';
+      return 'UNBREAK ONE <no-reply@unbreak-one.com>';
     
     case 'test':
-      return process.env.RESEND_FROM || 'test@unbreak.one';
+      return 'UNBREAK ONE <no-reply@unbreak-one.com>';
     
     default:
-      return process.env.RESEND_FROM || 'no-reply@unbreak.one';
+      return 'UNBREAK ONE <no-reply@unbreak-one.com>';
   }
 }
 
@@ -90,12 +91,12 @@ function getDefaultFrom(type: EmailType): string {
 function getDefaultReplyTo(type: EmailType): string | undefined {
   // Order emails should have replies go to support
   if (['order-confirmation', 'order-shipped', 'payment-received'].includes(type)) {
-    return process.env.EMAIL_FROM_SUPPORT || 'support@unbreak.one';
+    return 'support@unbreak-one.com';
   }
   
   // Support tickets should reply to support
   if (type === 'support-ticket') {
-    return process.env.EMAIL_FROM_SUPPORT || 'support@unbreak.one';
+    return 'support@unbreak-one.com';
   }
   
   // System emails typically don't need reply-to
@@ -135,6 +136,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     text,
     from,
     replyTo,
+    bcc,
     meta = {}
   } = params;
 
@@ -208,6 +210,9 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   
   try {
     console.log(`📧 [EMAIL SEND] Sending ${type} to ${Array.isArray(to) ? to.join(', ') : to}`);
+    if (bcc) {
+      console.log(`📧 [EMAIL SEND] BCC: ${Array.isArray(bcc) ? bcc.join(', ') : bcc}`);
+    }
 
     // Check for API key
     if (!process.env.RESEND_API_KEY) {
@@ -217,6 +222,14 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     // Initialize Resend (only when actually sending)
     const resend = new Resend(process.env.RESEND_API_KEY);
 
+    // Prepare BCC recipients
+    const bccRecipients = bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined;
+
+    console.log('[RESEND CALL] Sending email...');
+    console.log('[RESEND CALL] To:', recipients);
+    console.log('[RESEND CALL] BCC:', bccRecipients);
+    console.log('[RESEND CALL] Subject:', subject);
+
     // Send email
     const result = await resend.emails.send({
       from: finalFrom,
@@ -225,11 +238,15 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
       html,
       text: finalText,
       ...(finalReplyTo && { replyTo: finalReplyTo }),
+      ...(bccRecipients && { bcc: bccRecipients }),
     });
+
+    console.log('[RESEND RESULT]', result);
 
     // Check for error response
     if (result.error) {
       console.error(`❌ [EMAIL SEND] Resend API error:`, result.error);
+      console.error('[RESEND ERROR]', result.error);
       return {
         sent: false,
         error: result.error.message || 'Unknown Resend API error',
@@ -245,6 +262,8 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
 
   } catch (error: any) {
     console.error(`❌ [EMAIL SEND] Failed to send ${type}:`, error.message);
+    console.error('[RESEND ERROR]', error);
+    console.error('[RESEND ERROR] Stack:', error.stack);
     
     // Don't throw - return error result instead
     // This prevents webhook/order flows from failing due to email issues
@@ -267,6 +286,7 @@ export async function sendOrderConfirmation(params: {
   totalAmount: number;
   language?: 'de' | 'en';
   shippingAddress?: any;
+  bcc?: string | string[]; // ← NEW: BCC support for admin@unbreak-one.com
 }) {
   const {
     orderId,
@@ -276,7 +296,8 @@ export async function sendOrderConfirmation(params: {
     items,
     totalAmount,
     language = 'de',
-    shippingAddress
+    shippingAddress,
+    bcc // ← NEW
   } = params;
 
   const isGerman = language === 'de';
@@ -355,6 +376,7 @@ export async function sendOrderConfirmation(params: {
     to: customerEmail,
     subject,
     html,
+    bcc, // ← NEW: Pass BCC through
     meta: {
       orderId,
       orderNumber,
