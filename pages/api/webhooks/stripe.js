@@ -1008,10 +1008,6 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
     const { error: orderUpdateError } = await supabase
       .from(tableName)
       .update(orderUpdate)
-        shipping_address: defaultShipping,
-        billing_address: defaultBilling,
-        updated_at: new Date().toISOString(),
-      })
       .eq('id', order.id);
 
     if (orderUpdateError) {
