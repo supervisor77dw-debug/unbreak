@@ -282,7 +282,7 @@ export async function sendOrderConfirmation(params: {
   orderNumber?: string;
   customerEmail: string;
   customerName?: string;
-  items: Array<{ name: string; quantity: number; price_cents: number }>;
+  items: Array<{ name: string; quantity: number; price_cents: number; line_total_cents?: number }>;
   totalAmount: number;
   language?: 'de' | 'en';
   shippingAddress?: any;
