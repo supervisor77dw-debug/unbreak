@@ -52,6 +52,8 @@ export default function CartPage() {
         }
 
         const data = await response.json();
+        console.log('[CART] Pricing API response:', data);
+        console.log('[CART] grand_total_cents:', data.grand_total_cents);
         setPricingSnapshot(data);
       } catch (err) {
         console.error('[Cart] Pricing error:', err);

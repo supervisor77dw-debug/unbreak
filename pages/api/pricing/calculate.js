@@ -182,6 +182,7 @@ async function handleCartPricing(items, res) {
       subtotal_cents: subtotalCents,
       shipping_cents: shippingCents,
       grand_total_cents: grandTotalCents,
+      CALCULATION: `${subtotalCents} + ${shippingCents} = ${grandTotalCents}`,
     });
 
     // Return pricing snapshot (same structure as checkout)
