@@ -358,87 +358,291 @@ export async function sendOrderConfirmation(params: {
   const html = isGerman ? `
 <!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5; line-height: 1.6;">
-  <div style="background: white; padding: 40px; border-radius: 8px;">
-    <h1 style="color: #0a4d4d; font-size: 24px; margin: 0 0 10px 0; text-align: center;">UNBREAK ONE</h1>
-    <p style="text-align: center; color: #666; font-size: 14px; margin: 0 0 30px 0;">Vielen Dank für Ihre Bestellung!</p>
-    
-    <p style="margin: 0 0 15px 0;">${greeting}</p>
-    
-    <p style="margin: 0 0 30px 0;">vielen Dank für Ihre Bestellung bei UNBREAK ONE.<br>
-    Wir haben Ihre Bestellung erfolgreich erhalten und werden diese nun weiter bearbeiten.</p>
-    
-    <h2 style="color: #0a4d4d; font-size: 18px; margin: 30px 0 15px 0;">Bestellübersicht</h2>
-    
-    <div style="background: #f9f9f9; padding: 20px; border-radius: 6px; margin: 20px 0; white-space: pre-line; font-family: monospace; font-size: 13px;">
-${itemsText}
-    </div>
-    
-    <div style="margin: 20px 0; padding: 15px 0; border-top: 1px solid #eee;">
-      <p style="margin: 5px 0;"><strong>Zwischensumme:</strong> ${formatCurrency(subtotalCents)}</p>
-      <p style="margin: 5px 0;"><strong>Versand:</strong> ${formatCurrency(shippingCents)}</p>
-      <p style="margin: 15px 0 0 0; font-size: 18px;"><strong>Gesamtbetrag:</strong> ${formatCurrency(orderTotalCents)}</p>
-    </div>
-    
-    <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 4px;">
-      <p style="margin: 0; color: #155724;"><strong>Zahlungsstatus:</strong> Bezahlt</p>
-    </div>
-    
-    <p style="margin: 30px 0;">Sobald Ihre Bestellung versendet wird, erhalten Sie eine weitere Benachrichtigung.</p>
-    
-    <p style="margin: 30px 0;">Bei Fragen erreichen Sie uns jederzeit unter<br>
-    <a href="mailto:support@unbreak-one.com" style="color: #0a4d4d;">support@unbreak-one.com</a></p>
-    
-    <p style="margin: 30px 0 10px 0;">Mit freundlichen Grüßen<br>UNBREAK ONE</p>
-    
-    <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #999;">
-    Dies ist eine automatisch erstellte E-Mail. Bitte antworten Sie nicht direkt auf diese Nachricht.
-    </p>
-  </div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #F7F7F7; font-family: Arial, Helvetica, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        
+        <!-- Main Container -->
+        <table role="presentation" style="max-width: 600px; width: 100%; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px 40px; text-align: center; background-color: #2F6F55; border-radius: 12px 12px 0 0;">
+              <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 600; letter-spacing: 1px;">UNBREAK ONE</h1>
+              <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">Vielen Dank für Ihre Bestellung!</p>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              
+              <p style="margin: 0 0 20px 0; font-size: 16px; color: #333333; line-height: 1.6;">${greeting}</p>
+              
+              <p style="margin: 0 0 30px 0; font-size: 15px; color: #666666; line-height: 1.6;">
+                vielen Dank für Ihre Bestellung bei UNBREAK ONE.<br>
+                Wir haben Ihre Zahlung erfolgreich erhalten und bereiten Ihre Bestellung nun für den Versand vor.
+              </p>
+              
+              <!-- Order Details Box -->
+              <div style="background-color: #F9F9F9; border-radius: 8px; padding: 25px; margin: 30px 0;">
+                <h2 style="margin: 0 0 20px 0; color: #2F6F55; font-size: 20px; font-weight: 600;">🧾 Bestellübersicht</h2>
+                
+                <table style="width: 100%; margin: 0 0 20px 0;">
+                  <tr>
+                    <td style="padding: 8px 0; font-size: 14px; color: #666;">Bestellnummer:</td>
+                    <td style="padding: 8px 0; font-size: 14px; color: #333; font-weight: 600; text-align: right;">${orderNumber || orderId.substring(0, 8)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-size: 14px; color: #666;">Bestelldatum:</td>
+                    <td style="padding: 8px 0; font-size: 14px; color: #333; text-align: right;">${new Date().toLocaleDateString('de-DE')}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-size: 14px; color: #666;">Zahlungsstatus:</td>
+                    <td style="padding: 8px 0; font-size: 14px; text-align: right;"><span style="background-color: #D4EDDA; color: #155724; padding: 4px 12px; border-radius: 4px; font-weight: 600;">Bezahlt</span></td>
+                  </tr>
+                </table>
+                
+                <div style="border-top: 2px solid #E0E0E0; margin: 20px 0;"></div>
+                
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px; font-weight: 600;">Positionen</h3>
+                
+${productItems.map(item => `                <div style="padding: 12px 0; border-bottom: 1px solid #EEEEEE;">
+                  <table style="width: 100%;">
+                    <tr>
+                      <td style="font-size: 14px; color: #333; padding-right: 10px;">${item.quantity} ×</td>
+                      <td style="font-size: 14px; color: #333; width: 70%;">${item.name}</td>
+                      <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(item.line_total_cents || (item.price_cents * item.quantity))}</td>
+                    </tr>
+                  </table>
+                </div>
+`).join('')}
+                
+                ${shippingCents > 0 ? `<div style="padding: 12px 0;">
+                  <table style="width: 100%;">
+                    <tr>
+                      <td style="font-size: 14px; color: #666;">Versand (DE)</td>
+                      <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(shippingCents)}</td>
+                    </tr>
+                  </table>
+                </div>` : ''}
+                
+                <div style="border-top: 2px solid #2F6F55; margin: 20px 0 15px 0; padding-top: 15px;">
+                  <table style="width: 100%;">
+                    <tr>
+                      <td style="font-size: 14px; color: #666; padding: 5px 0;">Zwischensumme:</td>
+                      <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(subtotalCents)}</td>
+                    </tr>
+                    <tr>
+                      <td style="font-size: 14px; color: #666; padding: 5px 0;">Versand:</td>
+                      <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(shippingCents)}</td>
+                    </tr>
+                    <tr>
+                      <td style="font-size: 18px; color: #2F6F55; padding: 10px 0 0 0; font-weight: 700;">Gesamtbetrag:</td>
+                      <td style="font-size: 20px; color: #2F6F55; text-align: right; font-weight: 700; padding: 10px 0 0 0;">${formatCurrency(orderTotalCents)}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+              
+              <!-- Shipping Info -->
+              <div style="background-color: #FFF9E6; border-left: 4px solid #FFC107; border-radius: 4px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin: 0 0 10px 0; color: #856404; font-size: 16px; font-weight: 600;">📦 Versand & Service</h3>
+                <p style="margin: 0; font-size: 14px; color: #856404; line-height: 1.6;">
+                  Sobald Ihre Bestellung versendet wurde, erhalten Sie eine separate Versandbestätigung per E-Mail.
+                </p>
+              </div>
+              
+              <p style="margin: 30px 0 10px 0; font-size: 15px; color: #666; line-height: 1.6;">
+                Bei Fragen erreichen Sie uns jederzeit unter<br>
+                👉 <a href="mailto:support@unbreak-one.com" style="color: #2F6F55; text-decoration: none; font-weight: 600;">support@unbreak-one.com</a>
+              </p>
+              
+              <p style="margin: 30px 0 0 0; font-size: 15px; color: #333; line-height: 1.6;">
+                Herzliche Grüße<br>
+                <strong>Ihr UNBREAK ONE Team</strong>
+              </p>
+              
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #F7F7F7; border-top: 1px solid #E0E0E0; border-radius: 0 0 12px 12px;">
+              <div style="text-align: center;">
+                <p style="margin: 0 0 15px 0; font-size: 16px; color: #2F6F55; font-weight: 600;">UNBREAK ONE</p>
+                <p style="margin: 0 0 5px 0; font-size: 13px; color: #999;">Premium Modular Holders</p>
+                <p style="margin: 0 0 15px 0; font-size: 13px; color: #999;">
+                  🌐 <a href="https://unbreak-one.com" style="color: #2F6F55; text-decoration: none;">unbreak-one.com</a><br>
+                  📧 <a href="mailto:support@unbreak-one.com" style="color: #2F6F55; text-decoration: none;">support@unbreak-one.com</a>
+                </p>
+                <p style="margin: 20px 0 10px 0; font-size: 12px; color: #999;">
+                  <a href="https://unbreak-one.com/impressum" style="color: #666; text-decoration: none; margin: 0 8px;">Impressum</a> •
+                  <a href="https://unbreak-one.com/datenschutz" style="color: #666; text-decoration: none; margin: 0 8px;">Datenschutz</a> •
+                  <a href="https://unbreak-one.com/agb" style="color: #666; text-decoration: none; margin: 0 8px;">AGB</a>
+                </p>
+                <p style="margin: 15px 0 0 0; font-size: 11px; color: #AAA; font-style: italic;">
+                  Diese E-Mail wurde automatisch generiert.<br>Bitte antworten Sie nicht direkt auf diese Nachricht.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+        </table>
+        
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
   ` : `
 <!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5; line-height: 1.6;">
-  <div style="background: white; padding: 40px; border-radius: 8px;">
-    <h1 style="color: #0a4d4d; font-size: 24px; margin: 0 0 10px 0; text-align: center;">UNBREAK ONE</h1>
-    <p style="text-align: center; color: #666; font-size: 14px; margin: 0 0 30px 0;">Thank you for your order!</p>
-    
-    <p style="margin: 0 0 15px 0;">${greetingEN}</p>
-    
-    <p style="margin: 0 0 30px 0;">thank you for your order at UNBREAK ONE.<br>
-    We have successfully received your order and will now process it.</p>
-    
-    <h2 style="color: #0a4d4d; font-size: 18px; margin: 30px 0 15px 0;">Order summary</h2>
-    
-    <div style="background: #f9f9f9; padding: 20px; border-radius: 6px; margin: 20px 0; white-space: pre-line; font-family: monospace; font-size: 13px;">
-${itemsText}
-    </div>
-    
-    <div style="margin: 20px 0; padding: 15px 0; border-top: 1px solid #eee;">
-      <p style="margin: 5px 0;"><strong>Subtotal:</strong> ${formatCurrency(subtotalCents)}</p>
-      <p style="margin: 5px 0;"><strong>Shipping:</strong> ${formatCurrency(shippingCents)}</p>
-      <p style="margin: 15px 0 0 0; font-size: 18px;"><strong>Total:</strong> ${formatCurrency(orderTotalCents)}</p>
-    </div>
-    
-    <div style="background: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 20px 0; border-radius: 4px;">
-      <p style="margin: 0; color: #155724;"><strong>Payment status:</strong> Paid</p>
-    </div>
-    
-    <p style="margin: 30px 0;">You will receive another notification once your order has been shipped.</p>
-    
-    <p style="margin: 30px 0;">If you have any questions, please contact us at<br>
-    <a href="mailto:support@unbreak-one.com" style="color: #0a4d4d;">support@unbreak-one.com</a></p>
-    
-    <p style="margin: 30px 0 10px 0;">Kind regards,<br>UNBREAK ONE</p>
-    
-    <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #999;">
-    This email was generated automatically. Please do not reply directly.
-    </p>
-  </div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #F7F7F7; font-family: Arial, Helvetica, sans-serif;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        
+        <!-- Main Container -->
+        <table role="presentation" style="max-width: 600px; width: 100%; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px 40px; text-align: center; background-color: #2F6F55; border-radius: 12px 12px 0 0;">
+              <h1 style="margin: 0; color: #FFFFFF; font-size: 28px; font-weight: 600; letter-spacing: 1px;">UNBREAK ONE</h1>
+              <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">Thank you for your order!</p>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              
+              <p style="margin: 0 0 20px 0; font-size: 16px; color: #333333; line-height: 1.6;">${greetingEN}</p>
+              
+              <p style="margin: 0 0 30px 0; font-size: 15px; color: #666666; line-height: 1.6;">
+                Thank you for your order at UNBREAK ONE.<br>
+                We have successfully received your payment and are now preparing your order for shipment.
+              </p>
+              
+              <!-- Order Details Box -->
+              <div style="background-color: #F9F9F9; border-radius: 8px; padding: 25px; margin: 30px 0;">
+                <h2 style="margin: 0 0 20px 0; color: #2F6F55; font-size: 20px; font-weight: 600;">🧾 Order Summary</h2>
+                
+                <table style="width: 100%; margin: 0 0 20px 0;">
+                  <tr>
+                    <td style="padding: 8px 0; font-size: 14px; color: #666;">Order number:</td>
+                    <td style="padding: 8px 0; font-size: 14px; color: #333; font-weight: 600; text-align: right;">${orderNumber || orderId.substring(0, 8)}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-size: 14px; color: #666;">Order date:</td>
+                    <td style="padding: 8px 0; font-size: 14px; color: #333; text-align: right;">${new Date().toLocaleDateString('en-US')}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; font-size: 14px; color: #666;">Payment status:</td>
+                    <td style="padding: 8px 0; font-size: 14px; text-align: right;"><span style="background-color: #D4EDDA; color: #155724; padding: 4px 12px; border-radius: 4px; font-weight: 600;">Paid</span></td>
+                  </tr>
+                </table>
+                
+                <div style="border-top: 2px solid #E0E0E0; margin: 20px 0;"></div>
+                
+                <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px; font-weight: 600;">Items</h3>
+                
+${productItems.map(item => `                <div style="padding: 12px 0; border-bottom: 1px solid #EEEEEE;">
+                  <table style="width: 100%;">
+                    <tr>
+                      <td style="font-size: 14px; color: #333; padding-right: 10px;">${item.quantity} ×</td>
+                      <td style="font-size: 14px; color: #333; width: 70%;">${item.name}</td>
+                      <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(item.line_total_cents || (item.price_cents * item.quantity))}</td>
+                    </tr>
+                  </table>
+                </div>
+`).join('')}
+                
+                ${shippingCents > 0 ? `<div style="padding: 12px 0;">
+                  <table style="width: 100%;">
+                    <tr>
+                      <td style="font-size: 14px; color: #666;">Shipping (Standard)</td>
+                      <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(shippingCents)}</td>
+                    </tr>
+                  </table>
+                </div>` : ''}
+                
+                <div style="border-top: 2px solid #2F6F55; margin: 20px 0 15px 0; padding-top: 15px;">
+                  <table style="width: 100%;">
+                    <tr>
+                      <td style="font-size: 14px; color: #666; padding: 5px 0;">Subtotal:</td>
+                      <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(subtotalCents)}</td>
+                    </tr>
+                    <tr>
+                      <td style="font-size: 14px; color: #666; padding: 5px 0;">Shipping:</td>
+                      <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(shippingCents)}</td>
+                    </tr>
+                    <tr>
+                      <td style="font-size: 18px; color: #2F6F55; padding: 10px 0 0 0; font-weight: 700;">Total:</td>
+                      <td style="font-size: 20px; color: #2F6F55; text-align: right; font-weight: 700; padding: 10px 0 0 0;">${formatCurrency(orderTotalCents)}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+              
+              <!-- Shipping Info -->
+              <div style="background-color: #FFF9E6; border-left: 4px solid #FFC107; border-radius: 4px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin: 0 0 10px 0; color: #856404; font-size: 16px; font-weight: 600;">📦 Shipping & Service</h3>
+                <p style="margin: 0; font-size: 14px; color: #856404; line-height: 1.6;">
+                  You will receive a separate shipping confirmation email once your order has been dispatched.
+                </p>
+              </div>
+              
+              <p style="margin: 30px 0 10px 0; font-size: 15px; color: #666; line-height: 1.6;">
+                If you have any questions, feel free to contact us at<br>
+                👉 <a href="mailto:support@unbreak-one.com" style="color: #2F6F55; text-decoration: none; font-weight: 600;">support@unbreak-one.com</a>
+              </p>
+              
+              <p style="margin: 30px 0 0 0; font-size: 15px; color: #333; line-height: 1.6;">
+                Kind regards,<br>
+                <strong>Your UNBREAK ONE Team</strong>
+              </p>
+              
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #F7F7F7; border-top: 1px solid #E0E0E0; border-radius: 0 0 12px 12px;">
+              <div style="text-align: center;">
+                <p style="margin: 0 0 15px 0; font-size: 16px; color: #2F6F55; font-weight: 600;">UNBREAK ONE</p>
+                <p style="margin: 0 0 5px 0; font-size: 13px; color: #999;">Premium Modular Holders</p>
+                <p style="margin: 0 0 15px 0; font-size: 13px; color: #999;">
+                  🌐 <a href="https://unbreak-one.com" style="color: #2F6F55; text-decoration: none;">unbreak-one.com</a><br>
+                  📧 <a href="mailto:support@unbreak-one.com" style="color: #2F6F55; text-decoration: none;">support@unbreak-one.com</a>
+                </p>
+                <p style="margin: 20px 0 10px 0; font-size: 12px; color: #999;">
+                  <a href="https://unbreak-one.com/impressum" style="color: #666; text-decoration: none; margin: 0 8px;">Legal Notice</a> •
+                  <a href="https://unbreak-one.com/datenschutz" style="color: #666; text-decoration: none; margin: 0 8px;">Privacy</a> •
+                  <a href="https://unbreak-one.com/agb" style="color: #666; text-decoration: none; margin: 0 8px;">Terms</a>
+                </p>
+                <p style="margin: 15px 0 0 0; font-size: 11px; color: #AAA; font-style: italic;">
+                  This email was generated automatically.<br>Please do not reply directly to this message.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+        </table>
+        
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
   `;
@@ -450,7 +654,7 @@ ${itemsText}
     subject,
     html,
     from: 'UNBREAK ONE <no-reply@unbreak-one.com>',
-    replyTo: 'support@unbreak-one.com',
+    replyTo: 'support@unbreak-one.com', // ← Wichtig für Kundenantworten
     bcc, // BCC admin if provided
     meta: {
       orderId,
@@ -462,45 +666,85 @@ ${itemsText}
 
   // Send internal order notification to orders@unbreak-one.com
   try {
-    const internalSubject = `Neue Bestellung ${orderNumber || orderId.substring(0, 8)} – UNBREAK ONE`;
+    const internalSubject = `Neue Bestellung ${orderNumber || orderId.substring(0, 8)}`;
     const internalHtml = `
 <!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family: monospace; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5; line-height: 1.6;">
-  <div style="background: white; padding: 40px; border-radius: 8px;">
-    <h1 style="font-size: 20px; margin: 0 0 20px 0;">Neue Bestellung eingegangen.</h1>
+<head>
+  <meta charset="UTF-8">
+</head>
+<body style="margin: 0; padding: 20px; background-color: #F7F7F7; font-family: 'Courier New', monospace;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #FFFFFF; border: 2px solid #2F6F55; border-radius: 8px; padding: 30px;">
     
-    <p style="margin: 5px 0;"><strong>Bestellnummer:</strong> ${orderNumber || orderId.substring(0, 8)}</p>
-    <p style="margin: 5px 0;"><strong>Datum:</strong> ${new Date().toLocaleString('de-DE')}</p>
-    <p style="margin: 5px 0;"><strong>Zahlungsstatus:</strong> Bezahlt</p>
+    <h1 style="margin: 0 0 20px 0; font-size: 20px; color: #2F6F55; border-bottom: 2px solid #2F6F55; padding-bottom: 10px;">
+      📦 Neue Bestellung eingegangen
+    </h1>
     
-    <h2 style="font-size: 16px; margin: 30px 0 10px 0;">Kunde:</h2>
-    <p style="margin: 5px 0;">${customerName || '—'}</p>
-    <p style="margin: 5px 0;">${customerEmail}</p>
+    <table style="width: 100%; margin: 20px 0; font-size: 14px;">
+      <tr>
+        <td style="padding: 8px 0; color: #666; width: 140px;"><strong>Bestellnummer:</strong></td>
+        <td style="padding: 8px 0; color: #333; font-weight: 600;">${orderNumber || orderId.substring(0, 8)}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; color: #666;"><strong>Datum:</strong></td>
+        <td style="padding: 8px 0; color: #333;">${new Date().toLocaleString('de-DE')}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; color: #666;"><strong>Zahlungsstatus:</strong></td>
+        <td style="padding: 8px 0;"><span style="background-color: #D4EDDA; color: #155724; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 12px;">BEZAHLT</span></td>
+      </tr>
+    </table>
+    
+    <div style="margin: 30px 0;">
+      <h2 style="margin: 0 0 10px 0; font-size: 16px; color: #2F6F55;">👤 Kunde</h2>
+      <p style="margin: 5px 0; font-size: 14px; color: #333;"><strong>${customerName || '—'}</strong></p>
+      <p style="margin: 5px 0; font-size: 14px; color: #666;">${customerEmail}</p>
+    </div>
     
     ${shippingAddress ? `
-    <h2 style="font-size: 16px; margin: 30px 0 10px 0;">Lieferadresse:</h2>
-    <p style="margin: 5px 0;">${shippingAddress.name || customerName || ''}</p>
-    <p style="margin: 5px 0;">${shippingAddress.line1 || ''}</p>
-    ${shippingAddress.line2 ? `<p style="margin: 5px 0;">${shippingAddress.line2}</p>` : ''}
-    <p style="margin: 5px 0;">${shippingAddress.postal_code || ''} ${shippingAddress.city || ''}</p>
-    <p style="margin: 5px 0;">${shippingAddress.country || ''}</p>
+    <div style="margin: 30px 0;">
+      <h2 style="margin: 0 0 10px 0; font-size: 16px; color: #2F6F55;">📍 Lieferadresse</h2>
+      <p style="margin: 3px 0; font-size: 13px; color: #333;">${shippingAddress.name || customerName || ''}</p>
+      <p style="margin: 3px 0; font-size: 13px; color: #333;">${shippingAddress.line1 || ''}</p>
+      ${shippingAddress.line2 ? `<p style="margin: 3px 0; font-size: 13px; color: #333;">${shippingAddress.line2}</p>` : ''}
+      <p style="margin: 3px 0; font-size: 13px; color: #333;">${shippingAddress.postal_code || ''} ${shippingAddress.city || ''}</p>
+      <p style="margin: 3px 0; font-size: 13px; color: #333; font-weight: 600;">${shippingAddress.country || ''}</p>
+    </div>
     ` : ''}
     
-    <h2 style="font-size: 16px; margin: 30px 0 10px 0;">Positionen:</h2>
-    <div style="background: #f9f9f9; padding: 15px; border-radius: 4px; white-space: pre-line;">
-${itemsText}
+    <div style="margin: 30px 0;">
+      <h2 style="margin: 0 0 10px 0; font-size: 16px; color: #2F6F55;">🛒 Positionen</h2>
+      <div style="background-color: #F9F9F9; padding: 15px; border-radius: 6px; border-left: 4px solid #2F6F55;">
+${productItems.map(item => `        <div style="padding: 8px 0; border-bottom: 1px solid #E0E0E0;">
+          <span style="color: #666; font-size: 13px;">${item.quantity} ×</span>
+          <span style="color: #333; font-size: 13px; margin-left: 10px;">${item.name}</span>
+          <span style="color: #333; font-size: 13px; float: right; font-weight: 600;">${formatCurrency(item.line_total_cents || (item.price_cents * item.quantity))}</span>
+        </div>
+`).join('')}
+      </div>
     </div>
     
-    <div style="margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 4px;">
-      <p style="margin: 5px 0;"><strong>Zwischensumme:</strong> ${formatCurrency(subtotalCents)}</p>
-      <p style="margin: 5px 0;"><strong>Versand:</strong> ${formatCurrency(shippingCents)}</p>
-      <p style="margin: 10px 0 0 0; font-size: 16px;"><strong>Gesamt:</strong> ${formatCurrency(orderTotalCents)}</p>
+    <div style="background-color: #F0F8F0; border-radius: 6px; padding: 20px; margin: 30px 0;">
+      <table style="width: 100%; font-size: 14px;">
+        <tr>
+          <td style="padding: 5px 0; color: #666;">Zwischensumme:</td>
+          <td style="padding: 5px 0; color: #333; text-align: right; font-weight: 600;">${formatCurrency(subtotalCents)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 5px 0; color: #666;">Versand:</td>
+          <td style="padding: 5px 0; color: #333; text-align: right; font-weight: 600;">${formatCurrency(shippingCents)}</td>
+        </tr>
+        <tr style="border-top: 2px solid #2F6F55;">
+          <td style="padding: 15px 0 5px 0; color: #2F6F55; font-weight: 700; font-size: 16px;">GESAMT:</td>
+          <td style="padding: 15px 0 5px 0; color: #2F6F55; text-align: right; font-weight: 700; font-size: 18px;">${formatCurrency(orderTotalCents)}</td>
+        </tr>
+      </table>
     </div>
     
-    <h2 style="font-size: 14px; margin: 30px 0 10px 0; color: #666;">Technische Details:</h2>
-    <p style="margin: 5px 0; font-size: 12px; color: #999;">Order ID: ${orderId}</p>
+    <div style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #E0E0E0;">
+      <p style="margin: 5px 0; font-size: 11px; color: #999;">Order ID: ${orderId}</p>
+    </div>
+    
   </div>
 </body>
 </html>
