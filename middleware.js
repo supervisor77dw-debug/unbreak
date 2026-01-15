@@ -59,17 +59,15 @@ export function middleware(request) {
 }
 
 // Apply middleware to all routes except API and static files
-// Matcher runs BEFORE middleware function, so we double-check /api/ in function
 export const config = {
   matcher: [
     /*
      * Match all request paths except:
+     * - /api/* (API routes - CRITICAL for CORS)
      * - _next/static (static files)
      * - _next/image (image optimization)
      * - favicon.ico, *.png, *.jpg, *.jpeg, *.svg (static assets)
-     * 
-     * Note: /api/* is also checked in middleware function for extra safety
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|ico|webp)).*)',
+    '/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|svg|ico|webp)).*)',
   ],
 };
