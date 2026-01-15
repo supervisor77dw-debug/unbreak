@@ -326,6 +326,26 @@
     console.log('[SHOP] Data:', event.data);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
+    // 🔥 PERSISTENT LOGGING - Save to localStorage (survives redirects)
+    try {
+      const logKey = 'unbreak_postmessage_log';
+      const logs = JSON.parse(localStorage.getItem(logKey) || '[]');
+      logs.push({
+        timestamp: new Date().toISOString(),
+        origin: event.origin,
+        type: event.data?.type,
+        event: event.data?.event,
+        reason: event.data?.reason,
+        data: event.data
+      });
+      // Keep only last 20 messages
+      if (logs.length > 20) logs.shift();
+      localStorage.setItem(logKey, JSON.stringify(logs));
+      console.log('[SHOP] 💾 Logged to localStorage:', logKey);
+    } catch (e) {
+      console.error('[SHOP] Failed to save log:', e);
+    }
+
     // Security: Check origin
     if (!isOriginAllowed(event.origin)) {
       console.warn('[SHOP] ❌ BLOCKED - Origin not allowed');

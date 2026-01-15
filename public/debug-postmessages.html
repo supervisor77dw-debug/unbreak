@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PostMessage Debug Log - UNBREAK ONE</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #2F6F55;
+      margin-bottom: 10px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #2F6F55;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: #3d8a6b;
+    }
+
+    button.danger {
+      background: #c53030;
+    }
+
+    button.danger:hover {
+      background: #e53e3e;
+    }
+
+    .status {
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .status-label {
+      color: #888;
+    }
+
+    .status-value {
+      color: #2F6F55;
+      font-weight: bold;
+    }
+
+    .empty {
+      background: #2a2a2a;
+      border: 2px dashed #444;
+      border-radius: 4px;
+      padding: 40px;
+      text-align: center;
+      color: #888;
+    }
+
+    .message {
+      background: #2a2a2a;
+      border-left: 4px solid #2F6F55;
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 15px;
+      font-size: 13px;
+    }
+
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #444;
+    }
+
+    .message-time {
+      color: #888;
+      font-size: 12px;
+    }
+
+    .message-type {
+      background: #2F6F55;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .message-origin {
+      color: #888;
+      margin-bottom: 10px;
+      font-size: 12px;
+    }
+
+    .message-data {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 3px;
+      padding: 10px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .highlight {
+      color: #ffc107;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #e53e3e;
+    }
+
+    .success {
+      color: #48bb78;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 PostMessage Debug Log</h1>
+    <p class="subtitle">Persistent log of all postMessages received by the shop (survives redirects)</p>
+
+    <div class="controls">
+      <button onclick="loadLogs()">🔄 Refresh</button>
+      <button onclick="clearLogs()" class="danger">🗑️ Clear Logs</button>
+      <button onclick="exportLogs()">📥 Export JSON</button>
+    </div>
+
+    <div class="status">
+      <div class="status-row">
+        <span class="status-label">Total Messages:</span>
+        <span class="status-value" id="message-count">0</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Last Updated:</span>
+        <span class="status-value" id="last-updated">Never</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Storage Key:</span>
+        <span class="status-value">unbreak_postmessage_log</span>
+      </div>
+    </div>
+
+    <div id="logs-container"></div>
+  </div>
+
+  <script>
+    function loadLogs() {
+      const logKey = 'unbreak_postmessage_log';
+      const logsRaw = localStorage.getItem(logKey);
+      
+      const container = document.getElementById('logs-container');
+      const countEl = document.getElementById('message-count');
+      const updatedEl = document.getElementById('last-updated');
+
+      if (!logsRaw) {
+        container.innerHTML = '<div class="empty">No postMessages logged yet.<br><br>Messages will appear here after visiting the configurator page.</div>';
+        countEl.textContent = '0';
+        updatedEl.textContent = 'Never';
+        return;
+      }
+
+      let logs;
+      try {
+        logs = JSON.parse(logsRaw);
+      } catch (e) {
+        container.innerHTML = '<div class="empty error">Error parsing logs: ' + e.message + '</div>';
+        return;
+      }
+
+      if (!logs || logs.length === 0) {
+        container.innerHTML = '<div class="empty">No postMessages logged yet.</div>';
+        countEl.textContent = '0';
+        updatedEl.textContent = 'Never';
+        return;
+      }
+
+      // Update status
+      countEl.textContent = logs.length;
+      updatedEl.textContent = new Date().toLocaleString('de-DE');
+
+      // Render messages (newest first)
+      const html = logs.reverse().map((log, index) => {
+        const timestamp = new Date(log.timestamp).toLocaleString('de-DE');
+        const messageType = log.event || log.type || 'UNKNOWN';
+        const isAddToCart = messageType.includes('ADD_TO_CART') || log.reason === 'add_to_cart';
+        const typeClass = isAddToCart ? 'highlight' : '';
+
+        return `
+          <div class="message">
+            <div class="message-header">
+              <div class="message-time">${timestamp}</div>
+              <div class="message-type ${typeClass}">${messageType}</div>
+            </div>
+            <div class="message-origin">Origin: <strong>${log.origin}</strong></div>
+            ${log.reason ? `<div class="message-origin">Reason: <strong class="highlight">${log.reason}</strong></div>` : ''}
+            <div class="message-data">${JSON.stringify(log.data, null, 2)}</div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = html;
+    }
+
+    function clearLogs() {
+      if (!confirm('Are you sure you want to clear all logs?')) return;
+      
+      localStorage.removeItem('unbreak_postmessage_log');
+      loadLogs();
+      alert('Logs cleared!');
+    }
+
+    function exportLogs() {
+      const logKey = 'unbreak_postmessage_log';
+      const logsRaw = localStorage.getItem(logKey);
+      
+      if (!logsRaw) {
+        alert('No logs to export');
+        return;
+      }
+
+      const blob = new Blob([logsRaw], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `postmessage-logs-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Auto-load on page load
+    loadLogs();
+
+    // Auto-refresh every 2 seconds
+    setInterval(loadLogs, 2000);
+  </script>
+</body>
+</html>
