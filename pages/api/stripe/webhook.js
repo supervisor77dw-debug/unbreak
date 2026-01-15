@@ -16,6 +16,7 @@
 import { buffer } from 'micro';
 import { stripe, stripeWebhookSecret } from '../../../lib/stripe';
 import { getSupabaseAdmin } from '../../../lib/supabase';
+import { sendOrderConfirmation } from '../../../lib/email/emailService';
 
 // Disable body parsing - we need raw body for signature verification
 export const config = {
@@ -268,6 +269,71 @@ async function handleCheckoutCompleted(session) {
 
   console.log(`[Webhook] ✅ Order ${orderNumber} → paid + production job created`);
 
+  // ========================================
+  // 6. SEND ORDER CONFIRMATION EMAIL
+  // ========================================
+  if (order.customer_email) {
+    console.log(`[Webhook] Sending order confirmation email to ${order.customer_email}`);
+    
+    try {
+      // Build items array for email
+      const emailItems = order.items || [{
+        name: order.product?.products?.name || 'Custom Product',
+        quantity: 1,
+        price_cents: order.total_amount_cents || order.total_cents,
+      }];
+
+      const emailResult = await sendOrderConfirmation({
+        orderId: orderId,
+        orderNumber: orderNumber,
+        customerEmail: order.customer_email,
+        customerName: order.customer_name,
+        items: emailItems,
+        totalAmount: order.total_amount_cents || order.total_cents,
+        language: session.metadata?.language || 'de',
+        shippingAddress: order.shipping_address || session.customer_details?.address,
+      });
+
+      if (emailResult.sent) {
+        console.log(`[Webhook] ✅ Order confirmation sent - Email ID: ${emailResult.id}`);
+        
+        // Update order with email status
+        await supabaseAdmin
+          .from('orders')
+          .update({
+            email_sent: true,
+            email_sent_at: new Date().toISOString(),
+            metadata: {
+              ...order.metadata,
+              email_id: emailResult.id,
+            },
+          })
+          .eq('id', orderId);
+      } else if (emailResult.preview) {
+        console.log(`[Webhook] 📧 Email preview mode (EMAILS_ENABLED=false)`);
+      } else {
+        console.error(`[Webhook] ⚠️ Email failed: ${emailResult.error}`);
+        
+        // Update order with email error (but don't throw - order is still paid!)
+        await supabaseAdmin
+          .from('orders')
+          .update({
+            email_sent: false,
+            metadata: {
+              ...order.metadata,
+              email_error: emailResult.error,
+            },
+          })
+          .eq('id', orderId);
+      }
+    } catch (emailError) {
+      console.error(`[Webhook] ⚠️ Email error (non-fatal):`, emailError.message);
+      // Don't throw - email failure shouldn't fail the webhook
+    }
+  } else {
+    console.log(`[Webhook] ⚠️ No customer email - skipping order confirmation`);
+  }
+
   return {
     status: 'processed',
     order_number: orderNumber,
@@ -384,61 +450,75 @@ export default async function handler(req, res) {
 
   try {
     // ========================================
-    // IDEMPOTENCY CHECK
+    // IDEMPOTENCY CHECK (use processed_events table)
     // ========================================
     const { data: existingEvent } = await supabaseAdmin
-      .from('payments')
-      .select('id')
+      .from('processed_events')
+      .select('id, processing_status')
       .eq('stripe_event_id', event.id)
       .single();
 
     if (existingEvent) {
-      console.log(`[Webhook] Event ${event.id} already processed - skipping`);
-      return res.status(200).json({ received: true, status: 'duplicate' });
+      console.log(`[Webhook] Event ${event.id} already processed (status: ${existingEvent.processing_status}) - skipping`);
+      return res.status(200).json({ 
+        received: true, 
+        status: 'duplicate',
+        previous_status: existingEvent.processing_status,
+      });
     }
 
     // ========================================
     // PROCESS EVENT
     // ========================================
     let result;
+    let processingStatus = 'success';
+    let errorMessage = null;
+    let orderId = null;
 
-    switch (event.type) {
-      case 'checkout.session.completed':
-        result = await handleCheckoutCompleted(event.data.object);
-        break;
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          result = await handleCheckoutCompleted(event.data.object);
+          orderId = result.order_id;
+          break;
 
-      case 'payment_intent.succeeded':
-        result = await handlePaymentIntentSucceeded(event.data.object);
-        break;
+        case 'payment_intent.succeeded':
+          result = await handlePaymentIntentSucceeded(event.data.object);
+          orderId = result.order_id || event.data.object.metadata?.order_id;
+          break;
 
-      case 'charge.refunded':
-        result = await handleChargeRefunded(event.data.object);
-        break;
+        case 'charge.refunded':
+          result = await handleChargeRefunded(event.data.object);
+          orderId = result.order_id;
+          break;
 
-      default:
-        console.log(`[Webhook] Unhandled event type: ${event.type}`);
-        result = { status: 'unhandled' };
+        default:
+          console.log(`[Webhook] Unhandled event type: ${event.type}`);
+          result = { status: 'unhandled' };
+          processingStatus = 'skipped';
+      }
+    } catch (processingError) {
+      console.error(`[Webhook] Error processing event ${event.id}:`, processingError);
+      processingStatus = 'failed';
+      errorMessage = processingError.message;
+      throw processingError; // Re-throw to trigger error response
     }
 
     // ========================================
     // RECORD EVENT (for idempotency)
     // ========================================
-    if (event.data.object.metadata?.order_id) {
-      await supabaseAdmin
-        .from('payments')
-        .insert({
-          order_id: event.data.object.metadata.order_id,
-          provider: 'stripe',
-          status: result.status || 'processed',
-          stripe_event_id: event.id,
-          stripe_payment_intent_id: event.data.object.payment_intent || null,
-          amount_cents: event.data.object.amount || 0,
-          currency: (event.data.object.currency || 'eur').toUpperCase(),
-          metadata: { event_type: event.type, result },
-        });
-    }
+    await supabaseAdmin
+      .from('processed_events')
+      .insert({
+        stripe_event_id: event.id,
+        event_type: event.type,
+        order_id: orderId,
+        event_data: event.data.object,
+        processing_status: processingStatus,
+        error_message: errorMessage,
+      });
 
-    console.log(`[Webhook] ✅ Event ${event.id} processed successfully`);
+    console.log(`[Webhook] ✅ Event ${event.id} processed successfully (status: ${processingStatus})`);
 
     return res.status(200).json({
       received: true,
@@ -447,6 +527,21 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error(`[Webhook] Error processing event ${event.id}:`, error);
+
+    // Try to record failed event (best effort)
+    try {
+      await supabaseAdmin
+        .from('processed_events')
+        .insert({
+          stripe_event_id: event.id,
+          event_type: event.type,
+          event_data: event.data.object,
+          processing_status: 'failed',
+          error_message: error.message,
+        });
+    } catch (recordError) {
+      console.error(`[Webhook] Failed to record error event:`, recordError);
+    }
 
     return res.status(500).json({
       error: 'Webhook processing failed',

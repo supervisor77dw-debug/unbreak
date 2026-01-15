@@ -54,6 +54,20 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // ========================================
+  // FEATURE FLAG: CHECKOUT_ENABLED
+  // ========================================
+  const checkoutEnabled = process.env.CHECKOUT_ENABLED !== 'false'; // Default: enabled
+  
+  if (!checkoutEnabled) {
+    console.warn('⚠️ [Checkout] Checkout is temporarily disabled (CHECKOUT_ENABLED=false)');
+    return res.status(503).json({ 
+      error: 'Checkout temporarily unavailable',
+      message: 'The checkout system is currently undergoing maintenance. Please try again later.',
+      retry_after: 3600, // Suggest retry in 1 hour
+    });
+  }
+
   // TRACE ID: Client sends or we generate
   const traceId = req.headers['x-trace-id'] || req.body.trace_id || randomUUID();
   const snapshotId = randomUUID();

@@ -127,6 +127,11 @@ export async function buyBundle(bundleId, options = {}) {
     const data = await response.json();
 
     if (!response.ok) {
+      // Handle specific error cases
+      if (response.status === 503) {
+        // Checkout disabled
+        throw new Error(data.message || 'Der Checkout ist vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.');
+      }
       throw new Error(data.error || `Checkout failed: ${response.status}`);
     }
 
