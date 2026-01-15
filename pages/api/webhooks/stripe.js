@@ -474,7 +474,6 @@ async function sendOrderConfirmationEmail(session, order) {
       console.error(`❌ [EMAIL] Order: ${orderNumber}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     }
-    }
 
   } catch (error) {
     // Log but don't throw - email failure shouldn't block webhook processing
