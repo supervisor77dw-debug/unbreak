@@ -9,6 +9,7 @@ import { getProductImageUrl } from '../lib/storage-utils';
 import { buildConfiguratorUrl, getCurrentLanguage, createConfiguratorClickHandler } from '../lib/configuratorLink';
 import { debugLog, debugWarn, errorLog } from '../lib/debugUtils';
 import { showUserMessage } from '../lib/uiMessages';
+import { getSiteUrl } from '../lib/urls';
 
 // CRITICAL: Force dynamic rendering - no ISR, no static, no edge cache
 export const dynamic = 'force-dynamic';
