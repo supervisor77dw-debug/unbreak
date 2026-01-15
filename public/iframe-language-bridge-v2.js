@@ -647,9 +647,14 @@
     }
 
     try {
+      console.log('[PARENT][CART] 🔍 Step 1: Importing cart module...');
+      
       // Import cart module
       const { getCart } = await import('/lib/cart.js');
+      
+      console.log('[PARENT][CART] 🔍 Step 2: Getting cart instance...');
       const cart = getCart();
+      console.log('[PARENT][CART] 🔍 Cart instance:', cart);
 
       // Prepare cart item from configurator config
       const cartItem = {
@@ -663,19 +668,32 @@
         image_url: config.preview_image || null,
       };
 
-      console.log('[PARENT][CART] Adding item to cart:', cartItem);
+      console.log('[PARENT][CART] 🔍 Step 3: Cart item prepared:', cartItem);
+      console.log('[PARENT][CART] 🔍 Config object:', config);
 
       // Add to cart
+      console.log('[PARENT][CART] 🔍 Step 4: Calling cart.addItem()...');
       const success = cart.addItem(cartItem);
+      console.log('[PARENT][CART] 🔍 Step 5: addItem() returned:', success);
 
       if (success) {
         console.log('✅ [PARENT][CART] Item added successfully');
+        console.log('[PARENT][CART] 🔍 Current cart items:', cart.getItems());
+        
+        // Small delay to ensure cart is saved
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Redirect to cart page
         console.log('[PARENT][CART] 🔄 Redirecting to /cart');
         window.location.href = '/cart';
       } else {
         console.error('❌ [PARENT][CART] Failed to add item to cart');
+        console.error('[PARENT][CART] Debugging info:', {
+          cartItem,
+          hasConfig: !!cartItem.config,
+          price: cartItem.price,
+          sku: cartItem.sku
+        });
         alert('Fehler beim Hinzufügen zum Warenkorb. Bitte versuchen Sie es erneut.');
       }
 
