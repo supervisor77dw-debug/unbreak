@@ -66,21 +66,21 @@ function getDefaultFrom(type: EmailType): string {
     case 'order-confirmation':
     case 'order-shipped':
     case 'payment-received':
-      return process.env.EMAIL_FROM_ORDERS || process.env.RESEND_FROM || 'orders@unbreak.one';
+      return 'UNBREAK ONE <orders@unbreak-one.com>';
     
     case 'support-ticket':
-      return process.env.EMAIL_FROM_SUPPORT || process.env.RESEND_FROM || 'support@unbreak.one';
+      return 'UNBREAK ONE Support <support@unbreak-one.com>';
     
     case 'account-verification':
     case 'password-reset':
     case 'system-notification':
-      return process.env.EMAIL_FROM_NO_REPLY || process.env.RESEND_FROM || 'no-reply@unbreak.one';
+      return 'UNBREAK ONE <no-reply@unbreak-one.com>';
     
     case 'test':
-      return process.env.RESEND_FROM || 'test@unbreak.one';
+      return 'UNBREAK ONE <no-reply@unbreak-one.com>';
     
     default:
-      return process.env.RESEND_FROM || 'no-reply@unbreak.one';
+      return 'UNBREAK ONE <no-reply@unbreak-one.com>';
   }
 }
 
@@ -90,12 +90,12 @@ function getDefaultFrom(type: EmailType): string {
 function getDefaultReplyTo(type: EmailType): string | undefined {
   // Order emails should have replies go to support
   if (['order-confirmation', 'order-shipped', 'payment-received'].includes(type)) {
-    return process.env.EMAIL_FROM_SUPPORT || 'support@unbreak.one';
+    return 'support@unbreak-one.com';
   }
   
   // Support tickets should reply to support
   if (type === 'support-ticket') {
-    return process.env.EMAIL_FROM_SUPPORT || 'support@unbreak.one';
+    return 'support@unbreak-one.com';
   }
   
   // System emails typically don't need reply-to
