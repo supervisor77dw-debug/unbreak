@@ -619,7 +619,7 @@
 
   /**
    * Handler: Add to Cart
-   * KRITISCH: Triggert Checkout-Flow
+   * Adds configured product to shopping cart
    */
   async function handleAddToCart(message) {
     const config = message.payload;
@@ -647,37 +647,40 @@
     }
 
     try {
-      // Check if UnbreakCheckout is available
-      if (!window.UnbreakCheckout?.createCheckoutFromConfig) {
-        console.error('[PARENT][CHECKOUT] ❌ UnbreakCheckout.createCheckoutFromConfig not available!');
-        console.error('[PARENT][CHECKOUT] Available:', {
-          UnbreakCheckout: !!window.UnbreakCheckout,
-          createCheckoutFromConfig: typeof window.UnbreakCheckout?.createCheckoutFromConfig
-        });
-        debug.log('ERROR', {
-          error: 'UnbreakCheckout.createCheckoutFromConfig not available',
-        });
-        return;
+      // Import cart module
+      const { getCart } = await import('/lib/cart.js');
+      const cart = getCart();
+
+      // Prepare cart item from configurator config
+      const cartItem = {
+        product_id: 'glass_configurator', // Special ID for configurator items
+        sku: config.variant === 'bottle_holder' ? 'UNBREAK-WEIN-CONFIG' : 'UNBREAK-GLAS-CONFIG',
+        name: config.variant === 'bottle_holder' ? 'Flaschenhalter (konfiguriert)' : 'Glashalter (konfiguriert)',
+        title_de: config.variant === 'bottle_holder' ? 'Flaschenhalter (konfiguriert)' : 'Glashalter (konfiguriert)',
+        price: 0, // Will be calculated from config
+        configured: true,
+        config: config, // Full configuration
+        image_url: config.preview_image || null,
+      };
+
+      console.log('[PARENT][CART] Adding item to cart:', cartItem);
+
+      // Add to cart
+      const success = cart.addItem(cartItem);
+
+      if (success) {
+        console.log('✅ [PARENT][CART] Item added successfully');
+        
+        // Redirect to cart page
+        console.log('[PARENT][CART] 🔄 Redirecting to /cart');
+        window.location.href = '/cart';
+      } else {
+        console.error('❌ [PARENT][CART] Failed to add item to cart');
+        alert('Fehler beim Hinzufügen zum Warenkorb. Bitte versuchen Sie es erneut.');
       }
 
-      console.log('[PARENT][CHECKOUT] ✅ Calling createCheckoutFromConfig...');
-      
-      // Call checkout API
-      const endpoint = '/api/checkout/create';
-      debug.logApiCall(endpoint, config);
-
-      const checkoutUrl = await window.UnbreakCheckout.createCheckoutFromConfig(config);
-
-      console.log('[PARENT][CHECKOUT] ✅ Checkout URL received:', checkoutUrl);
-      debug.logApiResponse(endpoint, { url: checkoutUrl });
-
-      // Redirect to Stripe
-      console.log('[PARENT][STRIPE] 🔄 Redirecting to:', checkoutUrl);
-      debug.logRedirect(checkoutUrl);
-      window.location.href = checkoutUrl;
-
     } catch (error) {
-      console.error('[PARENT][CHECKOUT] ❌ Error:', error);
+      console.error('[PARENT][CART] ❌ Error:', error);
       console.error('[PARENT][CHECKOUT] ❌ Stack:', error.stack);
       debug.logApiResponse('/api/checkout/create', null, error);
     }
