@@ -158,11 +158,24 @@ export default function CartPage() {
   const shipping = pricingSnapshot?.shipping_cents || 0;
   const total = pricingSnapshot?.grand_total_cents || (subtotal + shipping);
 
+  // Debug logging for pricing
+  if (pricingSnapshot && isPreviewMode()) {
+    console.log('[CART PRICING]', {
+      snapshot_subtotal: pricingSnapshot.subtotal_cents,
+      snapshot_shipping: pricingSnapshot.shipping_cents,
+      snapshot_total: pricingSnapshot.grand_total_cents,
+      calculated_total: subtotal + shipping,
+      final_subtotal: subtotal,
+      final_shipping: shipping,
+      final_total: total
+    });
+  }
+
   // Defensive checks for NaN
   const isValidPrice = (val) => Number.isFinite(val) && val >= 0;
   const safeSubtotal = isValidPrice(subtotal) ? subtotal : 0;
   const safeShipping = isValidPrice(shipping) ? shipping : 0;
-  const safeTotal = isValidPrice(total) ? total : 0;
+  const safeTotal = isValidPrice(total) ? total : (safeSubtotal + safeShipping);
 
   if (cartItems.length === 0) {
     return (

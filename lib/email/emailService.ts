@@ -314,13 +314,27 @@ export async function sendOrderConfirmation(params: {
     return formatter.format(cents / 100);
   };
 
-  // Calculate totals
-  const subtotalCents = items.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0);
-  const shippingCents = 0; // Shipping included in totalAmount
-  const orderTotalCents = totalAmount;
+  // Calculate totals from items
+  // IMPORTANT: Items from Stripe include shipping as a line item
+  // So we need to separate products from shipping
+  const productItems = items.filter(item => !item.name.toLowerCase().includes('versand') && !item.name.toLowerCase().includes('shipping'));
+  const shippingItem = items.find(item => item.name.toLowerCase().includes('versand') || item.name.toLowerCase().includes('shipping'));
+  
+  const subtotalCents = productItems.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0);
+  const shippingCents = shippingItem ? (shippingItem.line_total_cents || shippingItem.price_cents) : 0;
+  const orderTotalCents = totalAmount; // This is the authoritative total from Stripe
 
-  // Format items for email
-  const itemsText = items.map(item => {
+  console.log('[EMAIL PRICING]', {
+    productItems: productItems.length,
+    shippingItem: !!shippingItem,
+    subtotal_cents: subtotalCents,
+    shipping_cents: shippingCents,
+    total_cents: orderTotalCents,
+    items_total_check: items.reduce((sum, item) => sum + (item.line_total_cents || 0), 0)
+  });
+
+  // Format items for email (products only, no shipping in list)
+  const itemsText = productItems.map(item => {
     const qty = item.quantity;
     const name = item.name;
     const lineTotal = formatCurrency(item.line_total_cents || (item.price_cents * item.quantity));
