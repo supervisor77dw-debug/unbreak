@@ -613,6 +613,11 @@ export default async function handler(req, res) {
           },
           unit_amount: item.unit_price_cents,
         },
+        quantity: item.quantity,
+      };
+    });
+
+    // Shipping: Add as separate line item with calculated amount
     const shippingLabels = SHIPPING_LABELS_I18N[userLanguage] || SHIPPING_LABELS_I18N.en;
     
     lineItems.push({
@@ -620,12 +625,7 @@ export default async function handler(req, res) {
         currency: 'eur',
         product_data: {
           name: shippingLabels.name,
-          description: shippingLabels.description
-      price_data: {
-        currency: 'eur',
-        product_data: {
-          name: `Versand (${shippingCountry})`,
-          description: 'Standard shipping',
+          description: shippingLabels.description,
         },
         unit_amount: shippingCents,
       },
