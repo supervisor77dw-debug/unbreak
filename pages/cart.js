@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getCart, formatPrice } from '../lib/cart';
 import { createClient } from '@supabase/supabase-js';
 import { isPreviewMode } from '../lib/urls';
+import { ts } from '../lib/i18n-shop';
 
 // Client-side Supabase client
 const supabase = createClient(
@@ -182,10 +183,10 @@ export default function CartPage() {
   if (cartItems.length === 0) {
     return (
       <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
-        <h1>Warenkorb</h1>
-        <p>Ihr Warenkorb ist leer.</p>
+        <h1>{ts('cart.title')}</h1>
+        <p>{ts('cart.empty')}</p>
         <a href="/" style={{ color: '#007bff', textDecoration: 'underline' }}>
-          Weiter einkaufen
+          {ts('cart.continueShopping')}
         </a>
       </div>
     );
@@ -193,7 +194,7 @@ export default function CartPage() {
 
   return (
     <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
-      <h1>Warenkorb</h1>
+      <h1>{ts('cart.title')}</h1>
 
       {error && (
         <div style={{ 
@@ -325,12 +326,12 @@ export default function CartPage() {
         marginBottom: '20px'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span>Zwischensumme:</span>
+          <span>{ts('cart.subtotal')}:</span>
           <span>€{formatPrice(safeSubtotal)}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span>Versand:</span>
-          <span>{safeShipping === 0 ? 'Kostenlos' : `€${formatPrice(safeShipping)}`}</span>
+          <span>{ts('cart.shipping')}:</span>
+          <span>{safeShipping === 0 ? ts('cart.freeShipping') : `€${formatPrice(safeShipping)}`}</span>
         </div>
         <div style={{ 
           display: 'flex', 
@@ -340,7 +341,7 @@ export default function CartPage() {
           fontSize: '20px',
           fontWeight: 'bold'
         }}>
-          <span>Gesamt:</span>
+          <span>{ts('cart.grandTotal')}:</span>
           <span>€{formatPrice(safeTotal)}</span>
         </div>
       </div>
@@ -361,7 +362,7 @@ export default function CartPage() {
           cursor: loading ? 'not-allowed' : 'pointer'
         }}
       >
-        {loading ? 'Weiterleitung zu Stripe...' : 'Zur Kasse'}
+        {loading ? ts('cart.redirectingToStripe') : ts('cart.checkout')}
       </button>
     </div>
   );

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { getCart } from '../lib/cart';
+import { ts } from '../lib/i18n-shop';
 
 export default function Success() {
   const router = useRouter();
@@ -80,13 +81,13 @@ export default function Success() {
     return (
       <>
         <Head>
-          <title>Bestellung wird verarbeitet – UNBREAK ONE</title>
+          <title>{ts('success.loading.title')} – UNBREAK ONE</title>
           <meta name="robots" content="noindex, nofollow" />
         </Head>
         <div style={styles.container}>
           <div style={styles.card}>
             <div style={styles.spinner}></div>
-            <p style={styles.loadingText}>Bestellung wird verarbeitet...</p>
+            <p style={styles.loadingText}>{ts('success.loading.message')}</p>
           </div>
         </div>
       </>
@@ -97,18 +98,18 @@ export default function Success() {
     return (
       <>
         <Head>
-          <title>Fehler – UNBREAK ONE</title>
+          <title>{ts('success.error.title')} – UNBREAK ONE</title>
           <meta name="robots" content="noindex, nofollow" />
         </Head>
         <div style={styles.container}>
           <div style={styles.card}>
-            <h1 style={styles.title}>Fehler bei der Bestellverarbeitung</h1>
+            <h1 style={styles.title}>{ts('success.error.heading')}</h1>
             <p style={styles.message}>{error}</p>
             <button 
               onClick={() => router.push('/shop')}
               style={styles.primaryButton}
             >
-              Zurück zum Shop
+              {ts('success.error.backToShop')}
             </button>
           </div>
         </div>
@@ -119,7 +120,7 @@ export default function Success() {
   return (
     <>
       <Head>
-        <title>Bestellung erfolgreich – UNBREAK ONE</title>
+        <title>{ts('success.success.title')} – UNBREAK ONE</title>
         <meta name="robots" content="noindex, nofollow" />
       </Head>
 
@@ -131,19 +132,19 @@ export default function Success() {
             </svg>
           </div>
 
-          <h1 style={styles.title}>Bestellung erfolgreich!</h1>
+          <h1 style={styles.title}>{ts('success.success.heading')}</h1>
           
           <p style={styles.message}>
-            Vielen Dank für Ihre Bestellung. Wir haben eine Bestätigungs-E-Mail an Ihre angegebene Adresse gesendet.
+            {ts('success.success.message')}
           </p>
 
           {orderData?.id && (
             <div style={styles.orderInfo}>
-              <p style={styles.orderLabel}>Bestellnummer:</p>
+              <p style={styles.orderLabel}>{ts('success.orderInfo.orderNumber')}</p>
               <p style={styles.orderId}>{orderData.id}</p>
               {orderData.total_amount_cents && (
                 <>
-                  <p style={styles.orderLabel}>Gesamtbetrag:</p>
+                  <p style={styles.orderLabel}>{ts('success.orderInfo.totalAmount')}</p>
                   <p style={styles.orderId}>
                     €{(orderData.total_amount_cents / 100).toFixed(2)}
                   </p>
@@ -153,12 +154,12 @@ export default function Success() {
           )}
 
           <div style={styles.nextSteps}>
-            <h3 style={styles.nextStepsTitle}>Wie geht es weiter?</h3>
+            <h3 style={styles.nextStepsTitle}>{ts('success.nextSteps.title')}</h3>
             <ul style={styles.stepsList}>
-              <li>Sie erhalten eine Bestätigungs-E-Mail mit allen Details</li>
-              <li>Ihr UNBREAK ONE wird individuell für Sie gefertigt</li>
-              <li>Versand erfolgt innerhalb von 3-5 Werktagen</li>
-              <li>Sie erhalten eine Tracking-Nummer per E-Mail</li>
+              <li>{ts('success.nextSteps.step1')}</li>
+              <li>{ts('success.nextSteps.step2')}</li>
+              <li>{ts('success.nextSteps.step3')}</li>
+              <li>{ts('success.nextSteps.step4')}</li>
             </ul>
           </div>
 
@@ -167,20 +168,20 @@ export default function Success() {
               onClick={() => router.push('/')}
               style={styles.primaryButton}
             >
-              Zur Startseite
+              {ts('success.actions.toHome')}
             </button>
             <button 
               onClick={() => router.push('/shop')}
               style={styles.secondaryButton}
             >
-              Weiter einkaufen
+              {ts('success.actions.continueShopping')}
             </button>
           </div>
 
           <div style={styles.support}>
             <p>
-              Fragen zu Ihrer Bestellung?<br />
-              <a href="/kontakt" style={styles.supportLink}>Kontaktieren Sie uns</a>
+              {ts('success.support.question')}<br />
+              <a href="/kontakt" style={styles.supportLink}>{ts('success.support.contactUs')}</a>
             </p>
           </div>
         </div>

@@ -187,29 +187,76 @@ export default function Shop({ initialProducts }) {
       if (debugMode) console.log('[CFG2CART][3] parsed item', item);
       debugState.step3_parsed = item;
       
+      // ========================================
+      // EFFECTIVE LANGUAGE RESOLUTION (i18n)
+      // Priority: cfg.lang > cfg.meta.lang > URL lang > site default
+      // ========================================
+      const effectiveLang = 
+        item.lang || 
+        item.meta?.lang || 
+        new URLSearchParams(window.location.search).get('lang') || 
+        currentLang || 
+        'de';
+      
+      if (debugMode) {
+        console.log('[CFG2CART][LANG] Language resolution:', {
+          'item.lang': item.lang || 'not set',
+          'item.meta.lang': item.meta?.lang || 'not set',
+          'URL lang': new URLSearchParams(window.location.search).get('lang') || 'not set',
+          'currentLang': currentLang,
+          'effectiveLang': effectiveLang
+        });
+      }
+      
+      // Set site language to match configurator item (CRITICAL for Cart/Checkout/Email)
+      if (effectiveLang !== currentLang && window.i18n?.setLanguage) {
+        console.log(`[CFG2CART][LANG] Setting site language to: ${effectiveLang}`);
+        window.i18n.setLanguage(effectiveLang);
+        setCurrentLang(effectiveLang);
+      }
+      
       // Step 4: Cart ready check
       if (debugMode) console.log('[CFG2CART][4] cart ready?', !!cart, cart?.items?.length);
       
-      // Normalize item to cart format
+      // ========================================
+      // NORMALIZE CONFIGURATOR ITEM (PRICE FIX)
+      // CRITICAL: Use price_cents (not price) to avoid NaN/wrong totals
+      // ========================================
       const cartItem = {
         product_id: 'glass_configurator',
         sku: item.config?.variant === 'bottle_holder' ? 'UNBREAK-WEIN-CONFIG' : 'UNBREAK-GLAS-CONFIG',
-        name: item.name || (currentLang === 'de' ? 'Individueller Glashalter' : 'Custom Glass Holder'),
-        price: 0, // Will be calculated server-side
-        quantity: 1,
+        name: item.name || (effectiveLang === 'de' ? 'Individueller Glashalter' : 'Custom Glass Holder'),
+        
+        // CRITICAL: Prefer price_cents, fallback to price*100, default to 0 (server calculates)
+        price_cents: item.price_cents || (item.price ? Math.round(item.price * 100) : 0),
+        
+        quantity: item.quantity || 1,
         image_url: item.image_url || null,
         configured: true,
         config: item.config,
-        lang: item.lang || currentLang, // CRITICAL: Preserve language from configurator
+        
+        // Language preservation (CRITICAL for i18n flow)
+        lang: effectiveLang,
+        
         meta: {
           source: 'configurator_url',
           received_at: new Date().toISOString(),
-          lang: item.lang || currentLang, // Redundant but explicit
+          lang: effectiveLang, // Redundant but explicit
+          original_price: item.price, // Keep original for debugging
+          original_price_cents: item.price_cents,
           ...item.meta,
         },
       };
       
-      if (debugMode) console.log('[CFG2CART][PRICE] Using server-side calculation (price set to 0, calculated at checkout)');
+      if (debugMode) {
+        console.log('[CFG2CART][ITEM] Normalized cart item:', {
+          product_id: cartItem.product_id,
+          sku: cartItem.sku,
+          price_cents: cartItem.price_cents,
+          lang: cartItem.lang,
+          config: cartItem.config
+        });
+      }
       
       // Step 5: Add to cart
       if (debugMode) console.log('[CFG2CART][5] addItem called');
