@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getCart, formatPrice } from '../lib/cart';
 import { createClient } from '@supabase/supabase-js';
 import { isPreviewMode } from '../lib/urls';
-import { ts } from '../lib/i18n-shop';
+import { ts, getCurrentLanguage } from '../lib/i18n-shop';
 import { resolveCartItemPrice, calculateCartTotal, validateCartItemPrice } from '../lib/pricing/cartPriceResolver';
 
 // Client-side Supabase client
@@ -130,9 +130,7 @@ export default function CartPage() {
       const token = session?.access_token;
 
       // Get current language for Stripe Checkout locale
-      const currentLang = typeof window !== 'undefined' && window.i18n?.getCurrentLanguage 
-        ? window.i18n.getCurrentLanguage() 
-        : 'de';
+      const currentLang = getCurrentLanguage(); // Use i18n-shop helper
 
       const payload = {
         items: cart.getCheckoutPayload(),
