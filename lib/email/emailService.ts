@@ -314,23 +314,33 @@ export async function sendOrderConfirmation(params: {
     return formatter.format(cents / 100);
   };
 
-  // Calculate totals from items
-  // IMPORTANT: Items from Stripe include shipping as a line item
-  // So we need to separate products from shipping
+  // ====================================================================
+  // PRICING LOGIC (CRITICAL: Prevent double-counting shipping)
+  // ====================================================================
+  // IMPORTANT: Checkout API sends shipping as a separate line item
+  // We MUST separate products from shipping to avoid double-counting
   const productItems = items.filter(item => !item.name.toLowerCase().includes('versand') && !item.name.toLowerCase().includes('shipping'));
   const shippingItem = items.find(item => item.name.toLowerCase().includes('versand') || item.name.toLowerCase().includes('shipping'));
+  
+  // GUARDRAIL: Detect if shipping is in line items
+  const hasShippingLine = !!shippingItem;
   
   const subtotalCents = productItems.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0);
   const shippingCents = shippingItem ? (shippingItem.line_total_cents || shippingItem.price_cents) : 0;
   const orderTotalCents = totalAmount; // This is the authoritative total from Stripe
 
-  console.log('[EMAIL PRICING]', {
-    productItems: productItems.length,
-    shippingItem: !!shippingItem,
-    subtotal_cents: subtotalCents,
+  // DEBUG LOGGING (temporary - remove after verification)
+  console.log('[EMAIL PRICING DEBUG]', {
+    productItems_count: productItems.length,
+    hasShippingLine,
+    products_sum_cents: productItems.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0),
     shipping_cents: shippingCents,
+    subtotal_cents: subtotalCents,
     total_cents: orderTotalCents,
-    items_total_check: items.reduce((sum, item) => sum + (item.line_total_cents || 0), 0)
+    items_total_check: items.reduce((sum, item) => sum + (item.line_total_cents || 0), 0),
+    // GUARDRAIL CHECK: Total should equal subtotal + shipping
+    expected_total: subtotalCents + shippingCents,
+    total_matches: orderTotalCents === (subtotalCents + shippingCents),
   });
 
   // Format items for email (products only, no shipping in list)
@@ -434,14 +444,14 @@ ${productItems.map(item => `                <div style="padding: 12px 0; border-
                 
                 <div style="border-top: 2px solid #2F6F55; margin: 20px 0 15px 0; padding-top: 15px;">
                   <table style="width: 100%;">
-                    <tr>
+                    ${!hasShippingLine ? `<tr>
                       <td style="font-size: 14px; color: #666; padding: 5px 0;">Zwischensumme:</td>
                       <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(subtotalCents)}</td>
                     </tr>
                     <tr>
                       <td style="font-size: 14px; color: #666; padding: 5px 0;">Versand:</td>
                       <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(shippingCents)}</td>
-                    </tr>
+                    </tr>` : ''}
                     <tr>
                       <td style="font-size: 18px; color: #2F6F55; padding: 10px 0 0 0; font-weight: 700;">Gesamtbetrag:</td>
                       <td style="font-size: 20px; color: #2F6F55; text-align: right; font-weight: 700; padding: 10px 0 0 0;">${formatCurrency(orderTotalCents)}</td>
@@ -579,14 +589,14 @@ ${productItems.map(item => `                <div style="padding: 12px 0; border-
                 
                 <div style="border-top: 2px solid #2F6F55; margin: 20px 0 15px 0; padding-top: 15px;">
                   <table style="width: 100%;">
-                    <tr>
+                    ${!hasShippingLine ? `<tr>
                       <td style="font-size: 14px; color: #666; padding: 5px 0;">Subtotal:</td>
                       <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(subtotalCents)}</td>
                     </tr>
                     <tr>
                       <td style="font-size: 14px; color: #666; padding: 5px 0;">Shipping:</td>
                       <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(shippingCents)}</td>
-                    </tr>
+                    </tr>` : ''}
                     <tr>
                       <td style="font-size: 18px; color: #2F6F55; padding: 10px 0 0 0; font-weight: 700;">Total:</td>
                       <td style="font-size: 20px; color: #2F6F55; text-align: right; font-weight: 700; padding: 10px 0 0 0;">${formatCurrency(orderTotalCents)}</td>
