@@ -680,8 +680,8 @@ export default async function handler(req, res) {
     });
 
     const sessionData = {
-      // PAYMENT METHODS: Card, PayPal, SEPA (activated in Dashboard)
-      payment_method_types: ['card', 'paypal', 'sepa_debit'],
+      // PAYMENT METHODS: Card + SEPA (PayPal has activation issues)
+      payment_method_types: ['card', 'sepa_debit'],
       line_items: lineItems,
       mode: 'payment',
       locale: stripeLocale, // 'de' or 'en' based on cart language

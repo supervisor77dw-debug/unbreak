@@ -126,7 +126,7 @@ export default async function handler(req, res) {
     // 6. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       // Payment methods: card, PayPal, SEPA, Klarna
-      payment_method_types: ['card', 'paypal', 'sepa_debit'],
+      payment_method_types: ['card', 'sepa_debit'],
       locale: 'de', // Preset endpoint defaults to German
       line_items: [
         {
