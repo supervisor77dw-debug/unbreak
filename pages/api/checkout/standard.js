@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
+import { resolvePriceCents, validatePricing } from '../../../lib/pricing/pricingResolver.js';
 import { getEnvFingerprint, formatFingerprintLog } from '../../../lib/utils/envFingerprint.js';
 import { generateOrderNumber, generatePublicId } from '../../../lib/utils/orderNumber.js';
 
@@ -136,174 +137,152 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Items must be a non-empty array' });
     }
 
-    // 1. Fetch and validate products
+    // =================================================================
+    // 1. LOG REQUEST + NORMALIZE CART ITEMS (Before Pricing)
+    // =================================================================
+    log('cart_items_received', {
+      origin: req.headers.origin || 'unknown',
+      lang: req.body.lang || 'unknown',
+      items_count: items?.length || (sku ? 1 : 0),
+      cart_items_normalized: items ? items.map(item => ({
+        id: item.id || item.product_id || 'unknown',
+        sku: item.sku || 'unknown',
+        product_id: item.product_id || 'unknown',
+        quantity: item.quantity || 0,
+        has_config: !!item.config,
+        configured: item.configured || false,
+        price_fields_present: {
+          price: 'price' in item,
+          price_cents: 'price_cents' in item,
+          priceCents: 'priceCents' in item,
+          unit_amount: 'unit_amount' in item,
+          base_price_cents: 'base_price_cents' in item,
+        },
+        configHash: item.config ? 'sha256:...' : null,
+      })) : [{ sku, quantity: 1 }],
+    });
+
+    // =================================================================
+    // 2. RESOLVE PRICES (Central Pricing Resolver)
+    // =================================================================
+    console.log('\n💰 [PRICING] Starting price resolution...\n');
+    
+    let resolvedItems = [];
     let cartItems = [];
     let totalAmount = 0;
 
     if (items) {
-      // New cart flow: multiple items with quantities
-      console.log('🛒 [Checkout] Processing cart with', items.length, 'items');
-
-      for (const item of items) {
-        if (!item.product_id || !item.quantity || item.quantity < 1) {
-          console.error('❌ [Checkout] Invalid item:', item);
-          return res.status(400).json({ 
-            error: 'Each item must have product_id and quantity >= 1',
-            invalid_item: item
-          });
-        }
-
-        // CONFIGURATOR ITEMS: Calculate price from config using DB pricing engine
-        if (item.product_id === 'glass_configurator' || item.sku === 'glass_configurator') {
-          console.log('🎨 [Checkout] Configurator item detected');
-          
-          if (!item.config) {
-            console.error('❌ [Checkout] Configurator item missing config');
-            return res.status(400).json({ 
-              error: 'Configurator item must include config object',
-              message: 'Configuration data is required for custom products',
-              product_id: item.product_id,
-              build_id: BUILD_ID,
-            });
-          }
-
-          // Validate config structure
-          if (!item.config.colors || typeof item.config.colors !== 'object') {
-            console.error('❌ [Checkout] Config missing colors object:', item.config);
-            return res.status(400).json({ 
-              error: 'Invalid config structure',
-              message: 'Config must include colors object with base, arm, module, pattern',
-              received_config_keys: Object.keys(item.config),
-              expected_structure: { colors: { base: '...', arm: '...', module: '...', pattern: '...' }, finish: '...' },
-              build_id: BUILD_ID,
-            });
-          }
-
-          console.log('🔍 [Checkout] Config structure:', {
-            colors: Object.keys(item.config.colors),
-            finish: item.config.finish,
-            variant: item.config.variant,
-          });
-
-          // Calculate price using DB pricing engine (source of truth)
-          let pricing;
-          try {
-            pricing = await calcConfiguredPrice({
-              productType: 'glass_holder',
-              config: item.config,
-              customFeeCents: 0,
-            });
-          } catch (error) {
-            console.error('❌ [Checkout] Pricing calculation failed:', error);
-            if (IS_PRODUCTION) {
-              // FAIL-CLOSED: No fallback in production
-              return res.status(500).json({ 
-                error: 'Pricing configuration not available',
-                message: 'Unable to calculate product price. Please contact support.',
-                build_id: BUILD_ID,
-              });
-            } else {
-              // DEV: Log and continue with minimal price for testing
-              console.warn('⚠️ [DEV] Using fallback pricing for development');
-              pricing = {
-                pricing_version: 'dev-fallback',
-                base_price_cents: 4990,
-                option_prices_cents: { base: 0, arm: 0, module: 0, pattern: 0, finish: 0 },
-                custom_fee_cents: 0,
-                subtotal_cents: 4990,
-                display_title: 'Glashalter (konfiguriert)',
-                sku: 'UNBREAK-GLAS-CONFIG',
-              };
-            }
-          }
-
-          // Validate pricing result
-          if (!pricing || !pricing.subtotal_cents || pricing.subtotal_cents <= 0) {
-            console.error('❌ [Checkout] Invalid pricing result:', pricing);
-            return res.status(500).json({ 
-              error: 'Invalid pricing calculation',
-              message: 'Calculated price is invalid. Please contact support.',
-              build_id: BUILD_ID,
-            });
-          }
-
-          // Create pricing snapshot for order
-          const pricingSnapshot = {
-            pricing_source: PRICING_SOURCE,
-            pricing_version: pricing.pricing_version,
-            admin_base_price_cents: pricing.base_price_cents,
-            option_prices_cents: pricing.option_prices_cents,
-            custom_fee_cents: pricing.custom_fee_cents,
-            computed_subtotal_cents: pricing.subtotal_cents,
-            build_id: BUILD_ID,
-            calculated_at: new Date().toISOString(),
-          };
-
-          const itemTotal = pricing.subtotal_cents * item.quantity;
-          totalAmount += itemTotal;
-
-          cartItems.push({
-            product_id: 'glass_configurator',
-            sku: pricing.sku,
-            name: pricing.display_title,
-            unit_price_cents: pricing.subtotal_cents,
-            quantity: item.quantity,
-            image_url: null,
-            is_configurator: true,
-            config: item.config,
-            pricing_snapshot: pricingSnapshot,
-          });
-
-          console.log('✅ [Checkout] Configurator price calculated:', {
-            sku: pricing.sku,
-            quantity: item.quantity,
-            unit_price_cents: pricing.subtotal_cents,
-            admin_base_price_cents: pricing.base_price_cents,
-            option_prices_cents: pricing.option_prices_cents,
-            pricing_version: pricing.pricing_version,
-            build_id: BUILD_ID,
-          });
-          continue; // Skip DB lookup
-        }
-
-        // STANDARD PRODUCTS: Fetch from database
-        const { data: product, error: productError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', item.product_id)
-          .eq('active', true)
-          .single();
-
-        if (productError || !product) {
-          console.error('❌ [Checkout] Product not found:', item.product_id);
-          return res.status(404).json({ 
-            error: 'Product not found or inactive',
-            product_id: item.product_id,
-            build_id: BUILD_ID,
-          });
-        }
-
-        const itemTotal = product.base_price_cents * item.quantity;
-        totalAmount += itemTotal;
-
-        cartItems.push({
-          product_id: product.id,
-          sku: product.sku,
-          name: product.title_de || product.name || product.sku,
-          unit_price_cents: product.base_price_cents,
-          quantity: item.quantity,
-          image_url: product.image_url || null,
-        });
-
-        console.log('✅ [Checkout] Item validated:', {
-          sku: product.sku,
-          quantity: item.quantity,
-          unit_price: product.base_price_cents,
-          subtotal: itemTotal
+      // CRITICAL: Validate items array structure
+      if (!Array.isArray(items) || items.length === 0) {
+        log('validation_failed', { reason: 'Items must be non-empty array' });
+        return res.status(400).json({ 
+          error: 'INVALID_CART',
+          message: 'Items must be a non-empty array',
+          trace_id: traceId,
         });
       }
 
-      console.log('💰 [Checkout] Total amount:', totalAmount, 'cents');
+      // Process each item through Central Pricing Resolver
+      for (const [index, item] of items.entries()) {
+        // Basic validation
+        if (!item.product_id || !item.quantity || item.quantity < 1) {
+          log('item_validation_failed', { index, item });
+          return res.status(400).json({ 
+            error: 'INVALID_ITEM',
+            message: 'Each item must have product_id and quantity >= 1',
+            invalid_item: item,
+            trace_id: traceId,
+          });
+        }
+
+        // RESOLVE PRICE (Single Source of Truth)
+        const pricingResult = await resolvePriceCents(item, supabase, traceId);
+        
+        // Attach quantity for validation
+        pricingResult.quantity = item.quantity;
+        resolvedItems.push(pricingResult);
+        
+        // If pricing failed, log and return error
+        if (!pricingResult.success) {
+          log('pricing_resolution_failed', {
+            item_index: index,
+            product_id: item.product_id,
+            sku: item.sku,
+            error_code: pricingResult.error,
+            error_details: pricingResult.details,
+          });
+          
+          return res.status(400).json({
+            error: 'PRICE_RESOLUTION_FAILED',
+            message: `Failed to resolve price for item: ${pricingResult.error}`,
+            error_code: pricingResult.error,
+            product_id: item.product_id,
+            sku: item.sku,
+            details: pricingResult.details,
+            trace_id: traceId,
+          });
+        }
+        
+        // Build cart item with resolved price
+        const itemTotal = pricingResult.unit_amount_cents * item.quantity;
+        totalAmount += itemTotal;
+        
+        cartItems.push({
+          product_id: item.product_id,
+          sku: item.sku || pricingResult.details?.sku || 'unknown',
+          name: pricingResult.details?.name || item.name || 'Product',
+          unit_price_cents: pricingResult.unit_amount_cents,
+          quantity: item.quantity,
+          image_url: item.image_url || null,
+          is_configurator: pricingResult.source === 'configurator_db',
+          config: item.config || null,
+          pricing_snapshot: pricingResult.source === 'configurator_db' ? {
+            pricing_source: PRICING_SOURCE,
+            pricing_version: pricingResult.details?.pricing_version,
+            admin_base_price_cents: pricingResult.details?.base_price_cents,
+            option_prices_cents: pricingResult.details?.option_prices_cents,
+            computed_subtotal_cents: pricingResult.unit_amount_cents,
+            build_id: BUILD_ID,
+            calculated_at: new Date().toISOString(),
+          } : null,
+        });
+      }
+      
+      // =================================================================
+      // 3. LOG PRICE RESOLUTION RESULTS (Critical Debug Info)
+      // =================================================================
+      log('price_resolution_complete', {
+        items_resolved: resolvedItems.map(r => ({
+          keyUsedForLookup: r.matchedKey,
+          resolved_unit_amount_cents: r.unit_amount_cents,
+          source: r.source,
+          matchedRecordId: r.details?.product_id || r.details?.sku,
+          quantity: r.quantity,
+          line_total_cents: r.unit_amount_cents * r.quantity,
+        })),
+        subtotal_cents: totalAmount,
+      });
+      
+      // =================================================================
+      // 4. HARD VALIDATION (No Silent Fallbacks!)
+      // =================================================================
+      const validation = validatePricing(resolvedItems, traceId);
+      
+      if (!validation.valid) {
+        log('validation_failed', {
+          error: validation.error,
+          failed_item: validation.failedItem,
+        });
+        
+        return res.status(400).json({
+          error: 'PRICE_VALIDATION_FAILED',
+          message: validation.error,
+          failed_item: validation.failedItem,
+          trace_id: traceId,
+        });
+      }
+      
+      console.log('✅ [PRICING] All prices validated successfully\n');
 
     } else {
       // Legacy flow: single product
@@ -610,24 +589,47 @@ export default async function handler(req, res) {
     
     console.log('📦 [Checkout] Shipping calculated:', { country: shippingCountry, amount_cents: shippingCents });
 
-    // SAFETY CHECK: Verify Stripe amount matches pricing snapshot
+    // =================================================================
+    // LOG FINAL STRIPE LINE_ITEMS (Before Stripe Call)
+    // =================================================================
+    log('stripe_line_items_final', {
+      stripe_line_items: lineItems.map(li => ({
+        name: li.price_data.product_data.name,
+        quantity: li.quantity,
+        unit_amount: li.price_data.unit_amount,
+        currency: li.price_data.currency,
+        line_total: li.price_data.unit_amount * li.quantity,
+      })),
+      stripe_total_cents: lineItems.reduce((sum, li) => sum + (li.price_data.unit_amount * li.quantity), 0),
+      currency: 'EUR',
+      locale: stripeLocale,
+    });
+
+    // =================================================================
+    // HARD VALIDATION: Stripe Amount vs Snapshot (Safety Check)
+    // =================================================================
     const calculatedStripeAmountCents = lineItems.reduce((sum, item) => {
       return sum + (item.price_data.unit_amount * item.quantity);
     }, 0);
     
     if (calculatedStripeAmountCents !== orderPricingSnapshot.grand_total_cents) {
-      console.error('❌ [Checkout] CRITICAL: Stripe amount mismatch!', {
+      log('stripe_amount_mismatch', {
         stripe_calculated: calculatedStripeAmountCents,
         snapshot_grand_total: orderPricingSnapshot.grand_total_cents,
         diff: Math.abs(calculatedStripeAmountCents - orderPricingSnapshot.grand_total_cents),
+        ERROR: 'CRITICAL MISMATCH - CHECKOUT BLOCKED',
       });
+      
       return res.status(500).json({ 
-        error: 'Pricing verification failed',
-        details: 'Amount mismatch between cart and checkout calculation'
+        error: 'PRICING_VERIFICATION_FAILED',
+        message: 'Amount mismatch between cart and checkout calculation',
+        stripe_amount: calculatedStripeAmountCents,
+        expected_amount: orderPricingSnapshot.grand_total_cents,
+        trace_id: traceId,
       });
     }
     
-    console.log('✅ [Checkout] Stripe amount verified:', { 
+    console.log('✅ [VALIDATION] Stripe amount verified:', { 
       amount_cents: calculatedStripeAmountCents,
       matches_snapshot: true 
     });
