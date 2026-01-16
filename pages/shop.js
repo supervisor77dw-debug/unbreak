@@ -237,13 +237,16 @@ export default function Shop({ initialProducts }) {
       // NORMALIZE CONFIGURATOR ITEM (PRICE FIX)
       // CRITICAL: Use price_cents (not price) to avoid NaN/wrong totals
       // ========================================
+      // ✅ P0 FIX: Use REAL Shop SKUs, IGNORE client price completely
+      const realSKU = item.config?.variant === 'bottle_holder' ? 'UNBREAK-WEIN-01' : 'UNBREAK-GLAS-01';
+      
       const cartItem = {
         product_id: 'glass_configurator',
-        sku: item.config?.variant === 'bottle_holder' ? 'UNBREAK-WEIN-CONFIG' : 'UNBREAK-GLAS-CONFIG',
+        sku: realSKU, // ✅ Real Shop SKU (exists in products table)
         name: item.name || (effectiveLang === 'de' ? 'Individueller Glashalter' : 'Custom Glass Holder'),
         
-        // CRITICAL: Prefer price_cents, fallback to price*100, default to 0 (server calculates)
-        price_cents: item.price_cents || (item.price ? Math.round(item.price * 100) : 0),
+        // ❌ P0 FIX: NO PRICE FIELD - Admin Pricing will resolve via SKU lookup
+        // Client price is COMPLETELY IGNORED
         
         quantity: item.quantity || 1,
         image_url: item.image_url || null,
