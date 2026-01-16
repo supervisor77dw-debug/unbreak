@@ -14,11 +14,12 @@ import { uploadProductImage, getProductImageUrl, PRODUCT_IMAGES_BUCKET } from '.
 export const config = {
   api: {
     bodyParser: false,
+    responseLimit: false,
   },
 };
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB (increased from 5MB)
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

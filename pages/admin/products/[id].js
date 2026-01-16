@@ -235,6 +235,56 @@ export default function ProductDetail() {
     handleCropChange(defaultCrop);
   };
 
+  // Image compression helper
+  const compressImage = async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Max dimensions: 2000px
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 2000;
+          
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = (height / width) * maxDim;
+              width = maxDim;
+            } else {
+              width = (width / height) * maxDim;
+              height = maxDim;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to blob with quality 0.85
+          canvas.toBlob(
+            (blob) => {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            0.85
+          );
+        };
+        img.onerror = reject;
+      };
+      reader.onerror = reject;
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -336,17 +386,28 @@ export default function ProductDetail() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Datei zu groß. Maximale Größe: 5MB');
-      return;
-    }
-
     setUploading(true);
     setError(null); // Clear previous errors
 
     try {
+      // Compress image if larger than 1MB
+      let processedFile = file;
+      if (file.size > 1 * 1024 * 1024) {
+        console.log('[Admin] Compressing image...', {
+          original: (file.size / 1024 / 1024).toFixed(2) + 'MB'
+        });
+        
+        processedFile = await compressImage(file);
+        
+        console.log('[Admin] Compression complete:', {
+          original: (file.size / 1024 / 1024).toFixed(2) + 'MB',
+          compressed: (processedFile.size / 1024 / 1024).toFixed(2) + 'MB',
+          saved: (((file.size - processedFile.size) / file.size) * 100).toFixed(1) + '%'
+        });
+      }
+
       const formDataUpload = new FormData();
-      formDataUpload.append('image', file);
+      formDataUpload.append('image', processedFile);
 
       console.log('[Admin] Uploading image for product', id);
 

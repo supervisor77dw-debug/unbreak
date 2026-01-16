@@ -14,5 +14,11 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["fra1"]
+  "regions": ["fra1"],
+  "functions": {
+    "pages/api/admin/products/[id]/upload-image.js": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  }
 }
