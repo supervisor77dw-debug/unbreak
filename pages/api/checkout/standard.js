@@ -645,12 +645,8 @@ export default async function handler(req, res) {
       line_items: lineItems,
       mode: 'payment',
       locale: stripeLocale, // 'de' or 'en' based on cart language
-      success_url: userLanguage === 'en' 
-        ? `${origin}/en/success?session_id={CHECKOUT_SESSION_ID}` 
-        : `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: userLanguage === 'en' 
-        ? `${origin}/en/cart` 
-        : `${origin}/cart`,
+      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/cart`,
       
       // SHIPPING: Address collection (for fulfillment, not pricing)
       shipping_address_collection: {
