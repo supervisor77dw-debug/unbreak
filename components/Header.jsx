@@ -7,6 +7,7 @@ export default function Header() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
+  const [currentLang, setCurrentLang] = useState('de');
 
   // Close menu on route change
   useEffect(() => {
@@ -14,6 +15,41 @@ export default function Header() {
     router.events.on('routeChangeStart', handleRouteChange);
     return () => router.events.off('routeChangeStart', handleRouteChange);
   }, [router.events]);
+
+  // Listen to language changes and trigger i18n content update
+  useEffect(() => {
+    const handleLanguageChange = (e) => {
+      setCurrentLang(e.detail.lang);
+      
+      // Trigger i18n content update (after state update)
+      if (window.i18n) {
+        setTimeout(() => {
+          window.i18n.updateContent();
+        }, 0);
+      }
+    };
+
+    // Listen to both language change events
+    window.addEventListener('languageChanged', handleLanguageChange);
+    window.addEventListener('i18nLanguageChanged', handleLanguageChange);
+
+    // Get initial language
+    if (window.i18n) {
+      setCurrentLang(window.i18n.getCurrentLanguage());
+    }
+
+    return () => {
+      window.removeEventListener('languageChanged', handleLanguageChange);
+      window.removeEventListener('i18nLanguageChanged', handleLanguageChange);
+    };
+  }, []);
+
+  // Trigger i18n update when component mounts or language changes
+  useEffect(() => {
+    if (scriptsLoaded && window.i18n) {
+      window.i18n.updateContent();
+    }
+  }, [scriptsLoaded, currentLang]);
 
   // Navigate to configurator in same tab
   const handleConfiguratorClick = (e) => {
@@ -75,21 +111,21 @@ export default function Header() {
 
         {/* Navigation Links */}
         <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`} id="navLinks">
-          <li><a href="/index.html" data-page="index" className={activePage === 'index' ? 'active' : ''}>Start</a></li>
-          <li><a href="/produkt.html" data-page="produkt" className={activePage === 'produkt' ? 'active' : ''}>Produkt</a></li>
-          <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
-          <li><a href="/gastro-edition.html" data-page="gastro-edition" className={activePage === 'gastro-edition' ? 'active' : ''}>Gastro Edition</a></li>
-          <li><a href="/technik.html" data-page="technik" className={activePage === 'technik' ? 'active' : ''}>Technik</a></li>
-          <li><a href="#" onClick={handleConfiguratorClick} data-page="configurator" className={activePage === 'configurator' ? 'active' : ''}>Konfigurator</a></li>
-          <li><a href="/shop" data-page="shop" className={activePage === 'shop' ? 'active' : ''}>Shop</a></li>
-          <li><a href="/kontakt.html" data-page="kontakt" className={activePage === 'kontakt' ? 'active' : ''}>Kontakt</a></li>
+          <li><a href="/index.html" data-page="index" data-i18n="nav.home" className={activePage === 'index' ? 'active' : ''}>Start</a></li>
+          <li><a href="/produkt.html" data-page="produkt" data-i18n="nav.product" className={activePage === 'produkt' ? 'active' : ''}>Produkt</a></li>
+          <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
+          <li><a href="/gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition" className={activePage === 'gastro-edition' ? 'active' : ''}>Gastro Edition</a></li>
+          <li><a href="/technik.html" data-page="technik" data-i18n="nav.tech" className={activePage === 'technik' ? 'active' : ''}>Technik</a></li>
+          <li><a href="#" onClick={handleConfiguratorClick} data-page="configurator" data-i18n="nav.configurator" className={activePage === 'configurator' ? 'active' : ''}>Konfigurator</a></li>
+          <li><a href="/shop" data-page="shop" data-i18n="nav.shop" className={activePage === 'shop' ? 'active' : ''}>Shop</a></li>
+          <li><a href="/kontakt.html" data-page="kontakt" data-i18n="nav.contact" className={activePage === 'kontakt' ? 'active' : ''}>Kontakt</a></li>
 
           {/* Mobile Only Legal Links */}
-          <li className="mobile-only"><a href="/impressum.html" data-page="impressum">Impressum</a></li>
-          <li className="mobile-only"><a href="/datenschutz.html" data-page="datenschutz">Datenschutz</a></li>
-          <li className="mobile-only"><a href="/agb.html" data-page="agb">AGB</a></li>
+          <li className="mobile-only"><a href="/impressum.html" data-page="impressum" data-i18n="nav.impressum">Impressum</a></li>
+          <li className="mobile-only"><a href="/datenschutz.html" data-page="datenschutz" data-i18n="nav.privacy">Datenschutz</a></li>
+          <li className="mobile-only"><a href="/agb.html" data-page="agb" data-i18n="nav.terms">AGB</a></li>
 
-          <li><a href="/shop" className="btn btn-nav">Jetzt kaufen</a></li>
+          <li><a href="/shop" className="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
         </ul>
       </nav>
     </header>
