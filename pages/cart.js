@@ -169,11 +169,35 @@ export default function CartPage() {
   };
 
   // ====================================================================
-  // PRICING: Use Central Resolver (Single Source of Truth)
+  // PRICING: Normalize cart items to canonical schema (unit_price_cents)
   // ====================================================================
+  // EMERGENCY FIX: Normalize ALL items to use unit_price_cents ONLY
+  const normalizedCartItems = cartItems.map(item => {
+    const unit_price_cents = 
+      item.unit_price_cents ||
+      item.price_cents ||
+      (item.price ? Math.round(item.price * 100) : 0);
+    
+    return {
+      ...item,
+      unit_price_cents,
+    };
+  });
+
+  // DEBUG: Log normalized items
+  if (typeof window !== 'undefined' && window.location?.search?.includes('debugCart=1')) {
+    console.log('[CART][NORMALIZED_ITEMS]', normalizedCartItems.map(i => ({
+      sku: i.sku,
+      qty: i.quantity,
+      unit_price_cents: i.unit_price_cents,
+      raw_price: i.price,
+      raw_price_cents: i.price_cents,
+    })));
+  }
+
   // Use pricing snapshot from server (SINGLE SOURCE OF TRUTH)
   // Fallback to central resolver if snapshot not available yet
-  const { subtotal_cents: calculatedSubtotal } = calculateCartTotal(cartItems, null, null);
+  const { subtotal_cents: calculatedSubtotal } = calculateCartTotal(normalizedCartItems, null, null);
   const subtotal = pricingSnapshot?.subtotal_cents || calculatedSubtotal;
   const shipping = pricingSnapshot?.shipping_cents || 0;
   const total = pricingSnapshot?.grand_total_cents || (subtotal + shipping);
@@ -227,7 +251,7 @@ export default function CartPage() {
       )}
 
       <div style={{ marginBottom: '30px' }}>
-        {cartItems.map((item) => (
+        {normalizedCartItems.map((item) => (
           <div
             key={item.product_id}
             style={{
@@ -259,11 +283,18 @@ export default function CartPage() {
                 SKU: {item.sku}
               </p>
               <p style={{ margin: '5px 0 0 0', fontWeight: 'bold' }}>
-                €{formatPrice(resolveCartItemPrice(item, null, null))}
+                €{formatPrice(item.unit_price_cents)}
               </p>
               {(() => {
-                const resolvedPrice = resolveCartItemPrice(item, null, null);
-                const priceError = validateCartItemPrice(item, resolvedPrice);
+                // DEBUG: Log what field we're using for display
+                if (typeof window !== 'undefined' && window.location?.search?.includes('debugCart=1')) {
+                  console.log('[CART][LINE_ITEM_RENDER]', {
+                    sku: item.sku,
+                    displaying_unit_price_cents: item.unit_price_cents,
+                    formatted: formatPrice(item.unit_price_cents),
+                  });
+                }
+                const priceError = validateCartItemPrice(item, item.unit_price_cents);
                 if (priceError) {
                   return <p style={{ margin: '5px 0 0 0', color: '#dc3545', fontSize: '12px' }}>{priceError}</p>;
                 }
@@ -322,7 +353,7 @@ export default function CartPage() {
             {/* Subtotal */}
             <div style={{ minWidth: '100px', textAlign: 'right' }}>
               <p style={{ margin: 0, fontWeight: 'bold', fontSize: '18px' }}>
-                €{formatPrice(resolveCartItemPrice(item, null, null) * item.quantity)}
+                €{formatPrice(item.unit_price_cents * item.quantity)}
               </p>
             </div>
 
