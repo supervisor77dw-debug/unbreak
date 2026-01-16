@@ -16,7 +16,19 @@ export default function CartPage() {
   const [error, setError] = useState(null);
   const [pricingSnapshot, setPricingSnapshot] = useState(null);
   const [loadingPricing, setLoadingPricing] = useState(false);
+  const [isClient, setIsClient] = useState(false); // Fix hydration mismatch
   const cart = getCart();
+
+  // Fix SSR/Client hydration mismatch for i18n
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Safe translation wrapper (prevents SSR/Client mismatch)
+  const t = (key) => {
+    if (!isClient) return ''; // SSR: return empty string
+    return ts(key); // Client: use i18n
+  };
 
   // Load cart items on mount
   useEffect(() => {
@@ -183,10 +195,10 @@ export default function CartPage() {
   if (cartItems.length === 0) {
     return (
       <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
-        <h1>{ts('cart.title')}</h1>
-        <p>{ts('cart.empty')}</p>
+        <h1>{t('cart.title')}</h1>
+        <p>{t('cart.empty')}</p>
         <a href="/" style={{ color: '#007bff', textDecoration: 'underline' }}>
-          {ts('cart.continueShopping')}
+          {t('cart.continueShopping')}
         </a>
       </div>
     );
@@ -194,7 +206,7 @@ export default function CartPage() {
 
   return (
     <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
-      <h1>{ts('cart.title')}</h1>
+      <h1>{t('cart.title')}</h1>
 
       {error && (
         <div style={{ 
@@ -326,12 +338,12 @@ export default function CartPage() {
         marginBottom: '20px'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span>{ts('cart.subtotal')}:</span>
+          <span>{t('cart.subtotal')}:</span>
           <span>€{formatPrice(safeSubtotal)}</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span>{ts('cart.shipping')}:</span>
-          <span>{safeShipping === 0 ? ts('cart.freeShipping') : `€${formatPrice(safeShipping)}`}</span>
+          <span>{t('cart.shipping')}:</span>
+          <span>{safeShipping === 0 ? t('cart.freeShipping') : `€${formatPrice(safeShipping)}`}</span>
         </div>
         <div style={{ 
           display: 'flex', 
@@ -341,7 +353,7 @@ export default function CartPage() {
           fontSize: '20px',
           fontWeight: 'bold'
         }}>
-          <span>{ts('cart.grandTotal')}:</span>
+          <span>{t('cart.grandTotal')}:</span>
           <span>€{formatPrice(safeTotal)}</span>
         </div>
       </div>
@@ -362,7 +374,7 @@ export default function CartPage() {
           cursor: loading ? 'not-allowed' : 'pointer'
         }}
       >
-        {loading ? ts('cart.redirectingToStripe') : ts('cart.checkout')}
+        {loading ? t('cart.redirectingToStripe') : t('cart.checkout')}
       </button>
     </div>
   );
