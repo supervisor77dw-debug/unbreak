@@ -539,9 +539,16 @@ export default async function handler(req, res) {
     const origin = getOrigin(req);
     console.log('🌐 [Checkout] Origin:', origin);
 
-    // Detect user language from cart items (for Stripe locale)
+    // Detect user language (Priority: req.body.locale > cart items > default 'de')
     let userLanguage = 'de'; // Default to German
-    if (items && items.length > 0) {
+    
+    // Priority 1: Explicit locale from request body (sent by cart)
+    if (req.body.locale && ['de', 'en'].includes(req.body.locale)) {
+      userLanguage = req.body.locale;
+      console.log(`🌐 [Checkout] Language from request body: ${userLanguage}`);
+    }
+    // Priority 2: Cart items metadata
+    else if (items && items.length > 0) {
       const firstItem = items[0];
       if (firstItem.lang && ['de', 'en'].includes(firstItem.lang)) {
         userLanguage = firstItem.lang;
@@ -551,6 +558,7 @@ export default async function handler(req, res) {
         console.log(`🌐 [Checkout] Language from cart item meta: ${userLanguage}`);
       }
     }
+    
     const stripeLocale = userLanguage === 'en' ? 'en' : 'de';
     console.log(`🌐 [Checkout] Stripe locale: ${stripeLocale}`);
 
@@ -639,8 +647,12 @@ export default async function handler(req, res) {
       line_items: lineItems,
       mode: 'payment',
       locale: stripeLocale, // 'de' or 'en' based on cart language
-      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/cart`,
+      success_url: userLanguage === 'en' 
+        ? `${origin}/en/success?session_id={CHECKOUT_SESSION_ID}` 
+        : `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: userLanguage === 'en' 
+        ? `${origin}/en/cart` 
+        : `${origin}/cart`,
       
       // SHIPPING: Address collection (for fulfillment, not pricing)
       shipping_address_collection: {

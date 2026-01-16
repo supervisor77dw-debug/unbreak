@@ -129,9 +129,15 @@ export default function CartPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
+      // Get current language for Stripe Checkout locale
+      const currentLang = typeof window !== 'undefined' && window.i18n?.getCurrentLanguage 
+        ? window.i18n.getCurrentLanguage() 
+        : 'de';
+
       const payload = {
         items: cart.getCheckoutPayload(),
         email: session?.user?.email || null,
+        locale: currentLang, // Pass language to Stripe Checkout
       };
 
       const headers = {
@@ -391,7 +397,7 @@ export default function CartPage() {
                 borderRadius: '4px'
               }}
             >
-              Entfernen
+              {t('cart.remove')}
             </button>
           </div>
         ))}
