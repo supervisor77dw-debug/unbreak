@@ -181,7 +181,25 @@ export default function CartPage() {
       qty: i.quantity,
       unit_price_cents: i.unit_price_cents,
       currency: i.currency,
+      // DIAGNOSE: Show ALL price fields to find legacy data
+      _legacy_price: i.price,
+      _legacy_price_cents: i.price_cents,
+      _legacy_base_price: i.base_price,
     })));
+    
+    // CRITICAL: Warn if legacy fields still present
+    cartItems.forEach(item => {
+      if (item.price !== undefined || item.price_cents !== undefined || item.base_price !== undefined) {
+        console.error('[CART][LEGACY_DATA_DETECTED]', {
+          sku: item.sku,
+          has_legacy_price: item.price !== undefined,
+          has_legacy_price_cents: item.price_cents !== undefined,
+          has_legacy_base_price: item.base_price !== undefined,
+          unit_price_cents: item.unit_price_cents,
+          message: 'MIGRATION FAILED! Clear localStorage or restart dev server!'
+        });
+      }
+    });
   }
 
   // Use pricing snapshot from server (SINGLE SOURCE OF TRUTH)
