@@ -91,10 +91,8 @@ export default async function handler(req, res) {
 
     // 4. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
-      // AUTOMATIC PAYMENT METHODS: Allow Stripe Dashboard configuration
-      automatic_payment_methods: {
-        enabled: true,
-      },
+      // Payment methods: card, PayPal, SEPA, Klarna
+      payment_method_types: ['card', 'paypal', 'sepa_debit', 'klarna'],
       locale: 'de', // Bundle endpoint defaults to German
       line_items: [
         {
