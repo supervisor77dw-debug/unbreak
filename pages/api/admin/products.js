@@ -59,6 +59,11 @@ export default async function handler(req, res) {
         base_price_cents,
         active,
         image_url,
+        badge_label,
+        short_description_de,
+        short_description_en,
+        shipping_text,
+        highlights,
       } = req.body;
 
       if (!name || !sku) {
@@ -75,6 +80,11 @@ export default async function handler(req, res) {
         image_crop_scale: 1.0,
         image_crop_x: 0,
         image_crop_y: 0,
+        badge_label: badge_label || null,
+        short_description_de: short_description_de || null,
+        short_description_en: short_description_en || null,
+        shipping_text: shipping_text || 'Versand 3–5 Tage',
+        highlights: highlights || [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };

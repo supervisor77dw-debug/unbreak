@@ -53,6 +53,8 @@ export default function ProductDetail() {
     image_crop_x: 0,
     image_crop_y: 0,
     badge_label: '',
+    short_description_de: '',
+    short_description_en: '',
     shipping_text: 'Versand 3–5 Tage',
     highlights: ['', '', ''],
   });
@@ -143,6 +145,8 @@ export default function ProductDetail() {
           image_crop_x: safeCrop.x,
           image_crop_y: safeCrop.y,
           badge_label: data.badge_label || '',
+          short_description_de: data.short_description_de || '',
+          short_description_en: data.short_description_en || '',
           shipping_text: data.shipping_text || 'Versand 3–5 Tage',
           highlights: highlightsArray,
         });
@@ -539,6 +543,32 @@ export default function ProductDetail() {
                 placeholder="Produktbeschreibung..."
                 rows={4}
               />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Kurzbeschreibung (DE) - Shop-Karte</label>
+                <textarea
+                  value={formData.short_description_de}
+                  onChange={(e) => handleChange('short_description_de', e.target.value)}
+                  placeholder="Kurze Beschreibung für deutsche Shop-Karte..."
+                  rows={2}
+                  maxLength={150}
+                />
+                <small>{formData.short_description_de?.length || 0}/150 Zeichen</small>
+              </div>
+
+              <div className="form-group">
+                <label>Kurzbeschreibung (EN) - Shop-Karte</label>
+                <textarea
+                  value={formData.short_description_en}
+                  onChange={(e) => handleChange('short_description_en', e.target.value)}
+                  placeholder="Short description for English shop card..."
+                  rows={2}
+                  maxLength={150}
+                />
+                <small>{formData.short_description_en?.length || 0}/150 characters</small>
+              </div>
             </div>
           </div>
 

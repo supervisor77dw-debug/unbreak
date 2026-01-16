@@ -469,8 +469,9 @@ export default function Shop({ initialProducts }) {
     }
   }
 
-  function formatPrice(cents) {
-    return new Intl.NumberFormat('de-DE', {
+  function formatPrice(cents, locale = 'de') {
+    const localeCode = locale === 'en' ? 'en-US' : 'de-DE';
+    return new Intl.NumberFormat(localeCode, {
       style: 'currency',
       currency: 'EUR',
     }).format(cents / 100);
@@ -678,12 +679,14 @@ export default function Shop({ initialProducts }) {
 
                       <div className="product-content">
                         <h3 className="product-title">{product.name}</h3>
-                        <p className="product-description">
-                          {currentLang === 'de' 
-                            ? (product.short_description_de || product.description || 'Professioneller magnetischer Halter')
-                            : (product.short_description_en || product.description_en || 'Professional magnetic holder')
-                          }
-                        </p>
+                        {(product.short_description_de || product.short_description_en || product.description || product.description_en) && (
+                          <p className="product-description">
+                            {currentLang === 'de' 
+                              ? (product.short_description_de || product.description || '')
+                              : (product.short_description_en || product.description_en || '')
+                            }
+                          </p>
+                        )}
 
                         {Array.isArray(highlights) && highlights.length > 0 && (
                           <ul className="product-highlights">
@@ -696,7 +699,7 @@ export default function Shop({ initialProducts }) {
                         <div className="product-price-section">
                           <div className="price-wrapper">
                             <span className="product-price">
-                              {formatPrice(product.base_price_cents)} €
+                              {formatPrice(product.base_price_cents, currentLang)}
                             </span>
                             <span className="price-label">{currentLang === 'de' ? 'inkl. MwSt.' : 'incl. VAT'}</span>
                           </div>
