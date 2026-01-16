@@ -218,7 +218,7 @@ export default function CartPage() {
   if (isPreviewMode() || (typeof window !== 'undefined' && window.location?.search?.includes('debugCart=1'))) {
     console.log('[CART PRICING]', {
       snapshot_subtotal: pricingSnapshot?.subtotal_cents,
-      calculated_subtotal: calculatedSubtotal,
+      calculated_subtotal: calculateLocalSubtotal(),
       snapshot_shipping: pricingSnapshot?.shipping_cents,
       snapshot_total: pricingSnapshot?.grand_total_cents,
       final_subtotal: subtotal,
