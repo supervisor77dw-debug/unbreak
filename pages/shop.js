@@ -16,6 +16,18 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 /**
+ * SHA-256 hash for cfg deduplication (Bug #2 Fix)
+ * Creates unique hash per cfg payload for idempotent import
+ */
+async function hashString(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+}
+
+/**
  * Translate badge labels (MVP: common badges only)
  * MUST be outside component for SSR compatibility
  */
@@ -118,7 +130,7 @@ export default function Shop({ initialProducts }) {
     
     const urlParams = new URLSearchParams(window.location.search);
     const cfgParam = urlParams.get('cfg');
-    const debugMode = process.env.NEXT_PUBLIC_DEBUG === 'true' || urlParams.get('debugCfg') === '1';
+    const debugMode = process.env.NEXT_PUBLIC_DEBUG === 'true' || urlParams.get('debugCfg') === '1' || urlParams.get('debugCart') === '1';
     
     // Debug state for overlay
     const debugState = {
@@ -144,48 +156,51 @@ export default function Shop({ initialProducts }) {
     
     debugState.step4_cartReady = true;
     
-    // Anti-Double-Add: Check if already processed this config
-    const cfgHash = cfgParam.substring(0, 16); // First 16 chars as hash
-    const onceKey = `cfg2cart_done_${cfgHash}`;
-    
-    if (sessionStorage.getItem(onceKey)) {
-      if (debugMode) console.log('[CFG2CART][SKIP] Already processed this config (anti-double-add)');
-      window.history.replaceState({}, '', '/shop');
-      return;
-    }
-    
-    try {
-      // Step 1: cfg parameter found
-      if (debugMode) console.log('[CFG2CART][1] cfg found', cfgParam.length);
-      debugState.step1_cfgFound = true;
-      
-      // Step 2: Decode (robust UTF-8 safe)
-      function decodeCfg(cfg) {
-        try {
-          const base64 = decodeURIComponent(cfg);
-          const binary = atob(base64);
-          const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-          const json = new TextDecoder('utf-8').decode(bytes);
-          return json;
-        } catch (e) {
-          // Fallback: direct atob
+    // BUG #2 FIX: Proper SHA-256 hash for idempotent import
+    // Process function async to use crypto.subtle
+    (async () => {
+      try {
+        // Decode first to hash the actual content (not the base64)
+        function decodeCfg(cfg) {
           try {
-            return atob(cfg);
-          } catch (e2) {
-            // Fallback: direct JSON (not encoded)
-            return decodeURIComponent(cfg);
+            const base64 = decodeURIComponent(cfg);
+            const binary = atob(base64);
+            const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+            const json = new TextDecoder('utf-8').decode(bytes);
+            return json;
+          } catch (e) {
+            try {
+              return atob(cfg);
+            } catch (e2) {
+              return decodeURIComponent(cfg);
+            }
           }
         }
-      }
-      
-      const jsonString = decodeCfg(cfgParam);
-      if (debugMode) console.log('[CFG2CART][2] decoded json', jsonString.slice(0, 200));
-      debugState.step2_decoded = jsonString.slice(0, 100);
-      
-      // Step 3: Parse JSON
-      const item = JSON.parse(jsonString);
-      if (debugMode) console.log('[CFG2CART][3] parsed item', item);
-      debugState.step3_parsed = item;
+        
+        const jsonString = decodeCfg(cfgParam);
+        const cfgHash = await hashString(jsonString);
+        const onceKey = `cfg2cart_done_${cfgHash}`;
+        
+        if (sessionStorage.getItem(onceKey)) {
+          if (debugMode) console.log('[CFG2CART][SKIP] Already processed this config (hash:', cfgHash, ')');
+          window.history.replaceState({}, '', '/shop');
+          return;
+        }
+        
+        if (debugMode) console.log('[CFG2CART][HASH] Config hash:', cfgHash);
+        
+        // Step 1: cfg parameter found
+        if (debugMode) console.log('[CFG2CART][1] cfg found', cfgParam.length);
+        debugState.step1_cfgFound = true;
+        
+        // Step 2: Already decoded above for hashing
+        if (debugMode) console.log('[CFG2CART][2] decoded json', jsonString.slice(0, 200));
+        debugState.step2_decoded = jsonString.slice(0, 100);
+        
+        // Step 3: Parse JSON
+        const item = JSON.parse(jsonString);
+        if (debugMode) console.log('[CFG2CART][3] parsed item', item);
+        debugState.step3_parsed = item;
       
       // ========================================
       // EFFECTIVE LANGUAGE RESOLUTION (i18n)
@@ -271,30 +286,35 @@ export default function Shop({ initialProducts }) {
         success: success,
       };
       
-      if (success) {
-        if (debugMode) console.log('[CFG2CART][SUCCESS] ✅ Item added to cart');
-        setCartCount(cart.getItemCount());
-        showUserMessage('addToCart', 'success', currentLang, 1500);
+        if (success) {
+          if (debugMode) console.log('[CFG2CART][SUCCESS] ✅ Item added to cart');
+          setCartCount(cart.getItemCount());
+          showUserMessage('addToCart', 'success', currentLang, 1500);
+          
+          // Mark as processed with hash
+          sessionStorage.setItem(onceKey, Date.now().toString());
+          
+          // BUG #2 FIX: Clean up URL after successful import
+          if (debugMode) console.log('[CFG2CART][CLEANUP] Removing cfg from URL');
+          window.history.replaceState({}, '', '/shop');
+        } else {
+          console.error('[CFG2CART][FAILED] ❌ cart.addItem returned false');
+          debugState.error = 'addItem returned false - validation failed';
+          showUserMessage('cartAddFailed', 'error', currentLang);
+          
+          // Clean up URL even on failure
+          window.history.replaceState({}, '', '/shop');
+        }
         
-        // Mark as processed
-        sessionStorage.setItem(onceKey, '1');
+      } catch (err) {
+        console.error('[CFG2CART][ERROR]', err);
+        debugState.error = err.message;
+        errorLog('shop:configurator', 'Failed to process cfg parameter:', err);
         
-        // Clean up URL
+        // Clean up URL even on error
         window.history.replaceState({}, '', '/shop');
-      } else {
-        console.error('[CFG2CART][FAILED] ❌ cart.addItem returned false');
-        debugState.error = 'addItem returned false - validation failed';
-        showUserMessage('cartAddFailed', 'error', currentLang);
       }
-      
-    } catch (err) {
-      console.error('[CFG2CART][ERROR]', err);
-      debugState.error = err.message;
-      errorLog('shop:configurator', 'Failed to process cfg parameter:', err);
-      
-      // Clean up URL even on error
-      window.history.replaceState({}, '', '/shop');
-    }
+    })(); // Close async IIFE
     
     // Show debug overlay if enabled
     if (debugMode && typeof window !== 'undefined') {
