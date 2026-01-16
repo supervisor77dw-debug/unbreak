@@ -682,7 +682,8 @@ export default async function handler(req, res) {
     const sessionData = {
       // PAYMENT METHODS: Manually specify when customer_creation is used
       // (automatic_payment_methods is incompatible with customer_creation)
-      payment_method_types: ['card', 'paypal', 'sepa_debit', 'klarna'],
+      // NOTE: PayPal/Klarna require activation in Stripe Dashboard first
+      payment_method_types: ['card', 'sepa_debit'],
       line_items: lineItems,
       mode: 'payment',
       locale: stripeLocale, // 'de' or 'en' based on cart language
