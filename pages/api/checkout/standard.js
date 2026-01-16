@@ -680,9 +680,8 @@ export default async function handler(req, res) {
     });
 
     const sessionData = {
-      // PAYMENT METHODS: Card only (always available)
-      // PayPal/SEPA/Klarna require manual activation in Stripe Dashboard
-      payment_method_types: ['card'],
+      // PAYMENT METHODS: Card, PayPal, SEPA (activated in Dashboard)
+      payment_method_types: ['card', 'paypal', 'sepa_debit'],
       line_items: lineItems,
       mode: 'payment',
       locale: stripeLocale, // 'de' or 'en' based on cart language
