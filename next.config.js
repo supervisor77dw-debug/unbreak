@@ -78,6 +78,13 @@ const nextConfig = {
         destination: `${CONFIGURATOR_URL}/?lang=de&return=${encodeURIComponent(SHOP_URL)}`,
         permanent: false, // 307 temporary redirect
       },
+      // NOTE: /admin/products should use pages/admin/products/index.js
+      // Old redirect from products.js moved here to avoid route conflict
+      {
+        source: '/admin/products-legacy',
+        destination: '/backend/products?filter=pending',
+        permanent: false,
+      },
     ];
   },
 };
