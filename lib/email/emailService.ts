@@ -302,6 +302,88 @@ export async function sendOrderConfirmation(params: {
 
   const isGerman = language === 'de';
 
+  // ====================================================================
+  // PRODUCT LABELS MAPPING (i18n for email)
+  // ====================================================================
+  // Map raw product names to localized display names
+  // This ensures emails show correct language regardless of database/cart data
+  const PRODUCT_LABELS: Record<string, { de: string; en: string }> = {
+    // Standard SKUs
+    'UNBREAK-GLAS-01': {
+      de: 'Glashalter',
+      en: 'Glass Holder'
+    },
+    'UNBREAK-WEIN-01': {
+      de: 'Flaschenhalter',
+      en: 'Bottle Holder'
+    },
+    // Configurator products
+    'glass_configurator': {
+      de: 'Glashalter Konfiguriert',
+      en: 'Glass Holder Configured'
+    },
+    'bottle_configurator': {
+      de: 'Flaschenhalter Konfiguriert',
+      en: 'Bottle Holder Configured'
+    },
+    // Stripe naming variants (what Stripe returns in line items)
+    'Glashalter Universal': {
+      de: 'Glashalter',
+      en: 'Glass Holder'
+    },
+    'Universal Glass Holder': {
+      de: 'Glashalter',
+      en: 'Glass Holder'
+    },
+    'Flaschenhalter': {
+      de: 'Flaschenhalter',
+      en: 'Bottle Holder'
+    },
+    'Bottle Holder': {
+      de: 'Flaschenhalter',
+      en: 'Bottle Holder'
+    },
+    'Glashalter Konfiguriert': {
+      de: 'Glashalter Konfiguriert',
+      en: 'Glass Holder Configured'
+    },
+    'Glass Holder Configured': {
+      de: 'Glashalter Konfiguriert',
+      en: 'Glass Holder Configured'
+    },
+    'Flaschenhalter Konfiguriert': {
+      de: 'Flaschenhalter Konfiguriert',
+      en: 'Bottle Holder Configured'
+    },
+    'Bottle Holder Configured': {
+      de: 'Flaschenhalter Konfiguriert',
+      en: 'Bottle Holder Configured'
+    }
+  };
+
+  /**
+   * Resolve localized product name from raw name
+   * Priority: PRODUCT_LABELS mapping → fallback to raw name
+   */
+  const resolveProductName = (rawName: string, locale: 'de' | 'en'): string => {
+    // Check exact match first
+    if (PRODUCT_LABELS[rawName]) {
+      return PRODUCT_LABELS[rawName][locale];
+    }
+    
+    // Check partial match (case-insensitive)
+    const lowerName = rawName.toLowerCase();
+    for (const [key, labels] of Object.entries(PRODUCT_LABELS)) {
+      if (lowerName.includes(key.toLowerCase())) {
+        return labels[locale];
+      }
+    }
+    
+    // Fallback: return raw name (for unknown products)
+    console.warn(`[EMAIL i18n] No translation found for product: "${rawName}" (locale: ${locale})`);
+    return rawName;
+  };
+
   // Safe currency formatter (no NaN)
   const formatCurrency = (cents: number): string => {
     if (cents === null || cents === undefined || isNaN(cents)) {
@@ -322,18 +404,33 @@ export async function sendOrderConfirmation(params: {
   const productItems = items.filter(item => !item.name.toLowerCase().includes('versand') && !item.name.toLowerCase().includes('shipping'));
   const shippingItem = items.find(item => item.name.toLowerCase().includes('versand') || item.name.toLowerCase().includes('shipping'));
   
+  // ====================================================================
+  // LOCALIZE PRODUCT NAMES (i18n)
+  // ====================================================================
+  // Apply locale-aware product name resolution to all items
+  const localizedProductItems = productItems.map(item => ({
+    ...item,
+    name: resolveProductName(item.name, language)
+  }));
+  
+  console.log('[EMAIL i18n] Product names localized:', {
+    locale: language,
+    original: productItems.map(i => i.name),
+    localized: localizedProductItems.map(i => i.name)
+  });
+  
   // GUARDRAIL: Detect if shipping is in line items
   const hasShippingLine = !!shippingItem;
   
-  const subtotalCents = productItems.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0);
+  const subtotalCents = localizedProductItems.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0);
   const shippingCents = shippingItem ? (shippingItem.line_total_cents || shippingItem.price_cents) : 0;
   const orderTotalCents = totalAmount; // This is the authoritative total from Stripe
 
   // DEBUG LOGGING (temporary - remove after verification)
   console.log('[EMAIL PRICING DEBUG]', {
-    productItems_count: productItems.length,
+    productItems_count: localizedProductItems.length,
     hasShippingLine,
-    products_sum_cents: productItems.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0),
+    products_sum_cents: localizedProductItems.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0),
     shipping_cents: shippingCents,
     subtotal_cents: subtotalCents,
     total_cents: orderTotalCents,
@@ -344,7 +441,7 @@ export async function sendOrderConfirmation(params: {
   });
 
   // Format items for email (products only, no shipping in list)
-  const itemsText = productItems.map(item => {
+  const itemsText = localizedProductItems.map(item => {
     const qty = item.quantity;
     const name = item.name;
     const lineTotal = formatCurrency(item.line_total_cents || (item.price_cents * item.quantity));
@@ -422,7 +519,7 @@ export async function sendOrderConfirmation(params: {
                 
                 <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px; font-weight: 600;">Positionen</h3>
                 
-${productItems.map(item => `                <div style="padding: 12px 0; border-bottom: 1px solid #EEEEEE;">
+${localizedProductItems.map(item => `                <div style="padding: 12px 0; border-bottom: 1px solid #EEEEEE;">
                   <table style="width: 100%;">
                     <tr>
                       <td style="font-size: 14px; color: #333; padding-right: 10px;">${item.quantity} ×</td>
@@ -567,7 +664,7 @@ ${productItems.map(item => `                <div style="padding: 12px 0; border-
                 
                 <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px; font-weight: 600;">Items</h3>
                 
-${productItems.map(item => `                <div style="padding: 12px 0; border-bottom: 1px solid #EEEEEE;">
+${localizedProductItems.map(item => `                <div style="padding: 12px 0; border-bottom: 1px solid #EEEEEE;">
                   <table style="width: 100%;">
                     <tr>
                       <td style="font-size: 14px; color: #333; padding-right: 10px;">${item.quantity} ×</td>
@@ -725,7 +822,7 @@ ${productItems.map(item => `                <div style="padding: 12px 0; border-
     <div style="margin: 30px 0;">
       <h2 style="margin: 0 0 10px 0; font-size: 16px; color: #2F6F55;">🛒 Positionen</h2>
       <div style="background-color: #F9F9F9; padding: 15px; border-radius: 6px; border-left: 4px solid #2F6F55;">
-${productItems.map(item => `        <div style="padding: 8px 0; border-bottom: 1px solid #E0E0E0;">
+${localizedProductItems.map(item => `        <div style="padding: 8px 0; border-bottom: 1px solid #E0E0E0;">
           <span style="color: #666; font-size: 13px;">${item.quantity} ×</span>
           <span style="color: #333; font-size: 13px; margin-left: 10px;">${item.name}</span>
           <span style="color: #333; font-size: 13px; float: right; font-weight: 600;">${formatCurrency(item.line_total_cents || (item.price_cents * item.quantity))}</span>
