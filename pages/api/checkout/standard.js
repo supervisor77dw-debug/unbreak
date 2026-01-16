@@ -124,7 +124,7 @@ export default async function handler(req, res) {
 
     // Support both single product (legacy) and cart items (new)
     const { sku, email, items } = req.body;
-    console.log('📦 [Checkout] Request:', { sku, email, items: items?.length });
+    console.log('📦 [Checkout] Request:', { sku, email, items: items?.length || 0 });
 
     // Validate input
     if (!items && !sku) {
@@ -133,8 +133,11 @@ export default async function handler(req, res) {
     }
 
     if (items && (!Array.isArray(items) || items.length === 0)) {
-      console.error('❌ [Checkout] Invalid items array');
-      return res.status(400).json({ error: 'Items must be a non-empty array' });
+      console.error('❌ [Checkout] Invalid items array - cart is empty');
+      return res.status(400).json({ 
+        error: 'Cart is empty',
+        message: 'Please add items to your cart before checking out',
+      });
     }
 
     // =================================================================
