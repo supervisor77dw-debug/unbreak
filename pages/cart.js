@@ -134,11 +134,38 @@ export default function CartPage() {
         ? window.i18n.getCurrentLanguage() 
         : 'de';
 
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      // [STRIPE_LOCALE] A) FRONTEND CHECKOUT REQUEST DEBUG
+      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('[STRIPE_LOCALE] A) FRONTEND - Before Checkout Request');
+      console.log('[STRIPE_LOCALE] currentLang:', currentLang);
+      console.log('[STRIPE_LOCALE] lang source:', {
+        window_i18n: typeof window?.i18n !== 'undefined',
+        localStorage_lang: typeof window !== 'undefined' ? localStorage.getItem('unbreakone_lang') : null,
+        html_lang: typeof document !== 'undefined' ? document.documentElement.lang : null,
+        pathname: typeof window !== 'undefined' ? window.location.pathname : null,
+      });
+      console.log('[STRIPE_LOCALE] origin:', typeof window !== 'undefined' ? window.location.origin : null);
+      console.log('[STRIPE_LOCALE] pathname:', typeof window !== 'undefined' ? window.location.pathname : null);
+
       const payload = {
         items: cart.getCheckoutPayload(),
         email: session?.user?.email || null,
         locale: currentLang, // Pass language to Stripe Checkout
       };
+
+      console.log('[STRIPE_LOCALE] Request Payload:', {
+        items_count: payload.items.length,
+        locale: payload.locale,
+        email: payload.email ? '***@***' : null,
+        items_sample: payload.items.slice(0, 2).map(i => ({
+          sku: i.sku,
+          price_cents: i.price_cents,
+          lang: i.lang || i.meta?.lang || 'NONE',
+        })),
+      });
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       const headers = {
         'Content-Type': 'application/json',
