@@ -549,12 +549,12 @@ export default async function handler(req, res) {
     console.log('[STRIPE_LOCALE] req.body.locale:', req.body.locale || 'NONE');
     console.log('[STRIPE_LOCALE] req.body.items count:', items?.length || 0);
     console.log('[STRIPE_LOCALE] Cart snapshot:', {
-      items: items.slice(0, 3).map(i => ({
+      items: items && items.length > 0 ? items.slice(0, 3).map(i => ({
         sku: i.sku,
         unit_price_cents: i.unit_price_cents,
         lang: i.lang || 'NONE',
         meta_lang: i.meta?.lang || 'NONE',
-      })),
+      })) : [],
     });
 
     // Detect user language (Priority: req.body.locale > cart items > default 'de')
