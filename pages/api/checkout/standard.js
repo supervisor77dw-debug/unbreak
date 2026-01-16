@@ -542,55 +542,27 @@ export default async function handler(req, res) {
     const origin = getOrigin(req);
     console.log('🌐 [Checkout] Origin:', origin);
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // [STRIPE_LOCALE] B) BACKEND API - Request Analysis
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('[STRIPE_LOCALE] B) BACKEND API - Checkout Request Received');
-    console.log('[STRIPE_LOCALE] req.headers.accept-language:', req.headers['accept-language'] || 'NONE');
-    console.log('[STRIPE_LOCALE] req.headers.cookie (excerpt):', req.headers.cookie ? req.headers.cookie.substring(0, 100) + '...' : 'NONE');
-    console.log('[STRIPE_LOCALE] req.body.locale:', req.body.locale || 'NONE');
-    console.log('[STRIPE_LOCALE] req.body.items count:', items?.length || 0);
-    console.log('[STRIPE_LOCALE] Cart snapshot:', {
-      items: items && items.length > 0 ? items.slice(0, 3).map(i => ({
-        sku: i.sku,
-        unit_price_cents: i.unit_price_cents,
-        lang: i.lang || 'NONE',
-        meta_lang: i.meta?.lang || 'NONE',
-      })) : [],
-    });
-
     // Detect user language (Priority: req.body.locale > cart items > default 'de')
     let userLanguage = 'de'; // Default to German
     
     // Priority 1: Explicit locale from request body (sent by cart)
     if (req.body.locale && ['de', 'en'].includes(req.body.locale)) {
       userLanguage = req.body.locale;
-      console.log(`🌐 [Checkout] Language from request body: ${userLanguage}`);
-      console.log('[STRIPE_LOCALE] ✅ Priority 1: req.body.locale =', userLanguage);
     }
     // Priority 2: Cart items metadata
     else if (items && items.length > 0) {
       const firstItem = items[0];
       if (firstItem.lang && ['de', 'en'].includes(firstItem.lang)) {
         userLanguage = firstItem.lang;
-        console.log(`🌐 [Checkout] Language from cart item: ${userLanguage}`);
-        console.log('[STRIPE_LOCALE] ✅ Priority 2: items[0].lang =', userLanguage);
       } else if (firstItem.meta?.lang && ['de', 'en'].includes(firstItem.meta.lang)) {
         userLanguage = firstItem.meta.lang;
-        console.log(`🌐 [Checkout] Language from cart item meta: ${userLanguage}`);
-        console.log('[STRIPE_LOCALE] ✅ Priority 3: items[0].meta.lang =', userLanguage);
       }
     }
     
     const stripeLocale = userLanguage === 'en' ? 'en' : 'de';
-    console.log(`🌐 [Checkout] Stripe locale: ${stripeLocale}`);
-    console.log('[STRIPE_LOCALE] resolvedLang:', userLanguage);
-    console.log('[STRIPE_LOCALE] stripeLocale:', stripeLocale);
 
     // Build line_items from cart (always use price_data for dynamic pricing)
     const lineItems = cartItems.map(item => {
-      console.log(`💰 [Checkout] Creating line item for ${item.sku}: €${(item.unit_price_cents / 100).toFixed(2)}`);
       return {
         price_data: {
           currency: 'eur',
@@ -668,25 +640,6 @@ export default async function handler(req, res) {
       matches_snapshot: true 
     });
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // [STRIPE_LOCALE] C) BEFORE STRIPE SESSION CREATION
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('[STRIPE_LOCALE] C) BEFORE stripe.checkout.sessions.create');
-    console.log('[STRIPE_LOCALE] sessionData.locale:', stripeLocale);
-    console.log('[STRIPE_LOCALE] success_url:', userLanguage === 'en' 
-      ? `${origin}/en/success?session_id={CHECKOUT_SESSION_ID}` 
-      : `${origin}/success?session_id={CHECKOUT_SESSION_ID}`);
-    console.log('[STRIPE_LOCALE] cancel_url:', userLanguage === 'en' 
-      ? `${origin}/en/cart` 
-      : `${origin}/cart`);
-    console.log('[STRIPE_LOCALE] line_items:', lineItems.map(li => ({
-      name: li.price_data.product_data.name,
-      sku: li.price_data.product_data.metadata.sku,
-      amount: li.price_data.unit_amount,
-      qty: li.quantity,
-    })));
-
     const sessionData = {
       payment_method_types: ['card'],
       line_items: lineItems,
@@ -736,16 +689,6 @@ export default async function handler(req, res) {
 
     // 6. Create Stripe checkout session
     const session = await stripe.checkout.sessions.create(sessionData);
-    
-    console.log('[STRIPE_LOCALE] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('[STRIPE_LOCALE] ✅ SESSION CREATED SUCCESSFULLY');
-    console.log('[STRIPE_LOCALE] stripe_session_id:', session.id);
-    console.log('[STRIPE_LOCALE] session.locale:', session.locale);
-    console.log('[STRIPE_LOCALE] session.url:', session.url ? session.url.substring(0, 80) + '...' : 'NONE');
-    console.log('[STRIPE_LOCALE] metadata.ui_lang:', session.metadata.ui_lang);
-    console.log('[STRIPE_LOCALE] metadata.accept_language:', session.metadata.accept_language);
-    console.log('[STRIPE_LOCALE] metadata.build_commit:', session.metadata.build_commit);
-    console.log('[STRIPE_LOCALE] ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     log('stripe_session_created', {
       order_id: order.id,
