@@ -20,6 +20,38 @@ const SNAPSHOT_VERSION = 'unbreak-one.pricing.v1';
 // Environment fingerprint (loaded once at module init)
 const ENV_FINGERPRINT = getEnvFingerprint();
 
+// i18n: Product names by SKU
+const PRODUCT_NAMES_I18N = {
+  'UNBREAK-GLAS-01': { 
+    de: 'Glashalter Universal', 
+    en: 'Universal Glass Holder' 
+  },
+  'UNBREAK-WEIN-01': { 
+    de: 'Flaschenhalter', 
+    en: 'Bottle Holder' 
+  },
+  'glass_configurator': {
+    de: 'Glashalter Konfiguriert',
+    en: 'Glass Holder Configured'
+  },
+  'bottle_configurator': {
+    de: 'Flaschenhalter Konfiguriert',
+    en: 'Bottle Holder Configured'
+  }
+};
+
+// i18n: Shipping labels
+const SHIPPING_LABELS_I18N = {
+  de: {
+    name: 'Versand',
+    description: 'Standardversand'
+  },
+  en: {
+    name: 'Shipping',
+    description: 'Standard shipping'
+  }
+};
+
 // Shipping calculation (from DB rules - TODO: fetch from shipping_rules table)
 function calculateShipping(country = 'DE') {
   const SHIPPING_RULES = {
@@ -563,11 +595,16 @@ export default async function handler(req, res) {
 
     // Build line_items from cart (always use price_data for dynamic pricing)
     const lineItems = cartItems.map(item => {
+      // Get localized product name
+      const productName = PRODUCT_NAMES_I18N[item.sku]?.[userLanguage] 
+        || PRODUCT_NAMES_I18N[item.sku]?.en 
+        || item.name; // Fallback to cart name if not in map
+
       return {
         price_data: {
           currency: 'eur',
           product_data: {
-            name: item.name,
+            name: productName,
             images: item.image_url ? [item.image_url] : undefined,
             metadata: {
               sku: item.sku,
@@ -576,12 +613,14 @@ export default async function handler(req, res) {
           },
           unit_amount: item.unit_price_cents,
         },
-        quantity: item.quantity,
-      };
-    });
-
-    // Shipping: Add as separate line item with calculated amount
+    const shippingLabels = SHIPPING_LABELS_I18N[userLanguage] || SHIPPING_LABELS_I18N.en;
+    
     lineItems.push({
+      price_data: {
+        currency: 'eur',
+        product_data: {
+          name: shippingLabels.name,
+          description: shippingLabels.description
       price_data: {
         currency: 'eur',
         product_data: {
