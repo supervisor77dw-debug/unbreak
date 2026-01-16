@@ -338,23 +338,25 @@ export default function ProductsPage() {
         }
 
         .add-button {
-          background: #0a4d4d;
-          color: #d4f1f1;
+          background: #0ea5e9;
+          color: #ffffff;
           border: none;
-          border-radius: 6px;
-          padding: 10px 20px;
-          font-size: 14px;
-          font-weight: 500;
+          border-radius: 8px;
+          padding: 12px 24px;
+          font-size: 15px;
+          font-weight: 600;
           cursor: pointer;
           text-decoration: none;
           transition: all 0.2s;
           white-space: nowrap;
           display: inline-block;
+          box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
         }
 
         .add-button:hover {
-          background: #0d6666;
-          transform: translateY(-1px);
+          background: #0284c7;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
         }
 
         .admin-filters {

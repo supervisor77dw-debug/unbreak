@@ -84,7 +84,11 @@ export default function ProductDetail() {
   }, [product?.image_path]);
 
   useEffect(() => {
-    if (!id || id === 'new') return;
+    if (!id || id === 'new') {
+      // For new products, set loading to false immediately
+      setLoading(false);
+      return;
+    }
     
     async function fetchProduct() {
       try {
