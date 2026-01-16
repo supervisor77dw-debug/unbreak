@@ -257,7 +257,10 @@ export default async function handler(req, res) {
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'payment',
-      payment_method_types: ['card'],
+      // AUTOMATIC PAYMENT METHODS: Allow Stripe Dashboard configuration
+      automatic_payment_methods: {
+        enabled: true,
+      },
       locale: 'de', // Default to German (create.js is legacy endpoint)
       
       // CUSTOMER CREATION - Use existing or create new

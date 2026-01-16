@@ -680,7 +680,11 @@ export default async function handler(req, res) {
     });
 
     const sessionData = {
-      payment_method_types: ['card'],
+      // AUTOMATIC PAYMENT METHODS: Allow Stripe Dashboard configuration
+      // Enables PayPal, SEPA, etc. based on Dashboard settings
+      automatic_payment_methods: {
+        enabled: true,
+      },
       line_items: lineItems,
       mode: 'payment',
       locale: stripeLocale, // 'de' or 'en' based on cart language
@@ -725,6 +729,15 @@ export default async function handler(req, res) {
     // 6. Create Stripe checkout session
     const session = await stripe.checkout.sessions.create(sessionData);
     
+    // LOG: Payment methods configuration
+    console.log('💳 [STRIPE PAYMENT METHODS]', {
+      automatic_payment_methods_enabled: session.automatic_payment_methods?.enabled,
+      payment_method_types: session.payment_method_types,
+      available_methods: session.automatic_payment_methods?.enabled 
+        ? 'Controlled by Stripe Dashboard' 
+        : session.payment_method_types,
+    });
+    
     log('stripe_session_created', {
       order_id: order.id,
       stripe_session_id: session.id,
@@ -732,6 +745,8 @@ export default async function handler(req, res) {
       stripe_currency: session.currency,
       expected_amount_cents: grandTotalCents,
       amount_match: session.amount_total === grandTotalCents,
+      payment_methods: session.payment_method_types,
+      automatic_payment_methods: session.automatic_payment_methods,
     });
 
     // 7. Update order with Stripe session ID
