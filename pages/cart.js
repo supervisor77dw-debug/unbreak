@@ -3,6 +3,7 @@ import { getCart, formatPrice } from '../lib/cart';
 import { createClient } from '@supabase/supabase-js';
 import { isPreviewMode } from '../lib/urls';
 import { ts } from '../lib/i18n-shop';
+import { resolveCartItemPrice, calculateCartTotal, validateCartItemPrice } from '../lib/pricing/cartPriceResolver';
 
 // Client-side Supabase client
 const supabase = createClient(
@@ -167,22 +168,27 @@ export default function CartPage() {
     }
   };
 
+  // ====================================================================
+  // PRICING: Use Central Resolver (Single Source of Truth)
+  // ====================================================================
   // Use pricing snapshot from server (SINGLE SOURCE OF TRUTH)
-  // Fallback to local calculation if snapshot not available yet
-  const subtotal = pricingSnapshot?.subtotal_cents || cart.getTotal();
+  // Fallback to central resolver if snapshot not available yet
+  const { subtotal_cents: calculatedSubtotal } = calculateCartTotal(cartItems, null, null);
+  const subtotal = pricingSnapshot?.subtotal_cents || calculatedSubtotal;
   const shipping = pricingSnapshot?.shipping_cents || 0;
   const total = pricingSnapshot?.grand_total_cents || (subtotal + shipping);
 
   // Debug logging for pricing
-  if (pricingSnapshot && isPreviewMode()) {
+  if (isPreviewMode() || (typeof window !== 'undefined' && window.location?.search?.includes('debugCart=1'))) {
     console.log('[CART PRICING]', {
-      snapshot_subtotal: pricingSnapshot.subtotal_cents,
-      snapshot_shipping: pricingSnapshot.shipping_cents,
-      snapshot_total: pricingSnapshot.grand_total_cents,
-      calculated_total: subtotal + shipping,
+      snapshot_subtotal: pricingSnapshot?.subtotal_cents,
+      calculated_subtotal: calculatedSubtotal,
+      snapshot_shipping: pricingSnapshot?.shipping_cents,
+      snapshot_total: pricingSnapshot?.grand_total_cents,
       final_subtotal: subtotal,
       final_shipping: shipping,
-      final_total: total
+      final_total: total,
+      using_snapshot: !!pricingSnapshot,
     });
   }
 
@@ -253,8 +259,16 @@ export default function CartPage() {
                 SKU: {item.sku}
               </p>
               <p style={{ margin: '5px 0 0 0', fontWeight: 'bold' }}>
-                €{formatPrice(item.price)}
+                €{formatPrice(resolveCartItemPrice(item, null, null))}
               </p>
+              {(() => {
+                const resolvedPrice = resolveCartItemPrice(item, null, null);
+                const priceError = validateCartItemPrice(item, resolvedPrice);
+                if (priceError) {
+                  return <p style={{ margin: '5px 0 0 0', color: '#dc3545', fontSize: '12px' }}>{priceError}</p>;
+                }
+                return null;
+              })()}
             </div>
 
             {/* Quantity Controls */}
@@ -308,7 +322,7 @@ export default function CartPage() {
             {/* Subtotal */}
             <div style={{ minWidth: '100px', textAlign: 'right' }}>
               <p style={{ margin: 0, fontWeight: 'bold', fontSize: '18px' }}>
-                €{formatPrice(item.price * item.quantity)}
+                €{formatPrice(resolveCartItemPrice(item, null, null) * item.quantity)}
               </p>
             </div>
 
