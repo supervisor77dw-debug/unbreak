@@ -205,9 +205,19 @@ export default function CartPage() {
   // Use pricing snapshot from server (SINGLE SOURCE OF TRUTH)
   // Fallback to local calculation if snapshot not available yet
   const calculateLocalSubtotal = () => {
-    return cartItems.reduce((sum, item) => {
-      return sum + (item.unit_price_cents * item.quantity);
-    }, 0);
+    let total = 0;
+    cartItems.forEach(item => {
+      const line_total = item.unit_price_cents * item.quantity;
+      console.log('[CART][TOTALS] Item:', {
+        sku: item.sku,
+        unit_price_cents: item.unit_price_cents,
+        qty: item.quantity,
+        line_total
+      });
+      total += line_total;
+    });
+    console.log('[CART][TOTALS] computed_subtotal:', total);
+    return total;
   };
 
   const subtotal = pricingSnapshot?.subtotal_cents || calculateLocalSubtotal();

@@ -744,12 +744,24 @@
       const cart = getCart();
 
       // Prepare cart item from configurator config
+      // CRITICAL: Extract price from config.pricing (set by configurator)
+      const computed_unit_price_cents = config.pricing?.totalPrice || 0;
+      const configHash = JSON.stringify(config);
+      
+      console.log('[CFG][ADD_CLICK]', {
+        sku: config.variant === 'bottle_holder' ? 'UNBREAK-WEIN-CONFIG' : 'UNBREAK-GLAS-CONFIG',
+        variant: config.variant,
+        computed_unit_price_cents,
+        configHash,
+        timestamp: Date.now()
+      });
+      
       const cartItem = {
         product_id: 'glass_configurator', // Special ID for configurator items
         sku: config.variant === 'bottle_holder' ? 'UNBREAK-WEIN-CONFIG' : 'UNBREAK-GLAS-CONFIG',
         name: config.variant === 'bottle_holder' ? 'Flaschenhalter (konfiguriert)' : 'Glashalter (konfiguriert)',
         title_de: config.variant === 'bottle_holder' ? 'Flaschenhalter (konfiguriert)' : 'Glashalter (konfiguriert)',
-        price: 0, // Will be calculated from config
+        price_cents: computed_unit_price_cents, // ✅ Use fresh calculated price from config.pricing
         configured: true,
         config: config, // Full configuration
         image_url: config.preview_image || null,
