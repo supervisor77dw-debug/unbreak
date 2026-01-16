@@ -10,6 +10,12 @@ export default function Success() {
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isClient, setIsClient] = useState(false); // Fix SSR hydration
+
+  // Fix SSR/Client hydration mismatch for i18n
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     // Add spinner animation
@@ -81,13 +87,13 @@ export default function Success() {
     return (
       <>
         <Head>
-          <title>{ts('success.loading.title')} – UNBREAK ONE</title>
+          <title>{isClient ? ts('success.loading.title') : 'Processing Order'} – UNBREAK ONE</title>
           <meta name="robots" content="noindex, nofollow" />
         </Head>
         <div style={styles.container}>
           <div style={styles.card}>
             <div style={styles.spinner}></div>
-            <p style={styles.loadingText}>{ts('success.loading.message')}</p>
+            <p style={styles.loadingText}>{isClient ? ts('success.loading.message') : 'Processing your order...'}</p>
           </div>
         </div>
       </>
@@ -95,6 +101,17 @@ export default function Success() {
   }
 
   if (error) {
+    // Don't render i18n content until client-side hydration complete
+    if (!isClient) {
+      return (
+        <div style={styles.container}>
+          <div style={styles.card}>
+            <p>Loading...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <>
         <Head>
@@ -114,6 +131,18 @@ export default function Success() {
           </div>
         </div>
       </>
+    );
+  }
+
+  // Don't render i18n content until client-side hydration complete
+  if (!isClient) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <div style={styles.spinner}></div>
+          <p style={styles.loadingText}>Loading...</p>
+        </div>
+      </div>
     );
   }
 
