@@ -169,36 +169,30 @@ export default function CartPage() {
   };
 
   // ====================================================================
-  // PRICING: Normalize cart items to canonical schema (unit_price_cents)
+  // PRICING: Use pricing snapshot from server (SINGLE SOURCE OF TRUTH)
   // ====================================================================
-  // EMERGENCY FIX: Normalize ALL items to use unit_price_cents ONLY
-  const normalizedCartItems = cartItems.map(item => {
-    const unit_price_cents = 
-      item.unit_price_cents ||
-      item.price_cents ||
-      (item.price ? Math.round(item.price * 100) : 0);
-    
-    return {
-      ...item,
-      unit_price_cents,
-    };
-  });
-
-  // DEBUG: Log normalized items
+  // Items are already normalized to unit_price_cents in lib/cart.js
+  // No need to normalize here - just use the canonical schema
+  
+  // DEBUG: Log cart items (canonical schema validation)
   if (typeof window !== 'undefined' && window.location?.search?.includes('debugCart=1')) {
-    console.log('[CART][NORMALIZED_ITEMS]', normalizedCartItems.map(i => ({
+    console.log('[CART][ITEMS_NORMALIZED]', cartItems.map(i => ({
       sku: i.sku,
       qty: i.quantity,
       unit_price_cents: i.unit_price_cents,
-      raw_price: i.price,
-      raw_price_cents: i.price_cents,
+      currency: i.currency,
     })));
   }
 
   // Use pricing snapshot from server (SINGLE SOURCE OF TRUTH)
-  // Fallback to central resolver if snapshot not available yet
-  const { subtotal_cents: calculatedSubtotal } = calculateCartTotal(normalizedCartItems, null, null);
-  const subtotal = pricingSnapshot?.subtotal_cents || calculatedSubtotal;
+  // Fallback to local calculation if snapshot not available yet
+  const calculateLocalSubtotal = () => {
+    return cartItems.reduce((sum, item) => {
+      return sum + (item.unit_price_cents * item.quantity);
+    }, 0);
+  };
+
+  const subtotal = pricingSnapshot?.subtotal_cents || calculateLocalSubtotal();
   const shipping = pricingSnapshot?.shipping_cents || 0;
   const total = pricingSnapshot?.grand_total_cents || (subtotal + shipping);
 
@@ -251,7 +245,7 @@ export default function CartPage() {
       )}
 
       <div style={{ marginBottom: '30px' }}>
-        {normalizedCartItems.map((item) => (
+        {cartItems.map((item) => (
           <div
             key={item.product_id}
             style={{
