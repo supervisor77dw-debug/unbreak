@@ -89,17 +89,26 @@ export default async function handler(req, res) {
       .from('simple_orders')
       .update({ 
         status: 'paid',
-        payment_status: session.payment_status,
+        paid_at: new Date().toISOString(),
         stripe_payment_intent_id: session.payment_intent?.id || session.payment_intent,
         updated_at: new Date().toISOString(),
       })
       .eq('id', orderId);
 
     if (updateError) {
-      console.error('[FINALIZE] Failed to update order:', updateError);
+      console.error('[FINALIZE] Failed to update order:', {
+        error: updateError,
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        order_id: orderId,
+      });
       return res.status(500).json({ 
         error: 'Failed to update order',
-        details: updateError.message,
+        code: updateError.code,
+        message: updateError.message,
+        hint: updateError.hint,
         cleared: false,
       });
     }
