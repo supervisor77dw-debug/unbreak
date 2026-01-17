@@ -1,7 +1,16 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
-import prisma from '../../../lib/prisma';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
 
 export const authOptions = {
   providers: [
@@ -16,33 +25,33 @@ export const authOptions = {
           throw new Error('Email and password required');
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
-        });
+        try {
+          // Authenticate with Supabase Auth
+          const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+            email: credentials.email,
+            password: credentials.password,
+          });
 
-        if (!user) {
-          throw new Error('No user found with this email');
+          if (error) {
+            console.error('[AUTH] Supabase login error:', error.message);
+            throw new Error('Invalid email or password');
+          }
+
+          if (!data.user) {
+            throw new Error('No user found');
+          }
+
+          // Return user data for session
+          return {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || 'Admin',
+            role: data.user.user_metadata?.role || 'ADMIN',
+          };
+        } catch (err) {
+          console.error('[AUTH] Authorization failed:', err.message);
+          throw err;
         }
-
-        if (!user.isActive) {
-          throw new Error('Account is inactive');
-        }
-
-        const isValidPassword = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash
-        );
-
-        if (!isValidPassword) {
-          throw new Error('Invalid password');
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       }
     })
   ],
