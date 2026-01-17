@@ -681,7 +681,7 @@ export default async function handler(req, res) {
 
     const sessionData = {
       // PAYMENT METHODS: Card + PayPal (confirmed active)
-      payment_method_types: ['card', 'paypal'],
+      payment_method_types: ['card'], // PayPal temporarily disabled (verification pending)
       line_items: lineItems,
       mode: 'payment',
       locale: stripeLocale, // 'de' or 'en' based on cart language
