@@ -119,6 +119,33 @@ export default async function handler(req, res) {
 
     console.log('✅ [FINALIZE] Order finalized:', orderId);
 
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // EMAIL NOTIFICATION
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // NOTE: Email sending is handled by Stripe webhook (checkout.session.completed)
+    // This finalize endpoint is called from frontend after successful payment
+    // to update order status and clear cart.
+    // 
+    // Emails are sent by: pages/api/webhooks/stripe.js
+    // Trigger: checkout.session.completed event
+    // 
+    // Why not send email here?
+    // 1. Webhook is more reliable (retries on failure)
+    // 2. Finalize can be called multiple times (idempotent)
+    // 3. Email should only be sent once per order
+    // 
+    // Logging for diagnostics:
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📧 [FINALIZE] Email notification status for order ${orderId}:`);
+    console.log(`📧 [FINALIZE] Email is sent via Stripe webhook (checkout.session.completed)`);
+    console.log(`📧 [FINALIZE] Check webhook logs for: [EMAIL ATTEMPT] trace_id=...`);
+    console.log(`📧 [FINALIZE] Session ID: ${session_id}`);
+    console.log(`📧 [FINALIZE] Customer: ${session.customer_details?.email || 'N/A'}`);
+    console.log(`📧 [FINALIZE] Payment Status: ${session.payment_status}`);
+    console.log(`📧 [FINALIZE] Order Status: paid (just updated)`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
     // 7. Return success (client will clear cart)
     return res.status(200).json({ 
       ok: true,

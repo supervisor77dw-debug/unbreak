@@ -289,7 +289,7 @@ RESEND_API_KEY=re_YourActualKeyHere    # ✅ MUSS gesetzt sein
 # Stripe (Test-Mode)
 STRIPE_MODE=test                       # ✅ Test-Mode
 STRIPE_SECRET_KEY=sk_test_...          # ✅ Test Secret Key
-STRIPE_PUBLISHABLE_KEY=pk_test_...     # ✅ Test Publishable Key
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...     # ✅ Test Publishable Key
 STRIPE_WEBHOOK_SECRET=whsec_...        # ✅ Test Webhook Secret
 
 # Supabase (gleich wie Production)
