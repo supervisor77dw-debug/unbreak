@@ -785,6 +785,193 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
 }
 
 /**
+ * SSOT MODE: Sync Stripe Session directly to admin_orders (NO legacy tables)
+ * 
+ * @param {Object} session - Stripe session (with expansions)
+ * @param {Object} extractedData - Pre-extracted data: { customerEmail, customerName, customerPhone, shippingAddress, billingAddress, items }
+ * @returns {Object|null} - Created/updated admin_orders record or null on failure
+ */
+async function syncStripeSessionToAdminOrders(session, extractedData) {
+  try {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('💾 [SSOT WRITE] Starting direct write to admin_orders...');
+    console.log('💾 [SSOT WRITE] Session ID:', session.id);
+    console.log('💾 [SSOT WRITE] Payment Intent:', session.payment_intent);
+    console.log('💾 [SSOT WRITE] Customer:', extractedData.customerEmail);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    const { customerEmail, customerName, customerPhone, shippingAddress, billingAddress, items } = extractedData;
+    
+    // 1. Upsert customer in admin_customers
+    const customer = await prisma.customer.upsert({
+      where: { email: customerEmail },
+      update: {
+        name: customerName,
+        lastOrderAt: new Date(),
+      },
+      create: {
+        email: customerEmail,
+        name: customerName,
+        phone: customerPhone,
+      },
+    });
+    
+    console.log('✅ [ADMIN_CUSTOMERS] Upserted customer:', customer.id.substring(0, 8));
+    
+    // 2. Determine shipping region
+    const shippingCountry = shippingAddress?.country || billingAddress?.country || 'DE';
+    const { countryToRegion } = require('../../../lib/utils/shipping');
+    const shippingRegion = countryToRegion(shippingCountry);
+    
+    console.log('🌍 [SHIPPING] Country:', shippingCountry, '→ Region:', shippingRegion);
+    
+    // 3. Calculate subtotal
+    const subtotalNet = items.reduce((sum, item) => sum + item.totalPrice, 0);
+    const taxRate = 0.19;
+    
+    // 4. Get shipping rate from DB (GROSS calculation)
+    let amountShipping = 0;
+    try {
+      const shippingRate = await prisma.shippingRate.findFirst({
+        where: { 
+          countryCode: shippingRegion,
+          active: true 
+        },
+        select: {
+          priceNet: true,
+          labelDe: true
+        }
+      });
+      
+      if (shippingRate) {
+        const shippingNet = shippingRate.priceNet;
+        const shippingTax = Math.round(shippingNet * taxRate);
+        amountShipping = shippingNet + shippingTax; // GROSS
+        
+        console.log('✅ [SHIPPING] From DB:', shippingRegion, '→ Net:', shippingNet, '¢ + Tax:', shippingTax, '¢ = Gross:', amountShipping, '¢');
+      } else {
+        const fallbackNetRates = { DE: 490, EU: 1290, INT: 2490 };
+        const shippingNet = fallbackNetRates[shippingRegion] || 2490;
+        const shippingTax = Math.round(shippingNet * taxRate);
+        amountShipping = shippingNet + shippingTax;
+        
+        console.warn('⚠️ [SHIPPING] No DB rate, using fallback: Net', shippingNet, '¢ + Tax', shippingTax, '¢ = Gross', amountShipping, '¢');
+      }
+    } catch (error) {
+      console.error('❌ [SHIPPING] DB query failed:', error.message);
+      const fallbackNetRates = { DE: 490, EU: 1290, INT: 2490 };
+      const shippingNet = fallbackNetRates[shippingRegion] || 2490;
+      const shippingTax = Math.round(shippingNet * taxRate);
+      amountShipping = shippingNet + shippingTax;
+      
+      console.warn('⚠️ [SHIPPING] Using fallback: Net', shippingNet, '¢ + Tax', shippingTax, '¢ = Gross', amountShipping, '¢');
+    }
+    
+    // 5. Calculate tax and total
+    const taxAmount = Math.round(subtotalNet * taxRate);
+    const totalGross = subtotalNet + taxAmount + amountShipping;
+    
+    console.log('💰 [PRICING] Subtotal:', subtotalNet, '¢ | Shipping (GROSS):', amountShipping, '¢ | Tax:', taxAmount, '¢ | Total:', totalGross, '¢');
+    
+    // 6. Create/update order in admin_orders
+    const order = await prisma.order.upsert({
+      where: { stripeCheckoutSessionId: session.id },
+      update: {
+        statusPayment: 'PAID',
+        stripePaymentIntentId: session.payment_intent,
+        paidAt: new Date(),
+        updatedAt: new Date(),
+      },
+      create: {
+        stripeCheckoutSessionId: session.id,
+        stripePaymentIntentId: session.payment_intent,
+        statusPayment: 'PAID',
+        statusFulfillment: 'NEW',
+        currency: (session.currency || 'EUR').toUpperCase(),
+        amountTotal: totalGross,
+        amountShipping: amountShipping,
+        amountTax: taxAmount,
+        subtotalNet: subtotalNet,
+        taxRate: taxRate,
+        taxAmount: taxAmount,
+        totalGross: totalGross,
+        email: customerEmail,
+        shippingName: shippingAddress?.name || customerName,
+        shippingAddress: shippingAddress,
+        billingAddress: billingAddress,
+        shippingRegion: shippingRegion,
+        customerId: customer.id,
+        paidAt: new Date(),
+      },
+    });
+
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`[DB_WRITE_OK] admin_orders upserted: ${order.id.substring(0, 8)}`);
+    console.log(`[DB_WRITE_OK] session_id=${session.id.substring(0, 20)} payment_intent=${session.payment_intent}`);
+    console.log(`[DB_WRITE_OK] email=${customerEmail} region=${shippingRegion}`);
+    console.log(`[DB_WRITE_OK] amounts: subtotal=${subtotalNet}¢ shipping_gross=${amountShipping}¢ tax=${taxAmount}¢ total=${totalGross}¢`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    // 7. Idempotency check for items
+    const existingItems = await prisma.orderItem.count({
+      where: { orderId: order.id }
+    });
+
+    if (existingItems > 0) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`[IDEMPOTENT_SKIP] Items already exist for order ${order.id.substring(0, 8)}: ${existingItems} items`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } else if (items.length > 0) {
+      console.log('🛒 [ADMIN_ORDER_ITEMS] Creating items...');
+      let insertedCount = 0;
+      
+      for (const item of items) {
+        await prisma.orderItem.create({
+          data: {
+            orderId: order.id,
+            sku: item.sku,
+            name: item.name,
+            variant: item.variant,
+            qty: item.qty,
+            unitPrice: item.unitPrice,
+            totalPrice: item.totalPrice,
+          },
+        });
+        insertedCount++;
+      }
+      
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`[DB_WRITE_OK] admin_order_items inserted: ${insertedCount} items for order ${order.id.substring(0, 8)}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    }
+
+    // 8. Log event to admin_order_events
+    await prisma.orderEvent.create({
+      data: {
+        orderId: order.id,
+        type: 'STRIPE_WEBHOOK',
+        source: 'stripe',
+        payload: {
+          event: 'checkout.session.completed',
+          session_id: session.id,
+          payment_intent: session.payment_intent,
+          amount_total: session.amount_total,
+        },
+      },
+    });
+
+    console.log('✅ [SSOT WRITE] Complete - admin_orders + admin_order_items + admin_order_events written');
+
+    return order;
+
+  } catch (error) {
+    console.error('⚠️ [SSOT WRITE] Failed:', error.message);
+    console.error('⚠️ [SSOT WRITE] Stack:', error.stack);
+    return null;
+  }
+}
+
+/**
  * Sync order to Supabase admin_orders + admin_order_items
  * (Prisma is only the query client, NOT the data owner)
  */
