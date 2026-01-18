@@ -460,8 +460,8 @@ async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
     }
 
     // Extract customer data from Stripe session (COMPLETE)
+    // customerEmail already set by priority logic above (line 407-424)
     const customerName = session.customer_details?.name || '(fehlt)';
-    const customerEmail = session.customer_details?.email || session.customer_email;
     const customerPhone = session.customer_details?.phone || '(fehlt)';
     const billingAddress = session.customer_details?.address || null;
     const shippingAddress = session.shipping_details?.address || null;
