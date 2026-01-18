@@ -1,7 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+import { stripe, guardCheckoutSession, STRIPE_MODE } from '../../../lib/stripe-config.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -124,7 +123,7 @@ export default async function handler(req, res) {
     }
 
     // 6. Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create(guardCheckoutSession({
       // Payment methods: card, PayPal, SEPA, Klarna
       payment_method_types: ['card'], // PayPal temporarily disabled (verification pending)
       locale: 'de', // Preset endpoint defaults to German
@@ -143,17 +142,27 @@ export default async function handler(req, res) {
         },
       ],
       mode: 'payment',
+      
+      // SHIPPING: Address + Phone collection (for fulfillment)
+      shipping_address_collection: {
+        allowed_countries: ['DE', 'AT', 'CH', 'NL', 'BE', 'LU', 'FR', 'IT', 'ES', 'PT'],
+      },
+      phone_number_collection: {
+        enabled: true,
+      },
+      
       success_url: `${getOrigin(req)}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${getOrigin(req)}/cancel.html`,
       customer_email: customerEmail || undefined,
       metadata: {
         order_id: order.id,
         preset_id: preset.id,
+        stripe_mode: STRIPE_MODE,
         configuration_id: configuration.id,
         type: 'preset',
         user_id: userId || 'guest',
       },
-    });
+    }));
 
     // 7. Update order with payment intent
     await supabase

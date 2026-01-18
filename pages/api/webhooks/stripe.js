@@ -5,8 +5,7 @@ import prisma from '../../../lib/prisma';
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
 import { countryToRegion } from '../../../lib/utils/shipping.js';
 import { sendOrderConfirmation } from '../../../lib/email/emailService';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+import { stripe, shouldProcessWebhookEvent, getWebhookSecret, IS_TEST_MODE, STRIPE_MODE } from '../../../lib/stripe-config.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -48,14 +47,27 @@ export default async function handler(req, res) {
       event = stripe.webhooks.constructEvent(
         buf,
         sig,
-        process.env.STRIPE_WEBHOOK_SECRET
+        getWebhookSecret()
       );
       console.log('✅ [SIGNATURE] Verified OK');
       console.log('📥 [EVENT] Type:', event.type);
       console.log('📥 [EVENT] ID:', event.id);
+      console.log(`🔒 [STRIPE MODE] Event livemode=${event.livemode}, Server mode=${STRIPE_MODE}`);
     } catch (err) {
       console.error('❌ [SIGNATURE] Verification FAILED:', err.message);
       return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
+    }
+
+    // 2.5 Validate event matches configured Stripe mode
+    if (!shouldProcessWebhookEvent(event)) {
+      console.warn(`⚠️ [WEBHOOK FILTER] Skipping event (mode mismatch): ${event.type}`);
+      return res.status(200).json({ 
+        received: true, 
+        skipped: true, 
+        reason: 'mode_mismatch',
+        event_livemode: event.livemode,
+        server_mode: STRIPE_MODE
+      });
     }
 
     // Extract trace_id from event metadata (passed through from checkout)
@@ -70,7 +82,9 @@ export default async function handler(req, res) {
       trace_id,
       event_id: event.id,
       event_type: event.type,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      stripe_mode: STRIPE_MODE,
+      is_test_mode: IS_TEST_MODE
     });
     
     // 3. Handle specific events
@@ -418,6 +432,7 @@ async function sendOrderConfirmationEmail(session, order) {
 
     // Extract customer data from Stripe session
     const customerName = session.customer_details?.name;
+    const customerPhone = session.customer_details?.phone;
     const shippingAddress = session.shipping_details?.address;
 
     // Load Line Items from Stripe (with proper amounts)
@@ -508,6 +523,7 @@ async function sendOrderConfirmationEmail(session, order) {
       orderNumber: orderNumber,
       customerEmail,
       customerName,
+      customerPhone, // ← NEW: Phone for support team
       items,
       totalAmount: order.total_amount_cents,
       language,
