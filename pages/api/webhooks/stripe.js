@@ -84,12 +84,10 @@ export default async function handler(req, res) {
     
     // Success
     const eventMode = event.livemode ? 'LIVE' : 'TEST';
+    const trace_id = event.data.object.metadata?.trace_id;
+    
     console.log(`✅ [WEBHOOK] OK secret_index=${matchedSecretIndex} livemode=${event.livemode} event=${event.type} id=${event.id}`);
     console.log(`🔒 [MODE] event.livemode=${event.livemode} → ${eventMode}`);
-
-    // Extract trace_id from event metadata
-    const trace_id = event.data.object.metadata?.trace_id;
-    const eventMode = event.livemode ? 'LIVE' : 'TEST';
     
     console.log('[WEBHOOK HIT]', event.type);
     console.log('[EVENT MODE]', eventMode);
