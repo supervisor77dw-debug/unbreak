@@ -39,24 +39,53 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing stripe-signature header' });
     }
 
-    // 2. Verify webhook signature
+    // 2. Verify webhook signature (multi-secret support)
     let event;
-    try {
-      const webhookSecret = getWebhookSecret();
-      event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
-      
-      // MODE DETECTION via event.livemode ONLY
-      const eventMode = event.livemode ? 'LIVE' : 'TEST';
-      
-      console.log('✅ [SIGNATURE] Verified OK');
-      console.log('📥 [EVENT] Type:', event.type);
-      console.log('📥 [EVENT] ID:', event.id);
-      console.log(`🔒 [MODE] event.livemode=${event.livemode} → ${eventMode}`);
-      console.log(`🔑 [SECRET] Using STRIPE_WEBHOOK_SECRET from Vercel scope`);
-    } catch (err) {
-      console.error('❌ [SIGNATURE] Verification FAILED:', err.message);
-      return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
+    let matchedSecretIndex = -1;
+    
+    // Parse webhook secrets (supports single or multiple secrets separated by | or ,)
+    const webhookSecretEnv = getWebhookSecret();
+    const webhookSecrets = webhookSecretEnv.includes('|') 
+      ? webhookSecretEnv.split('|').map(s => s.trim())
+      : webhookSecretEnv.includes(',')
+      ? webhookSecretEnv.split(',').map(s => s.trim())
+      : [webhookSecretEnv.trim()];
+    
+    console.log(`🔑 [SECRETS] Found ${webhookSecrets.length} webhook secret(s)`);
+    
+    // Try to verify with each secret
+    let lastError = null;
+    for (let i = 0; i < webhookSecrets.length; i++) {
+      try {
+        event = stripe.webhooks.constructEvent(buf, sig, webhookSecrets[i]);
+        matchedSecretIndex = i;
+        break; // Success - stop trying
+      } catch (err) {
+        lastError = err;
+        // Continue to next secret
+      }
     }
+    
+    if (matchedSecretIndex === -1) {
+      // No secret matched
+      const eventIdHint = lastError?.raw?.event?.id || 'unknown';
+      const livemodeHint = lastError?.raw?.event?.livemode !== undefined 
+        ? lastError.raw.event.livemode 
+        : 'unknown';
+      
+      console.error(`❌ [WEBHOOK] FAIL signature mismatch (tried ${webhookSecrets.length} secrets)`);
+      console.error(`❌ [WEBHOOK] event_id=${eventIdHint} livemode=${livemodeHint}`);
+      console.error(`❌ [SIGNATURE] Last error: ${lastError.message}`);
+      
+      return res.status(400).json({ 
+        error: `Webhook signature verification failed: ${lastError.message}` 
+      });
+    }
+    
+    // Success
+    const eventMode = event.livemode ? 'LIVE' : 'TEST';
+    console.log(`✅ [WEBHOOK] OK secret_index=${matchedSecretIndex} livemode=${event.livemode} event=${event.type} id=${event.id}`);
+    console.log(`🔒 [MODE] event.livemode=${event.livemode} → ${eventMode}`);
 
     // Extract trace_id from event metadata
     const trace_id = event.data.object.metadata?.trace_id;

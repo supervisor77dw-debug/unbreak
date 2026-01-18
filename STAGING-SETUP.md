@@ -56,6 +56,11 @@ STRIPE_MODE=test
 # Stripe Test Keys
 STRIPE_SECRET_KEY=sk_test_... # Aus Stripe Dashboard → Test Mode
 STRIPE_PUBLISHABLE_KEY=pk_test_... # Aus Stripe Dashboard → Test Mode
+
+# Webhook Secret (supports multiple secrets)
+# Format: Single secret OR multiple separated by |
+# Example single: whsec_test_abc123
+# Example multi: whsec_live_xyz|whsec_test_abc (both Live + Test)
 STRIPE_WEBHOOK_SECRET=whsec_... # Webhook Endpoint für Staging
 
 # Database (gleiche Supabase wie Production)
