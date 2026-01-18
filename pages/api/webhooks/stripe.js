@@ -458,40 +458,111 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     }
 
     console.log('✅ [VALIDATION] Order complete - all required fields present');
-    console.log('✅ [VALIDATION] Proceeding to email...');
+    console.log('✅ [VALIDATION] Proceeding to Prisma sync...');
 
     // === SYNC STRIPE CUSTOMER TO SUPABASE ===
     await syncStripeCustomerToSupabase(fullSession, orderFromDB, trace_id);
 
     // === SYNC TO PRISMA (ADMIN SYSTEM) ===
-    await syncOrderToPrisma(fullSession, orderFromDB, orderSource);
+    const prismaOrder = await syncOrderToPrisma(fullSession, orderFromDB, orderSource);
 
-    // === SEND ORDER CONFIRMATION EMAIL (DB-FIRST) ===
-    try {
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`📧 [EMAIL ATTEMPT] trace_id=${trace_id} mode=${eventMode}`);
-      console.log(`📧 [EMAIL] Order: ${orderFromDB.id}`);
-      console.log(`📧 [EMAIL] Order Number: ${orderFromDB.order_number}`);
-      console.log(`📧 [EMAIL] Customer: ${orderFromDB.customer_email}`);
-      console.log(`📧 [EMAIL] Source: DATABASE (not Stripe session)`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      
-      // CRITICAL: Pass orderFromDB, not fullSession
-      await sendOrderConfirmationEmail(orderFromDB, trace_id, eventMode);
-      
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id} - Email flow completed`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    } catch (emailError) {
-      // Don't fail the entire webhook if email fails
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error(`❌ [EMAIL FAILED] trace_id=${trace_id} mode=${eventMode}`);
-      console.error(`❌ [EMAIL] Error: ${emailError.message}`);
-      console.error(`❌ [EMAIL] Stack:`, emailError.stack);
-      console.error(`❌ [EMAIL] Order ID: ${order.id}`);
-      console.error(`❌ [EMAIL] Session ID: ${session.id}`);
-      console.error('⚠️ [EMAIL] Order was still created successfully (email failed)');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // === SEND ORDER CONFIRMATION EMAIL (PRISMA DB-FIRST) ===
+    if (prismaOrder) {
+      try {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`📧 [EMAIL ATTEMPT] trace_id=${trace_id} mode=${eventMode}`);
+        console.log(`📧 [EMAIL] Order ID: ${prismaOrder.id}`);
+        console.log(`📧 [EMAIL] Source: PRISMA admin_orders + admin_order_items (DB-FIRST)`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        
+        // Query full order with items from Prisma
+        const orderWithItems = await prisma.order.findUnique({
+          where: { id: prismaOrder.id },
+          include: {
+            items: {
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+                variant: true,
+                qty: true,
+                unitPrice: true,
+                totalPrice: true,
+              }
+            }
+          }
+        });
+        
+        if (!orderWithItems) {
+          console.error('❌ [EMAIL] Order not found in Prisma after sync:', prismaOrder.id);
+          throw new Error('Order not found after Prisma sync');
+        }
+        
+        // Format items for email service (match expected structure)
+        const emailItems = orderWithItems.items.map(item => ({
+          name: item.name,
+          quantity: item.qty,
+          price_cents: item.unitPrice,
+          line_total_cents: item.totalPrice
+        }));
+        
+        console.log('[EMAIL_PAYLOAD_FROM_DB] Prisma order loaded:');
+        console.log(`[EMAIL_PAYLOAD_FROM_DB] order_id=${orderWithItems.id.substring(0, 8)}`);
+        console.log(`[EMAIL_PAYLOAD_FROM_DB] items_count=${emailItems.length}`);
+        console.log('[EMAIL_PAYLOAD_FROM_DB] Items:');
+        emailItems.forEach((item, idx) => {
+          console.log(`[EMAIL_PAYLOAD_FROM_DB]   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
+        });
+        console.log(`[EMAIL_PAYLOAD_FROM_DB] Totals: subtotal=${orderWithItems.subtotalNet}¢ shipping=${orderWithItems.amountShipping}¢ tax=${orderWithItems.taxAmount}¢ total=${orderWithItems.totalGross}¢`);
+        console.log(`[EMAIL_PAYLOAD_FROM_DB] Addresses: billing=${orderWithItems.billingAddress ? 'YES' : 'NO'} shipping=${orderWithItems.shippingAddress ? 'YES' : 'NO'}`);
+        
+        // Call email service with PRISMA data
+        const emailResult = await sendOrderConfirmation({
+          orderId: orderWithItems.id,
+          orderNumber: orderWithItems.id.substring(0, 8).toUpperCase(),
+          customerEmail: orderWithItems.email,
+          customerName: orderWithItems.shippingName,
+          items: emailItems,
+          totalAmount: orderWithItems.totalGross,
+          language: 'de', // TODO: detect from country
+          shippingAddress: orderWithItems.shippingAddress,
+          billingAddress: orderWithItems.billingAddress,
+          amountSubtotal: orderWithItems.subtotalNet,
+          shippingCost: orderWithItems.amountShipping,
+          orderDate: orderWithItems.createdAt,
+          bcc: ['admin@unbreak-one.com', 'orders@unbreak-one.com']
+        });
+        
+        if (emailResult.sent) {
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id} - Email sent from Prisma data`);
+          console.log(`✅ [EMAIL] Resend ID: ${emailResult.id}`);
+          console.log(`✅ [EMAIL] TO: ${orderWithItems.email}`);
+          console.log(`✅ [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
+          console.log('[MAIL] send customer ok');
+          console.log('[MAIL] send internal/bcc ok');
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        } else if (emailResult.preview) {
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.log(`📋 [EMAIL PREVIEW] trace_id=${trace_id} - EMAILS DISABLED`);
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        } else {
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          console.error(`❌ [EMAIL FAILED] trace_id=${trace_id} - ${emailResult.error}`);
+          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        }
+        
+      } catch (emailError) {
+        // Don't fail the entire webhook if email fails
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error(`❌ [EMAIL FAILED] trace_id=${trace_id} mode=${eventMode}`);
+        console.error(`❌ [EMAIL] Error: ${emailError.message}`);
+        console.error(`❌ [EMAIL] Stack:`, emailError.stack);
+        console.error('⚠️ [EMAIL] Order was still created successfully (email failed)');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      }
+    } else {
+      console.warn('⚠️ [EMAIL] Skipping email - Prisma sync returned null (sync failed)');
     }
 
   } catch (error) {
@@ -855,29 +926,48 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     console.log('🌍 [PRISMA SYNC] Shipping country:', shippingCountry, '→ Region:', shippingRegion);
     
     // Calculate shipping from Backend DB (NOT from Stripe!)
+    // Calculate subtotal to determine tax rate first
+    const subtotalNet = items.reduce((sum, item) => sum + (item.unitPrice * item.qty), 0);
+    
+    // Determine tax rate (19% for Germany)
+    const taxRate = 0.19;
+    
     amountShipping = 0; // Reset before calculation
     try {
       const shippingRate = await prisma.shippingRate.findFirst({
         where: { 
           countryCode: shippingRegion,
           active: true 
+        },
+        select: {
+          priceNet: true,
+          labelDe: true
         }
       });
       
       if (shippingRate) {
-        amountShipping = shippingRate.priceNet;
-        console.log('✅ [SHIPPING] From DB:', shippingRegion, '→', amountShipping, '¢ (', shippingRate.labelDe, ')');
+        const shippingNet = shippingRate.priceNet;
+        const shippingTax = Math.round(shippingNet * taxRate);
+        amountShipping = shippingNet + shippingTax; // GROSS = NET + TAX
+        
+        console.log('✅ [SHIPPING] From DB:', shippingRegion, '→ Net:', shippingNet, '¢ + Tax:', shippingTax, '¢ = Gross:', amountShipping, '¢ (', shippingRate.labelDe, ')');
       } else {
-        // Fallback to hardcoded values if DB query fails
-        const fallbackRates = { DE: 490, EU: 1290, INT: 2490 };
-        amountShipping = fallbackRates[shippingRegion] || 2490;
-        console.warn('⚠️ [SHIPPING] No DB rate found, using fallback:', amountShipping, '¢');
+        // Fallback to hardcoded NET values, then add tax
+        const fallbackNetRates = { DE: 490, EU: 1290, INT: 2490 };
+        const shippingNet = fallbackNetRates[shippingRegion] || 2490;
+        const shippingTax = Math.round(shippingNet * taxRate);
+        amountShipping = shippingNet + shippingTax;
+        
+        console.warn('⚠️ [SHIPPING] No DB rate found, using fallback: Net', shippingNet, '¢ + Tax', shippingTax, '¢ = Gross', amountShipping, '¢');
       }
     } catch (error) {
       console.error('❌ [SHIPPING] DB query failed:', error.message);
-      const fallbackRates = { DE: 490, EU: 1290, INT: 2490 };
-      amountShipping = fallbackRates[shippingRegion] || 2490;
-      console.warn('⚠️ [SHIPPING] Using fallback:', amountShipping, '¢');
+      const fallbackNetRates = { DE: 490, EU: 1290, INT: 2490 };
+      const shippingNet = fallbackNetRates[shippingRegion] || 2490;
+      const shippingTax = Math.round(shippingNet * taxRate);
+      amountShipping = shippingNet + shippingTax;
+      
+      console.warn('⚠️ [SHIPPING] Using fallback: Net', shippingNet, '¢ + Tax', shippingTax, '¢ = Gross', amountShipping, '¢');
     }
     
     // Extract addresses with fallbacks (CRITICAL for admin_orders)
@@ -889,15 +979,12 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     console.log('🏠 [PRISMA SYNC] Shipping address:', shippingAddress ? `${shippingAddress.line1}, ${shippingAddress.city}` : 'MISSING');
     console.log('📋 [PRISMA SYNC] Billing address:', billingAddress ? `${billingAddress.line1}, ${billingAddress.city}` : 'MISSING');
     
-    // Calculate subtotal from items
-    const subtotalNet = items.reduce((sum, item) => sum + (item.unitPrice * item.qty), 0);
-    
-    // Recalculate tax and total with BACKEND shipping (NOT Stripe!)
-    const taxRate = 0.19; // 19% German VAT
-    const taxAmount = Math.round((subtotalNet + amountShipping) * taxRate);
+    // Recalculate tax and total
+    // Note: amountShipping is already GROSS (includes tax), so only tax the subtotal
+    const taxAmount = Math.round(subtotalNet * taxRate);
     const totalGross = subtotalNet + taxAmount + amountShipping;
     
-    console.log('💰 [PRICING] Subtotal:', subtotalNet, '¢ | Shipping:', amountShipping, '¢ | Tax:', taxAmount, '¢ | Total:', totalGross, '¢');
+    console.log('💰 [PRICING] Subtotal:', subtotalNet, '¢ | Shipping (GROSS):', amountShipping, '¢ | Tax:', taxAmount, '¢ | Total:', totalGross, '¢');
     
     const order = await prisma.order.upsert({
       where: { stripeCheckoutSessionId: session.id },
@@ -937,8 +1024,8 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     console.log(`[DB_WRITE_ORDER] order_id=${order.id.substring(0, 8)} session_id=${session.id.substring(0, 20)}`);
     console.log(`[DB_WRITE_ORDER] shipping_address_present=${!!shippingAddress} billing_address_present=${!!billingAddress}`);
     console.log(`[DB_WRITE_ORDER] email=${customerEmail} region=${shippingRegion}`);
-    console.log(`[DB_WRITE_ORDER] amounts: subtotal=${subtotalNet}¢ shipping=${amountShipping}¢ tax=${taxAmount}¢ total=${totalGross}¢`);
-    console.log(`[DB_WRITE_ORDER] shipping_source=DB_shipping_rates (NOT Stripe!)`);
+    console.log(`[DB_WRITE_ORDER] amounts: subtotal=${subtotalNet}¢ shipping_gross=${amountShipping}¢ tax=${taxAmount}¢ total=${totalGross}¢`);
+    console.log(`[DB_WRITE_ORDER] shipping_source=DB_shipping_rates (GROSS=NET+TAX, NOT Stripe!)`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('✅ [PRISMA SYNC] Admin order:', order.id);
 
@@ -1064,10 +1151,14 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     });
 
     console.log('✅ [PRISMA SYNC] Complete - Order synced to admin system');
+    
+    // Return order data for email (with items included)
+    return order;
 
   } catch (error) {
     // Don't throw - Prisma sync failure shouldn't block webhook
     console.error('⚠️ [PRISMA SYNC] Failed but continuing:', error.message);
+    return null;
   }
 }
 
