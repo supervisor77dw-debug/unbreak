@@ -93,14 +93,21 @@ export default async function handler(req, res) {
       if (image_url !== undefined) updates.image_url = image_url;
       if (image_crop_scale !== undefined) {
         // VALIDATION: Ensure scale is within valid range (1.0 to 2.5)
-        const validScale = Math.max(1.0, Math.min(2.5, parseFloat(image_crop_scale) || 1.0));
+        const numScale = typeof image_crop_scale === 'number' ? image_crop_scale : parseFloat(image_crop_scale);
+        const validScale = Math.max(1.0, Math.min(2.5, isNaN(numScale) ? 1.0 : numScale));
         updates.image_crop_scale = validScale;
         if (validScale !== image_crop_scale) {
           console.warn(`⚠️ [VALIDATION] image_crop_scale adjusted: ${image_crop_scale} → ${validScale}`);
         }
       }
-      if (image_crop_nx !== undefined) updates.image_crop_nx = image_crop_nx;
-      if (image_crop_ny !== undefined) updates.image_crop_ny = image_crop_ny;
+      if (image_crop_nx !== undefined) {
+        // Allow 0 as valid value (center position)
+        updates.image_crop_nx = image_crop_nx;
+      }
+      if (image_crop_ny !== undefined) {
+        // Allow 0 as valid value (center position)
+        updates.image_crop_ny = image_crop_ny;
+      }
       if (image_crop_version !== undefined) updates.image_crop_version = image_crop_version;
       // Legacy x/y for backward compat (not used by server pipeline)
       if (image_crop_x !== undefined) updates.image_crop_x = image_crop_x;
