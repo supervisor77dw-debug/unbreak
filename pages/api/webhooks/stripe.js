@@ -5,7 +5,7 @@ import prisma from '../../../lib/prisma';
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
 import { countryToRegion } from '../../../lib/utils/shipping.js';
 import { sendOrderConfirmation } from '../../../lib/email/emailService';
-import { verifyWebhookEvent, getStripeForEvent } from '../../../lib/stripe-config-v2.js';
+import { stripe, getWebhookSecret, IS_TEST_MODE } from '../../../lib/stripe-config.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -21,10 +21,8 @@ export default async function handler(req, res) {
   // === DIAGNOSTIC LOGGING ===
   console.log('🪝 [WEBHOOK HIT] Method:', req.method);
   console.log('🪝 [WEBHOOK HIT] Has stripe-signature:', !!req.headers['stripe-signature']);
-  console.log('🪝 [ENV CHECK] STRIPE_SECRET_KEY (LIVE) present:', !!process.env.STRIPE_SECRET_KEY);
-  console.log('🪝 [ENV CHECK] STRIPE_TEST_SECRET_KEY (DEBUG) present:', !!process.env.STRIPE_TEST_SECRET_KEY);
-  console.log('🪝 [ENV CHECK] STRIPE_WEBHOOK_SECRET (LIVE) present:', !!process.env.STRIPE_WEBHOOK_SECRET);
-  console.log('🪝 [ENV CHECK] STRIPE_TEST_WEBHOOK_SECRET (DEBUG) present:', !!process.env.STRIPE_TEST_WEBHOOK_SECRET);
+  console.log('🪝 [ENV CHECK] STRIPE_SECRET_KEY present:', !!process.env.STRIPE_SECRET_KEY);
+  console.log('🪝 [ENV CHECK] STRIPE_WEBHOOK_SECRET present:', !!process.env.STRIPE_WEBHOOK_SECRET);
 
   if (req.method !== 'POST') {
     console.log('⚠️ [Webhook] Non-POST request received:', req.method);
@@ -41,22 +39,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing stripe-signature header' });
     }
 
-    // 2. Verify webhook signature (AUTOMATIC mode detection via event.livemode)
+    // 2. Verify webhook signature
     let event;
     try {
-      event = verifyWebhookEvent(buf, sig);
+      event = stripe.webhooks.constructEvent(buf, sig, getWebhookSecret());
       console.log('✅ [SIGNATURE] Verified OK');
       console.log('📥 [EVENT] Type:', event.type);
       console.log('📥 [EVENT] ID:', event.id);
-      console.log(`🔒 [EVENT MODE] event.livemode=${event.livemode} (${event.livemode ? 'LIVE' : 'DEBUG'})`);
+      console.log(`🔒 [EVENT MODE] event.livemode=${event.livemode} (${event.livemode ? 'LIVE' : 'TEST'})`);
     } catch (err) {
       console.error('❌ [SIGNATURE] Verification FAILED:', err.message);
       return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
     }
 
-    // Extract trace_id from event metadata (passed through from checkout)
+    // Extract trace_id from event metadata
     const trace_id = event.data.object.metadata?.trace_id;
-    const eventMode = event.livemode ? 'LIVE' : 'DEBUG';
+    const eventMode = event.livemode ? 'LIVE' : 'TEST';
     
     console.log('[WEBHOOK HIT]', event.type);
     console.log('[EVENT MODE]', eventMode);
@@ -73,13 +71,10 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     });
     
-    // 3. Get appropriate Stripe client for this event
-    const stripe = getStripeForEvent(event);
-    
-    // 4. Handle specific events
+    // 3. Handle specific events
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object, trace_id, stripe);
+        await handleCheckoutSessionCompleted(event.data.object, trace_id);
         break;
 
       case 'customer.created':
@@ -94,7 +89,7 @@ export default async function handler(req, res) {
         console.log(`⚠️ [Webhook] Unhandled event type: ${event.type}`);
     }
 
-    // 5. Return success response
+    // 4. Return success response
     res.status(200).json({ received: true, event: event.type, mode: eventMode });
 
   } catch (error) {
@@ -107,7 +102,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleCheckoutSessionCompleted(session, trace_id, stripe) {
+async function handleCheckoutSessionCompleted(session, trace_id) {
   console.log('[TRACE] WEBHOOK_SESSION_DATA', {
     trace_id,
     stripe_session_id: session.id,

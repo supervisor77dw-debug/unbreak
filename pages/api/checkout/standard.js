@@ -5,7 +5,7 @@ import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.
 import { resolvePriceCents, validatePricing } from '../../../lib/pricing/pricingResolver.js';
 import { getEnvFingerprint, formatFingerprintLog } from '../../../lib/utils/envFingerprint.js';
 import { generateOrderNumber, generatePublicId } from '../../../lib/utils/orderNumber.js';
-import { stripe, guardCheckoutSession } from '../../../lib/stripe-config-v2.js';
+import { stripe, guardCheckoutSession } from '../../../lib/stripe-config.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
