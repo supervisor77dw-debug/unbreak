@@ -268,12 +268,26 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
       return;
     }
 
-    // 2.5 Retrieve complete Stripe session with line_items
+    // 2.5 Retrieve COMPLETE Stripe session with ALL data (CRITICAL!)
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    console.log('🔍 [STRIPE] Retrieving session with line_items...');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔍 [STRIPE RETRIEVE] Loading complete session with expands...');
+    console.log('🔍 [STRIPE RETRIEVE] Session ID:', session.id);
     const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
-      expand: ['line_items']
+      expand: [
+        'line_items',                    // ← Line items array
+        'line_items.data.price',         // ← Price details (unit_amount, currency)
+        'line_items.data.price.product', // ← Product details (name, description)
+        'customer',                      // ← Customer object (email, name, phone)
+        'payment_intent'                 // ← Payment intent (for fees/status)
+      ]
     });
+    console.log('✅ [STRIPE RETRIEVE] Complete session loaded');
+    console.log('✅ [STRIPE RETRIEVE] Line items:', fullSession.line_items?.data?.length || 0);
+    console.log('✅ [STRIPE RETRIEVE] Customer:', fullSession.customer_details?.email || fullSession.customer?.email || 'MISSING');
+    console.log('✅ [STRIPE RETRIEVE] Billing address:', fullSession.customer_details?.address ? 'YES' : 'NO');
+    console.log('✅ [STRIPE RETRIEVE] Shipping address:', fullSession.shipping_details?.address ? 'YES' : 'NO');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     const lineItemsFromStripe = fullSession.line_items?.data || [];
     console.log('📦 [LINE_ITEMS] Retrieved from Stripe:', lineItemsFromStripe.length, 'items');
@@ -290,13 +304,14 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     // 3. Update order to paid in the appropriate table
     const updateData = {
       status: 'paid',
-      stripe_payment_intent_id: session.payment_intent,
-      stripe_customer_id: session.customer,
-      customer_email: session.customer_details?.email || session.customer_email,
-      customer_name: session.customer_details?.name,
-      customer_phone: session.customer_details?.phone,
-      shipping_address: session.shipping_details?.address || null,
-      billing_address: session.customer_details?.address || null,
+      paid_at: new Date().toISOString(), // ← CRITICAL: Set paid timestamp
+      stripe_payment_intent_id: fullSession.payment_intent,
+      stripe_customer_id: fullSession.customer,
+      customer_email: fullSession.customer_details?.email || fullSession.customer_email,
+      customer_name: fullSession.customer_details?.name,
+      customer_phone: fullSession.customer_details?.phone,
+      shipping_address: fullSession.shipping_details?.address || null,
+      billing_address: fullSession.customer_details?.address || null,
       items: lineItemsForDB, // ← CRITICAL: Save complete line_items from Stripe
       updated_at: new Date().toISOString(),
     };
@@ -308,8 +323,10 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     lineItemsForDB.forEach((item, idx) => {
       console.log(`   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
     });
-    console.log('📝 [DB UPDATE] Billing Address:', billingAddress ? 'YES (' + billingAddress.line1 + ')' : 'NO');
-    console.log('📝 [DB UPDATE] Shipping Address:', shippingAddress ? 'YES (' + shippingAddress.line1 + ')' : 'NO');
+    const billingAddr = fullSession.customer_details?.address;
+    const shippingAddr = fullSession.shipping_details?.address;
+    console.log('📝 [DB UPDATE] Billing Address:', billingAddr ? 'YES (' + billingAddr.line1 + ')' : 'NO');
+    console.log('📝 [DB UPDATE] Shipping Address:', shippingAddr ? 'YES (' + shippingAddr.line1 + ')' : 'NO');
     console.log('📝 [DB UPDATE] SET data:', JSON.stringify(updateData, null, 2));
 
     const tableName = orderSource === 'configurator' ? 'orders' : 'simple_orders';
@@ -356,21 +373,21 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     await logWebhookEvent(logData);
 
     // === SYNC STRIPE CUSTOMER TO SUPABASE ===
-    await syncStripeCustomerToSupabase(session, order, trace_id);
+    await syncStripeCustomerToSupabase(fullSession, order, trace_id);
 
     // === SYNC TO PRISMA (ADMIN SYSTEM) ===
-    await syncOrderToPrisma(session, order, orderSource);
+    await syncOrderToPrisma(fullSession, order, orderSource);
 
     // === SEND ORDER CONFIRMATION EMAIL ===
     try {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`📧 [EMAIL ATTEMPT] trace_id=${trace_id} mode=${eventMode}`);
       console.log(`📧 [EMAIL] Order: ${order.id}`);
-      console.log(`📧 [EMAIL] Session: ${session.id}`);
-      console.log(`📧 [EMAIL] Customer: ${session.customer_details?.email || session.customer_email || 'UNKNOWN'}`);
+      console.log(`📧 [EMAIL] Session: ${fullSession.id}`);
+      console.log(`📧 [EMAIL] Customer: ${fullSession.customer_details?.email || fullSession.customer_email || 'UNKNOWN'}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       
-      await sendOrderConfirmationEmail(session, order, trace_id, eventMode);
+      await sendOrderConfirmationEmail(fullSession, order, trace_id, eventMode);
       
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id} - Email flow completed`);
@@ -526,51 +543,48 @@ async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
     console.log('  Tax:', taxTotal, '¢');
     console.log('  Order Date:', orderDate.toISOString());
 
-    // Load Line Items from Stripe (with proper amounts)
-    console.log('[MAIL] Loading line items from Stripe...');
+    // CRITICAL: Use line_items from expanded session (already loaded!)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('[MAIL] Using line items from expanded session (no re-fetch)');
+    const lineItemsData = session.line_items?.data || [];
+    console.log('[MAIL] Line items available:', lineItemsData.length);
+    
     let items = [];
-    try {
-      // CRITICAL: expand 'data.price' to get unit_amount
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { 
-        limit: 100,
-        expand: ['data.price']  // ← MUST expand to get price.unit_amount
-      });
-      console.log('[MAIL] lineItems count:', lineItems.data.length);
-      
-      items = lineItems.data.map(item => {
-        const unitAmount = item.price?.unit_amount || item.amount_total / item.quantity || 0;
-        const lineTotal = item.amount_total || unitAmount * item.quantity;
+    if (lineItemsData.length > 0) {
+      items = lineItemsData.map((item, idx) => {
+        // Use expanded price data (unit_amount is available due to expand)
+        const unitAmount = item.price?.unit_amount || 0;
+        const lineTotal = item.amount_total || 0;
+        const productName = item.price?.product?.name || item.description || 'Product';
         
-        console.log('[MAIL] item DEBUG:', {
-          name: item.description,
-          'price.unit_amount': item.price?.unit_amount,
-          'amount_total': item.amount_total,
-          qty: item.quantity,
-          'calculated unit': unitAmount,
-          'calculated lineTotal': lineTotal
+        console.log(`[MAIL] Line item [${idx + 1}]:`, {
+          name: productName,
+          description: item.description,
+          'price.unit_amount': unitAmount,
+          'amount_total': lineTotal,
+          qty: item.quantity
         });
         
         return {
-          name: item.description || 'Product',
+          name: productName,
           quantity: item.quantity,
           price_cents: unitAmount,
           line_total_cents: lineTotal
         };
       });
-      
-      console.log('[MAIL] total:', session.amount_total);
-      console.log('[MAIL] items mapped:', items.length, 'items with prices');
-    } catch (err) {
-      console.error('❌ [EMAIL] Failed to load Stripe line items:', err.message);
-      // Fallback to order items from DB
+      console.log('✅ [MAIL] Mapped', items.length, 'items with prices from expanded session');
+    } else {
+      // FALLBACK: Use items from DB (already saved in webhook)
+      console.warn('⚠️ [MAIL] No line_items in session, using fallback from order.items');
       try {
-        items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        items = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
         console.log('[MAIL] Using fallback items from DB:', items.length);
       } catch (parseErr) {
         console.error('❌ [EMAIL] Failed to parse order items:', parseErr.message);
-        items = [{ name: 'Order', quantity: 1, price_cents: order.total_amount_cents }];
+        items = [{ name: 'Order', quantity: 1, price_cents: order.total_amount_cents || 0, line_total_cents: order.total_amount_cents || 0 }];
       }
     }
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Detect language from order data (priority: cart item > session locale > country > default DE)
     let language = 'de';
