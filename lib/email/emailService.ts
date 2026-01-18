@@ -562,6 +562,19 @@ ${localizedProductItems.map(item => `                <div style="padding: 12px 0
                 </div>
               </div>
               
+              <!-- Shipping Address -->
+              ${shippingAddress ? `
+              <div style="background-color: #F0F8FF; border-left: 4px solid #2F6F55; border-radius: 4px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin: 0 0 10px 0; color: #2F6F55; font-size: 16px; font-weight: 600;">📍 Lieferadresse</h3>
+                <p style="margin: 3px 0; font-size: 14px; color: #333;"><strong>${shippingAddress.name || customerName || ''}</strong></p>
+                <p style="margin: 3px 0; font-size: 14px; color: #666;">${shippingAddress.line1 || ''}</p>
+                ${shippingAddress.line2 ? `<p style="margin: 3px 0; font-size: 14px; color: #666;">${shippingAddress.line2}</p>` : ''}
+                <p style="margin: 3px 0; font-size: 14px; color: #666;">${shippingAddress.postal_code || ''} ${shippingAddress.city || ''}</p>
+                ${shippingAddress.state ? `<p style="margin: 3px 0; font-size: 14px; color: #666;">${shippingAddress.state}</p>` : ''}
+                <p style="margin: 3px 0; font-size: 14px; color: #333; font-weight: 600;">${shippingAddress.country || ''}</p>
+              </div>
+              ` : ''}
+              
               <!-- Shipping Info -->
               <div style="background-color: #FFF9E6; border-left: 4px solid #FFC107; border-radius: 4px; padding: 20px; margin: 30px 0;">
                 <h3 style="margin: 0 0 10px 0; color: #856404; font-size: 16px; font-weight: 600;">📦 Versand & Service</h3>
@@ -706,6 +719,19 @@ ${localizedProductItems.map(item => `                <div style="padding: 12px 0
                   </table>
                 </div>
               </div>
+              
+              <!-- Shipping Address -->
+              ${shippingAddress ? `
+              <div style="background-color: #F0F8FF; border-left: 4px solid #2F6F55; border-radius: 4px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin: 0 0 10px 0; color: #2F6F55; font-size: 16px; font-weight: 600;">📍 Shipping Address</h3>
+                <p style="margin: 3px 0; font-size: 14px; color: #333;"><strong>${shippingAddress.name || customerName || ''}</strong></p>
+                <p style="margin: 3px 0; font-size: 14px; color: #666;">${shippingAddress.line1 || ''}</p>
+                ${shippingAddress.line2 ? `<p style="margin: 3px 0; font-size: 14px; color: #666;">${shippingAddress.line2}</p>` : ''}
+                <p style="margin: 3px 0; font-size: 14px; color: #666;">${shippingAddress.postal_code || ''} ${shippingAddress.city || ''}</p>
+                ${shippingAddress.state ? `<p style="margin: 3px 0; font-size: 14px; color: #666;">${shippingAddress.state}</p>` : ''}
+                <p style="margin: 3px 0; font-size: 14px; color: #333; font-weight: 600;">${shippingAddress.country || ''}</p>
+              </div>
+              ` : ''}
               
               <!-- Shipping Info -->
               <div style="background-color: #FFF9E6; border-left: 4px solid #FFC107; border-radius: 4px; padding: 20px; margin: 30px 0;">
