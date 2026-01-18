@@ -341,23 +341,26 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
         total_cents: totalCents,
         currency: currency
       },
+      email_status: 'pending', // ← Will be updated after email send
       updated_at: new Date().toISOString(),
     };
 
-    console.log('📝 [DB UPDATE] Attempting update in', orderSource, 'table...');
-    console.log('📝 [DB UPDATE] WHERE order.id =', order.id);
-    console.log('📝 [DB UPDATE] Order Number:', order.order_number || 'MISSING');
-    console.log('📝 [DB UPDATE] Saving', lineItemsForDB.length, 'line items with prices:');
-    lineItemsForDB.forEach((item, idx) => {
-      console.log(`   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
-    });
-    const billingAddr = fullSession.customer_details?.address;
-    const shippingAddr = fullSession.shipping_details?.address;
-    console.log('📝 [DB UPDATE] Billing Address:', billingAddr ? 'YES (' + billingAddr.line1 + ')' : 'NO');
-    console.log('📝 [DB UPDATE] Shipping Address:', shippingAddr ? 'YES (' + shippingAddr.line1 + ')' : 'NO');
-    console.log('📝 [DB UPDATE] SET data:', JSON.stringify(updateData, null, 2));
-
     const tableName = orderSource === 'configurator' ? 'orders' : 'simple_orders';
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('[DB_WRITE] Starting database write...');
+    console.log('[DB_WRITE] Table:', tableName);
+    console.log('[DB_WRITE] Order ID:', order.id);
+    console.log('[DB_WRITE] Order Number:', order.order_number || 'MISSING');
+    console.log('[DB_WRITE] Session ID:', fullSession.id);
+    console.log('[DB_WRITE] Items:', lineItemsForDB.length);
+    lineItemsForDB.forEach((item, idx) => {
+      console.log(`[DB_WRITE]   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
+    });
+    console.log('[DB_WRITE] Billing Address:', billingAddr ? 'YES' : 'NO');
+    console.log('[DB_WRITE] Shipping Address:', shippingAddr ? 'YES' : 'NO');
+    console.log('[DB_WRITE] Total:', totalCents + '¢ (' + currency + ')');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     const { data: updatedRows, error: updateError } = await supabase
       .from(tableName)
@@ -366,35 +369,25 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
       .select();
 
     if (updateError) {
-      console.error('❌ [DB UPDATE] Failed:', updateError.message);
-      console.error('❌ [DB UPDATE] Code:', updateError.code);
-      console.error('❌ [DB UPDATE] Details:', updateError.details);
-      console.error('❌ [DB UPDATE] Hint:', updateError.hint);
+      console.error('❌ [DB_WRITE_FAIL] Database write failed:', updateError.message);
+      console.error('❌ [DB_WRITE_FAIL] Code:', updateError.code);
+      console.error('❌ [DB_WRITE_FAIL] Details:', updateError.details);
       throw new Error(`Order update failed: ${updateError.message}`);
     }
 
     const rowCount = updatedRows?.length || 0;
-    console.log('✅ [DB UPDATE] Complete - Rows affected:', rowCount);
-
     if (rowCount === 0) {
-      console.error('❌ [DB UPDATE] WARNING: 0 rows affected!');
-      console.error('❌ [DB UPDATE] Order ID:', order.id);
-      console.error('❌ [DB UPDATE] Session ID:', session.id);
-      console.error('❌ [DB UPDATE] This means WHERE clause matched nothing');
-      logData.status = 'error';
-      logData.error_message = `Update affected 0 rows for order ${order.id}`;
-      logData.rows_affected = 0;
-      await logWebhookEvent(logData);
+      console.error('❌ [DB_WRITE_FAIL] 0 rows affected!');
+      console.error('❌ [DB_WRITE_FAIL] Order ID:', order.id);
       throw new Error(`Update affected 0 rows for order ${order.id}`);
     }
 
     logData.rows_affected = rowCount;
 
-    if (rowCount > 0 && updatedRows[0]) {
-      console.log('✅ [DB UPDATE] Updated order ID:', updatedRows[0].id);
-      console.log('✅ [DB UPDATE] New status:', updatedRows[0].status);
-      console.log('✅ [DB UPDATE] Paid at:', updatedRows[0].paid_at);
-    }
+    // SUCCESS LOG (Required format)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`[DB_WRITE_OK] order_id=${order.id} order_number=${order.order_number || 'N/A'} session_id=${fullSession.id} items=${lineItemsForDB.length} total=${totalCents}¢ has_shipping=${!!shippingAddr} has_billing=${!!billingAddr}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     console.log('✅ [WEBHOOK] Order successfully marked as paid:', order.id);
     logData.status = 'success';
@@ -402,7 +395,7 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
 
     // === DB-FIRST: RELOAD ORDER FROM DB (Single Source of Truth) ===
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔄 [DB RELOAD] Loading complete order from DB for email...');
+    console.log('[DB_RELOAD] Reloading order from database...');
     const { data: orderFromDB, error: reloadError } = await supabase
       .from(tableName)
       .select('*')
@@ -410,26 +403,37 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
       .single();
 
     if (reloadError || !orderFromDB) {
-      console.error('❌ [DB RELOAD] Failed to reload order:', reloadError?.message);
+      console.error('❌ [DB_RELOAD_FAIL] Failed to reload order:', reloadError?.message);
       throw new Error('Failed to reload order from DB after update');
     }
 
-    console.log('✅ [DB RELOAD] Order loaded from DB');
-    console.log('📋 [DB RELOAD] Order Number:', orderFromDB.order_number);
-    console.log('📋 [DB RELOAD] Items:', Array.isArray(orderFromDB.items) ? orderFromDB.items.length : 'NOT_ARRAY');
-    console.log('📋 [DB RELOAD] Billing Address:', orderFromDB.billing_address ? 'YES' : 'NO');
-    console.log('📋 [DB RELOAD] Shipping Address:', orderFromDB.shipping_address ? 'YES' : 'NO');
+    // Check what fields are present
+    const hasItems = Array.isArray(orderFromDB.items) && orderFromDB.items.length > 0;
+    const hasBilling = !!(orderFromDB.billing_address && orderFromDB.billing_address.line1);
+    const hasShipping = !!(orderFromDB.shipping_address && orderFromDB.shipping_address.line1);
+    const hasPrices = hasItems && orderFromDB.items.every(item => item.price_cents > 0);
+
+    // SUCCESS LOG (Required format)
+    console.log(`[DB_RELOAD_OK] order_id=${orderFromDB.id} fields={billing:${hasBilling},shipping:${hasShipping},items:${hasItems},prices:${hasPrices}}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
+    // === IDEMPOTENCY CHECK (prevent duplicate emails) ===
+    if (orderFromDB.customer_email_sent_at || orderFromDB.admin_email_sent_at) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`[EMAIL_SKIP_ALREADY_SENT] order_id=${orderFromDB.id} customer_sent=${!!orderFromDB.customer_email_sent_at} admin_sent=${!!orderFromDB.admin_email_sent_at}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      return; // Don't send duplicate emails
+    }
+
     // === VALIDATE ORDER COMPLETENESS (Gate before email) ===
-    console.log('🔍 [VALIDATION] Checking order completeness...');
+    console.log('[VALIDATION] Checking order completeness...');
     const missingFields = [];
     
     if (!orderFromDB.order_number) missingFields.push('order_number');
     if (!orderFromDB.customer_email) missingFields.push('customer_email');
-    if (!orderFromDB.billing_address || !orderFromDB.billing_address.line1) missingFields.push('billing_address');
-    if (!orderFromDB.shipping_address || !orderFromDB.shipping_address.line1) missingFields.push('shipping_address');
-    if (!Array.isArray(orderFromDB.items) || orderFromDB.items.length === 0) missingFields.push('line_items');
+    if (!hasBilling) missingFields.push('billing_address');
+    if (!hasShipping) missingFields.push('shipping_address');
+    if (!hasItems) missingFields.push('line_items');
     if (!orderFromDB.total_amount_cents || orderFromDB.total_amount_cents <= 0) missingFields.push('total_amount');
     if (!orderFromDB.currency) missingFields.push('currency');
 
@@ -437,9 +441,7 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.error('❌ [EMAIL_BLOCKED] Order incomplete - cannot send email');
       console.error('❌ [EMAIL_BLOCKED] Order ID:', orderFromDB.id);
-      console.error('❌ [EMAIL_BLOCKED] Session ID:', fullSession.id);
       console.error('❌ [EMAIL_BLOCKED] Missing fields:', missingFields.join(', '));
-      console.error('❌ [EMAIL_BLOCKED] Updating order.email_status = blocked_incomplete');
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       
       // Update email_status in DB
@@ -596,12 +598,6 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
       return;
     }
 
-    // Log each item with prices
-    console.log('[EMAIL ITEMS] From DB:');
-    items.forEach((item, idx) => {
-      console.log(`  [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
-    });
-
     // Detect language from order data
     let language = 'de';
     if (order.cart_items && Array.isArray(order.cart_items)) {
@@ -614,7 +610,24 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
     } else if (shippingAddress?.country) {
       language = ['GB', 'US', 'CA', 'AU', 'NZ'].includes(shippingAddress.country) ? 'en' : 'de';
     }
-    console.log(`📧 [LANG] Email language: ${language}`);
+
+    // Extract totals from order (DB-first)
+    const totals = order.totals || {};
+    const amountTotal = order.total_amount_cents || 0;
+    const amountSubtotal = totals.subtotal_cents || items.reduce((sum, item) => sum + (item.line_total_cents || 0), 0);
+    const shippingCost = totals.shipping_cents || 0;
+    const taxTotal = totals.tax_cents || 0;
+
+    // REQUIRED LOG: EMAIL_PAYLOAD_FROM_DB
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`[EMAIL_PAYLOAD_FROM_DB] order_id=${order.id} includes={addresses:${!!(billingAddress && shippingAddress)}, unit_prices:${items.every(i => i.price_cents > 0)}, totals:${!!(amountTotal && amountSubtotal)}}`);
+    console.log('[EMAIL_PAYLOAD_FROM_DB] Items:');
+    items.forEach((item, idx) => {
+      console.log(`[EMAIL_PAYLOAD_FROM_DB]   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
+    });
+    console.log(`[EMAIL_PAYLOAD_FROM_DB] Totals: subtotal=${amountSubtotal}¢ shipping=${shippingCost}¢ tax=${taxTotal}¢ total=${amountTotal}¢`);
+    console.log(`[EMAIL_PAYLOAD_FROM_DB] Addresses: billing=${billingAddress ? billingAddress.line1 : 'NONE'} shipping=${shippingAddress ? shippingAddress.line1 : 'NONE'}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Extract totals from order (DB-first)
     const totals = order.totals || {};
@@ -624,11 +637,6 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
     const taxTotal = totals.tax_cents || 0;
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('[EMAIL TOTALS] From DB:');
-    console.log('  Subtotal:', amountSubtotal, '¢');
-    console.log('  Shipping:', shippingCost, '¢');
-    console.log('  Tax:', taxTotal, '¢');
-    console.log('  Total:', amountTotal, '¢');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Call emailService with DB data
@@ -667,6 +675,25 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
       console.log('[MAIL] send customer ok');
       console.log('[MAIL] send internal/bcc ok');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+      // Update email status timestamps in DB
+      const emailStatusUpdate = {
+        email_status: 'sent_customer_and_admin',
+        customer_email_sent_at: new Date().toISOString(),
+        admin_email_sent_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { error: statusError } = await supabase
+        .from(tableName)
+        .update(emailStatusUpdate)
+        .eq('id', order.id);
+
+      if (statusError) {
+        console.error(`[EMAIL_STATUS_UPDATE_ERROR] Failed to update email status for order ${order.id}:`, statusError);
+      } else {
+        console.log(`[EMAIL_STATUS_UPDATE_OK] order_id=${order.id} status=sent_customer_and_admin customer_sent_at=${emailStatusUpdate.customer_email_sent_at} admin_sent_at=${emailStatusUpdate.admin_email_sent_at}`);
+      }
     } else if (emailResult.preview) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`📋 [EMAIL PREVIEW] trace_id=${trace_id || 'none'} - EMAILS_ENABLED=false`);
