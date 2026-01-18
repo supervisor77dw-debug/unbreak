@@ -454,10 +454,13 @@ export async function sendOrderConfirmation(params: {
   }).join('\n');
 
   // EXACT TEXTS AS PROVIDED - DO NOT MODIFY
+  // Add [TEST] prefix in test mode for clarity
+  const isTestMode = process.env.STRIPE_MODE === 'test';
+  const testPrefix = isTestMode ? '[TEST] ' : '';
   
   const subject = isGerman
-    ? `Bestellbestätigung ${orderNumber || orderId.substring(0, 8)} – UNBREAK ONE`
-    : `Order confirmation ${orderNumber || orderId.substring(0, 8)} – UNBREAK ONE`;
+    ? `${testPrefix}Bestellbestätigung ${orderNumber || orderId.substring(0, 8)} – UNBREAK ONE`
+    : `${testPrefix}Order confirmation ${orderNumber || orderId.substring(0, 8)} – UNBREAK ONE`;
 
   const greeting = customerName 
     ? `Hallo ${customerName},`
@@ -804,7 +807,7 @@ ${localizedProductItems.map(item => `                <div style="padding: 12px 0
 
   // Send internal order notification to orders@unbreak-one.com
   try {
-    const internalSubject = `Neue Bestellung ${orderNumber || orderId.substring(0, 8)}`;
+    const internalSubject = `${testPrefix}Neue Bestellung ${orderNumber || orderId.substring(0, 8)}`;
     const internalHtml = `
 <!DOCTYPE html>
 <html>

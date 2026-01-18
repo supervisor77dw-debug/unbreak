@@ -504,19 +504,30 @@ async function sendOrderConfirmationEmail(session, order) {
     // Fallback to UUID substring only if order_number missing (legacy orders)
     const orderNumber = order.order_number || order.id.substring(0, 8).toUpperCase();
 
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📧 [EMAIL ATTEMPT] trace_id=${trace_id || 'none'}`);
     console.log(`📧 [EMAIL] Recipient: ${customerEmail} (${emailSource})`);
     console.log(`📧 [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
     console.log(`📧 [EMAIL] Order: ${orderNumber} (DB: ${order.order_number || 'MISSING'}, UUID: ${order.id})`);
-    console.log(`📧 [EMAIL] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
-    console.log(`📧 [EMAIL] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
+    console.log(`📧 [EMAIL] Items: ${items.length} items, Total: ${order.total_amount_cents}¢`);
+    console.log(`📧 [EMAIL] Shipping Address: ${shippingAddress ? 'YES' : 'NO'}`);
+    console.log(`📧 [EMAIL] Customer Phone: ${customerPhone || 'NO'}`);
+    console.log(`📧 [EMAIL] Language: ${language}`);
+    console.log(`📧 [ENV CHECK] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
+    console.log(`📧 [ENV CHECK] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
+    console.log(`📧 [ENV CHECK] STRIPE_MODE: ${STRIPE_MODE}`);
+    console.log(`📧 [ENV CHECK] NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Direct call to emailService (no HTTP fetch!)
-    console.log('[EMAIL SEND] Calling sendOrderConfirmation with:', {
+    console.log(`[EMAIL SEND] trace_id=${trace_id || 'none'} - Calling sendOrderConfirmation with:`, {
       customerEmail,
       orderNumber,
       itemCount: items.length,
-      totalAmount: order.total_amount_cents
+      totalAmount: order.total_amount_cents,
+      language,
+      hasShippingAddress: !!shippingAddress,
+      hasPhone: !!customerPhone
     });
     const emailResult = await sendOrderConfirmation({
       orderId: order.id,
@@ -531,21 +542,24 @@ async function sendOrderConfirmationEmail(session, order) {
       // BCC to admin + orders for internal tracking
       bcc: ['admin@unbreak-one.com', 'orders@unbreak-one.com']
     });
-    console.log('[EMAIL SEND] Result:', emailResult);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`[EMAIL RESULT] trace_id=${trace_id || 'none'}:`, emailResult);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     if (emailResult.sent) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('✅ [EMAIL SUCCESS] Order confirmation sent!');
+      console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id || 'none'} - Order confirmation sent!`);
       console.log(`✅ [EMAIL] Resend Email ID: ${emailResult.id}`);
       console.log(`✅ [EMAIL] TO: ${customerEmail} (${emailSource})`);
       console.log(`✅ [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
       console.log(`✅ [EMAIL] Order: ${orderNumber}`);
+      console.log(`✅ [EMAIL] Mode: ${STRIPE_MODE}`);
       console.log('[MAIL] send customer ok');
       console.log('[MAIL] send internal/bcc ok');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else if (emailResult.preview) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📋 [EMAIL PREVIEW MODE] EMAILS_ENABLED=false');
+      console.log(`📋 [EMAIL PREVIEW] trace_id=${trace_id || 'none'} - EMAILS_ENABLED=false`);
       console.log('📋 [EMAIL] Email NOT sent (preview mode)');
       console.log('📋 [EMAIL] Would send to:', customerEmail);
       console.log('📋 [EMAIL] Would BCC to: admin@unbreak-one.com');
@@ -553,17 +567,20 @@ async function sendOrderConfirmationEmail(session, order) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error('❌ [EMAIL FAILED] Email send failed!');
+      console.error(`❌ [EMAIL FAILED] trace_id=${trace_id || 'none'} - Email send failed!`);
       console.error(`❌ [EMAIL] Error: ${emailResult.error}`);
       console.error(`❌ [EMAIL] TO: ${customerEmail} (${emailSource})`);
       console.error(`❌ [EMAIL] Order: ${orderNumber}`);
+      console.error(`❌ [EMAIL] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
+      console.error(`❌ [EMAIL] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? 'SET' : 'MISSING'}`);
+      console.error(`❌ [EMAIL] STRIPE_MODE: ${STRIPE_MODE}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     }
 
   } catch (error) {
     // Log but don't throw - email failure shouldn't block webhook processing
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.error('❌ [EMAIL EXCEPTION] Unexpected email error!');
+    console.error(`❌ [EMAIL EXCEPTION] trace_id=${trace_id || 'none'} - Unexpected email error!`);
     console.error(`❌ [EMAIL] Error: ${error.message}`);
     console.error(`❌ [EMAIL] Stack:`, error.stack);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
