@@ -64,13 +64,17 @@
 
 .proof-section {
   padding: 80px 0;
-  background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+  background: linear-gradient(135deg, #1A1A1A 0%, #084F55 100%);
   position: relative;
+}
+
+.proof-section h2 {
+  color: #ffffff;
 }
 
 .proof-subtitle {
   font-size: 1.2rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.85);
   max-width: 800px;
   margin: 0 auto 60px;
   font-weight: 400;
@@ -164,9 +168,11 @@
 /* Proof Points */
 .proof-points {
   padding: 40px;
-  background: white;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   position: sticky;
   top: 100px;
 }
@@ -174,7 +180,7 @@
 .proof-points h3 {
   font-size: 1.8rem;
   margin-bottom: 20px;
-  color: #0a4d4d;
+  color: #ffffff;
 }
 
 .proof-list {
@@ -186,8 +192,8 @@
 .proof-list li {
   padding: 12px 0;
   font-size: 1.1rem;
-  color: #333;
-  border-bottom: 1px solid #eee;
+  color: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .proof-list li:last-child {
@@ -196,19 +202,19 @@
 
 .proof-note {
   font-size: 0.9rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   margin-top: 20px;
 }
 
 .text-link {
-  color: #0a4d4d;
+  color: #5dd5d5;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .text-link:hover {
-  color: #0d6666;
+  color: #7ee5e5;
   text-decoration: underline;
 }
 
