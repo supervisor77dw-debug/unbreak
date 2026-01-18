@@ -301,6 +301,23 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
       currency: item.currency?.toUpperCase() || 'EUR'
     }));
 
+    // CRITICAL: Calculate totals (DB-first architecture)
+    const subtotalCents = lineItemsForDB.reduce((sum, item) => sum + (item.line_total_cents || 0), 0);
+    const shippingCents = fullSession.total_details?.amount_shipping || 0;
+    const taxCents = fullSession.total_details?.amount_tax || 0;
+    const discountCents = fullSession.total_details?.amount_discount || 0;
+    const totalCents = fullSession.amount_total || 0;
+    const currency = fullSession.currency?.toUpperCase() || 'EUR';
+
+    console.log('💰 [TOTALS CALCULATION]', {
+      subtotal: subtotalCents + '¢',
+      shipping: shippingCents + '¢',
+      tax: taxCents + '¢',
+      discount: discountCents + '¢',
+      total: totalCents + '¢',
+      currency: currency
+    });
+
     // 3. Update order to paid in the appropriate table
     const updateData = {
       status: 'paid',
@@ -310,9 +327,20 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
       customer_email: fullSession.customer_details?.email || fullSession.customer_email,
       customer_name: fullSession.customer_details?.name,
       customer_phone: fullSession.customer_details?.phone,
-      shipping_address: fullSession.shipping_details?.address || null,
+      shipping_address: fullSession.shipping_details?.address || fullSession.customer_details?.address || null,
       billing_address: fullSession.customer_details?.address || null,
       items: lineItemsForDB, // ← CRITICAL: Save complete line_items from Stripe
+      total_amount_cents: totalCents, // ← CRITICAL: Save total
+      currency: currency, // ← CRITICAL: Save currency
+      // Store detailed totals as JSON for email rendering
+      totals: {
+        subtotal_cents: subtotalCents,
+        shipping_cents: shippingCents,
+        tax_cents: taxCents,
+        discount_cents: discountCents,
+        total_cents: totalCents,
+        currency: currency
+      },
       updated_at: new Date().toISOString(),
     };
 
@@ -372,22 +400,82 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     logData.status = 'success';
     await logWebhookEvent(logData);
 
+    // === DB-FIRST: RELOAD ORDER FROM DB (Single Source of Truth) ===
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔄 [DB RELOAD] Loading complete order from DB for email...');
+    const { data: orderFromDB, error: reloadError } = await supabase
+      .from(tableName)
+      .select('*')
+      .eq('id', order.id)
+      .single();
+
+    if (reloadError || !orderFromDB) {
+      console.error('❌ [DB RELOAD] Failed to reload order:', reloadError?.message);
+      throw new Error('Failed to reload order from DB after update');
+    }
+
+    console.log('✅ [DB RELOAD] Order loaded from DB');
+    console.log('📋 [DB RELOAD] Order Number:', orderFromDB.order_number);
+    console.log('📋 [DB RELOAD] Items:', Array.isArray(orderFromDB.items) ? orderFromDB.items.length : 'NOT_ARRAY');
+    console.log('📋 [DB RELOAD] Billing Address:', orderFromDB.billing_address ? 'YES' : 'NO');
+    console.log('📋 [DB RELOAD] Shipping Address:', orderFromDB.shipping_address ? 'YES' : 'NO');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    // === VALIDATE ORDER COMPLETENESS (Gate before email) ===
+    console.log('🔍 [VALIDATION] Checking order completeness...');
+    const missingFields = [];
+    
+    if (!orderFromDB.order_number) missingFields.push('order_number');
+    if (!orderFromDB.customer_email) missingFields.push('customer_email');
+    if (!orderFromDB.billing_address || !orderFromDB.billing_address.line1) missingFields.push('billing_address');
+    if (!orderFromDB.shipping_address || !orderFromDB.shipping_address.line1) missingFields.push('shipping_address');
+    if (!Array.isArray(orderFromDB.items) || orderFromDB.items.length === 0) missingFields.push('line_items');
+    if (!orderFromDB.total_amount_cents || orderFromDB.total_amount_cents <= 0) missingFields.push('total_amount');
+    if (!orderFromDB.currency) missingFields.push('currency');
+
+    if (missingFields.length > 0) {
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ [EMAIL_BLOCKED] Order incomplete - cannot send email');
+      console.error('❌ [EMAIL_BLOCKED] Order ID:', orderFromDB.id);
+      console.error('❌ [EMAIL_BLOCKED] Session ID:', fullSession.id);
+      console.error('❌ [EMAIL_BLOCKED] Missing fields:', missingFields.join(', '));
+      console.error('❌ [EMAIL_BLOCKED] Updating order.email_status = blocked_incomplete');
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      // Update email_status in DB
+      await supabase
+        .from(tableName)
+        .update({ 
+          email_status: 'blocked_incomplete',
+          email_last_error: `Missing: ${missingFields.join(', ')}`
+        })
+        .eq('id', orderFromDB.id);
+      
+      // Don't throw - webhook succeeded, just no email
+      return;
+    }
+
+    console.log('✅ [VALIDATION] Order complete - all required fields present');
+    console.log('✅ [VALIDATION] Proceeding to email...');
+
     // === SYNC STRIPE CUSTOMER TO SUPABASE ===
-    await syncStripeCustomerToSupabase(fullSession, order, trace_id);
+    await syncStripeCustomerToSupabase(fullSession, orderFromDB, trace_id);
 
     // === SYNC TO PRISMA (ADMIN SYSTEM) ===
-    await syncOrderToPrisma(fullSession, order, orderSource);
+    await syncOrderToPrisma(fullSession, orderFromDB, orderSource);
 
-    // === SEND ORDER CONFIRMATION EMAIL ===
+    // === SEND ORDER CONFIRMATION EMAIL (DB-FIRST) ===
     try {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`📧 [EMAIL ATTEMPT] trace_id=${trace_id} mode=${eventMode}`);
-      console.log(`📧 [EMAIL] Order: ${order.id}`);
-      console.log(`📧 [EMAIL] Session: ${fullSession.id}`);
-      console.log(`📧 [EMAIL] Customer: ${fullSession.customer_details?.email || fullSession.customer_email || 'UNKNOWN'}`);
+      console.log(`📧 [EMAIL] Order: ${orderFromDB.id}`);
+      console.log(`📧 [EMAIL] Order Number: ${orderFromDB.order_number}`);
+      console.log(`📧 [EMAIL] Customer: ${orderFromDB.customer_email}`);
+      console.log(`📧 [EMAIL] Source: DATABASE (not Stripe session)`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       
-      await sendOrderConfirmationEmail(fullSession, order, trace_id, eventMode);
+      // CRITICAL: Pass orderFromDB, not fullSession
+      await sendOrderConfirmationEmail(orderFromDB, trace_id, eventMode);
       
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id} - Email flow completed`);
@@ -438,15 +526,14 @@ async function logWebhookEvent(logData) {
   }
 }
 
-async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
+async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
   try {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`📧 [EMAIL PROCESS] trace_id=${trace_id} mode=${eventMode}`);
-    console.log('📧 [EMAIL RESOLUTION] Determining recipient email...');
-    console.log(`📧 [EMAIL SOURCE] session.id: ${session.id}`);
-    console.log(`📧 [EMAIL SOURCE] session.customer_details?.email: ${session.customer_details?.email || 'EMPTY'}`);
-    console.log(`📧 [EMAIL SOURCE] session.customer_email: ${session.customer_email || 'EMPTY'}`);
-    console.log(`📧 [EMAIL SOURCE] session.metadata?.customer_email: ${session.metadata?.customer_email || 'EMPTY'}`);
+    console.log('📧 [EMAIL] SOURCE: DATABASE (DB-FIRST)');
+    console.log(`📧 [EMAIL] Order ID: ${order.id}`);
+    console.log(`📧 [EMAIL] Order Number: ${order.order_number}`);
+    console.log(`📧 [EMAIL] Customer: ${order.customer_email}`);
     
     // Email validation helper
     const isValidEmail = (email) => {
@@ -455,211 +542,117 @@ async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
       return email.includes('@') && email.includes('.') && email.length > 5;
     };
 
-    // Determine recipient email with priority
-    let customerEmail = null;
-    let emailSource = null;
-
-    // PRIORITY 1: session.customer_details?.email (most reliable from Stripe)
-    if (session.customer_details?.email && isValidEmail(session.customer_details.email)) {
-      customerEmail = session.customer_details.email;
-      emailSource = 'session.customer_details.email';
-    }
-    // PRIORITY 2: session.customer_email (fallback)
-    else if (session.customer_email && isValidEmail(session.customer_email)) {
-      customerEmail = session.customer_email;
-      emailSource = 'session.customer_email';
-    }
-    // PRIORITY 3: metadata.customer_email (only if valid email pattern)
-    else if (session.metadata?.customer_email && isValidEmail(session.metadata.customer_email)) {
-      customerEmail = session.metadata.customer_email;
-      emailSource = 'session.metadata.customer_email';
+    // Extract customer email from DB order
+    const customerEmail = order.customer_email;
+    
+    if (!isValidEmail(customerEmail)) {
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ [EMAIL CRITICAL] No valid customer email in order!');
+      console.error('❌ [EMAIL] Order ID:', order.id);
+      console.error('❌ [EMAIL] customer_email:', customerEmail);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      return; // Don't send email
     }
 
-    console.log(`📧 [EMAIL RESOLVED] Recipient: ${customerEmail || 'NONE'}`);
-    console.log(`📧 [EMAIL RESOLVED] Source: ${emailSource || 'NONE'}`);
-
-    // If no valid email found, NOTIFY ADMIN
-    if (!customerEmail) {
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error('⚠️  [EMAIL CRITICAL] NO VALID CUSTOMER EMAIL FOUND!');
-      console.error('⚠️  [EMAIL] Order ID:', order.id);
-      console.error('⚠️  [EMAIL] Session ID:', session.id);
-      console.error('⚠️  [EMAIL] Sending admin notification...');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-      // Send admin notification
+    // Extract all data from DB order (SINGLE SOURCE OF TRUTH)
+    const customerName = order.customer_name || '(fehlt)';
+    const customerPhone = order.customer_phone || '(fehlt)';
+    const billingAddress = order.billing_address || null;
+    const shippingAddress = order.shipping_address || null;
+    const orderNumber = order.order_number || order.id.substring(0, 8).toUpperCase();
+    const paymentIntentId = order.stripe_payment_intent_id || '(fehlt)';
+    const paymentStatus = 'paid'; // From order.status
+    const orderDate = order.created_at ? new Date(order.created_at) : new Date();
+    
+    // Extract items from DB (already saved with prices)
+    let items = [];
+    if (Array.isArray(order.items)) {
+      items = order.items;
+    } else if (typeof order.items === 'string') {
       try {
-        const orderNumber = order.order_number || order.id.substring(0, 8).toUpperCase();
-        await sendOrderConfirmation({
-          orderId: order.id,
-          orderNumber: orderNumber,
-          customerEmail: 'admin@unbreak-one.com',
-          customerName: '⚠️ ADMIN ALERT - No Customer Email',
-          items: [{ 
-            name: '⚠️ ORDER WITHOUT CUSTOMER EMAIL', 
-            quantity: 1, 
-            price_cents: order.total_amount_cents 
-          }],
-          totalAmount: order.total_amount_cents,
-          language: 'de',
-          shippingAddress: session.shipping_details?.address
-        });
-        console.log('✅ [EMAIL] Admin notification sent');
-      } catch (adminEmailError) {
-        console.error('❌ [EMAIL] Failed to send admin notification:', adminEmailError.message);
+        items = JSON.parse(order.items);
+      } catch (e) {
+        console.error('❌ [EMAIL] Failed to parse items JSON:', e.message);
+        items = [];
       }
-      return;
     }
 
-    // Extract customer data from Stripe session (COMPLETE)
-    // customerEmail already set by priority logic above (line 407-424)
-    const customerName = session.customer_details?.name || '(fehlt)';
-    const customerPhone = session.customer_details?.phone || '(fehlt)';
-    const billingAddress = session.customer_details?.address || null;
-    const shippingAddress = session.shipping_details?.address || null;
-    
-    // Payment details
-    const paymentIntentId = session.payment_intent || '(fehlt)';
-    const paymentStatus = session.payment_status || 'unknown';
-    
-    // Amounts from Stripe (authoritative)
-    const amountTotal = session.amount_total || 0; // Total inc. shipping & tax
-    const amountSubtotal = session.amount_subtotal || 0; // Subtotal before shipping
-    const shippingCost = session.total_details?.amount_shipping || 0;
-    const taxTotal = session.total_details?.amount_tax || 0;
-    
-    // Timestamp
-    const orderDate = session.created ? new Date(session.created * 1000) : new Date();
-    
-    console.log('[SESSION DATA] Complete extraction:');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('[EMAIL DATA] From DB Order:');
     console.log('  Customer:', customerName, customerEmail, customerPhone);
     console.log('  Billing:', billingAddress ? 'YES' : 'NO');
     console.log('  Shipping:', shippingAddress ? 'YES' : 'NO');
     console.log('  Payment Intent:', paymentIntentId);
     console.log('  Payment Status:', paymentStatus);
-    console.log('  Amount Total:', amountTotal, '¢');
-    console.log('  Amount Subtotal:', amountSubtotal, '¢');
-    console.log('  Shipping Cost:', shippingCost, '¢');
-    console.log('  Tax:', taxTotal, '¢');
+    console.log('  Items count:', items.length);
+    console.log('  Total:', order.total_amount_cents, '¢');
+    console.log('  Currency:', order.currency || 'EUR');
     console.log('  Order Date:', orderDate.toISOString());
-
-    // CRITICAL: Use line_items from expanded session (already loaded!)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('[MAIL] Using line items from expanded session (no re-fetch)');
-    const lineItemsData = session.line_items?.data || [];
-    console.log('[MAIL] Line items available:', lineItemsData.length);
-    
-    let items = [];
-    if (lineItemsData.length > 0) {
-      items = lineItemsData.map((item, idx) => {
-        // Use expanded price data (unit_amount is available due to expand)
-        const unitAmount = item.price?.unit_amount || 0;
-        const lineTotal = item.amount_total || 0;
-        const productName = item.price?.product?.name || item.description || 'Product';
-        
-        console.log(`[MAIL] Line item [${idx + 1}]:`, {
-          name: productName,
-          description: item.description,
-          'price.unit_amount': unitAmount,
-          'amount_total': lineTotal,
-          qty: item.quantity
-        });
-        
-        return {
-          name: productName,
-          quantity: item.quantity,
-          price_cents: unitAmount,
-          line_total_cents: lineTotal
-        };
-      });
-      console.log('✅ [MAIL] Mapped', items.length, 'items with prices from expanded session');
-    } else {
-      // FALLBACK: Use items from DB (already saved in webhook)
-      console.warn('⚠️ [MAIL] No line_items in session, using fallback from order.items');
-      try {
-        items = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
-        console.log('[MAIL] Using fallback items from DB:', items.length);
-      } catch (parseErr) {
-        console.error('❌ [EMAIL] Failed to parse order items:', parseErr.message);
-        items = [{ name: 'Order', quantity: 1, price_cents: order.total_amount_cents || 0, line_total_cents: order.total_amount_cents || 0 }];
-      }
+
+    // Validate items
+    if (!items || items.length === 0) {
+      console.error('❌ [EMAIL] No items in order - cannot send email');
+      return;
     }
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // Detect language from order data (priority: cart item > session locale > country > default DE)
+    // Log each item with prices
+    console.log('[EMAIL ITEMS] From DB:');
+    items.forEach((item, idx) => {
+      console.log(`  [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
+    });
+
+    // Detect language from order data
     let language = 'de';
-    
-    // PRIORITY 1: Cart item language (from configurator)
     if (order.cart_items && Array.isArray(order.cart_items)) {
       const firstItem = order.cart_items[0];
       if (firstItem?.lang && ['de', 'en'].includes(firstItem.lang)) {
         language = firstItem.lang;
-        console.log(`📧 [LANG] Detected from cart item: ${language}`);
       } else if (firstItem?.meta?.lang && ['de', 'en'].includes(firstItem.meta.lang)) {
         language = firstItem.meta.lang;
-        console.log(`📧 [LANG] Detected from cart item meta: ${language}`);
       }
-    }
-    // PRIORITY 2: Session locale (Stripe)
-    else if (session.locale) {
-      language = session.locale.startsWith('en') ? 'en' : 'de';
-      console.log(`📧 [LANG] Detected from Stripe session locale: ${language}`);
-    }
-    // PRIORITY 3: Shipping country
-    else if (shippingAddress?.country) {
+    } else if (shippingAddress?.country) {
       language = ['GB', 'US', 'CA', 'AU', 'NZ'].includes(shippingAddress.country) ? 'en' : 'de';
-      console.log(`📧 [LANG] Detected from shipping country: ${language}`);
     }
-    
-    console.log(`📧 [LANG] Final language for email: ${language}`);
+    console.log(`📧 [LANG] Email language: ${language}`);
 
-    // CRITICAL: Use order_number from DB (UO-2026-000123)
-    // Fallback to UUID substring only if order_number missing (legacy orders)
-    const orderNumber = order.order_number || order.id.substring(0, 8).toUpperCase();
+    // Extract totals from order (DB-first)
+    const totals = order.totals || {};
+    const amountTotal = order.total_amount_cents || 0;
+    const amountSubtotal = totals.subtotal_cents || items.reduce((sum, item) => sum + (item.line_total_cents || 0), 0);
+    const shippingCost = totals.shipping_cents || 0;
+    const taxTotal = totals.tax_cents || 0;
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`📧 [EMAIL ATTEMPT] trace_id=${trace_id || 'none'}`);
-    console.log(`📧 [EMAIL] Recipient: ${customerEmail} (${emailSource})`);
-    console.log(`📧 [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
-    console.log(`📧 [EMAIL] Order: ${orderNumber} (DB: ${order.order_number || 'MISSING'}, UUID: ${order.id})`);
-    console.log(`📧 [EMAIL] Items: ${items.length} items, Total: ${order.total_amount_cents}¢`);
-    console.log(`📧 [EMAIL] Shipping Address: ${shippingAddress ? 'YES' : 'NO'}`);
-    console.log(`📧 [EMAIL] Customer Phone: ${customerPhone || 'NO'}`);
-    console.log(`📧 [EMAIL] Language: ${language}`);
-    console.log(`📧 [ENV CHECK] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
-    console.log(`📧 [ENV CHECK] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
-    console.log(`📧 [ENV CHECK] NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+    console.log('[EMAIL TOTALS] From DB:');
+    console.log('  Subtotal:', amountSubtotal, '¢');
+    console.log('  Shipping:', shippingCost, '¢');
+    console.log('  Tax:', taxTotal, '¢');
+    console.log('  Total:', amountTotal, '¢');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // Direct call to emailService (no HTTP fetch!)
-    console.log(`[EMAIL SEND] trace_id=${trace_id || 'none'} - Calling sendOrderConfirmation with:`, {
-      customerEmail,
-      orderNumber,
-      itemCount: items.length,
-      totalAmount: order.total_amount_cents,
-      language,
-      hasShippingAddress: !!shippingAddress,
-      hasPhone: !!customerPhone
-    });
+    // Call emailService with DB data
+    console.log(`[EMAIL SEND] trace_id=${trace_id || 'none'} - Calling sendOrderConfirmation with DB data`);
     const emailResult = await sendOrderConfirmation({
       orderId: order.id,
       orderNumber: orderNumber,
-      customerEmail,
-      customerName,
-      customerPhone,
-      items,
-      totalAmount: amountTotal, // Use Stripe's authoritative total
-      language,
-      shippingAddress,
-      billingAddress, // ← NEW
-      paymentIntentId, // ← NEW
-      paymentStatus, // ← NEW
-      amountSubtotal, // ← NEW
-      shippingCost, // ← NEW
-      orderDate, // ← NEW
+      customerEmail: customerEmail,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      items: items, // From DB
+      totalAmount: amountTotal, // From DB
+      language: language,
+      shippingAddress: shippingAddress, // From DB
+      billingAddress: billingAddress, // From DB
+      paymentIntentId: paymentIntentId,
+      paymentStatus: paymentStatus,
+      amountSubtotal: amountSubtotal,
+      shippingCost: shippingCost,
+      orderDate: orderDate,
       // BCC to admin + orders for internal tracking
       bcc: ['admin@unbreak-one.com', 'orders@unbreak-one.com']
     });
+    
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`[EMAIL RESULT] trace_id=${trace_id || 'none'}:`, emailResult);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -668,7 +661,7 @@ async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id || 'none'} - Order confirmation sent!`);
       console.log(`✅ [EMAIL] Resend Email ID: ${emailResult.id}`);
-      console.log(`✅ [EMAIL] TO: ${customerEmail} (${emailSource})`);
+      console.log(`✅ [EMAIL] TO: ${customerEmail} (DB source)`);
       console.log(`✅ [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
       console.log(`✅ [EMAIL] Order: ${orderNumber}`);
       console.log('[MAIL] send customer ok');
@@ -686,7 +679,7 @@ async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.error(`❌ [EMAIL FAILED] trace_id=${trace_id || 'none'} - Email send failed!`);
       console.error(`❌ [EMAIL] Error: ${emailResult.error}`);
-      console.error(`❌ [EMAIL] TO: ${customerEmail} (${emailSource})`);
+      console.error(`❌ [EMAIL] TO: ${customerEmail}`);
       console.error(`❌ [EMAIL] Order: ${orderNumber}`);
       console.error(`❌ [EMAIL] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
       console.error(`❌ [EMAIL] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? 'SET' : 'MISSING'}`);
