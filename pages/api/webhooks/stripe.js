@@ -328,17 +328,28 @@ async function handleCheckoutSessionCompleted(session, trace_id) {
 
     // === SEND ORDER CONFIRMATION EMAIL ===
     try {
-      console.log('[EMAIL CALL] About to send order confirmation');
-      console.log('[EMAIL CALL] Order ID:', order.id);
-      console.log('[EMAIL CALL] Session ID:', session.id);
-      await sendOrderConfirmationEmail(session, order);
-      console.log('[EMAIL CALL] sendOrderConfirmationEmail finished');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`📧 [EMAIL ATTEMPT] trace_id=${trace_id} mode=${eventMode}`);
+      console.log(`📧 [EMAIL] Order: ${order.id}`);
+      console.log(`📧 [EMAIL] Session: ${session.id}`);
+      console.log(`📧 [EMAIL] Customer: ${session.customer_details?.email || session.customer_email || 'UNKNOWN'}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      await sendOrderConfirmationEmail(session, order, trace_id, eventMode);
+      
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id} - Email flow completed`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } catch (emailError) {
       // Don't fail the entire webhook if email fails
-      console.error('[EMAIL CALL] EXCEPTION:', emailError.message);
-      console.error('[EMAIL CALL] Stack:', emailError.stack);
-      console.error('⚠️ [EMAIL] Failed to send confirmation email:', emailError.message);
-      console.error('⚠️ [EMAIL] Order was still created successfully');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error(`❌ [EMAIL FAILED] trace_id=${trace_id} mode=${eventMode}`);
+      console.error(`❌ [EMAIL] Error: ${emailError.message}`);
+      console.error(`❌ [EMAIL] Stack:`, emailError.stack);
+      console.error(`❌ [EMAIL] Order ID: ${order.id}`);
+      console.error(`❌ [EMAIL] Session ID: ${session.id}`);
+      console.error('⚠️ [EMAIL] Order was still created successfully (email failed)');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     }
 
   } catch (error) {
@@ -375,9 +386,10 @@ async function logWebhookEvent(logData) {
   }
 }
 
-async function sendOrderConfirmationEmail(session, order) {
+async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
   try {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📧 [EMAIL PROCESS] trace_id=${trace_id} mode=${eventMode}`);
     console.log('📧 [EMAIL RESOLUTION] Determining recipient email...');
     console.log(`📧 [EMAIL SOURCE] session.id: ${session.id}`);
     console.log(`📧 [EMAIL SOURCE] session.customer_details?.email: ${session.customer_details?.email || 'EMPTY'}`);
