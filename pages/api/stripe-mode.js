@@ -2,10 +2,8 @@
  * STRIPE MODE API
  * GET /api/stripe-mode
  * 
- * Returns current Stripe mode (test/live) for client-side checks
+ * Returns current Stripe mode (test/live) based on publishable key
  */
-
-import { IS_TEST_MODE, STRIPE_MODE } from '../../lib/stripe-config.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -13,10 +11,14 @@ export default async function handler(req, res) {
   }
 
   try {
+    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+    const isTestMode = publishableKey.startsWith('pk_test_');
+    const isLiveMode = publishableKey.startsWith('pk_live_');
+    
     return res.status(200).json({
-      mode: STRIPE_MODE,
-      isTestMode: IS_TEST_MODE,
-      isLiveMode: !IS_TEST_MODE,
+      mode: isTestMode ? 'test' : 'live',
+      isTestMode,
+      isLiveMode,
     });
   } catch (error) {
     console.error('[Stripe Mode API] Error:', error);

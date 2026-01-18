@@ -454,8 +454,9 @@ export async function sendOrderConfirmation(params: {
   }).join('\n');
 
   // EXACT TEXTS AS PROVIDED - DO NOT MODIFY
-  // Add [TEST] prefix in test mode for clarity
-  const isTestMode = process.env.STRIPE_MODE === 'test';
+  // Add [TEST] prefix when using Stripe Test keys
+  const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+  const isTestMode = publishableKey.startsWith('pk_test_');
   const testPrefix = isTestMode ? '[TEST] ' : '';
   
   const subject = isGerman

@@ -5,7 +5,7 @@ import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.
 import { resolvePriceCents, validatePricing } from '../../../lib/pricing/pricingResolver.js';
 import { getEnvFingerprint, formatFingerprintLog } from '../../../lib/utils/envFingerprint.js';
 import { generateOrderNumber, generatePublicId } from '../../../lib/utils/orderNumber.js';
-import { stripe, IS_TEST_MODE, guardCheckoutSession, STRIPE_MODE } from '../../../lib/stripe-config.js';
+import { stripe, guardCheckoutSession } from '../../../lib/stripe-config-v2.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -722,7 +722,6 @@ export default async function handler(req, res) {
         ui_lang: userLanguage, // 'de' or 'en' for debugging
         accept_language: req.headers['accept-language'] ? req.headers['accept-language'].substring(0, 50) : 'NONE',
         build_commit: process.env.VERCEL_GIT_COMMIT_SHA || 'local',
-        stripe_mode: STRIPE_MODE, // Test or live mode identifier
       },
     });
 

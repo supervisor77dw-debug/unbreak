@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { stripe, guardCheckoutSession, STRIPE_MODE } from '../../../lib/stripe-config.js';
+import { stripe, guardCheckoutSession } from '../../../lib/stripe-config-v2.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -125,7 +125,6 @@ export default async function handler(req, res) {
         bundle_id: bundle.id,
         type: 'bundle',
         user_id: userId || 'guest',
-        stripe_mode: STRIPE_MODE,
       },
     }));
 

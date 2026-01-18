@@ -6,6 +6,7 @@ import '../public/i18n.css';
 import '../public/premium.css';
 import { SessionProvider } from 'next-auth/react';
 import { useEffect } from 'react';
+import DebugBanner from '../components/DebugBanner';
 
 export default function App({ Component, pageProps: { session, ...pageProps } }) {
   // Inject ENV variables for client-side access
@@ -20,6 +21,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   
   return (
     <SessionProvider session={session}>
+      <DebugBanner />
       <Component {...pageProps} />
     </SessionProvider>
   );

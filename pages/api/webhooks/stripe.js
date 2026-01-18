@@ -5,7 +5,7 @@ import prisma from '../../../lib/prisma';
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
 import { countryToRegion } from '../../../lib/utils/shipping.js';
 import { sendOrderConfirmation } from '../../../lib/email/emailService';
-import { stripe, shouldProcessWebhookEvent, getWebhookSecret, IS_TEST_MODE, STRIPE_MODE } from '../../../lib/stripe-config.js';
+import { verifyWebhookEvent, getStripeForEvent } from '../../../lib/stripe-config-v2.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -21,10 +21,10 @@ export default async function handler(req, res) {
   // === DIAGNOSTIC LOGGING ===
   console.log('🪝 [WEBHOOK HIT] Method:', req.method);
   console.log('🪝 [WEBHOOK HIT] Has stripe-signature:', !!req.headers['stripe-signature']);
-  console.log('🪝 [ENV CHECK] STRIPE_SECRET_KEY present:', !!process.env.STRIPE_SECRET_KEY);
-  console.log('🪝 [ENV CHECK] STRIPE_WEBHOOK_SECRET present:', !!process.env.STRIPE_WEBHOOK_SECRET);
-  console.log('🪝 [ENV CHECK] SUPABASE_URL present:', !!process.env.SUPABASE_URL);
-  console.log('🪝 [ENV CHECK] SUPABASE_SERVICE_ROLE_KEY present:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+  console.log('🪝 [ENV CHECK] STRIPE_SECRET_KEY (LIVE) present:', !!process.env.STRIPE_SECRET_KEY);
+  console.log('🪝 [ENV CHECK] STRIPE_TEST_SECRET_KEY (DEBUG) present:', !!process.env.STRIPE_TEST_SECRET_KEY);
+  console.log('🪝 [ENV CHECK] STRIPE_WEBHOOK_SECRET (LIVE) present:', !!process.env.STRIPE_WEBHOOK_SECRET);
+  console.log('🪝 [ENV CHECK] STRIPE_TEST_WEBHOOK_SECRET (DEBUG) present:', !!process.env.STRIPE_TEST_WEBHOOK_SECRET);
 
   if (req.method !== 'POST') {
     console.log('⚠️ [Webhook] Non-POST request received:', req.method);
@@ -41,39 +41,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing stripe-signature header' });
     }
 
-    // 2. Verify webhook signature
+    // 2. Verify webhook signature (AUTOMATIC mode detection via event.livemode)
     let event;
     try {
-      event = stripe.webhooks.constructEvent(
-        buf,
-        sig,
-        getWebhookSecret()
-      );
+      event = verifyWebhookEvent(buf, sig);
       console.log('✅ [SIGNATURE] Verified OK');
       console.log('📥 [EVENT] Type:', event.type);
       console.log('📥 [EVENT] ID:', event.id);
-      console.log(`🔒 [STRIPE MODE] Event livemode=${event.livemode}, Server mode=${STRIPE_MODE}`);
+      console.log(`🔒 [EVENT MODE] event.livemode=${event.livemode} (${event.livemode ? 'LIVE' : 'DEBUG'})`);
     } catch (err) {
       console.error('❌ [SIGNATURE] Verification FAILED:', err.message);
       return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
     }
 
-    // 2.5 Validate event matches configured Stripe mode
-    if (!shouldProcessWebhookEvent(event)) {
-      console.warn(`⚠️ [WEBHOOK FILTER] Skipping event (mode mismatch): ${event.type}`);
-      return res.status(200).json({ 
-        received: true, 
-        skipped: true, 
-        reason: 'mode_mismatch',
-        event_livemode: event.livemode,
-        server_mode: STRIPE_MODE
-      });
-    }
-
     // Extract trace_id from event metadata (passed through from checkout)
     const trace_id = event.data.object.metadata?.trace_id;
+    const eventMode = event.livemode ? 'LIVE' : 'DEBUG';
     
     console.log('[WEBHOOK HIT]', event.type);
+    console.log('[EVENT MODE]', eventMode);
     console.log('[EMAILS_ENABLED]', process.env.EMAILS_ENABLED);
     console.log('[RESEND_API_KEY]', process.env.RESEND_API_KEY ? 'SET' : 'MISSING');
     console.log('[SESSION ID]', event.data.object.id);
@@ -82,15 +68,18 @@ export default async function handler(req, res) {
       trace_id,
       event_id: event.id,
       event_type: event.type,
-      timestamp: new Date().toISOString(),
-      stripe_mode: STRIPE_MODE,
-      is_test_mode: IS_TEST_MODE
+      event_livemode: event.livemode,
+      event_mode: eventMode,
+      timestamp: new Date().toISOString()
     });
     
-    // 3. Handle specific events
+    // 3. Get appropriate Stripe client for this event
+    const stripe = getStripeForEvent(event);
+    
+    // 4. Handle specific events
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object, trace_id);
+        await handleCheckoutSessionCompleted(event.data.object, trace_id, stripe);
         break;
 
       case 'customer.created':
@@ -105,8 +94,8 @@ export default async function handler(req, res) {
         console.log(`⚠️ [Webhook] Unhandled event type: ${event.type}`);
     }
 
-    // 4. Return success response
-    res.status(200).json({ received: true, event: event.type });
+    // 5. Return success response
+    res.status(200).json({ received: true, event: event.type, mode: eventMode });
 
   } catch (error) {
     console.error('❌ [Webhook] Fatal error:', error);
@@ -118,7 +107,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleCheckoutSessionCompleted(session, trace_id) {
+async function handleCheckoutSessionCompleted(session, trace_id, stripe) {
   console.log('[TRACE] WEBHOOK_SESSION_DATA', {
     trace_id,
     stripe_session_id: session.id,
@@ -515,7 +504,6 @@ async function sendOrderConfirmationEmail(session, order) {
     console.log(`📧 [EMAIL] Language: ${language}`);
     console.log(`📧 [ENV CHECK] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
     console.log(`📧 [ENV CHECK] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
-    console.log(`📧 [ENV CHECK] STRIPE_MODE: ${STRIPE_MODE}`);
     console.log(`📧 [ENV CHECK] NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
@@ -553,7 +541,6 @@ async function sendOrderConfirmationEmail(session, order) {
       console.log(`✅ [EMAIL] TO: ${customerEmail} (${emailSource})`);
       console.log(`✅ [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
       console.log(`✅ [EMAIL] Order: ${orderNumber}`);
-      console.log(`✅ [EMAIL] Mode: ${STRIPE_MODE}`);
       console.log('[MAIL] send customer ok');
       console.log('[MAIL] send internal/bcc ok');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -573,7 +560,6 @@ async function sendOrderConfirmationEmail(session, order) {
       console.error(`❌ [EMAIL] Order: ${orderNumber}`);
       console.error(`❌ [EMAIL] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
       console.error(`❌ [EMAIL] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? 'SET' : 'MISSING'}`);
-      console.error(`❌ [EMAIL] STRIPE_MODE: ${STRIPE_MODE}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     }
 
