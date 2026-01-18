@@ -629,16 +629,6 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
     console.log(`[EMAIL_PAYLOAD_FROM_DB] Addresses: billing=${billingAddress ? billingAddress.line1 : 'NONE'} shipping=${shippingAddress ? shippingAddress.line1 : 'NONE'}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // Extract totals from order (DB-first)
-    const totals = order.totals || {};
-    const amountTotal = order.total_amount_cents || 0;
-    const amountSubtotal = totals.subtotal_cents || items.reduce((sum, item) => sum + (item.line_total_cents || 0), 0);
-    const shippingCost = totals.shipping_cents || 0;
-    const taxTotal = totals.tax_cents || 0;
-
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
     // Call emailService with DB data
     console.log(`[EMAIL SEND] trace_id=${trace_id || 'none'} - Calling sendOrderConfirmation with DB data`);
     const emailResult = await sendOrderConfirmation({
