@@ -107,7 +107,7 @@ export default async function handler(req, res) {
     // 3. Handle specific events
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object, trace_id);
+        await handleCheckoutSessionCompleted(event.data.object, trace_id, eventMode);
         break;
 
       case 'customer.created':
@@ -135,7 +135,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleCheckoutSessionCompleted(session, trace_id) {
+async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
   console.log('[TRACE] WEBHOOK_SESSION_DATA', {
     trace_id,
     stripe_session_id: session.id,
