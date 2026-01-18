@@ -173,62 +173,45 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   const finalText = text || getTextPreview(html);
 
   // ========================================
-  // 3. KILL-SWITCH CHECK
-  // ========================================
-  
-  const emailsEnabled = process.env.EMAILS_ENABLED === 'true';
-
-  if (!emailsEnabled) {
-    // PREVIEW MODE - Log instead of sending
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📧 [EMAIL PREVIEW] Email sending is DISABLED');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`📧 [EMAIL PREVIEW] Type:      ${type}`);
-    console.log(`📧 [EMAIL PREVIEW] To:        ${Array.isArray(to) ? to.join(', ') : to}`);
-    console.log(`📧 [EMAIL PREVIEW] From:      ${finalFrom}`);
-    if (finalReplyTo) {
-      console.log(`📧 [EMAIL PREVIEW] Reply-To:  ${finalReplyTo}`);
-    }
-    console.log(`📧 [EMAIL PREVIEW] Subject:   ${subject}`);
-    console.log(`📧 [EMAIL PREVIEW] Preview:   ${getTextPreview(html, 150)}`);
-    
-    if (Object.keys(meta).length > 0) {
-      console.log(`📧 [EMAIL PREVIEW] Meta:      ${JSON.stringify(meta, null, 2)}`);
-    }
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('ℹ️  [EMAIL PREVIEW] To enable sending: Set EMAILS_ENABLED=true');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-
-    return {
-      preview: true,
-    };
-  }
-
-  // ========================================
-  // 4. SEND VIA RESEND (only if enabled)
+  // 3. SEND VIA RESEND (ALWAYS - NO KILL-SWITCH)
   // ========================================
   
   try {
-    console.log(`📧 [EMAIL SEND] Sending ${type} to ${Array.isArray(to) ? to.join(', ') : to}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📧 [EMAIL SEND] Type: ${type}`);
+    console.log(`📧 [EMAIL SEND] To: ${Array.isArray(to) ? to.join(', ') : to}`);
+    console.log(`📧 [EMAIL SEND] From: ${finalFrom}`);
     if (bcc) {
       console.log(`📧 [EMAIL SEND] BCC: ${Array.isArray(bcc) ? bcc.join(', ') : bcc}`);
     }
+    console.log(`📧 [EMAIL SEND] Subject: ${subject}`);
+    console.log(`📧 [EMAIL SEND] Meta:`, meta);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Check for API key
     if (!process.env.RESEND_API_KEY) {
+      console.error('❌ [EMAIL] RESEND_API_KEY not configured');
       throw new Error('[EMAIL] RESEND_API_KEY not configured');
     }
+    
+    console.log('✅ [EMAIL] RESEND_API_KEY present');
 
     // Initialize Resend (only when actually sending)
+    console.log('🔧 [RESEND] Initializing Resend client...');
     const resend = new Resend(process.env.RESEND_API_KEY);
+    console.log('✅ [RESEND] Client initialized');
 
     // Prepare BCC recipients
     const bccRecipients = bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : undefined;
 
-    console.log('[RESEND CALL] Sending email...');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📤 [RESEND CALL] ABOUT TO CALL resend.emails.send()');
     console.log('[RESEND CALL] To:', recipients);
+    console.log('[RESEND CALL] From:', finalFrom);
     console.log('[RESEND CALL] BCC:', bccRecipients);
     console.log('[RESEND CALL] Subject:', subject);
+    console.log('[RESEND CALL] ReplyTo:', finalReplyTo || 'none');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Send email
     const result = await resend.emails.send({
@@ -241,19 +224,28 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
       ...(bccRecipients && { bcc: bccRecipients }),
     });
 
-    console.log('[RESEND RESULT]', result);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📥 [RESEND RESPONSE] Received from Resend API');
+    console.log('[RESEND RESULT] Full response:', JSON.stringify(result, null, 2));
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Check for error response
     if (result.error) {
-      console.error(`❌ [EMAIL SEND] Resend API error:`, result.error);
-      console.error('[RESEND ERROR]', result.error);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error(`❌ [EMAIL SEND] Resend API returned error`);
+      console.error('[RESEND ERROR] Message:', result.error.message);
+      console.error('[RESEND ERROR] Full error:', JSON.stringify(result.error, null, 2));
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return {
         sent: false,
         error: result.error.message || 'Unknown Resend API error',
       };
     }
 
-    console.log(`✅ [EMAIL SEND] Success - ID: ${result.data?.id}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`✅ [EMAIL SEND] Success!`);
+    console.log(`✅ [RESEND ID] ${result.data?.id}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     return {
       sent: true,
