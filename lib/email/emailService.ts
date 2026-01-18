@@ -592,16 +592,21 @@ export async function sendOrderConfirmation(params: {
                 
                 <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px; font-weight: 600;">Positionen</h3>
                 
-${localizedProductItems.map(item => `                <div style="padding: 12px 0; border-bottom: 1px solid #EEEEEE;">
+${localizedProductItems.map(item => {
+  const unitPrice = formatCurrency(item.price_cents);
+  const lineTotal = formatCurrency(item.line_total_cents || (item.price_cents * item.quantity));
+  return `                <div style="padding: 12px 0; border-bottom: 1px solid #EEEEEE;">
                   <table style="width: 100%;">
                     <tr>
-                      <td style="font-size: 14px; color: #333; padding-right: 10px;">${item.quantity} ×</td>
-                      <td style="font-size: 14px; color: #333; width: 70%;">${item.name}</td>
-                      <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600;">${formatCurrency(item.line_total_cents || (item.price_cents * item.quantity))}</td>
+                      <td style="font-size: 14px; color: #333; padding-right: 10px; white-space: nowrap;">${item.quantity} ×</td>
+                      <td style="font-size: 14px; color: #333; width: 100%;">${item.name}</td>
+                      <td style="font-size: 14px; color: #666; text-align: right; white-space: nowrap; padding: 0 8px;">${unitPrice}</td>
+                      <td style="font-size: 14px; color: #333; text-align: right; font-weight: 600; white-space: nowrap;">${lineTotal}</td>
                     </tr>
                   </table>
                 </div>
-`).join('')}
+`;
+}).join('')}
                 
                 ${shippingCents > 0 ? `<div style="padding: 12px 0;">
                   <table style="width: 100%;">
@@ -943,12 +948,21 @@ ${localizedProductItems.map(item => `                <div style="padding: 12px 0
     <div style="margin: 30px 0;">
       <h2 style="margin: 0 0 10px 0; font-size: 16px; color: #2F6F55;">🛒 Positionen</h2>
       <div style="background-color: #F9F9F9; padding: 15px; border-radius: 6px; border-left: 4px solid #2F6F55;">
-${localizedProductItems.map(item => `        <div style="padding: 8px 0; border-bottom: 1px solid #E0E0E0;">
-          <span style="color: #666; font-size: 13px;">${item.quantity} ×</span>
-          <span style="color: #333; font-size: 13px; margin-left: 10px;">${item.name}</span>
-          <span style="color: #333; font-size: 13px; float: right; font-weight: 600;">${formatCurrency(item.line_total_cents || (item.price_cents * item.quantity))}</span>
+${localizedProductItems.map(item => {
+  const unitPrice = formatCurrency(item.price_cents);
+  const lineTotal = formatCurrency(item.line_total_cents || (item.price_cents * item.quantity));
+  return `        <div style="padding: 8px 0; border-bottom: 1px solid #E0E0E0;">
+          <table style="width: 100%;">
+            <tr>
+              <td style="color: #666; font-size: 13px; white-space: nowrap;">${item.quantity} ×</td>
+              <td style="color: #333; font-size: 13px; padding-left: 10px;">${item.name}</td>
+              <td style="color: #666; font-size: 13px; text-align: right; white-space: nowrap; padding: 0 8px;">${unitPrice}</td>
+              <td style="color: #333; font-size: 13px; text-align: right; font-weight: 600; white-space: nowrap;">${lineTotal}</td>
+            </tr>
+          </table>
         </div>
-`).join('')}
+`;
+}).join('')}
       </div>
     </div>
     

@@ -304,7 +304,12 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     console.log('📝 [DB UPDATE] Attempting update in', orderSource, 'table...');
     console.log('📝 [DB UPDATE] WHERE order.id =', order.id);
     console.log('📝 [DB UPDATE] Order Number:', order.order_number || 'MISSING');
-    console.log('📝 [DB UPDATE] Saving', lineItemsForDB.length, 'line items to DB');
+    console.log('📝 [DB UPDATE] Saving', lineItemsForDB.length, 'line items with prices:');
+    lineItemsForDB.forEach((item, idx) => {
+      console.log(`   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
+    });
+    console.log('📝 [DB UPDATE] Billing Address:', billingAddress ? 'YES (' + billingAddress.line1 + ')' : 'NO');
+    console.log('📝 [DB UPDATE] Shipping Address:', shippingAddress ? 'YES (' + shippingAddress.line1 + ')' : 'NO');
     console.log('📝 [DB UPDATE] SET data:', JSON.stringify(updateData, null, 2));
 
     const tableName = orderSource === 'configurator' ? 'orders' : 'simple_orders';
