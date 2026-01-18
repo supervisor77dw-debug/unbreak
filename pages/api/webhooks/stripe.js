@@ -744,7 +744,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
       customerEmail = customerData.email;
       customerName = customerData.name;
       amountTotal = supabaseOrder.total_cents;
-      amountShipping = supabaseOrder.shipping_cents || 0;
+      // amountShipping will be calculated from DB below
       amountTax = supabaseOrder.tax_cents || 0;
 
       // Get product from configuration
@@ -787,8 +787,8 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
       }
 
       amountTotal = session.amount_total || supabaseOrder.total_amount_cents || 0;
-      amountShipping = session.total_details?.amount_shipping || 0;
-      amountTax = session.total_details?.amount_tax || 0;
+      // amountShipping will be calculated from DB below
+      // amountTax will be recalculated after shipping is known
 
       // Parse items from simple_orders JSON
       try {
@@ -854,6 +854,32 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     
     console.log('🌍 [PRISMA SYNC] Shipping country:', shippingCountry, '→ Region:', shippingRegion);
     
+    // Calculate shipping from Backend DB (NOT from Stripe!)
+    amountShipping = 0; // Reset before calculation
+    try {
+      const shippingRate = await prisma.shippingRate.findFirst({
+        where: { 
+          countryCode: shippingRegion,
+          active: true 
+        }
+      });
+      
+      if (shippingRate) {
+        amountShipping = shippingRate.priceNet;
+        console.log('✅ [SHIPPING] From DB:', shippingRegion, '→', amountShipping, '¢ (', shippingRate.labelDe, ')');
+      } else {
+        // Fallback to hardcoded values if DB query fails
+        const fallbackRates = { DE: 490, EU: 1290, INT: 2490 };
+        amountShipping = fallbackRates[shippingRegion] || 2490;
+        console.warn('⚠️ [SHIPPING] No DB rate found, using fallback:', amountShipping, '¢');
+      }
+    } catch (error) {
+      console.error('❌ [SHIPPING] DB query failed:', error.message);
+      const fallbackRates = { DE: 490, EU: 1290, INT: 2490 };
+      amountShipping = fallbackRates[shippingRegion] || 2490;
+      console.warn('⚠️ [SHIPPING] Using fallback:', amountShipping, '¢');
+    }
+    
     // Extract addresses with fallbacks (CRITICAL for admin_orders)
     const shippingAddress = session.shipping_details?.address ?? session.customer_details?.address ?? null;
     const billingAddress = session.customer_details?.address ?? session.shipping_details?.address ?? null;
@@ -862,6 +888,16 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     
     console.log('🏠 [PRISMA SYNC] Shipping address:', shippingAddress ? `${shippingAddress.line1}, ${shippingAddress.city}` : 'MISSING');
     console.log('📋 [PRISMA SYNC] Billing address:', billingAddress ? `${billingAddress.line1}, ${billingAddress.city}` : 'MISSING');
+    
+    // Calculate subtotal from items
+    const subtotalNet = items.reduce((sum, item) => sum + (item.unitPrice * item.qty), 0);
+    
+    // Recalculate tax and total with BACKEND shipping (NOT Stripe!)
+    const taxRate = 0.19; // 19% German VAT
+    const taxAmount = Math.round((subtotalNet + amountShipping) * taxRate);
+    const totalGross = subtotalNet + taxAmount + amountShipping;
+    
+    console.log('💰 [PRICING] Subtotal:', subtotalNet, '¢ | Shipping:', amountShipping, '¢ | Tax:', taxAmount, '¢ | Total:', totalGross, '¢');
     
     const order = await prisma.order.upsert({
       where: { stripeCheckoutSessionId: session.id },
@@ -879,9 +915,13 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         statusPayment: 'PAID',
         statusFulfillment: 'NEW',
         currency: (session.currency || supabaseOrder.currency || 'EUR').toUpperCase(),
-        amountTotal: amountTotal,
-        amountShipping: amountShipping,
-        amountTax: amountTax,
+        amountTotal: totalGross, // Recalculated with Backend shipping
+        amountShipping: amountShipping, // From DB shipping_rates
+        amountTax: taxAmount, // Recalculated
+        subtotalNet: subtotalNet, // From items
+        taxRate: taxRate,
+        taxAmount: taxAmount,
+        totalGross: totalGross,
         email: customerEmail,
         shippingName: shippingName,
         shippingAddress: shippingAddress,
@@ -896,7 +936,9 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`[DB_WRITE_ORDER] order_id=${order.id.substring(0, 8)} session_id=${session.id.substring(0, 20)}`);
     console.log(`[DB_WRITE_ORDER] shipping_address_present=${!!shippingAddress} billing_address_present=${!!billingAddress}`);
-    console.log(`[DB_WRITE_ORDER] email=${customerEmail} amount=${amountTotal}¢ shipping=${amountShipping}¢`);
+    console.log(`[DB_WRITE_ORDER] email=${customerEmail} region=${shippingRegion}`);
+    console.log(`[DB_WRITE_ORDER] amounts: subtotal=${subtotalNet}¢ shipping=${amountShipping}¢ tax=${taxAmount}¢ total=${totalGross}¢`);
+    console.log(`[DB_WRITE_ORDER] shipping_source=DB_shipping_rates (NOT Stripe!)`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('✅ [PRISMA SYNC] Admin order:', order.id);
 
