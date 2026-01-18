@@ -81,8 +81,9 @@ export default async function handler(req, res) {
         image_crop_x: 0,
         image_crop_y: 0,
         badge_label: badge_label || null,
-        short_description_de: short_description_de || null,
-        short_description_en: short_description_en || null,
+        // TEMPORARY: Commented out until schema is fixed
+        // short_description_de: short_description_de || null,
+        // short_description_en: short_description_en || null,
         shipping_text: shipping_text || 'Versand 3–5 Tage',
         highlights: highlights || [],
         created_at: new Date().toISOString(),

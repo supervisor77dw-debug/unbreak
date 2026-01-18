@@ -99,8 +99,9 @@ export default async function handler(req, res) {
       if (image_crop_x !== undefined) updates.image_crop_x = image_crop_x;
       if (image_crop_y !== undefined) updates.image_crop_y = image_crop_y;
       if (badge_label !== undefined) updates.badge_label = badge_label;
-      if (short_description_de !== undefined) updates.short_description_de = short_description_de;
-      if (short_description_en !== undefined) updates.short_description_en = short_description_en;
+      // TEMPORARY: Commented out until schema is fixed
+      // if (short_description_de !== undefined) updates.short_description_de = short_description_de;
+      // if (short_description_en !== undefined) updates.short_description_en = short_description_en;
       if (shipping_text !== undefined) updates.shipping_text = shipping_text;
       if (highlights !== undefined) updates.highlights = highlights;
 
