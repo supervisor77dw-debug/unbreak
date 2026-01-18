@@ -478,8 +478,8 @@ export async function sendOrderConfirmation(params: {
   const testPrefix = isTestMode ? '[TEST] ' : '';
   
   const subject = isGerman
-    ? `${testPrefix}Bestellbestätigung ${orderNumber || orderId.substring(0, 8)} – UNBREAK ONE`
-    : `${testPrefix}Order confirmation ${orderNumber || orderId.substring(0, 8)} – UNBREAK ONE`;
+    ? `${testPrefix}UNBREAK-ONE – Neue Bestellung – ${orderNumber || orderId.substring(0, 8)}`
+    : `${testPrefix}UNBREAK-ONE – New Order – ${orderNumber || orderId.substring(0, 8)}`;
 
   const greeting = customerName 
     ? `Hallo ${customerName},`

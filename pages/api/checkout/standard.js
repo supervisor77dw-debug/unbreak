@@ -762,9 +762,12 @@ export default async function handler(req, res) {
     // 8. Return checkout URL
     log('checkout_success', {
       order_id: order.id,
+      order_number: order.order_number, // ← CRITICAL: Log order_number for tracking
       stripe_session_id: session.id,
       session_url_length: session.url?.length || 0,
     });
+
+    console.log(`✅ [CHECKOUT SUCCESS] Order ${order.order_number} - Session: ${session.id}`);
 
     res.status(200).json({ 
       url: session.url,

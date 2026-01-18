@@ -167,6 +167,13 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     console.log('🔍 [METADATA] order_number:', session.metadata?.order_number);
     console.log('🔍 [FALLBACK] stripe_session_id:', session.id);
     
+    // CRITICAL VALIDATION: Order number MUST exist in metadata
+    if (!session.metadata?.order_number) {
+      console.error('⚠️ [WEBHOOK] CRITICAL: No order_number in Stripe metadata!');
+      console.error('⚠️ [WEBHOOK] Session ID:', session.id);
+      console.error('⚠️ [WEBHOOK] This should NEVER happen for new orders!');
+    }
+    
     let order = null;
     let orderSource = null;
     
@@ -185,6 +192,7 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
         order = shopOrder;
         orderSource = 'simple_orders';
         console.log('✅ [DB QUERY] Found in SIMPLE_ORDERS by UUID');
+        console.log('📋 [ORDER] Number:', order.order_number || 'MISSING');
       } else {
         // Try configurator orders
         const { data: configuratorOrder } = await supabase
@@ -260,6 +268,25 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
       return;
     }
 
+    // 2.5 Retrieve complete Stripe session with line_items
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    console.log('🔍 [STRIPE] Retrieving session with line_items...');
+    const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+      expand: ['line_items']
+    });
+    
+    const lineItemsFromStripe = fullSession.line_items?.data || [];
+    console.log('📦 [LINE_ITEMS] Retrieved from Stripe:', lineItemsFromStripe.length, 'items');
+    
+    // Map Stripe line_items to our format
+    const lineItemsForDB = lineItemsFromStripe.map(item => ({
+      name: item.description || 'Unknown Product',
+      quantity: item.quantity,
+      price_cents: item.price?.unit_amount || 0,
+      line_total_cents: item.amount_total,
+      currency: item.currency?.toUpperCase() || 'EUR'
+    }));
+
     // 3. Update order to paid in the appropriate table
     const updateData = {
       status: 'paid',
@@ -270,11 +297,14 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
       customer_phone: session.customer_details?.phone,
       shipping_address: session.shipping_details?.address || null,
       billing_address: session.customer_details?.address || null,
+      items: lineItemsForDB, // ← CRITICAL: Save complete line_items from Stripe
       updated_at: new Date().toISOString(),
     };
 
     console.log('📝 [DB UPDATE] Attempting update in', orderSource, 'table...');
     console.log('📝 [DB UPDATE] WHERE order.id =', order.id);
+    console.log('📝 [DB UPDATE] Order Number:', order.order_number || 'MISSING');
+    console.log('📝 [DB UPDATE] Saving', lineItemsForDB.length, 'line items to DB');
     console.log('📝 [DB UPDATE] SET data:', JSON.stringify(updateData, null, 2));
 
     const tableName = orderSource === 'configurator' ? 'orders' : 'simple_orders';

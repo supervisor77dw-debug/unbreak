@@ -40,7 +40,18 @@ export default function Success() {
           console.log('[SUCCESS] session_id=%s', session_id);
         }
 
-        // Call finalize API to verify payment and update order
+        // 1. Fetch order data first (to display order number immediately)
+        const orderResponse = await fetch(`/api/order/by-session?session_id=${session_id}`);
+        const orderData = await orderResponse.json();
+
+        if (orderResponse.ok && orderData.order_number) {
+          console.log('[SUCCESS] ✅ Order fetched:', orderData.order_number);
+          setOrderData(orderData);
+        } else {
+          console.warn('[SUCCESS] ⚠️ Order fetch failed, using finalize fallback');
+        }
+
+        // 2. Call finalize API to verify payment and update order
         const response = await fetch('/api/checkout/finalize', {
           method: 'POST',
           headers: {
@@ -70,7 +81,8 @@ export default function Success() {
           }
         }
 
-        setOrderData(data.order);
+        // Merge finalize data with order data (finalize may have more info)
+        setOrderData(prev => ({ ...prev, ...data.order }));
         setLoading(false);
 
       } catch (err) {
@@ -167,10 +179,10 @@ export default function Success() {
             {ts('success.success.message')}
           </p>
 
-          {orderData?.id && (
+          {orderData?.order_number && (
             <div style={styles.orderInfo}>
               <p style={styles.orderLabel}>{ts('success.orderInfo.orderNumber')}</p>
-              <p style={styles.orderId}>{orderData.id}</p>
+              <p style={styles.orderId}>{orderData.order_number}</p>
               {orderData.total_amount_cents && (
                 <>
                   <p style={styles.orderLabel}>{ts('success.orderInfo.totalAmount')}</p>
