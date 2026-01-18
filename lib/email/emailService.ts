@@ -213,20 +213,59 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     console.log('[RESEND CALL] ReplyTo:', finalReplyTo || 'none');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    // Send email
-    const result = await resend.emails.send({
-      from: finalFrom,
-      to: recipients,
-      subject,
-      html,
-      text: finalText,
-      ...(finalReplyTo && { replyTo: finalReplyTo }),
-      ...(bccRecipients && { bcc: bccRecipients }),
-    });
+    // Send email with retry logic for rate limits (429)
+    let result;
+    let attempt = 0;
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+    
+    while (attempt < maxRetries) {
+      try {
+        if (attempt > 0) {
+          const delay = baseDelay * Math.pow(2, attempt - 1); // Exponential backoff: 1s, 2s, 4s
+          console.log(`⏳ [RETRY] Attempt ${attempt + 1}/${maxRetries} - Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        result = await resend.emails.send({
+          from: finalFrom,
+          to: recipients,
+          subject,
+          html,
+          text: finalText,
+          ...(finalReplyTo && { replyTo: finalReplyTo }),
+          ...(bccRecipients && { bcc: bccRecipients }),
+        });
+        
+        // If success or non-rate-limit error, break out of retry loop
+        if (!result.error || result.error.name !== 'rate_limit_exceeded') {
+          break;
+        }
+        
+        // Rate limit error - will retry
+        console.warn(`⚠️ [RATE LIMIT] Attempt ${attempt + 1} hit rate limit - will retry`);
+        attempt++;
+        
+      } catch (sendError: any) {
+        console.error(`❌ [SEND ERROR] Attempt ${attempt + 1} failed:`, sendError.message);
+        // If last attempt, throw the error
+        if (attempt === maxRetries - 1) {
+          throw sendError;
+        }
+        attempt++;
+      }
+    }
+    
+    if (!result) {
+      throw new Error('Failed to send email after retries');
+    }
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📥 [RESEND RESPONSE] Received from Resend API');
     console.log('[RESEND RESULT] Full response:', JSON.stringify(result, null, 2));
+    if (attempt > 0) {
+      console.log(`✅ [RETRY SUCCESS] Email sent after ${attempt + 1} attempts`);
+    }
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Check for error response
@@ -234,6 +273,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.error(`❌ [EMAIL SEND] Resend API returned error`);
       console.error('[RESEND ERROR] Message:', result.error.message);
+      console.error('[RESEND ERROR] Name:', result.error.name);
       console.error('[RESEND ERROR] Full error:', JSON.stringify(result.error, null, 2));
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return {
@@ -245,6 +285,12 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`✅ [EMAIL SEND] Success!`);
     console.log(`✅ [RESEND ID] ${result.data?.id}`);
+    console.log(`✅ [EMAIL SENT TO] ${Array.isArray(to) ? to.join(', ') : to}`);
+    if (bccRecipients && bccRecipients.length > 0) {
+      console.log(`✅ [EMAIL BCC TO] ${bccRecipients.join(', ')}`);
+      console.log(`ℹ️  [BCC INFO] BCC recipients will receive the SAME email`);
+      console.log(`ℹ️  [BCC INFO] This is ONE request, not ${1 + bccRecipients.length} separate requests`);
+    }
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     return {
