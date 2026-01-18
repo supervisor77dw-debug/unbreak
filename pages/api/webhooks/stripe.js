@@ -854,6 +854,15 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     
     console.log('🌍 [PRISMA SYNC] Shipping country:', shippingCountry, '→ Region:', shippingRegion);
     
+    // Extract addresses with fallbacks (CRITICAL for admin_orders)
+    const shippingAddress = session.shipping_details?.address ?? session.customer_details?.address ?? null;
+    const billingAddress = session.customer_details?.address ?? session.shipping_details?.address ?? null;
+    const shippingName = session.shipping_details?.name ?? session.customer_details?.name ?? customerName;
+    const billingName = session.customer_details?.name ?? session.shipping_details?.name ?? customerName;
+    
+    console.log('🏠 [PRISMA SYNC] Shipping address:', shippingAddress ? `${shippingAddress.line1}, ${shippingAddress.city}` : 'MISSING');
+    console.log('📋 [PRISMA SYNC] Billing address:', billingAddress ? `${billingAddress.line1}, ${billingAddress.city}` : 'MISSING');
+    
     const order = await prisma.order.upsert({
       where: { stripeCheckoutSessionId: session.id },
       update: {
@@ -874,8 +883,9 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         amountShipping: amountShipping,
         amountTax: amountTax,
         email: customerEmail,
-        shippingName: customerName || session.shipping_details?.name,
-        shippingAddress: session.shipping_details?.address || supabaseOrder.shipping_address || null,
+        shippingName: shippingName,
+        shippingAddress: shippingAddress,
+        billingAddress: billingAddress,
         shippingRegion: shippingRegion,
         customerId: customer.id,
         paidAt: new Date(),
@@ -883,14 +893,26 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
       },
     });
 
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`[DB_WRITE_ORDER] order_id=${order.id.substring(0, 8)} session_id=${session.id.substring(0, 20)}`);
+    console.log(`[DB_WRITE_ORDER] shipping_address_present=${!!shippingAddress} billing_address_present=${!!billingAddress}`);
+    console.log(`[DB_WRITE_ORDER] email=${customerEmail} amount=${amountTotal}¢ shipping=${amountShipping}¢`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('✅ [PRISMA SYNC] Admin order:', order.id);
 
-    // 4. Create order items
+    // 4. Check if items already exist (IDEMPOTENCY)
     const existingItems = await prisma.orderItem.count({
       where: { orderId: order.id }
     });
 
-    if (existingItems === 0 && items.length > 0) {
+    if (existingItems > 0) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`[IDEMPOTENT_SKIP] reason=items_already_exist order_id=${order.id.substring(0, 8)} existing_count=${existingItems}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } else if (items.length > 0) {
+      console.log('🛒 [PRISMA SYNC] Creating order items...');
+      let insertedCount = 0;
+      
       for (const item of items) {
         // Calculate pricing fields if this is a configured product
         let pricingFields = {};
@@ -943,8 +965,9 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
             ...pricingFields,
           },
         });
+        insertedCount++;
       }
-      console.log(`✅ [PRISMA SYNC] Created ${items.length} order items`);
+      console.log(`✅ [PRISMA SYNC] Created ${insertedCount} order items`);
       
       // 5. Recalculate order totals from items (SINGLE SOURCE OF TRUTH)
       const createdItems = await prisma.orderItem.findMany({
@@ -976,8 +999,10 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         shipping: shippingAmount,
         total_gross: totalGross,
       });
-    } else {
-      console.log('ℹ️ [PRISMA SYNC] Order items already exist - skipping');
+      
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`[DB_WRITE_ITEMS] inserted_count=${insertedCount} order_id=${order.id.substring(0, 8)}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     }
 
     // 6. Log event
