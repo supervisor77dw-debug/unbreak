@@ -1042,6 +1042,41 @@ footer a:hover {
   color: var(--color-white);
 }
 
+/* Manual Download Links */
+.manual-link,
+.footer-manual-link {
+  display: inline-block;
+  padding: 8px 16px;
+  background: rgba(10, 109, 116, 0.2);
+  border: 1px solid rgba(10, 109, 116, 0.4);
+  border-radius: 6px;
+  color: #5dd5d5;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.manual-link:hover,
+.footer-manual-link:hover {
+  background: rgba(10, 109, 116, 0.3);
+  border-color: #5dd5d5;
+  color: #7ee5e5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(10, 109, 116, 0.3);
+}
+
+.footer-manual-link {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--color-silber);
+}
+
+.footer-manual-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-white);
+  color: var(--color-white);
+}
+
 /* === UTILITY CLASSES === */
 .text-center {
   text-align: center;

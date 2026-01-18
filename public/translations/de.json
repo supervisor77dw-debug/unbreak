@@ -50,6 +50,9 @@
   "product": {
     "sectionTitle": "Das System hinter UNBREAK ONE",
     "sectionSubtitle": "Unsere magnetischen Halter kombinieren innovative Technik mit elegantem Design. Ob Weinglas, Glas oder Flasche – UNBREAK ONE sorgt für sicheren Halt, egal wo.",
+    "manualTitle": "📄 Bedienungsanleitung:",
+    "manualDE": "📥 Deutsch (PDF)",
+    "manualEN": "📥 English (PDF)",
     "teaser": {
       "title": "Weinglashalter & Flaschenhalter",
       "description": "Entwickelt für alle gängigen Weingläser, Flaschen und Getränke. Magnetisch oder mit Nano-Gel – flexibel einsetzbar auf jeder Oberfläche.",
@@ -402,5 +405,13 @@
       "glass_holder": "Glashalter (konfiguriert)",
       "bottle_holder": "Flaschenhalter (konfiguriert)"
     }
+  },
+  "footer": {
+    "downloads": "📥 Downloads",
+    "manualDE": "Bedienungsanleitung (DE)",
+    "manualEN": "User Manual (EN)",
+    "impressum": "Impressum",
+    "privacy": "Datenschutz",
+    "terms": "AGB"
   }
 }
