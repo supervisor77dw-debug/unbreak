@@ -97,12 +97,66 @@
   }
 
   // ===================================
-  // VIDEO PLAY CONTROLLER
+  // VIDEO PLAY CONTROLLER WITH MODAL
   // ===================================
   class VideoPlayController {
     constructor() {
       this.videos = document.querySelectorAll('.proof-video');
+      this.modal = null;
+      this.currentVideo = null;
+      this.scrollPosition = 0;
       this.init();
+      this.createModal();
+    }
+
+    createModal() {
+      // Create modal HTML
+      const modalHTML = `
+        <div class="video-modal" id="videoModal">
+          <div class="video-modal-hint">Drücke ESC zum Schließen</div>
+          <button class="video-modal-close" aria-label="Schließen">&times;</button>
+          <div class="video-modal-content">
+            <video 
+              id="modalVideo"
+              controls
+              autoplay
+              loop
+              playsinline>
+            </video>
+            <div class="video-modal-title" id="modalTitle"></div>
+          </div>
+        </div>
+      `;
+
+      // Insert modal into body
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+      this.modal = document.getElementById('videoModal');
+      const closeBtn = this.modal.querySelector('.video-modal-close');
+      const modalVideo = document.getElementById('modalVideo');
+
+      // Close button handler
+      closeBtn.addEventListener('click', () => this.closeModal());
+
+      // ESC key handler
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.modal.classList.contains('active')) {
+          this.closeModal();
+        }
+      });
+
+      // Click outside video to close
+      this.modal.addEventListener('click', (e) => {
+        if (e.target === this.modal) {
+          this.closeModal();
+        }
+      });
+
+      // Video ended handler
+      modalVideo.addEventListener('ended', () => {
+        // Loop is enabled, but if user wants to close on end
+        // this.closeModal();
+      });
     }
 
     init() {
@@ -110,29 +164,69 @@
         const container = video.closest('.proof-video-container');
         const playOverlay = container?.querySelector('.video-play-overlay');
         const playButton = container?.querySelector('.video-play-btn');
+        const videoLabel = container?.querySelector('.video-label span');
 
         if (!container || !playOverlay || !playButton) return;
 
-        // Play button click handler
+        // Play button click handler - Open Modal
         playButton.addEventListener('click', (e) => {
           e.preventDefault();
-          this.togglePlayback(video, playOverlay);
+          const videoSrc = video.querySelector('source')?.src || video.src;
+          const title = videoLabel?.textContent || 'Video';
+          this.openModal(videoSrc, title);
         });
 
-        // Video click handler (toggle play/pause)
+        // Video click handler - Open Modal
         video.addEventListener('click', (e) => {
           e.preventDefault();
-          this.togglePlayback(video, playOverlay);
+          const videoSrc = video.querySelector('source')?.src || video.src;
+          const title = videoLabel?.textContent || 'Video';
+          this.openModal(videoSrc, title);
         });
-
-        // Show overlay when video ends
-        video.addEventListener('ended', () => {
-          playOverlay.classList.remove('hidden');
-        });
-
-        // Pause when out of viewport (Performance)
-        this.setupViewportPause(video);
       });
+    }
+
+    openModal(videoSrc, title) {
+      const modalVideo = document.getElementById('modalVideo');
+      const modalTitle = document.getElementById('modalTitle');
+
+      // Save current scroll position
+      this.scrollPosition = window.pageYOffset;
+
+      // Set video source
+      modalVideo.src = videoSrc;
+
+      // Set title
+      modalTitle.textContent = title;
+
+      // Show modal
+      this.modal.classList.add('active');
+      document.body.classList.add('video-modal-open');
+
+      // Play video
+      modalVideo.play().catch(err => {
+        console.error('[VIDEO MODAL] Play failed:', err);
+      });
+
+      console.log('[VIDEO MODAL] Opened:', title);
+    }
+
+    closeModal() {
+      const modalVideo = document.getElementById('modalVideo');
+
+      // Pause and reset video
+      modalVideo.pause();
+      modalVideo.currentTime = 0;
+      modalVideo.src = '';
+
+      // Hide modal
+      this.modal.classList.remove('active');
+      document.body.classList.remove('video-modal-open');
+
+      // Restore scroll position
+      window.scrollTo(0, this.scrollPosition);
+
+      console.log('[VIDEO MODAL] Closed');
     }
 
     togglePlayback(video, overlay) {

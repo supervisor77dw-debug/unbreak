@@ -1,0 +1,133 @@
+/* ===================================
+   VIDEO MODAL / LIGHTBOX
+   Professional full-screen video overlay
+   =================================== */
+
+.video-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.95);
+  animation: fadeIn 0.3s ease;
+}
+
+.video-modal.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-modal-content {
+  position: relative;
+  width: 90%;
+  max-width: 1400px;
+  max-height: 90vh;
+  animation: scaleIn 0.3s ease;
+}
+
+.video-modal video {
+  width: 100%;
+  height: auto;
+  max-height: 90vh;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
+.video-modal-close {
+  position: absolute;
+  top: -50px;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 40px;
+  cursor: pointer;
+  padding: 10px;
+  line-height: 1;
+  transition: transform 0.2s, opacity 0.2s;
+  opacity: 0.8;
+  z-index: 10001;
+}
+
+.video-modal-close:hover {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+.video-modal-title {
+  position: absolute;
+  bottom: -60px;
+  left: 0;
+  color: white;
+  font-size: 18px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .video-modal-content {
+    width: 95%;
+  }
+
+  .video-modal-close {
+    top: -40px;
+    font-size: 32px;
+  }
+
+  .video-modal-title {
+    font-size: 14px;
+    bottom: -40px;
+  }
+}
+
+/* ESC key hint */
+.video-modal-hint {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  opacity: 0.6;
+  font-size: 14px;
+  animation: fadeOut 3s forwards;
+}
+
+@keyframes fadeOut {
+  0%, 70% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Prevent body scroll when modal open */
+body.video-modal-open {
+  overflow: hidden;
+}
