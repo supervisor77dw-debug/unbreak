@@ -5,8 +5,7 @@ import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.
 import { resolvePriceCents, validatePricing } from '../../../lib/pricing/pricingResolver.js';
 import { getEnvFingerprint, formatFingerprintLog } from '../../../lib/utils/envFingerprint.js';
 import { generateOrderNumber, generatePublicId } from '../../../lib/utils/orderNumber.js';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+import { stripe, IS_TEST_MODE, guardCheckoutSession, STRIPE_MODE } from '../../../lib/stripe-config.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -679,7 +678,7 @@ export default async function handler(req, res) {
       matches_snapshot: true 
     });
 
-    const sessionData = {
+    const sessionData = guardCheckoutSession({
       // PAYMENT METHODS: Card + PayPal (confirmed active)
       payment_method_types: ['card'], // PayPal temporarily disabled (verification pending)
       line_items: lineItems,
@@ -720,8 +719,9 @@ export default async function handler(req, res) {
         ui_lang: userLanguage, // 'de' or 'en' for debugging
         accept_language: req.headers['accept-language'] ? req.headers['accept-language'].substring(0, 50) : 'NONE',
         build_commit: process.env.VERCEL_GIT_COMMIT_SHA || 'local',
+        stripe_mode: STRIPE_MODE, // Test or live mode identifier
       },
-    };
+    });
 
     // 6. Create Stripe checkout session
     const session = await stripe.checkout.sessions.create(sessionData);

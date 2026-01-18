@@ -1,7 +1,6 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+import { stripe, guardCheckoutSession, STRIPE_MODE } from '../../../lib/stripe-config.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -90,7 +89,7 @@ export default async function handler(req, res) {
     }
 
     // 4. Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create(guardCheckoutSession({
       // Payment methods: card, PayPal, SEPA, Klarna
       payment_method_types: ['card'], // PayPal temporarily disabled (verification pending)
       locale: 'de', // Bundle endpoint defaults to German
@@ -117,8 +116,9 @@ export default async function handler(req, res) {
         bundle_id: bundle.id,
         type: 'bundle',
         user_id: userId || 'guest',
+        stripe_mode: STRIPE_MODE,
       },
-    });
+    }));
 
     // 5. Update order with payment intent
     await supabase
