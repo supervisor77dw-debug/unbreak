@@ -17,14 +17,14 @@
   <meta property="og:title" content="UNBREAK ONE – Magnetische Halter für Gläser & Flaschen">
   <meta property="og:description"
     content="Premium magnetische Halter für Gläser und Flaschen. Entwickelt für Boot, Camper, Gastronomie und mehr.">
-  <meta property="og:url" content="https://unbreak-one.vercel.app">
-  <meta property="og:image" content="https://unbreak-one.vercel.app/images/hero-combo.jpg">
+  <meta property="og:url" content="https://unbreak-one.com">
+  <meta property="og:image" content="https://unbreak-one.com/images/hero-combo.jpg">
 
   <!-- Twitter Card Meta Tags -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="UNBREAK ONE – Magnetische Halter">
   <meta name="twitter:description" content="Premium magnetische Halter für Gläser und Flaschen.">
-  <meta name="twitter:image" content="https://unbreak-one.vercel.app/images/hero-combo.jpg">
+  <meta name="twitter:image" content="https://unbreak-one.com/images/hero-combo.jpg">
 
   <!-- Favicon (placeholder for later) -->
   <!-- <link rel="icon" type="image/png" href="favicon.png"> -->
@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="readability-optimization.css?v=2.0.3">
   <link rel="stylesheet" href="i18n.css?v=2.0.3">
   <link rel="stylesheet" href="premium.css?v=2.0.3">
+  <link rel="stylesheet" href="video-sections.css?v=2.0.4">
   
   <!-- Version & Cache Management (MUST load first) -->
   <script src="/version.js?v=2.0.4"></script>
@@ -47,6 +48,8 @@
 <body>
   <!-- Animation Scripts -->
   <script src="animations.js?v=2.0.0" defer></script>
+  <!-- Video Controller -->
+  <script src="video-controller.js?v=2.0.4" defer></script>
 
   <!-- ===================================
        HEADER / NAVIGATION
@@ -98,16 +101,15 @@
         autoplay 
         loop 
         muted 
-        playsinline>
-        <!-- Desktop Version (1920x1080) -->
+        playsinline
+        preload="metadata"
+        poster="images/poster-yacht.jpg">
+        <!-- Yacht Video -->
         <source 
-          src="images/background-1920.mp4" 
-          type="video/mp4" 
-          media="(min-width: 1024px)">
-        <!-- Mobile Version (1280x720) -->
-        <source 
-          src="images/background-1280.mp4" 
+          src="images/unbreak-one-yacht.mp4" 
           type="video/mp4">
+        <!-- Fallback für alte Browser -->
+        Your browser does not support the video tag.
       </video>
       <!-- Dark Overlay für bessere Lesbarkeit -->
       <div class="hero-video-overlay"></div>
@@ -182,6 +184,70 @@
           </ul>
 
           <a href="produkt.html" class="btn btn-primary btn-magnetic" data-i18n="product.teaser.cta">Mehr zum Produkt</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================
+       PRODUKT IN ACTION - LIVE TEST
+       =================================== -->
+  <section id="proof-video" class="proof-section">
+    <div class="container">
+      <h2 class="text-center mb-lg" data-scroll-reveal="fade-up" data-i18n="proof.sectionTitle">Produkt in Action – Echter Härtetest</h2>
+      <p class="text-center mb-xl proof-subtitle" data-scroll-reveal="fade-up" data-scroll-delay="1" data-i18n="proof.sectionSubtitle">
+        Stabilität bei hoher Belastung – Live getestet unter extremen Bedingungen
+      </p>
+
+      <div class="proof-video-wrapper" data-scroll-reveal="fade-up" data-scroll-delay="2">
+        <!-- Video Container -->
+        <div class="proof-video-container">
+          <video 
+            class="proof-video lazy-video" 
+            loop 
+            muted 
+            playsinline
+            preload="metadata"
+            poster="images/poster-live-test.jpg"
+            data-src="images/unbreak-one-winter_live.mp4">
+            <source 
+              data-src="images/unbreak-one-winter_live.mp4" 
+              type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          
+          <!-- Play Button Overlay -->
+          <div class="video-play-overlay">
+            <button class="video-play-btn" aria-label="Video abspielen">
+              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
+                <circle cx="40" cy="40" r="38" stroke="white" stroke-width="2" opacity="0.8"/>
+                <path d="M32 26L56 40L32 54V26Z" fill="white"/>
+              </svg>
+            </button>
+          </div>
+          
+          <!-- Video Label -->
+          <div class="video-label">
+            <span data-i18n="proof.videoLabel">🎥 Echter Produkttest – Winter Edition</span>
+          </div>
+        </div>
+
+        <!-- Proof Points neben dem Video -->
+        <div class="proof-points" data-scroll-reveal="fade-left" data-scroll-delay="3">
+          <h3 data-i18n="proof.pointsTitle">Was Sie sehen werden:</h3>
+          <ul class="proof-list">
+            <li data-i18n="proof.point1">✓ Extreme Stabilität bei Bewegung</li>
+            <li data-i18n="proof.point2">✓ Sicherer Halt auch bei Erschütterungen</li>
+            <li data-i18n="proof.point3">✓ Echte Nutzungsbedingungen im Winter</li>
+            <li data-i18n="proof.point4">✓ Professionelle Belastbarkeit</li>
+          </ul>
+          
+          <a href="#" class="btn btn-primary btn-magnetic mt-md" data-i18n="proof.cta">Zum Konfigurator</a>
+          
+          <!-- Optional: Link zur vollständigen Testseite -->
+          <p class="proof-note mt-sm" data-i18n="proof.note">
+            <a href="/live-test" class="text-link">→ Vollständiger Testbericht mit Ergebnissen</a>
+          </p>
         </div>
       </div>
     </div>
@@ -337,7 +403,21 @@
 
   <!-- ===================================
        SETS & BUNDLES / SHOP SECTION (TEASER)
-       =================================== -->  <!-- ===================================
+       =================================== -->
+  <!-- SHOP TEASER (Link zu /shop) -->
+  <section id="shop-teaser" style="padding: var(--spacing-xl) 0; background: linear-gradient(135deg, var(--petrol-dark) 0%, var(--petrol) 100%); text-align: center; color: white;">
+    <div class="container">
+      <h2 class="mb-md" data-scroll-reveal="fade-up" data-i18n="shop.teaser.title">Wähle dein UNBREAK ONE</h2>
+      <p class="mb-lg" data-scroll-reveal="fade-up" data-scroll-delay="1" data-i18n="shop.teaser.subtitle" style="max-width: 700px; margin: 0 auto 2rem; opacity: 0.95;">
+        Von der kleinen Haushaltslösung bis zum professionellen Gastro-Bundle – wir haben das passende Set für dich.
+      </p>
+      <a href="/shop" class="btn btn-primary btn-magnetic" data-scroll-reveal="fade-up" data-scroll-delay="2" data-i18n="shop.teaser.cta">
+        Jetzt zum Shop
+      </a>
+    </div>
+  </section>
+
+  <!-- ===================================
        KONTAKT SECTION (TEASER)
        =================================== -->
   <section id="kontakt" data-scroll-reveal="fade-up">
@@ -367,6 +447,16 @@
       </p>
     </div>
   </footer>
+
+  <!-- ===================================
+       CONFIGURATOR MODAL OVERLAY
+       =================================== -->
+  <div id="configurator-modal" class="modal-overlay">
+    <div class="modal-container">
+      <button class="modal-close" aria-label="Close configurator">&times;</button>
+      <iframe class="modal-iframe" title="UNBREAK ONE Configurator"></iframe>
+    </div>
+  </div>
 
   <!-- JavaScript -->
   <script src="script.js?v=2.0.0"></script>
