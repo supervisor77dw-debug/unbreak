@@ -1,7 +1,7 @@
 /**
  * TESTMODUS-BANNER
  * 
- * Wird nur im Test-Mode angezeigt (STRIPE_MODE=test)
+ * Wird nur im Test-Mode angezeigt (pk_test_ Schlüssel)
  * Warnt Benutzer, dass keine echten Zahlungen verarbeitet werden
  */
 

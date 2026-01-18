@@ -42,11 +42,17 @@ export default async function handler(req, res) {
     // 2. Verify webhook signature
     let event;
     try {
-      event = stripe.webhooks.constructEvent(buf, sig, getWebhookSecret());
+      const webhookSecret = getWebhookSecret();
+      event = stripe.webhooks.constructEvent(buf, sig, webhookSecret);
+      
+      // MODE DETECTION via event.livemode ONLY
+      const eventMode = event.livemode ? 'LIVE' : 'TEST';
+      
       console.log('✅ [SIGNATURE] Verified OK');
       console.log('📥 [EVENT] Type:', event.type);
       console.log('📥 [EVENT] ID:', event.id);
-      console.log(`🔒 [EVENT MODE] event.livemode=${event.livemode} (${event.livemode ? 'LIVE' : 'TEST'})`);
+      console.log(`🔒 [MODE] event.livemode=${event.livemode} → ${eventMode}`);
+      console.log(`🔑 [SECRET] Using STRIPE_WEBHOOK_SECRET from Vercel scope`);
     } catch (err) {
       console.error('❌ [SIGNATURE] Verification FAILED:', err.message);
       return res.status(400).json({ error: `Webhook signature verification failed: ${err.message}` });
