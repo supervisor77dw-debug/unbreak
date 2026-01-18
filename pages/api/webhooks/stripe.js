@@ -432,6 +432,7 @@ async function sendOrderConfirmationEmail(session, order) {
 
     // Extract customer data from Stripe session
     const customerName = session.customer_details?.name;
+    const customerPhone = session.customer_details?.phone;
     const shippingAddress = session.shipping_details?.address;
 
     // Load Line Items from Stripe (with proper amounts)
@@ -522,6 +523,7 @@ async function sendOrderConfirmationEmail(session, order) {
       orderNumber: orderNumber,
       customerEmail,
       customerName,
+      customerPhone, // ← NEW: Phone for support team
       items,
       totalAmount: order.total_amount_cents,
       language,

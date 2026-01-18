@@ -282,6 +282,7 @@ export async function sendOrderConfirmation(params: {
   orderNumber?: string;
   customerEmail: string;
   customerName?: string;
+  customerPhone?: string; // ← NEW: Customer phone number
   items: Array<{ name: string; quantity: number; price_cents: number; line_total_cents?: number }>;
   totalAmount: number;
   language?: 'de' | 'en';
@@ -293,6 +294,7 @@ export async function sendOrderConfirmation(params: {
     orderNumber,
     customerEmail,
     customerName,
+    customerPhone, // ← NEW
     items,
     totalAmount,
     language = 'de',
@@ -301,6 +303,9 @@ export async function sendOrderConfirmation(params: {
   } = params;
 
   const isGerman = language === 'de';
+  
+  // Make customerPhone accessible in template via params
+  // (already destructured above, but keep reference for consistency)
 
   // ====================================================================
   // PRODUCT LABELS MAPPING (i18n for email)
@@ -806,6 +811,7 @@ ${localizedProductItems.map(item => `                <div style="padding: 12px 0
       <h2 style="margin: 0 0 10px 0; font-size: 16px; color: #2F6F55;">👤 Kunde</h2>
       <p style="margin: 5px 0; font-size: 14px; color: #333;"><strong>${customerName || '—'}</strong></p>
       <p style="margin: 5px 0; font-size: 14px; color: #666;">${customerEmail}</p>
+      ${customerPhone ? `<p style="margin: 5px 0; font-size: 14px; color: #666;">📞 ${customerPhone}</p>` : ''}
     </div>
     
     ${shippingAddress ? `

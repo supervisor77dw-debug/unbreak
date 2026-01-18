@@ -691,6 +691,9 @@ export default async function handler(req, res) {
       shipping_address_collection: {
         allowed_countries: ['DE', 'AT', 'CH', 'NL', 'BE', 'LU', 'FR', 'IT', 'ES', 'PT'],
       },
+      phone_number_collection: {
+        enabled: true,
+      },
       
       // TAX: Automatic tax calculation
       automatic_tax: {

@@ -108,6 +108,15 @@ export default async function handler(req, res) {
         },
       ],
       mode: 'payment',
+      
+      // SHIPPING: Address + Phone collection (for fulfillment)
+      shipping_address_collection: {
+        allowed_countries: ['DE', 'AT', 'CH', 'NL', 'BE', 'LU', 'FR', 'IT', 'ES', 'PT'],
+      },
+      phone_number_collection: {
+        enabled: true,
+      },
+      
       success_url: `${getOrigin(req)}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${getOrigin(req)}/cancel.html`,
       customer_email: customerEmail || undefined,
