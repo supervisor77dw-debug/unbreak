@@ -458,26 +458,26 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     }
 
     console.log('✅ [VALIDATION] Order complete - all required fields present');
-    console.log('✅ [VALIDATION] Proceeding to Prisma sync...');
+    console.log('✅ [VALIDATION] Proceeding to Supabase admin_orders sync...');
 
     // === SYNC STRIPE CUSTOMER TO SUPABASE ===
     await syncStripeCustomerToSupabase(fullSession, orderFromDB, trace_id);
 
-    // === SYNC TO PRISMA (ADMIN SYSTEM) ===
-    const prismaOrder = await syncOrderToPrisma(fullSession, orderFromDB, orderSource);
+    // === SYNC TO SUPABASE ADMIN_ORDERS (via Prisma client) ===
+    const adminOrder = await syncOrderToSupabase(fullSession, orderFromDB, orderSource);
 
-    // === SEND ORDER CONFIRMATION EMAIL (PRISMA DB-FIRST) ===
-    if (prismaOrder) {
+    // === SEND ORDER CONFIRMATION EMAIL (SUPABASE admin_orders + admin_order_items) ===
+    if (adminOrder) {
       try {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log(`📧 [EMAIL ATTEMPT] trace_id=${trace_id} mode=${eventMode}`);
-        console.log(`📧 [EMAIL] Order ID: ${prismaOrder.id}`);
-        console.log(`📧 [EMAIL] Source: PRISMA admin_orders + admin_order_items (DB-FIRST)`);
+        console.log(`📧 [EMAIL] Order ID: ${adminOrder.id}`);
+        console.log(`📧 [EMAIL] Source: SUPABASE admin_orders + admin_order_items (via Prisma client)`);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
-        // Query full order with items from Prisma
+        // Query full order with items from Supabase admin_orders (via Prisma client)
         const orderWithItems = await prisma.order.findUnique({
-          where: { id: prismaOrder.id },
+          where: { id: adminOrder.id },
           include: {
             items: {
               select: {
@@ -494,8 +494,8 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
         });
         
         if (!orderWithItems) {
-          console.error('❌ [EMAIL] Order not found in Prisma after sync:', prismaOrder.id);
-          throw new Error('Order not found after Prisma sync');
+          console.error('❌ [EMAIL] Order not found in Supabase admin_orders after sync:', adminOrder.id);
+          throw new Error('Order not found in Supabase admin_orders after sync');
         }
         
         // Format items for email service (match expected structure)
@@ -506,17 +506,17 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
           line_total_cents: item.totalPrice
         }));
         
-        console.log('[EMAIL_PAYLOAD_FROM_DB] Prisma order loaded:');
+        console.log('[EMAIL_PAYLOAD_FROM_DB] Supabase admin_orders order loaded (via Prisma):');
         console.log(`[EMAIL_PAYLOAD_FROM_DB] order_id=${orderWithItems.id.substring(0, 8)}`);
         console.log(`[EMAIL_PAYLOAD_FROM_DB] items_count=${emailItems.length}`);
-        console.log('[EMAIL_PAYLOAD_FROM_DB] Items:');
+        console.log('[EMAIL_PAYLOAD_FROM_DB] Items (from admin_order_items):');
         emailItems.forEach((item, idx) => {
           console.log(`[EMAIL_PAYLOAD_FROM_DB]   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
         });
         console.log(`[EMAIL_PAYLOAD_FROM_DB] Totals: subtotal=${orderWithItems.subtotalNet}¢ shipping=${orderWithItems.amountShipping}¢ tax=${orderWithItems.taxAmount}¢ total=${orderWithItems.totalGross}¢`);
         console.log(`[EMAIL_PAYLOAD_FROM_DB] Addresses: billing=${orderWithItems.billingAddress ? 'YES' : 'NO'} shipping=${orderWithItems.shippingAddress ? 'YES' : 'NO'}`);
         
-        // Call email service with PRISMA data
+        // Call email service with SUPABASE admin_orders data (queried via Prisma)
         const emailResult = await sendOrderConfirmation({
           orderId: orderWithItems.id,
           orderNumber: orderWithItems.id.substring(0, 8).toUpperCase(),
@@ -535,7 +535,7 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
         
         if (emailResult.sent) {
           console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id} - Email sent from Prisma data`);
+          console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id} - Email sent from Supabase admin_orders`);
           console.log(`✅ [EMAIL] Resend ID: ${emailResult.id}`);
           console.log(`✅ [EMAIL] TO: ${orderWithItems.email}`);
           console.log(`✅ [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
@@ -562,7 +562,7 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       }
     } else {
-      console.warn('⚠️ [EMAIL] Skipping email - Prisma sync returned null (sync failed)');
+      console.warn('⚠️ [EMAIL] Skipping email - Supabase admin_orders sync returned null (sync failed)');
     }
 
   } catch (error) {
@@ -784,12 +784,16 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
   }
 }
 
-async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
+/**
+ * Sync order to Supabase admin_orders + admin_order_items
+ * (Prisma is only the query client, NOT the data owner)
+ */
+async function syncOrderToSupabase(session, supabaseOrder, orderSource) {
   try {
-    console.log('💾 [PRISMA SYNC] Starting order sync...');
-    console.log('💾 [PRISMA SYNC] Session ID:', session.id);
-    console.log('💾 [PRISMA SYNC] Order ID:', supabaseOrder.id);
-    console.log('💾 [PRISMA SYNC] Order Source:', orderSource);
+    console.log('💾 [ADMIN_ORDERS SYNC] Starting order sync to Supabase...');
+    console.log('💾 [ADMIN_ORDERS SYNC] Session ID:', session.id);
+    console.log('💾 [ADMIN_ORDERS SYNC] Order ID:', supabaseOrder.id);
+    console.log('💾 [ADMIN_ORDERS SYNC] Order Source:', orderSource);
 
     let customerEmail, customerName;
     let items = [];
@@ -798,7 +802,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     // Handle different order formats
     if (orderSource === 'configurator') {
       // Orders table format (configurator)
-      console.log('💾 [PRISMA SYNC] Processing CONFIGURATOR order:', supabaseOrder.order_number);
+      console.log('💾 [ADMIN_ORDERS] Processing CONFIGURATOR order:', supabaseOrder.order_number);
       
       // Get customer from customers table
       const { data: customerData, error: customerError } = await supabase
@@ -808,7 +812,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         .single();
 
       if (customerError || !customerData) {
-        console.error('❌ [PRISMA SYNC] Failed to get customer:', customerError?.message);
+        console.error('❌ [ADMIN_ORDERS] Failed to get customer:', customerError?.message);
         return;
       }
 
@@ -847,13 +851,13 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
       }
     } else {
       // simple_orders table format (standard shop)
-      console.log('💾 [PRISMA SYNC] Processing SHOP order');
+      console.log('💾 [ADMIN_ORDERS] Processing SHOP order');
       
       customerEmail = session.customer_details?.email || session.customer_email;
       customerName = session.customer_details?.name || null;
       
       if (!customerEmail) {
-        console.warn('⚠️ [PRISMA SYNC] No customer email - skipping');
+        console.warn('⚠️ [ADMIN_ORDERS] No customer email - skipping');
         return;
       }
 
@@ -878,12 +882,12 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
           });
         }
       } catch (err) {
-        console.error('❌ [PRISMA SYNC] Failed to parse items:', err.message);
+        console.error('❌ [ADMIN_ORDERS] Failed to parse items:', err.message);
       }
     }
 
-    console.log('✅ [PRISMA SYNC] Customer email:', customerEmail);
-    console.log('✅ [PRISMA SYNC] Items:', items.length);
+    console.log('✅ [ADMIN_ORDERS] Customer email:', customerEmail);
+    console.log('✅ [ADMIN_ORDERS] Items:', items.length);
 
     // 2. Upsert customer in admin system
     const customer = await prisma.customer.upsert({
@@ -899,20 +903,20 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
       },
     });
 
-    console.log('✅ [PRISMA SYNC] Admin customer:', customer.id);
+    console.log('✅ [ADMIN_ORDERS] Admin customer:', customer.id);
 
     // 3. Parse config_json from session metadata or supabaseOrder
     let configJson = null;
     try {
       if (session.metadata?.config_json) {
         configJson = JSON.parse(session.metadata.config_json);
-        console.log('✅ [PRISMA SYNC] config_json from Stripe metadata:', configJson);
+        console.log('✅ [ADMIN_ORDERS] config_json from Stripe metadata:', configJson);
       } else if (supabaseOrder?.config_json) {
         configJson = supabaseOrder.config_json;
-        console.log('✅ [PRISMA SYNC] config_json from Supabase order:', configJson);
+        console.log('✅ [ADMIN_ORDERS] config_json from Supabase order:', configJson);
       }
     } catch (error) {
-      console.warn('⚠️ [PRISMA SYNC] Failed to parse config_json:', error.message);
+      console.warn('⚠️ [ADMIN_ORDERS] Failed to parse config_json:', error.message);
     }
 
     // 4. Create or update order in admin system
@@ -923,7 +927,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
                            null;
     const shippingRegion = countryToRegion(shippingCountry);
     
-    console.log('🌍 [PRISMA SYNC] Shipping country:', shippingCountry, '→ Region:', shippingRegion);
+    console.log('🌍 [ADMIN_ORDERS] Shipping country:', shippingCountry, '→ Region:', shippingRegion);
     
     // Calculate shipping from Backend DB (NOT from Stripe!)
     // Calculate subtotal to determine tax rate first
@@ -976,8 +980,8 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     const shippingName = session.shipping_details?.name ?? session.customer_details?.name ?? customerName;
     const billingName = session.customer_details?.name ?? session.shipping_details?.name ?? customerName;
     
-    console.log('🏠 [PRISMA SYNC] Shipping address:', shippingAddress ? `${shippingAddress.line1}, ${shippingAddress.city}` : 'MISSING');
-    console.log('📋 [PRISMA SYNC] Billing address:', billingAddress ? `${billingAddress.line1}, ${billingAddress.city}` : 'MISSING');
+    console.log('🏠 [ADMIN_ORDERS] Shipping address:', shippingAddress ? `${shippingAddress.line1}, ${shippingAddress.city}` : 'MISSING');
+    console.log('📋 [ADMIN_ORDERS] Billing address:', billingAddress ? `${billingAddress.line1}, ${billingAddress.city}` : 'MISSING');
     
     // Recalculate tax and total
     // Note: amountShipping is already GROSS (includes tax), so only tax the subtotal
@@ -1027,7 +1031,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
     console.log(`[DB_WRITE_ORDER] amounts: subtotal=${subtotalNet}¢ shipping_gross=${amountShipping}¢ tax=${taxAmount}¢ total=${totalGross}¢`);
     console.log(`[DB_WRITE_ORDER] shipping_source=DB_shipping_rates (GROSS=NET+TAX, NOT Stripe!)`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('✅ [PRISMA SYNC] Admin order:', order.id);
+    console.log('✅ [ADMIN_ORDERS] Admin order:', order.id);
 
     // 4. Check if items already exist (IDEMPOTENCY)
     const existingItems = await prisma.orderItem.count({
@@ -1039,7 +1043,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
       console.log(`[IDEMPOTENT_SKIP] reason=items_already_exist order_id=${order.id.substring(0, 8)} existing_count=${existingItems}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else if (items.length > 0) {
-      console.log('🛒 [PRISMA SYNC] Creating order items...');
+      console.log('🛒 [ADMIN_ORDERS] Creating order items...');
       let insertedCount = 0;
       
       for (const item of items) {
@@ -1073,7 +1077,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
             config: configJson,
           };
           
-          console.log('💰 [PRISMA SYNC] Calculated pricing:', {
+          console.log('💰 [ADMIN_ORDERS] Calculated pricing:', {
             sku: finalSku,
             name: finalName,
             unit_price: finalUnitPrice,
@@ -1096,7 +1100,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         });
         insertedCount++;
       }
-      console.log(`✅ [PRISMA SYNC] Created ${insertedCount} order items`);
+      console.log(`✅ [ADMIN_ORDERS] Created ${insertedCount} order items`);
       
       // 5. Recalculate order totals from items (SINGLE SOURCE OF TRUTH)
       const createdItems = await prisma.orderItem.findMany({
@@ -1122,7 +1126,7 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
         },
       });
       
-      console.log('💰 [PRISMA SYNC] Recalculated totals:', {
+      console.log('💰 [ADMIN_ORDERS] Recalculated totals:', {
         subtotal_net: subtotalNet,
         tax_amount: taxAmount,
         shipping: shippingAmount,
@@ -1150,14 +1154,14 @@ async function syncOrderToPrisma(session, supabaseOrder, orderSource) {
       },
     });
 
-    console.log('✅ [PRISMA SYNC] Complete - Order synced to admin system');
+    console.log('✅ [ADMIN_ORDERS] Complete - Order synced to admin system');
     
     // Return order data for email (with items included)
     return order;
 
   } catch (error) {
     // Don't throw - Prisma sync failure shouldn't block webhook
-    console.error('⚠️ [PRISMA SYNC] Failed but continuing:', error.message);
+    console.error('⚠️ [ADMIN_ORDERS] Failed but continuing:', error.message);
     return null;
   }
 }
