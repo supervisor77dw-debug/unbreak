@@ -344,6 +344,11 @@
     "infoCustomText": "Jedes Stück wird nach Ihren Wünschen gefertigt."
   },
   "shop": {
+    "teaser": {
+      "title": "Wähle dein UNBREAK ONE",
+      "subtitle": "Von der kleinen Haushaltslösung bis zum professionellen Gastro-Bundle – wir haben das passende Set für dich.",
+      "cta": "Jetzt zum Shop"
+    },
     "hero": {
       "title": "UNBREAK ONE Shop",
       "subtitle": "Magnetische Halter für Gläser & Flaschen – Professionelle Qualität Made in Germany"

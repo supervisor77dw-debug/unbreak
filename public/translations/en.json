@@ -342,6 +342,11 @@
     "infoCustomText": "Each piece is made according to your wishes."
   },
   "shop": {
+    "teaser": {
+      "title": "Choose your UNBREAK ONE",
+      "subtitle": "From small household solutions to professional gastronomy bundles – we have the perfect set for you.",
+      "cta": "Go to Shop"
+    },
     "hero": {
       "title": "UNBREAK ONE Shop",
       "subtitle": "Magnetic holders for glasses & bottles – Professional quality Made in Germany"
