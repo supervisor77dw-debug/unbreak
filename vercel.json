@@ -3,6 +3,7 @@
   "git": {
     "deploymentEnabled": {
       "master": true,
+      "staging": true,
       "post-messe": true
     }
   },
