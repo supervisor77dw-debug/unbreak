@@ -459,10 +459,37 @@ async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
       return;
     }
 
-    // Extract customer data from Stripe session
-    const customerName = session.customer_details?.name;
-    const customerPhone = session.customer_details?.phone;
-    const shippingAddress = session.shipping_details?.address;
+    // Extract customer data from Stripe session (COMPLETE)
+    const customerName = session.customer_details?.name || '(fehlt)';
+    const customerEmail = session.customer_details?.email || session.customer_email;
+    const customerPhone = session.customer_details?.phone || '(fehlt)';
+    const billingAddress = session.customer_details?.address || null;
+    const shippingAddress = session.shipping_details?.address || null;
+    
+    // Payment details
+    const paymentIntentId = session.payment_intent || '(fehlt)';
+    const paymentStatus = session.payment_status || 'unknown';
+    
+    // Amounts from Stripe (authoritative)
+    const amountTotal = session.amount_total || 0; // Total inc. shipping & tax
+    const amountSubtotal = session.amount_subtotal || 0; // Subtotal before shipping
+    const shippingCost = session.total_details?.amount_shipping || 0;
+    const taxTotal = session.total_details?.amount_tax || 0;
+    
+    // Timestamp
+    const orderDate = session.created ? new Date(session.created * 1000) : new Date();
+    
+    console.log('[SESSION DATA] Complete extraction:');
+    console.log('  Customer:', customerName, customerEmail, customerPhone);
+    console.log('  Billing:', billingAddress ? 'YES' : 'NO');
+    console.log('  Shipping:', shippingAddress ? 'YES' : 'NO');
+    console.log('  Payment Intent:', paymentIntentId);
+    console.log('  Payment Status:', paymentStatus);
+    console.log('  Amount Total:', amountTotal, '¢');
+    console.log('  Amount Subtotal:', amountSubtotal, '¢');
+    console.log('  Shipping Cost:', shippingCost, '¢');
+    console.log('  Tax:', taxTotal, '¢');
+    console.log('  Order Date:', orderDate.toISOString());
 
     // Load Line Items from Stripe (with proper amounts)
     console.log('[MAIL] Loading line items from Stripe...');
@@ -562,11 +589,17 @@ async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
       orderNumber: orderNumber,
       customerEmail,
       customerName,
-      customerPhone, // ← NEW: Phone for support team
+      customerPhone,
       items,
-      totalAmount: order.total_amount_cents,
+      totalAmount: amountTotal, // Use Stripe's authoritative total
       language,
       shippingAddress,
+      billingAddress, // ← NEW
+      paymentIntentId, // ← NEW
+      paymentStatus, // ← NEW
+      amountSubtotal, // ← NEW
+      shippingCost, // ← NEW
+      orderDate, // ← NEW
       // BCC to admin + orders for internal tracking
       bcc: ['admin@unbreak-one.com', 'orders@unbreak-one.com']
     });

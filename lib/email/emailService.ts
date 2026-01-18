@@ -274,30 +274,56 @@ export async function sendOrderConfirmation(params: {
   orderNumber?: string;
   customerEmail: string;
   customerName?: string;
-  customerPhone?: string; // ← NEW: Customer phone number
+  customerPhone?: string;
   items: Array<{ name: string; quantity: number; price_cents: number; line_total_cents?: number }>;
   totalAmount: number;
   language?: 'de' | 'en';
   shippingAddress?: any;
-  bcc?: string | string[]; // ← NEW: BCC support for admin@unbreak-one.com
+  billingAddress?: any; // ← NEW: Billing address
+  paymentIntentId?: string; // ← NEW: Payment intent ID
+  paymentStatus?: string; // ← NEW: Payment status
+  amountSubtotal?: number; // ← NEW: Subtotal
+  shippingCost?: number; // ← NEW: Shipping cost
+  orderDate?: Date; // ← NEW: Order timestamp
+  bcc?: string | string[];
 }) {
   const {
     orderId,
     orderNumber,
     customerEmail,
     customerName,
-    customerPhone, // ← NEW
+    customerPhone,
     items,
     totalAmount,
     language = 'de',
     shippingAddress,
-    bcc // ← NEW
+    billingAddress, // ← NEW
+    paymentIntentId, // ← NEW
+    paymentStatus, // ← NEW
+    amountSubtotal, // ← NEW
+    shippingCost, // ← NEW
+    orderDate, // ← NEW
+    bcc
   } = params;
 
   const isGerman = language === 'de';
   
-  // Make customerPhone accessible in template via params
-  // (already destructured above, but keep reference for consistency)
+  console.log('[EMAIL DATA] Received params:', {
+    orderId,
+    orderNumber,
+    customerName: customerName || '(fehlt)',
+    customerEmail,
+    customerPhone: customerPhone || '(fehlt)',
+    hasShippingAddress: !!shippingAddress,
+    hasBillingAddress: !!billingAddress,
+    paymentIntentId: paymentIntentId || '(fehlt)',
+    paymentStatus: paymentStatus || '(fehlt)',
+    itemCount: items.length,
+    totalAmount,
+    amountSubtotal,
+    shippingCost,
+    orderDate: orderDate ? orderDate.toISOString() : '(fehlt)'
+  });
 
   // ====================================================================
   // PRODUCT LABELS MAPPING (i18n for email)
@@ -821,11 +847,21 @@ ${localizedProductItems.map(item => `                <div style="padding: 12px 0
       </tr>
       <tr>
         <td style="padding: 8px 0; color: #666;"><strong>Datum:</strong></td>
-        <td style="padding: 8px 0; color: #333;">${new Date().toLocaleString('de-DE')}</td>
+        <td style="padding: 8px 0; color: #333;">${orderDate ? orderDate.toLocaleString('de-DE') : new Date().toLocaleString('de-DE')}</td>
       </tr>
       <tr>
         <td style="padding: 8px 0; color: #666;"><strong>Zahlungsstatus:</strong></td>
-        <td style="padding: 8px 0;"><span style="background-color: #D4EDDA; color: #155724; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 12px;">BEZAHLT</span></td>
+        <td style="padding: 8px 0;"><span style="background-color: #D4EDDA; color: #155724; padding: 4px 10px; border-radius: 4px; font-weight: 600; font-size: 12px;">${paymentStatus ? paymentStatus.toUpperCase() : 'BEZAHLT'}</span></td>
+      </tr>
+      ${paymentIntentId ? `
+      <tr>
+        <td style="padding: 8px 0; color: #666;"><strong>Payment Intent:</strong></td>
+        <td style="padding: 8px 0; color: #888; font-size: 12px; font-family: monospace;">${paymentIntentId}</td>
+      </tr>
+      ` : ''}
+      <tr>
+        <td style="padding: 8px 0; color: #666;"><strong>Stripe Session:</strong></td>
+        <td style="padding: 8px 0; color: #888; font-size: 12px; font-family: monospace;">${orderId.substring(0, 16)}...</td>
       </tr>
     </table>
     
@@ -844,6 +880,17 @@ ${localizedProductItems.map(item => `                <div style="padding: 12px 0
       ${shippingAddress.line2 ? `<p style="margin: 3px 0; font-size: 13px; color: #333;">${shippingAddress.line2}</p>` : ''}
       <p style="margin: 3px 0; font-size: 13px; color: #333;">${shippingAddress.postal_code || ''} ${shippingAddress.city || ''}</p>
       <p style="margin: 3px 0; font-size: 13px; color: #333; font-weight: 600;">${shippingAddress.country || ''}</p>
+    </div>
+    ` : '<div style="margin: 30px 0;"><p style="color: #999;">(Lieferadresse fehlt)</p></div>'}
+    
+    ${billingAddress && billingAddress.line1 ? `
+    <div style="margin: 30px 0;">
+      <h2 style="margin: 0 0 10px 0; font-size: 16px; color: #2F6F55;">🏢 Rechnungsadresse</h2>
+      <p style="margin: 3px 0; font-size: 13px; color: #333;">${customerName || ''}</p>
+      <p style="margin: 3px 0; font-size: 13px; color: #333;">${billingAddress.line1 || ''}</p>
+      ${billingAddress.line2 ? `<p style="margin: 3px 0; font-size: 13px; color: #333;">${billingAddress.line2}</p>` : ''}
+      <p style="margin: 3px 0; font-size: 13px; color: #333;">${billingAddress.postal_code || ''} ${billingAddress.city || ''}</p>
+      <p style="margin: 3px 0; font-size: 13px; color: #333; font-weight: 600;">${billingAddress.country || ''}</p>
     </div>
     ` : ''}
     
