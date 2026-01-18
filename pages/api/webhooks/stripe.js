@@ -530,18 +530,24 @@ async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
     console.log('[MAIL] Loading line items from Stripe...');
     let items = [];
     try {
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 100 });
+      // CRITICAL: expand 'data.price' to get unit_amount
+      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { 
+        limit: 100,
+        expand: ['data.price']  // ← MUST expand to get price.unit_amount
+      });
       console.log('[MAIL] lineItems count:', lineItems.data.length);
       
       items = lineItems.data.map(item => {
         const unitAmount = item.price?.unit_amount || item.amount_total / item.quantity || 0;
         const lineTotal = item.amount_total || unitAmount * item.quantity;
         
-        console.log('[MAIL] item:', {
+        console.log('[MAIL] item DEBUG:', {
           name: item.description,
-          unit: unitAmount,
+          'price.unit_amount': item.price?.unit_amount,
+          'amount_total': item.amount_total,
           qty: item.quantity,
-          lineTotal: lineTotal
+          'calculated unit': unitAmount,
+          'calculated lineTotal': lineTotal
         });
         
         return {
@@ -553,11 +559,13 @@ async function sendOrderConfirmationEmail(session, order, trace_id, eventMode) {
       });
       
       console.log('[MAIL] total:', session.amount_total);
+      console.log('[MAIL] items mapped:', items.length, 'items with prices');
     } catch (err) {
       console.error('❌ [EMAIL] Failed to load Stripe line items:', err.message);
       // Fallback to order items from DB
       try {
         items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        console.log('[MAIL] Using fallback items from DB:', items.length);
       } catch (parseErr) {
         console.error('❌ [EMAIL] Failed to parse order items:', parseErr.message);
         items = [{ name: 'Order', quantity: 1, price_cents: order.total_amount_cents }];
