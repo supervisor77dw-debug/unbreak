@@ -146,10 +146,11 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     has_metadata: !!session.metadata
   });
   
-  console.log('💳 [SESSION] ID:', session.id);
-  console.log('💳 [SESSION] Payment status:', session.payment_status);
-  console.log('💳 [SESSION] Amount total:', session.amount_total);
-  console.log('💳 [SESSION] Customer email:', session.customer_email || session.customer_details?.email);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('💳 [STRIPE SESSION] ID:', session.id);
+  console.log('💳 [STRIPE SESSION] Payment status:', session.payment_status);
+  console.log('💳 [SSOT MODE] Writing directly to admin_orders (NO legacy tables)');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   let logData = {
     event_type: 'checkout.session.completed',
@@ -161,410 +162,106 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
   };
 
   try {
-    // 1. Try to find order - PRIORITY: Use metadata.order_id (UUID) from Stripe
-    console.log('🔍 [DB QUERY] Looking for order...');
-    console.log('🔍 [METADATA] order_id:', session.metadata?.order_id);
-    console.log('🔍 [METADATA] order_number:', session.metadata?.order_number);
-    console.log('🔍 [FALLBACK] stripe_session_id:', session.id);
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // SSOT MODE: Extract ALL data from Stripe Session (NO legacy table reads)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
-    // CRITICAL VALIDATION: Order number MUST exist in metadata
-    if (!session.metadata?.order_number) {
-      console.error('⚠️ [WEBHOOK] CRITICAL: No order_number in Stripe metadata!');
-      console.error('⚠️ [WEBHOOK] Session ID:', session.id);
-      console.error('⚠️ [WEBHOOK] This should NEVER happen for new orders!');
-    }
-    
-    let order = null;
-    let orderSource = null;
-    
-    // CRITICAL: First try to find by metadata.order_id (UUID) - MOST RELIABLE
-    if (session.metadata?.order_id) {
-      console.log('✅ [DB QUERY] Using metadata.order_id (UUID):', session.metadata.order_id);
-      
-      // Try simple_orders first (shop orders)
-      const { data: shopOrder } = await supabase
-        .from('simple_orders')
-        .select('*')
-        .eq('id', session.metadata.order_id)
-        .maybeSingle();
-      
-      if (shopOrder) {
-        order = shopOrder;
-        orderSource = 'simple_orders';
-        console.log('✅ [DB QUERY] Found in SIMPLE_ORDERS by UUID');
-        console.log('📋 [ORDER] Number:', order.order_number || 'MISSING');
-      } else {
-        // Try configurator orders
-        const { data: configuratorOrder } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('id', session.metadata.order_id)
-          .maybeSingle();
-        
-        if (configuratorOrder) {
-          order = configuratorOrder;
-          orderSource = 'configurator';
-          console.log('✅ [DB QUERY] Found in ORDERS (configurator) by UUID');
-        }
-      }
-    }
-    
-    // FALLBACK: Try to find by Stripe session ID (legacy orders without metadata)
-    if (!order) {
-      console.log('⚠️ [DB QUERY] metadata.order_id not found or missing, falling back to session ID lookup');
-      
-      // First try: Configurator orders (orders table)
-      const { data: configuratorOrder } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('stripe_checkout_session_id', session.id)
-        .maybeSingle();
-      
-      if (configuratorOrder) {
-        order = configuratorOrder;
-        orderSource = 'configurator';
-        console.log('✅ [DB QUERY] Found in CONFIGURATOR orders table (by session ID)');
-      } else {
-        // Second try: Standard shop orders (simple_orders table)
-        // CRITICAL: Check BOTH column names (stripe_session_id AND stripe_checkout_session_id)
-        const { data: shopOrder } = await supabase
-          .from('simple_orders')
-          .select('*')
-          .or(`stripe_session_id.eq.${session.id},stripe_checkout_session_id.eq.${session.id}`)
-          .maybeSingle();
-        
-        if (shopOrder) {
-          order = shopOrder;
-          orderSource = 'simple_orders';
-          console.log('✅ [DB QUERY] Found in SIMPLE_ORDERS table (by session ID)');
-        }
-      }
-    }
-
-    if (!order) {
-      console.error('❌ [DB QUERY] No order found in any table for session:', session.id);
-      console.error('❌ [DB QUERY] Checked: orders (configurator) and simple_orders (shop)');
-      logData.status = 'error';
-      logData.error_message = `No order found for session: ${session.id}`;
-      await logWebhookEvent(logData);
-      throw new Error(`No order found for session: ${session.id}`);
-    }
-
-    console.log('✅ [DB QUERY] Order found - ID:', order.id);
-    console.log('✅ [DB QUERY] Source:', orderSource);
-    console.log('📊 [ORDER BEFORE UPDATE] ID:', order.id);
-    if (order.order_number) console.log('📊 [ORDER BEFORE UPDATE] order_number:', order.order_number);
-    console.log('📊 [ORDER BEFORE UPDATE] status:', order.status);
-    console.log('📊 [ORDER BEFORE UPDATE] created_at:', order.created_at);
-
-    logData.order_id = order.id;
-
-    // 2. Check if already paid (idempotency)
-    if (order.status === 'paid' || order.status === 'completed') {
-      console.log('✅ [IDEMPOTENT] Order already paid - skipping');
-      logData.status = 'skipped';
-      logData.error_message = 'Order already paid (idempotent)';
-      await logWebhookEvent(logData);
-      return;
-    }
-
-    // 2.5 Retrieve COMPLETE Stripe session with ALL data (CRITICAL!)
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔍 [STRIPE RETRIEVE] Loading complete session with expands...');
-    console.log('🔍 [STRIPE RETRIEVE] Session ID:', session.id);
+    console.log('🔍 [STRIPE DATA EXTRACTION] Loading complete session...');
+    
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
     const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
       expand: [
-        'line_items',                    // ← Line items array
-        'line_items.data.price',         // ← Price details (unit_amount, currency)
-        'line_items.data.price.product', // ← Product details (name, description)
-        'customer',                      // ← Customer object (email, name, phone)
-        'payment_intent'                 // ← Payment intent (for fees/status)
+        'line_items',
+        'line_items.data.price.product',
+        'customer',
+        'payment_intent'
       ]
     });
-    console.log('✅ [STRIPE RETRIEVE] Complete session loaded');
-    console.log('✅ [STRIPE RETRIEVE] Line items:', fullSession.line_items?.data?.length || 0);
-    console.log('✅ [STRIPE RETRIEVE] Customer:', fullSession.customer_details?.email || fullSession.customer?.email || 'MISSING');
-    console.log('✅ [STRIPE RETRIEVE] Billing address:', fullSession.customer_details?.address ? 'YES' : 'NO');
-    console.log('✅ [STRIPE RETRIEVE] Shipping address:', fullSession.shipping_details?.address ? 'YES' : 'NO');
+    
+    console.log('✅ [STRIPE DATA] Session loaded with expansions');
+    console.log('✅ [STRIPE DATA] Line items:', fullSession.line_items?.data?.length || 0);
+    console.log('✅ [STRIPE DATA] Customer:', fullSession.customer_details?.email);
+    console.log('✅ [STRIPE DATA] Payment Intent:', fullSession.payment_intent);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    const lineItemsFromStripe = fullSession.line_items?.data || [];
-    console.log('📦 [LINE_ITEMS] Retrieved from Stripe:', lineItemsFromStripe.length, 'items');
+    // === EXTRACT CUSTOMER DATA ===
+    const customerEmail = fullSession.customer_details?.email || fullSession.customer_email;
+    const customerName = fullSession.customer_details?.name;
+    const customerPhone = fullSession.customer_details?.phone;
     
-    // Map Stripe line_items to our format
-    const lineItemsForDB = lineItemsFromStripe.map(item => ({
-      name: item.description || 'Unknown Product',
-      quantity: item.quantity,
-      price_cents: item.price?.unit_amount || 0,
-      line_total_cents: item.amount_total,
-      currency: item.currency?.toUpperCase() || 'EUR'
-    }));
-
-    // CRITICAL: Calculate totals (DB-first architecture)
-    const subtotalCents = lineItemsForDB.reduce((sum, item) => sum + (item.line_total_cents || 0), 0);
-    const shippingCents = fullSession.total_details?.amount_shipping || 0;
-    const taxCents = fullSession.total_details?.amount_tax || 0;
-    const discountCents = fullSession.total_details?.amount_discount || 0;
-    const totalCents = fullSession.amount_total || 0;
-    const currency = fullSession.currency?.toUpperCase() || 'EUR';
-
-    console.log('💰 [TOTALS CALCULATION]', {
-      subtotal: subtotalCents + '¢',
-      shipping: shippingCents + '¢',
-      tax: taxCents + '¢',
-      discount: discountCents + '¢',
-      total: totalCents + '¢',
-      currency: currency
-    });
-
-    // 3. Update order to paid in the appropriate table
-    const updateData = {
-      status: 'paid',
-      paid_at: new Date().toISOString(), // ← CRITICAL: Set paid timestamp
-      stripe_payment_intent_id: fullSession.payment_intent,
-      stripe_customer_id: fullSession.customer,
-      customer_email: fullSession.customer_details?.email || fullSession.customer_email,
-      customer_name: fullSession.customer_details?.name,
-      customer_phone: fullSession.customer_details?.phone,
-      shipping_address: fullSession.shipping_details?.address || fullSession.customer_details?.address || null,
-      billing_address: fullSession.customer_details?.address || null,
-      items: lineItemsForDB, // ← CRITICAL: Save complete line_items from Stripe
-      total_amount_cents: totalCents, // ← CRITICAL: Save total
-      currency: currency, // ← CRITICAL: Save currency
-      // Store detailed totals as JSON for email rendering
-      totals: {
-        subtotal_cents: subtotalCents,
-        shipping_cents: shippingCents,
-        tax_cents: taxCents,
-        discount_cents: discountCents,
-        total_cents: totalCents,
-        currency: currency
-      },
-      email_status: 'pending', // ← Will be updated after email send
-      updated_at: new Date().toISOString(),
-    };
-
-    const tableName = orderSource === 'configurator' ? 'orders' : 'simple_orders';
-    
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('[DB_WRITE] Starting database write...');
-    console.log('[DB_WRITE] Table:', tableName);
-    console.log('[DB_WRITE] Order ID:', order.id);
-    console.log('[DB_WRITE] Order Number:', order.order_number || 'MISSING');
-    console.log('[DB_WRITE] Session ID:', fullSession.id);
-    console.log('[DB_WRITE] Items:', lineItemsForDB.length);
-    lineItemsForDB.forEach((item, idx) => {
-      console.log(`[DB_WRITE]   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
-    });
-    console.log('[DB_WRITE] Billing Address:', billingAddr ? 'YES' : 'NO');
-    console.log('[DB_WRITE] Shipping Address:', shippingAddr ? 'YES' : 'NO');
-    console.log('[DB_WRITE] Total:', totalCents + '¢ (' + currency + ')');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    
-    const { data: updatedRows, error: updateError } = await supabase
-      .from(tableName)
-      .update(updateData)
-      .eq('id', order.id)
-      .select();
-
-    if (updateError) {
-      console.error('❌ [DB_WRITE_FAIL] Database write failed:', updateError.message);
-      console.error('❌ [DB_WRITE_FAIL] Code:', updateError.code);
-      console.error('❌ [DB_WRITE_FAIL] Details:', updateError.details);
-      throw new Error(`Order update failed: ${updateError.message}`);
+    if (!customerEmail) {
+      console.error('❌ [VALIDATION] No customer email in session');
+      throw new Error('No customer email in Stripe session');
     }
-
-    const rowCount = updatedRows?.length || 0;
-    if (rowCount === 0) {
-      console.error('❌ [DB_WRITE_FAIL] 0 rows affected!');
-      console.error('❌ [DB_WRITE_FAIL] Order ID:', order.id);
-      throw new Error(`Update affected 0 rows for order ${order.id}`);
+    
+    console.log('👤 [CUSTOMER] Email:', customerEmail);
+    console.log('👤 [CUSTOMER] Name:', customerName || '(none)');
+    console.log('👤 [CUSTOMER] Phone:', customerPhone || '(none)');
+    
+    // === EXTRACT ADDRESSES ===
+    const shippingAddress = fullSession.shipping_details?.address ?? fullSession.customer_details?.address ?? null;
+    const billingAddress = fullSession.customer_details?.address ?? fullSession.shipping_details?.address ?? null;
+    
+    console.log('🏠 [ADDRESS] Shipping:', shippingAddress ? `${shippingAddress.line1}, ${shippingAddress.city}` : 'MISSING');
+    console.log('📋 [ADDRESS] Billing:', billingAddress ? `${billingAddress.line1}, ${billingAddress.city}` : 'MISSING');
+    
+    // === EXTRACT LINE ITEMS ===
+    const lineItems = fullSession.line_items?.data || [];
+    if (lineItems.length === 0) {
+      console.error('❌ [VALIDATION] No line items in session');
+      throw new Error('No line items in Stripe session');
     }
-
-    logData.rows_affected = rowCount;
-
-    // SUCCESS LOG (Required format)
+    
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`[DB_WRITE_OK] order_id=${order.id} order_number=${order.order_number || 'N/A'} session_id=${fullSession.id} items=${lineItemsForDB.length} total=${totalCents}¢ has_shipping=${!!shippingAddr} has_billing=${!!billingAddr}`);
+    console.log('🛒 [LINE ITEMS] Extracting items from Stripe session...');
+    
+    const items = lineItems.map((item, idx) => {
+      const product = item.price?.product;
+      const name = item.description || product?.name || 'Unknown Product';
+      const sku = product?.metadata?.sku || `STRIPE-${item.price?.id}`;
+      const qty = item.quantity || 1;
+      const unitPrice = item.price?.unit_amount || 0;
+      const totalPrice = item.amount_total || (unitPrice * qty);
+      
+      console.log(`  [${idx + 1}] ${qty}× ${name} (${sku}) @ ${unitPrice}¢ = ${totalPrice}¢`);
+      
+      return {
+        sku,
+        name,
+        qty,
+        unitPrice,
+        totalPrice,
+        variant: product?.metadata?.variant || null
+      };
+    });
+    
+    console.log(`✅ [LINE ITEMS] Extracted ${items.length} items`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-    console.log('✅ [WEBHOOK] Order successfully marked as paid:', order.id);
+    
+    // === WRITE TO SUPABASE admin_orders ===
+    const adminOrder = await syncStripeSessionToAdminOrders(fullSession, {
+      customerEmail,
+      customerName,
+      customerPhone,
+      shippingAddress,
+      billingAddress,
+      items
+    });
+    
+    if (!adminOrder) {
+      console.error('❌ [SSOT] Failed to write to admin_orders');
+      throw new Error('Failed to create admin_orders entry');
+    }
+    
+    logData.order_id = adminOrder.id;
     logData.status = 'success';
-    await logWebhookEvent(logData);
-
-    // === DB-FIRST: RELOAD ORDER FROM DB (Single Source of Truth) ===
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('[DB_RELOAD] Reloading order from database...');
-    const { data: orderFromDB, error: reloadError } = await supabase
-      .from(tableName)
-      .select('*')
-      .eq('id', order.id)
-      .single();
-
-    if (reloadError || !orderFromDB) {
-      console.error('❌ [DB_RELOAD_FAIL] Failed to reload order:', reloadError?.message);
-      throw new Error('Failed to reload order from DB after update');
-    }
-
-    // Check what fields are present
-    const hasItems = Array.isArray(orderFromDB.items) && orderFromDB.items.length > 0;
-    const hasBilling = !!(orderFromDB.billing_address && orderFromDB.billing_address.line1);
-    const hasShipping = !!(orderFromDB.shipping_address && orderFromDB.shipping_address.line1);
-    const hasPrices = hasItems && orderFromDB.items.every(item => item.price_cents > 0);
-
-    // SUCCESS LOG (Required format)
-    console.log(`[DB_RELOAD_OK] order_id=${orderFromDB.id} fields={billing:${hasBilling},shipping:${hasShipping},items:${hasItems},prices:${hasPrices}}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-    // === IDEMPOTENCY CHECK (prevent duplicate emails) ===
-    if (orderFromDB.customer_email_sent_at || orderFromDB.admin_email_sent_at) {
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`[EMAIL_SKIP_ALREADY_SENT] order_id=${orderFromDB.id} customer_sent=${!!orderFromDB.customer_email_sent_at} admin_sent=${!!orderFromDB.admin_email_sent_at}`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      return; // Don't send duplicate emails
-    }
-
-    // === VALIDATE ORDER COMPLETENESS (Gate before email) ===
-    console.log('[VALIDATION] Checking order completeness...');
-    const missingFields = [];
     
-    if (!orderFromDB.order_number) missingFields.push('order_number');
-    if (!orderFromDB.customer_email) missingFields.push('customer_email');
-    if (!hasBilling) missingFields.push('billing_address');
-    if (!hasShipping) missingFields.push('shipping_address');
-    if (!hasItems) missingFields.push('line_items');
-    if (!orderFromDB.total_amount_cents || orderFromDB.total_amount_cents <= 0) missingFields.push('total_amount');
-    if (!orderFromDB.currency) missingFields.push('currency');
-
-    if (missingFields.length > 0) {
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error('❌ [EMAIL_BLOCKED] Order incomplete - cannot send email');
-      console.error('❌ [EMAIL_BLOCKED] Order ID:', orderFromDB.id);
-      console.error('❌ [EMAIL_BLOCKED] Missing fields:', missingFields.join(', '));
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      
-      // Update email_status in DB
-      await supabase
-        .from(tableName)
-        .update({ 
-          email_status: 'blocked_incomplete',
-          email_last_error: `Missing: ${missingFields.join(', ')}`
-        })
-        .eq('id', orderFromDB.id);
-      
-      // Don't throw - webhook succeeded, just no email
-      return;
-    }
-
-    console.log('✅ [VALIDATION] Order complete - all required fields present');
-    console.log('✅ [VALIDATION] Proceeding to Supabase admin_orders sync...');
-
-    // === SYNC STRIPE CUSTOMER TO SUPABASE ===
-    await syncStripeCustomerToSupabase(fullSession, orderFromDB, trace_id);
-
-    // === SYNC TO SUPABASE ADMIN_ORDERS (via Prisma client) ===
-    const adminOrder = await syncOrderToSupabase(fullSession, orderFromDB, orderSource);
-
-    // === SEND ORDER CONFIRMATION EMAIL (SUPABASE admin_orders + admin_order_items) ===
-    if (adminOrder) {
-      try {
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`📧 [EMAIL ATTEMPT] trace_id=${trace_id} mode=${eventMode}`);
-        console.log(`📧 [EMAIL] Order ID: ${adminOrder.id}`);
-        console.log(`📧 [EMAIL] Source: SUPABASE admin_orders + admin_order_items (via Prisma client)`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        
-        // Query full order with items from Supabase admin_orders (via Prisma client)
-        const orderWithItems = await prisma.order.findUnique({
-          where: { id: adminOrder.id },
-          include: {
-            items: {
-              select: {
-                id: true,
-                sku: true,
-                name: true,
-                variant: true,
-                qty: true,
-                unitPrice: true,
-                totalPrice: true,
-              }
-            }
-          }
-        });
-        
-        if (!orderWithItems) {
-          console.error('❌ [EMAIL] Order not found in Supabase admin_orders after sync:', adminOrder.id);
-          throw new Error('Order not found in Supabase admin_orders after sync');
-        }
-        
-        // Format items for email service (match expected structure)
-        const emailItems = orderWithItems.items.map(item => ({
-          name: item.name,
-          quantity: item.qty,
-          price_cents: item.unitPrice,
-          line_total_cents: item.totalPrice
-        }));
-        
-        console.log('[EMAIL_PAYLOAD_FROM_DB] Supabase admin_orders order loaded (via Prisma):');
-        console.log(`[EMAIL_PAYLOAD_FROM_DB] order_id=${orderWithItems.id.substring(0, 8)}`);
-        console.log(`[EMAIL_PAYLOAD_FROM_DB] items_count=${emailItems.length}`);
-        console.log('[EMAIL_PAYLOAD_FROM_DB] Items (from admin_order_items):');
-        emailItems.forEach((item, idx) => {
-          console.log(`[EMAIL_PAYLOAD_FROM_DB]   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
-        });
-        console.log(`[EMAIL_PAYLOAD_FROM_DB] Totals: subtotal=${orderWithItems.subtotalNet}¢ shipping=${orderWithItems.amountShipping}¢ tax=${orderWithItems.taxAmount}¢ total=${orderWithItems.totalGross}¢`);
-        console.log(`[EMAIL_PAYLOAD_FROM_DB] Addresses: billing=${orderWithItems.billingAddress ? 'YES' : 'NO'} shipping=${orderWithItems.shippingAddress ? 'YES' : 'NO'}`);
-        
-        // Call email service with SUPABASE admin_orders data (queried via Prisma)
-        const emailResult = await sendOrderConfirmation({
-          orderId: orderWithItems.id,
-          orderNumber: orderWithItems.id.substring(0, 8).toUpperCase(),
-          customerEmail: orderWithItems.email,
-          customerName: orderWithItems.shippingName,
-          items: emailItems,
-          totalAmount: orderWithItems.totalGross,
-          language: 'de', // TODO: detect from country
-          shippingAddress: orderWithItems.shippingAddress,
-          billingAddress: orderWithItems.billingAddress,
-          amountSubtotal: orderWithItems.subtotalNet,
-          shippingCost: orderWithItems.amountShipping,
-          orderDate: orderWithItems.createdAt,
-          bcc: ['admin@unbreak-one.com', 'orders@unbreak-one.com']
-        });
-        
-        if (emailResult.sent) {
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id} - Email sent from Supabase admin_orders`);
-          console.log(`✅ [EMAIL] Resend ID: ${emailResult.id}`);
-          console.log(`✅ [EMAIL] TO: ${orderWithItems.email}`);
-          console.log(`✅ [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
-          console.log('[MAIL] send customer ok');
-          console.log('[MAIL] send internal/bcc ok');
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        } else if (emailResult.preview) {
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log(`📋 [EMAIL PREVIEW] trace_id=${trace_id} - EMAILS DISABLED`);
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        } else {
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.error(`❌ [EMAIL FAILED] trace_id=${trace_id} - ${emailResult.error}`);
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        }
-        
-      } catch (emailError) {
-        // Don't fail the entire webhook if email fails
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.error(`❌ [EMAIL FAILED] trace_id=${trace_id} mode=${eventMode}`);
-        console.error(`❌ [EMAIL] Error: ${emailError.message}`);
-        console.error(`❌ [EMAIL] Stack:`, emailError.stack);
-        console.error('⚠️ [EMAIL] Order was still created successfully (email failed)');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      }
-    } else {
-      console.warn('⚠️ [EMAIL] Skipping email - Supabase admin_orders sync returned null (sync failed)');
-    }
-
+    // === SEND EMAIL (with idempotency + required fields gate) ===
+    await sendOrderEmailFromAdminOrders(adminOrder.id, trace_id, eventMode);
+    
+    await logWebhookEvent(logData);
+    
   } catch (error) {
     console.error('❌ [Webhook] handleCheckoutSessionCompleted failed:', error);
     if (logData.status !== 'error') {
@@ -573,6 +270,164 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
       await logWebhookEvent(logData);
     }
     throw error; // Re-throw to trigger retry in Stripe
+  }
+}
+
+/**
+ * Send order confirmation email from admin_orders (with all gates)
+ */
+async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
+  try {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📧 [EMAIL PIPELINE] Starting for order ${orderId.substring(0, 8)}`);
+    
+    // 1. Load order with items from admin_orders
+    const orderWithItems = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          select: {
+            id: true,
+            sku: true,
+            name: true,
+            variant: true,
+            qty: true,
+            unitPrice: true,
+            totalPrice: true,
+          }
+        }
+      }
+    });
+    
+    if (!orderWithItems) {
+      console.error('❌ [EMAIL] Order not found in admin_orders:', orderId);
+      throw new Error('Order not found in admin_orders');
+    }
+    
+    console.log('[DB_RELOAD_OK] admin_orders loaded with items');
+    
+    // 2. IDEMPOTENCY CHECK (prevent duplicate emails)
+    if (orderWithItems.customerEmailSentAt || orderWithItems.adminEmailSentAt) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`[EMAIL_SKIP_ALREADY_SENT] order_id=${orderId.substring(0, 8)} customer_sent=${!!orderWithItems.customerEmailSentAt} admin_sent=${!!orderWithItems.adminEmailSentAt}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      return;
+    }
+    
+    // 3. REQUIRED FIELDS GATE
+    const missingFields = [];
+    
+    if (!orderWithItems.email) missingFields.push('email');
+    if (!orderWithItems.currency) missingFields.push('currency');
+    if (!orderWithItems.subtotalNet) missingFields.push('subtotalNet');
+    if (!orderWithItems.taxAmount) missingFields.push('taxAmount');
+    if (!orderWithItems.totalGross) missingFields.push('totalGross');
+    if (!orderWithItems.amountShipping) missingFields.push('amountShipping');
+    if (!orderWithItems.billingAddress) missingFields.push('billingAddress');
+    if (!orderWithItems.shippingAddress) missingFields.push('shippingAddress');
+    if (!orderWithItems.items || orderWithItems.items.length === 0) missingFields.push('items');
+    
+    if (missingFields.length > 0) {
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ [EMAIL_BLOCKED] Order incomplete - cannot send email');
+      console.error('❌ [EMAIL_BLOCKED] Order ID:', orderId.substring(0, 8));
+      console.error('❌ [EMAIL_BLOCKED] Missing fields:', missingFields.join(', '));
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { 
+          emailStatus: 'blocked_incomplete',
+          emailLastError: `Missing: ${missingFields.join(', ')}`
+        }
+      });
+      
+      // Log event
+      await prisma.orderEvent.create({
+        data: {
+          orderId: orderId,
+          type: 'EMAIL_BLOCKED',
+          source: 'webhook',
+          payload: { reason: 'incomplete', missing: missingFields }
+        }
+      });
+      
+      return; // Don't send email
+    }
+    
+    console.log('✅ [EMAIL GATE] All required fields present');
+    
+    // 4. Format items for email
+    const emailItems = orderWithItems.items.map(item => ({
+      name: item.name,
+      quantity: item.qty,
+      price_cents: item.unitPrice,
+      line_total_cents: item.totalPrice
+    }));
+    
+    console.log('[EMAIL_PAYLOAD_FROM_DB] Supabase admin_orders data:');
+    console.log(`[EMAIL_PAYLOAD_FROM_DB] order_id=${orderId.substring(0, 8)}`);
+    console.log(`[EMAIL_PAYLOAD_FROM_DB] items_count=${emailItems.length}`);
+    emailItems.forEach((item, idx) => {
+      console.log(`[EMAIL_PAYLOAD_FROM_DB]   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
+    });
+    console.log(`[EMAIL_PAYLOAD_FROM_DB] Totals: subtotal=${orderWithItems.subtotalNet}¢ shipping=${orderWithItems.amountShipping}¢ tax=${orderWithItems.taxAmount}¢ total=${orderWithItems.totalGross}¢`);
+    console.log(`[EMAIL_PAYLOAD_FROM_DB] Addresses: billing=${orderWithItems.billingAddress ? 'YES' : 'NO'} shipping=${orderWithItems.shippingAddress ? 'YES' : 'NO'}`);
+    
+    // 5. Send email
+    const emailResult = await sendOrderConfirmation({
+      orderId: orderWithItems.id,
+      orderNumber: orderWithItems.id.substring(0, 8).toUpperCase(),
+      customerEmail: orderWithItems.email,
+      customerName: orderWithItems.shippingName,
+      items: emailItems,
+      totalAmount: orderWithItems.totalGross,
+      language: 'de', // TODO: detect from country
+      shippingAddress: orderWithItems.shippingAddress,
+      billingAddress: orderWithItems.billingAddress,
+      amountSubtotal: orderWithItems.subtotalNet,
+      shippingCost: orderWithItems.amountShipping,
+      orderDate: orderWithItems.createdAt,
+      bcc: ['admin@unbreak-one.com', 'orders@unbreak-one.com']
+    });
+    
+    if (emailResult.sent) {
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`[EMAIL_SENT_CUSTOMER] order_id=${orderId.substring(0, 8)} resend_id=${emailResult.id}`);
+      console.log(`[EMAIL_SENT_ADMIN] order_id=${orderId.substring(0, 8)} bcc=orders@unbreak-one.com`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      // Update email status
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          emailStatus: 'sent',
+          customerEmailSentAt: new Date(),
+          adminEmailSentAt: new Date(),
+        }
+      });
+      
+      console.log('[EMAIL_STATUS_UPDATE_OK] email_status=sent timestamps_updated=true');
+      
+    } else if (emailResult.preview) {
+      console.log(`📋 [EMAIL PREVIEW] trace_id=${trace_id} - EMAILS DISABLED`);
+    } else {
+      console.error(`❌ [EMAIL FAILED] trace_id=${trace_id} - ${emailResult.error}`);
+      
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          emailStatus: 'error',
+          emailLastError: emailResult.error
+        }
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ [EMAIL EXCEPTION]', error.message);
+    throw error;
+  }
+}
   }
 }
 
