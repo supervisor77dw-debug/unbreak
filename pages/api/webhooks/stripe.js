@@ -100,6 +100,45 @@ export default async function handler(req, res) {
     console.log(`✅ [WEBHOOK] OK secret_index=${matchedSecretIndex} livemode=${event.livemode} event=${event.type} id=${event.id}`);
     console.log(`🔒 [MODE] event.livemode=${event.livemode} → ${eventMode}`);
     
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // MODE/KEY CONSISTENCY CHECK
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const stripeKeyPrefix = process.env.STRIPE_SECRET_KEY?.substring(0, 7) || 'unknown';
+    const keyIsLive = stripeKeyPrefix.includes('sk_live');
+    const keyIsTest = stripeKeyPrefix.includes('sk_test');
+    
+    console.log(`🔑 [KEY_CHECK] STRIPE_SECRET_KEY prefix: ${stripeKeyPrefix}`);
+    console.log(`🔑 [KEY_CHECK] Key mode: ${keyIsLive ? 'LIVE' : keyIsTest ? 'TEST' : 'UNKNOWN'}`);
+    
+    // Check for mode mismatch
+    if (event.livemode && keyIsTest) {
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ [MODE_MISMATCH] Event is LIVE but key is TEST');
+      console.error(`❌ event.livemode=${event.livemode} but STRIPE_SECRET_KEY=${stripeKeyPrefix}`);
+      console.error('❌ Cannot process - wrong API key for this event');
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      return res.status(500).json({
+        error: 'MODE_MISMATCH: Live event with test key',
+        event_livemode: event.livemode,
+        key_prefix: stripeKeyPrefix
+      });
+    }
+    
+    if (!event.livemode && keyIsLive) {
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ [MODE_MISMATCH] Event is TEST but key is LIVE');
+      console.error(`❌ event.livemode=${event.livemode} but STRIPE_SECRET_KEY=${stripeKeyPrefix}`);
+      console.error('❌ Cannot process - wrong API key for this event');
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      return res.status(500).json({
+        error: 'MODE_MISMATCH: Test event with live key',
+        event_livemode: event.livemode,
+        key_prefix: stripeKeyPrefix
+      });
+    }
+    
+    console.log('✅ [MODE_CHECK] Event mode and key mode are consistent');
+    
     console.log('[WEBHOOK HIT]', event.type);
     console.log('[EVENT MODE]', eventMode);
     console.log('[EMAILS_ENABLED]', process.env.EMAILS_ENABLED);
@@ -116,54 +155,28 @@ export default async function handler(req, res) {
     });
     
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // EVENT IDEMPOTENCY: Check if event already processed
+    // EVENT IDEMPOTENCY: Check if event already processed (CHECK FIRST, CREATE LATER)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    try {
-      await prisma.orderEvent.create({
-        data: {
-          stripeEventId: event.id,
-          eventType: event.type,
-          type: 'STRIPE_WEBHOOK',
-          source: 'stripe',
-          payload: event // FULL event object
-        }
-      });
+    const existingEvent = await prisma.orderEvent.findFirst({
+      where: { stripeEventId: event.id }
+    });
+    
+    if (existingEvent) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`[EVENT_DEDUP_OK] event_id=${event.id} event_type=${event.type}`);
-      console.log(`[EVENT_DEDUP_OK] stripe_event_id WRITTEN to admin_order_events`);
+      console.log(`[EVENT_DUPLICATE] event_id=${event.id} event_type=${event.type} - Already processed`);
+      console.log(`[EVENT_DUPLICATE] Existing event record: ${existingEvent.id}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    } catch (eventError) {
-      // Check if it's a unique constraint violation (duplicate event)
-      if (eventError.code === 'P2002' || eventError.message?.includes('unique constraint')) {
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`[EVENT_DUPLICATE] event_id=${event.id} event_type=${event.type} - Already processed`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        return res.status(200).json({ 
-          received: true, 
-          duplicate: true, 
-          event_id: event.id 
-        });
-      }
-      
-      // ❌ CRITICAL: Event logging FAILED - this means DB schema mismatch or connection issue
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error('❌ [EVENT_LOG_CRITICAL] Event logging FAILED - Cannot proceed without deduplication!');
-      console.error('❌ Error code:', eventError.code);
-      console.error('❌ Error message:', eventError.message);
-      console.error('❌ This likely means:');
-      console.error('   - stripe_event_id or event_type columns do NOT exist in DB');
-      console.error('   - Migration was not executed');
-      console.error('   - Prisma client out of sync');
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      
-      // Return 500 to trigger Stripe retry
-      return res.status(500).json({
-        error: 'Event logging failed',
-        code: eventError.code,
-        message: eventError.message,
-        event_id: event.id
+      return res.status(200).json({ 
+        received: true, 
+        duplicate: true, 
+        event_id: event.id,
+        existing_event_id: existingEvent.id
       });
     }
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`[EVENT_DEDUP_CHECK] event_id=${event.id} is NEW - proceeding with processing`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     // 3. Handle specific events
     switch (event.type) {
@@ -210,10 +223,17 @@ export default async function handler(req, res) {
 }
 
 async function handleCheckoutSessionCompleted({ event, session, trace_id, eventMode }) {
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // CRITICAL: Create stable variables IMMEDIATELY to prevent ReferenceError in nested scopes
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const stripeEventId = event?.id || null;
+  const stripeEventType = event?.type || 'unknown';
+  const sessionId = session?.id || 'unknown';
+  
   console.log('[TRACE] WEBHOOK_SESSION_DATA', {
     trace_id,
-    event_id: event.id,
-    stripe_session_id: session.id,
+    event_id: stripeEventId,
+    stripe_session_id: sessionId,
     stripe_customer_id: session.customer,
     email: session.customer_details?.email || session.customer_email,
     payment_status: session.payment_status,
@@ -222,14 +242,15 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
   });
   
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('💳 [STRIPE SESSION] ID:', session.id);
+  console.log('💳 [STRIPE SESSION] ID:', sessionId);
   console.log('💳 [STRIPE SESSION] Payment status:', session.payment_status);
+  console.log('💳 [STRIPE EVENT] ID:', stripeEventId, 'Type:', stripeEventType);
   console.log('💳 [SSOT MODE] Writing directly to admin_orders (NO legacy tables)');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   let logData = {
     event_type: 'checkout.session.completed',
-    stripe_session_id: session.id,
+    stripe_session_id: sessionId,
     status: 'processing',
     error_message: null,
     order_id: null,
@@ -249,9 +270,7 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     
     // Only retrieve session if line_items are not expanded
     if (!session.line_items || !session.line_items.data || session.line_items.data.length === 0) {
-      console.log('⚠️ [STRIPE DATA] line_items not in event, retrieving session...');
-      
-      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      console.log('⚠️ [STRIPE DATA] line_items not in event, attempting retrieve...');
       
       try {
         fullSession = await stripe.checkout.sessions.retrieve(session.id, {
@@ -262,44 +281,30 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
             'payment_intent'
           ]
         });
+        console.log('✅ [STRIPE DATA] Session retrieved successfully');
       } catch (sessionError) {
-        // Handle expired or missing sessions gracefully
-        if (sessionError.statusCode === 404 || sessionError.code === 'resource_missing') {
-          console.warn('⚠️ [STRIPE SESSION NOT FOUND] Session does not exist or has expired');
-          console.warn('⚠️ [SESSION ID]:', session.id);
-          console.warn('⚠️ [REASON] Likely causes:');
-          console.warn('   - Session expired (>24h old)');
-          console.warn('   - Webhook replay of old event');
-          console.warn('   - Test/Live mode mismatch');
-          console.warn('⚠️ [ACTION] Logging error event and throwing to prevent order creation');
-          
-          // Log event as processed with error status
-          await prisma.orderEvent.create({
-            data: {
-              type: 'ERROR',
-              source: 'stripe',
-              payload: {
-                error: 'session_not_found',
-                session_id: session.id,
-                message: sessionError.message,
-                code: sessionError.code
-              },
-              stripeEventId: event.id,
-              eventType: event.type
-            }
-          }).catch(() => {
-            console.error('Failed to log session_not_found event');
-          });
-          
-          // Throw error with special marker for graceful handling in main handler
-          const error = new Error('STRIPE_SESSION_NOT_FOUND: Session does not exist or has expired');
-          error.isExpectedError = true; // Marker for 200 OK response
-          error.sessionId = session.id;
-          throw error;
-        }
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // CRITICAL FIX: session.retrieve failure does NOT block order creation
+        // We continue with event.data.object and try to extract what we can
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.warn('⚠️ [STRIPE SESSION RETRIEVE FAILED]');
+        console.warn('⚠️ [SESSION ID]:', sessionId);
+        console.warn('⚠️ [ERROR]:', sessionError.message);
+        console.warn('⚠️ [CODE]:', sessionError.code);
+        console.warn('⚠️ [STATUS CODE]:', sessionError.statusCode);
+        console.warn('⚠️ [ACTION] Continuing with event.data.object (may have incomplete data)');
+        console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
-        // Other Stripe errors - rethrow
-        throw sessionError;
+        // Use session from event as fallback
+        fullSession = session;
+        
+        // Check if we have metadata with cart/config info as fallback
+        if (session.metadata?.config_json || session.metadata?.cart_json) {
+          console.log('✅ [FALLBACK] Found cart/config data in session.metadata');
+        } else {
+          console.warn('⚠️ [FALLBACK] No metadata fallback - order may be incomplete');
+        }
       }
     } else {
       console.log('✅ [STRIPE DATA] line_items already in event, skipping retrieve');
@@ -347,9 +352,33 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     
     // === EXTRACT LINE ITEMS ===
     const lineItems = fullSession.line_items?.data || [];
+    
+    // Try to extract from metadata if line_items are missing
     if (lineItems.length === 0) {
-      console.error('❌ [VALIDATION] No line items in session');
-      throw new Error('No line items in Stripe session');
+      console.warn('⚠️ [LINE ITEMS] No line_items in session data');
+      
+      // Check for fallback in metadata
+      if (fullSession.metadata?.cart_json || fullSession.metadata?.config_json) {
+        console.warn('⚠️ [LINE ITEMS] Attempting to parse from metadata...');
+        try {
+          const cartData = fullSession.metadata.cart_json 
+            ? JSON.parse(fullSession.metadata.cart_json)
+            : null;
+          const configData = fullSession.metadata.config_json
+            ? JSON.parse(fullSession.metadata.config_json)
+            : null;
+          
+          if (cartData || configData) {
+            console.warn('⚠️ [LINE ITEMS] Found metadata but parsing not implemented yet');
+            console.warn('⚠️ [LINE ITEMS] Order will be created but may be incomplete');
+          }
+        } catch (parseError) {
+          console.error('❌ [METADATA PARSE] Failed:', parseError.message);
+        }
+      }
+      
+      // Don't throw - allow order creation even if incomplete
+      console.warn('⚠️ [VALIDATION] No line items - order will be marked incomplete');
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -397,6 +426,39 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     logData.order_id = adminOrder.id;
     logData.status = 'success';
     
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CRITICAL: Mark event as processed ONLY AFTER successful order write
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('[EVENT_MARK_PROCESSED] Order write successful, marking event as processed...');
+    
+    try {
+      await prisma.orderEvent.create({
+        data: {
+          stripeEventId: stripeEventId,
+          eventType: stripeEventType,
+          type: 'STRIPE_WEBHOOK',
+          source: 'stripe',
+          orderId: adminOrder.id,
+          payload: {
+            session_id: sessionId,
+            order_id: adminOrder.id,
+            marked_at: new Date().toISOString()
+          }
+        }
+      });
+      console.log(`[EVENT_MARK_PROCESSED] ✅ Event ${stripeEventId} marked as processed`);
+    } catch (eventMarkError) {
+      // If this fails, it might be a duplicate (race condition) - that's OK
+      if (eventMarkError.code === 'P2002') {
+        console.log(`[EVENT_MARK_PROCESSED] ⚠️ Event already marked (race condition) - OK`);
+      } else {
+        console.error(`[EVENT_MARK_PROCESSED] ❌ Failed to mark event:`, eventMarkError.message);
+        // Don't throw - order is already written
+      }
+    }
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     // === DB-RELOAD: Load order with items from admin_orders (VALIDATION) ===
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🔄 [DB_RELOAD] Loading order from admin_orders for validation...');
@@ -438,6 +500,7 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.error('❌ [VALIDATION_FAIL] Order incomplete after DB write!');
       console.error(`❌ items_count=${itemsCount} has_totals=${hasTotals}`);
+      console.error('❌ Order was created but email will NOT be sent');
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       
       await prisma.order.update({
@@ -461,7 +524,8 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
         }
       });
       
-      return; // Don't send email
+      console.log('✅ [DB_WRITE_OK] Order created (incomplete) - will not retry');
+      return; // Don't send email but event was processed successfully
     }
     
     // === SEND EMAIL (with idempotency + required fields gate) ===
