@@ -595,12 +595,6 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     throw error;
   }
 }
-    
-  } catch (error) {
-    console.error('❌ [EMAIL EXCEPTION]', error.message);
-    throw error;
-  }
-}
 
 async function logWebhookEvent(logData) {
   try {
