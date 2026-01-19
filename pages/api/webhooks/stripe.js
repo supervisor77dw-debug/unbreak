@@ -463,12 +463,14 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
  * Send order confirmation email from admin_orders (with all gates)
  */
 async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
+  let orderWithItems = null;
+  
   try {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`[EMAIL_FLOW_START] order_id=${orderId.substring(0, 8)}`);
     
     // 1. Load order with items from admin_orders
-    const orderWithItems = await prisma.order.findUnique({
+    orderWithItems = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
         items: {
@@ -492,15 +494,29 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     
     console.log('[DB_RELOAD_OK] admin_orders loaded with items');
     
-    // 2. IDEMPOTENCY CHECK (prevent duplicate emails)
+    // 2. MARK AS PROCESSING (FIRST DB WRITE - ensures visibility)
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { emailStatus: 'processing' }
+    });
+    console.log(`[EMAIL_DB_UPDATE] order_id=${orderId.substring(0, 8)} emailStatus=processing`);
+    
+    // 3. IDEMPOTENCY CHECK (prevent duplicate emails)
     if (orderWithItems.customerEmailSentAt || orderWithItems.adminEmailSentAt) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`[EMAIL_SKIP_ALREADY_SENT] order_id=${orderId.substring(0, 8)} customer_sent=${!!orderWithItems.customerEmailSentAt} admin_sent=${!!orderWithItems.adminEmailSentAt}`);
+      
+      // Update status to reflect already sent
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { emailStatus: 'sent' }
+      });
+      
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return;
     }
     
-    // 3. REQUIRED FIELDS GATE
+    // 4. REQUIRED FIELDS GATE
     const missingFields = [];
     
     if (!orderWithItems.email) missingFields.push('email');
@@ -520,13 +536,16 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
       console.error('❌ [EMAIL_BLOCKED] Missing fields:', missingFields.join(', '));
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       
+      const errorMsg = `Missing: ${missingFields.join(', ')}`;
       await prisma.order.update({
         where: { id: orderId },
         data: { 
           emailStatus: 'blocked_incomplete',
-          emailLastError: `Missing: ${missingFields.join(', ')}`
+          emailLastError: errorMsg.substring(0, 500) // Max 500 chars
         }
       });
+      
+      console.log(`[EMAIL_DB_UPDATED] order_id=${orderId.substring(0, 8)} status=blocked_incomplete`);
       
       // Log event
       await prisma.orderEvent.create({
@@ -543,7 +562,7 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     
     console.log('✅ [EMAIL GATE] All required fields present');
     
-    // 4. Check if emails are DISABLED globally
+    // 5. Check if emails are DISABLED globally
     const emailsDisabled = process.env.DISABLE_EMAILS === 'true';
     
     if (emailsDisabled) {
@@ -559,15 +578,15 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
         }
       });
       
-      console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} emailStatus=disabled`);
+      console.log(`[EMAIL_DB_UPDATED] order_id=${orderId.substring(0, 8)} emailStatus=disabled`);
       return;
     }
     
-    // 5. Log routing info
+    // 6. Log routing info
     const adminEmail = process.env.ADMIN_ORDER_EMAIL || 'orders@unbreak-one.com';
     console.log(`[EMAIL_ROUTE] customer=${orderWithItems.email} admin=${adminEmail}`);
     
-    // 6. Format items for email
+    // 7. Format items for email
     const emailItems = orderWithItems.items.map(item => ({
       name: item.name,
       quantity: item.qty,
@@ -579,7 +598,7 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     console.log(`[EMAIL_PAYLOAD_FROM_DB] order_id=${orderId.substring(0, 8)}`);
     console.log(`[EMAIL_PAYLOAD_FROM_DB] items_count=${emailItems.length}`);
     
-    // 7. SEND CUSTOMER EMAIL
+    // 8. SEND CUSTOMER EMAIL
     let customerResult = { sent: false, error: null, id: null };
     try {
       const result = await sendOrderConfirmation({
@@ -598,20 +617,23 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
         bcc: []
       });
       
-      customerResult = {
-        sent: result.sent || false,
-        error: result.error || null,
-        id: result.id || null
-      };
+      if (result.sent === true) {
+        customerResult = { sent: true, error: null, id: result.id || null };
+        console.log(`[EMAIL_SENT_CUSTOMER] resend_id=${result.id}`);
+      } else if (result.error) {
+        customerResult = { sent: false, error: result.error, id: null };
+        console.error(`[EMAIL_ERROR] customer: ${result.error}`);
+      } else {
+        // Unexpected result format
+        customerResult = { sent: false, error: 'Unexpected result format from sendOrderConfirmation', id: null };
+        console.error(`[EMAIL_ERROR] customer: Unexpected result format:`, result);
+      }
     } catch (emailError) {
-      customerResult = {
-        sent: false,
-        error: emailError.message,
-        id: null
-      };
+      customerResult = { sent: false, error: emailError.message, id: null };
+      console.error(`[EMAIL_ERROR] customer exception: ${emailError.message}`);
     }
     
-    // 8. SEND ADMIN EMAIL
+    // 9. SEND ADMIN EMAIL
     let adminResult = { sent: false, error: null, id: null };
     try {
       const result = await sendOrderConfirmation({
@@ -630,68 +652,86 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
         bcc: []
       });
       
-      adminResult = {
-        sent: result.sent || false,
-        error: result.error || null,
-        id: result.id || null
-      };
+      if (result.sent === true) {
+        adminResult = { sent: true, error: null, id: result.id || null };
+        console.log(`[EMAIL_SENT_ADMIN] resend_id=${result.id}`);
+      } else if (result.error) {
+        adminResult = { sent: false, error: result.error, id: null };
+        console.error(`[EMAIL_ERROR] admin: ${result.error}`);
+      } else {
+        // Unexpected result format
+        adminResult = { sent: false, error: 'Unexpected result format from sendOrderConfirmation', id: null };
+        console.error(`[EMAIL_ERROR] admin: Unexpected result format:`, result);
+      }
     } catch (emailError) {
-      adminResult = {
-        sent: false,
-        error: emailError.message,
-        id: null
-      };
+      adminResult = { sent: false, error: emailError.message, id: null };
+      console.error(`[EMAIL_ERROR] admin exception: ${emailError.message}`);
     }
     
-    // 9. LOG RESULTS
+    // 10. LOG RESULTS
     console.log(`[EMAIL_SEND_RESULT] customer=${customerResult.sent ? 'ok' : 'error'} admin=${adminResult.sent ? 'ok' : 'error'}`);
     
-    // 10. UPDATE DB BASED ON RESULTS
+    // 11. UPDATE DB BASED ON RESULTS (GUARANTEED TO RUN)
     const updateData = {};
     
     // Customer email timestamp
     if (customerResult.sent) {
       updateData.customerEmailSentAt = new Date();
-      console.log(`✅ [EMAIL_SENT] customer → ${orderWithItems.email} (resend_id=${customerResult.id})`);
-    } else {
-      console.error(`❌ [EMAIL_FAILED] customer → ${customerResult.error}`);
     }
     
     // Admin email timestamp  
     if (adminResult.sent) {
       updateData.adminEmailSentAt = new Date();
-      console.log(`✅ [EMAIL_SENT] admin → ${adminEmail} (resend_id=${adminResult.id})`);
-    } else {
-      console.error(`❌ [EMAIL_FAILED] admin → ${adminResult.error}`);
     }
     
-    // Email status
+    // Email status and error message
     if (customerResult.sent && adminResult.sent) {
       updateData.emailStatus = 'sent';
       updateData.emailLastError = null;
     } else if (!customerResult.sent && !adminResult.sent) {
       updateData.emailStatus = 'error';
-      updateData.emailLastError = `Customer: ${customerResult.error}; Admin: ${adminResult.error}`;
+      const errorMsg = `Customer: ${customerResult.error || 'Unknown'}; Admin: ${adminResult.error || 'Unknown'}`;
+      updateData.emailLastError = errorMsg.substring(0, 500); // Max 500 chars
     } else {
       updateData.emailStatus = 'partial';
       const errors = [];
-      if (!customerResult.sent) errors.push(`Customer: ${customerResult.error}`);
-      if (!adminResult.sent) errors.push(`Admin: ${adminResult.error}`);
-      updateData.emailLastError = errors.join('; ');
+      if (!customerResult.sent) errors.push(`Customer: ${customerResult.error || 'Unknown'}`);
+      if (!adminResult.sent) errors.push(`Admin: ${adminResult.error || 'Unknown'}`);
+      updateData.emailLastError = errors.join('; ').substring(0, 500);
     }
     
-    // 11. COMMIT TO DATABASE
+    // 12. COMMIT TO DATABASE (MUST ALWAYS HAPPEN)
     await prisma.order.update({
       where: { id: orderId },
       data: updateData
     });
     
-    console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} status=${updateData.emailStatus} customer_sent=${!!updateData.customerEmailSentAt} admin_sent=${!!updateData.adminEmailSentAt}`);
+    console.log(`[EMAIL_DB_UPDATED] order_id=${orderId.substring(0, 8)} status=${updateData.emailStatus} customer_sent=${!!updateData.customerEmailSentAt} admin_sent=${!!updateData.adminEmailSentAt}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
   } catch (error) {
-    console.error('❌ [EMAIL EXCEPTION]', error.message);
-    throw error;
+    // CRITICAL: If we reach here, ensure DB is updated with error
+    console.error('❌ [EMAIL_EXCEPTION]', error.message);
+    console.error('❌ [EMAIL_EXCEPTION] Stack:', error.stack);
+    
+    // Try to update DB with error status
+    if (orderWithItems?.id || orderId) {
+      try {
+        await prisma.order.update({
+          where: { id: orderWithItems?.id || orderId },
+          data: {
+            emailStatus: 'error',
+            emailLastError: `Exception: ${error.message}`.substring(0, 500)
+          }
+        });
+        console.log(`[EMAIL_DB_UPDATED] order_id=${orderId.substring(0, 8)} status=error (exception)`);
+      } catch (dbError) {
+        console.error('❌ [EMAIL_DB_UPDATE_FAILED] Could not update DB with error:', dbError.message);
+      }
+    }
+    
+    // DON'T rethrow - we've done everything we can
+    console.error('❌ [EMAIL] Flow completed with errors');
   }
 }
 
