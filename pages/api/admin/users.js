@@ -12,8 +12,15 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import prisma from '../../../lib/prisma';
+import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
 
 export default async function handler(req, res) {
+  // Log data source fingerprint (SSOT: Prisma User table)
+  logDataSourceFingerprint('admin_users_list', {
+    readTables: ['User (Prisma)'],
+    writeTables: [],
+  });
+
   // Check authentication
   const session = await getServerSession(req, res, authOptions);
   

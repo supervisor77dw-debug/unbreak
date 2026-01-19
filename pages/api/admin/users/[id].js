@@ -12,10 +12,17 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import prisma from '../../../../lib/prisma';
+import { logDataSourceFingerprint } from '../../../../lib/dataSourceFingerprint';
 
 const VALID_ROLES = ['ADMIN', 'STAFF', 'SUPPORT'];
 
 export default async function handler(req, res) {
+  // Log data source fingerprint (SSOT: Prisma User table)
+  logDataSourceFingerprint('admin_users_detail', {
+    readTables: ['User (Prisma)'],
+    writeTables: req.method === 'PATCH' ? ['User (Prisma)'] : [],
+  });
+
   // Check authentication
   const session = await getServerSession(req, res, authOptions);
   
