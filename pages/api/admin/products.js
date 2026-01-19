@@ -1,5 +1,6 @@
 import { requireAuth } from '../../../lib/auth-helpers';
 import { createClient } from '@supabase/supabase-js';
+import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -7,6 +8,12 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  // Log data source fingerprint
+  logDataSourceFingerprint('products_api', {
+    readTables: ['products'],
+    writeTables: req.method === 'GET' ? [] : ['products'],
+  });
+
   const user = await requireAuth(req, res);
   if (!user) {
     console.error('❌ [ADMIN PRODUCTS] No user authenticated');

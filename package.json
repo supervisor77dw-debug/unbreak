@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "dev:clean": "npm run clean:next && next dev",
+    "dev:validate": "node scripts/validate-env.js && next dev",
+    "validate-env": "node scripts/validate-env.js",
     "prebuild": "node scripts/generate-build-info.js",
     "build": "next build",
     "start": "next start",

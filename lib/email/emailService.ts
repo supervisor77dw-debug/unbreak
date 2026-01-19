@@ -474,13 +474,23 @@ export async function sendOrderConfirmation(params: {
   const shippingItem = items.find(item => item.name.toLowerCase().includes('versand') || item.name.toLowerCase().includes('shipping'));
   
   // ====================================================================
-  // LOCALIZE PRODUCT NAMES (i18n)
+  // LOCALIZE PRODUCT NAMES (i18n) + FIX MISSING UNIT PRICES
   // ====================================================================
   // Apply locale-aware product name resolution to all items
-  const localizedProductItems = productItems.map(item => ({
-    ...item,
-    name: resolveProductName(item.name, language)
-  }));
+  // FIX: If price_cents is 0 but line_total_cents exists, calculate unit price
+  const localizedProductItems = productItems.map(item => {
+    const qty = item.quantity || 1;
+    // Calculate price_cents from line_total if missing (logic fix: 1+0 should equal 1)
+    const fixedPriceCents = item.price_cents > 0 
+      ? item.price_cents 
+      : (item.line_total_cents && qty > 0 ? Math.round(item.line_total_cents / qty) : 0);
+    
+    return {
+      ...item,
+      name: resolveProductName(item.name, language),
+      price_cents: fixedPriceCents,
+    };
+  });
   
   console.log('[EMAIL i18n] Product names localized:', {
     locale: language,
@@ -491,17 +501,25 @@ export async function sendOrderConfirmation(params: {
   // GUARDRAIL: Detect if shipping is in line items
   const hasShippingLine = !!shippingItem;
   
-  const subtotalCents = localizedProductItems.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0);
-  const shippingCents = shippingItem ? (shippingItem.line_total_cents || shippingItem.price_cents) : 0;
+  // Calculate from items, but use passed-in values as fallback if items empty
+  const itemsSubtotal = localizedProductItems.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0);
+  const itemsShipping = shippingItem ? (shippingItem.line_total_cents || shippingItem.price_cents) : 0;
+  
+  // CRITICAL: Use amountSubtotal/shippingCost params if items calculation yields 0
+  const subtotalCents = itemsSubtotal > 0 ? itemsSubtotal : (amountSubtotal || totalAmount);
+  const shippingCents = itemsShipping > 0 ? itemsShipping : (shippingCost || 0);
   const orderTotalCents = totalAmount; // This is the authoritative total from Stripe
 
   // DEBUG LOGGING (temporary - remove after verification)
   console.log('[EMAIL PRICING DEBUG]', {
     productItems_count: localizedProductItems.length,
     hasShippingLine,
-    products_sum_cents: localizedProductItems.reduce((sum, item) => sum + ((item.line_total_cents || (item.price_cents * item.quantity)) || 0), 0),
-    shipping_cents: shippingCents,
-    subtotal_cents: subtotalCents,
+    items_subtotal: itemsSubtotal,
+    items_shipping: itemsShipping,
+    fallback_subtotal: amountSubtotal,
+    fallback_shipping: shippingCost,
+    final_subtotal_cents: subtotalCents,
+    final_shipping_cents: shippingCents,
     total_cents: orderTotalCents,
     items_total_check: items.reduce((sum, item) => sum + (item.line_total_cents || 0), 0),
     // GUARDRAIL CHECK: Total should equal subtotal + shipping

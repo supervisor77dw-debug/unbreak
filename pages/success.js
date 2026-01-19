@@ -44,8 +44,8 @@ export default function Success() {
         const orderResponse = await fetch(`/api/order/by-session?session_id=${session_id}`);
         const orderData = await orderResponse.json();
 
-        if (orderResponse.ok && orderData.order_number) {
-          console.log('[SUCCESS] ✅ Order fetched:', orderData.order_number);
+        if (orderResponse.ok && orderData.found) {
+          console.log('[SUCCESS] ✅ Order fetched:', orderData.order_number || orderData.order_id);
           setOrderData(orderData);
         } else {
           console.warn('[SUCCESS] ⚠️ Order fetch failed, using finalize fallback');
@@ -82,7 +82,16 @@ export default function Success() {
         }
 
         // Merge finalize data with order data (finalize may have more info)
-        setOrderData(prev => ({ ...prev, ...data.order }));
+        // Prefer finalize data over initial fetch (finalize has Stripe customer details)
+        setOrderData(prev => ({
+          ...prev,
+          ...data,
+          ...data.order,
+          // Ensure these fields are present
+          order_number: data.order_number || data.order?.order_number || prev?.order_number,
+          total_amount_cents: data.total_amount_cents || data.order?.total_amount_cents || prev?.total_amount_cents,
+          customer_email: data.customer_email || data.order?.customer_email || prev?.customer_email,
+        }));
         setLoading(false);
 
       } catch (err) {
@@ -179,16 +188,22 @@ export default function Success() {
             {ts('success.success.message')}
           </p>
 
-          {orderData?.order_number && (
+          {(orderData?.order_number || orderData?.order_id) && (
             <div style={styles.orderInfo}>
               <p style={styles.orderLabel}>{ts('success.orderInfo.orderNumber')}</p>
-              <p style={styles.orderId}>{orderData.order_number}</p>
+              <p style={styles.orderId}>{orderData.order_number || `#${orderData.order_id?.substring(0, 8).toUpperCase()}`}</p>
               {orderData.total_amount_cents && (
                 <>
                   <p style={styles.orderLabel}>{ts('success.orderInfo.totalAmount')}</p>
                   <p style={styles.orderId}>
                     €{(orderData.total_amount_cents / 100).toFixed(2)}
                   </p>
+                </>
+              )}
+              {orderData.customer_email && (
+                <>
+                  <p style={styles.orderLabel}>Email</p>
+                  <p style={styles.orderId}>{orderData.customer_email}</p>
                 </>
               )}
             </div>

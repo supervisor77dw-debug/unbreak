@@ -331,7 +331,7 @@ export default function OrderDetail() {
                   {order.order_number}
                 </span>
               ) : (
-                <span>ID: {order.id.substring(0, 8)}...</span>
+                <span>ID: {order.id ? order.id.substring(0, 8) + '...' : 'N/A'}</span>
               )}
             </div>
           </div>
@@ -375,7 +375,7 @@ export default function OrderDetail() {
                       {order._debug.order_number}
                     </span>
                   </div>
-                  {order._debug.stripe_session_id !== '(not set)' && (
+                  {order._debug.stripe_session_id && order._debug.stripe_session_id !== '(not set)' && (
                     <div style={{ gridColumn: '1 / -1' }}>
                       <strong>Stripe Session:</strong>
                       <span className="mono" style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '12px' }}>
@@ -401,9 +401,9 @@ export default function OrderDetail() {
                       alignItems: 'center',
                       gap: '8px'
                     }}>
-                      {order._debug.order_number}
+                      {order._debug.order_number || order.id || 'N/A'}
                       <button 
-                        onClick={() => navigator.clipboard.writeText(order._debug.order_number)}
+                        onClick={() => navigator.clipboard.writeText(order._debug.order_number || order.id || '')}
                         style={{
                           background: '#0891b2',
                           border: 'none',
@@ -593,7 +593,7 @@ export default function OrderDetail() {
                   <span>{order.customer_phone || order.customerPhone}</span>
                 </div>
               )}
-              {order.customer && (
+              {order.customer && order.customer.id && (
                 <div>
                   <strong>Kunden-ID:</strong>
                   <span title={order.customer.id}>{order.customer.id.substring(0, 8)}...</span>

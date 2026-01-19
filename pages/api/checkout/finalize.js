@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { getStripeClient } from '../../../lib/stripe-config.js';
+import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -10,6 +11,12 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
  * Called from success page to verify payment and clear cart
  */
 export default async function handler(req, res) {
+  // Log data source fingerprint
+  logDataSourceFingerprint('checkout_finalize', {
+    readTables: ['simple_orders'],
+    writeTables: ['simple_orders'],
+  });
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -55,16 +62,16 @@ export default async function handler(req, res) {
     let order = null;
     
     if (orderId) {
-      // Primary: Find by order_id in metadata
+      // Primary: Find by id in metadata (orderId is the UUID)
       const { data, error: orderError } = await supabase
         .from('simple_orders')
         .select('*')
-        .eq('order_id', orderId)
+        .eq('id', orderId)
         .single();
       
       if (!orderError && data) {
         order = data;
-        console.log('[FINALIZE] Found order by order_id:', orderId);
+        console.log('[FINALIZE] Found order by id:', orderId);
       }
     }
     
@@ -115,16 +122,36 @@ export default async function handler(req, res) {
       });
     }
 
-    // 6. Update order status
+    // 6. Update order status with customer data from Stripe
+    const customerDetails = session.customer_details || {};
+    const shippingDetails = session.shipping_details || session.customer_details || {};
+    
+    const updateData = { 
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+      stripe_payment_intent_id: session.payment_intent?.id || session.payment_intent,
+      customer_email: customerDetails.email || order.customer_email,
+      customer_name: customerDetails.name || shippingDetails.name || order.customer_name,
+      customer_phone: customerDetails.phone || order.customer_phone,
+      updated_at: new Date().toISOString(),
+    };
+    
+    // Add shipping address if available
+    if (shippingDetails.address) {
+      updateData.shipping_address = {
+        name: shippingDetails.name,
+        line1: shippingDetails.address.line1,
+        line2: shippingDetails.address.line2,
+        city: shippingDetails.address.city,
+        state: shippingDetails.address.state,
+        postal_code: shippingDetails.address.postal_code,
+        country: shippingDetails.address.country,
+      };
+    }
+    
     const { error: updateError } = await supabase
       .from('simple_orders')
-      .update({ 
-        status: 'paid',
-        paid_at: new Date().toISOString(),
-        stripe_payment_intent_id: session.payment_intent?.id || session.payment_intent,
-        customer_email: session.customer_details?.email || order.customer_email,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', order.id);
 
     if (updateError) {
@@ -181,14 +208,20 @@ export default async function handler(req, res) {
     // 7. Return success (client will clear cart)
     return res.status(200).json({ 
       ok: true,
-      order_id: orderId,
+      order_id: order.id,
+      order_number: order.order_number,
+      total_amount_cents: order.total_amount_cents,
+      customer_email: updateData.customer_email,
       cleared: true,
       message: 'Payment verified, order finalized',
       order: {
         id: order.id,
+        order_number: order.order_number,
         total_amount_cents: order.total_amount_cents,
         currency: order.currency,
         status: 'paid',
+        customer_email: updateData.customer_email,
+        customer_name: updateData.customer_name,
       },
     });
 

@@ -23,6 +23,7 @@ import { getSupabaseAdmin } from '../../../lib/supabase';
 import { getStripeClient, getCheckoutMode } from '../../../lib/stripe';
 import { calculatePrice, calculateShipping, calculateTax } from '../../../lib/pricing';
 import { validateConfiguratorConfig } from '../../../lib/configValidation';
+import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
 
 // PRODUCTION ONLY: All Stripe checkouts must redirect to production domain
 // This ensures webhooks, success/cancel URLs work correctly regardless of caller origin
@@ -45,6 +46,12 @@ function generateOrderNumber() {
 }
 
 export default async function handler(req, res) {
+  // Log data source fingerprint
+  logDataSourceFingerprint('checkout_create', {
+    readTables: ['products', 'pricing_rules'],
+    writeTables: ['simple_orders', 'customers'],
+  });
+
   const supabaseAdmin = getSupabaseAdmin();
   
   // Only POST allowed

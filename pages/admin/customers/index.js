@@ -43,24 +43,22 @@ export default function CustomersPage() {
       params.append('limit', pagination.limit);
       params.append('offset', pagination.offset);
 
-      const res = await fetch(`/api/admin/customers?${params}`, {
-        headers: {
-          'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_API_KEY || '',
-        },
-      });
+      const res = await fetch(`/api/admin/customers?${params}`);
       
       if (res.ok) {
         const data = await res.json();
         setCustomers(data.customers || []);
         setPagination(data.pagination || pagination);
       } else if (res.status === 401) {
-        console.error('❌ Admin API unauthorized - check NEXT_PUBLIC_ADMIN_API_KEY');
-        setError('Admin API unauthorized. Check environment configuration.');
+        console.error('❌ Admin API unauthorized - not logged in');
+        router.push('/admin/login');
       } else {
         console.error('Failed to fetch customers:', res.status);
+        setError('Fehler beim Laden der Kunden');
       }
     } catch (err) {
       console.error('Failed to fetch customers:', err);
+      setError('Netzwerkfehler');
     } finally {
       setLoading(false);
     }

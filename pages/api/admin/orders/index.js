@@ -6,6 +6,7 @@
 
 import { requireAuth } from '../../../../lib/auth-helpers';
 import { createClient } from '@supabase/supabase-js';
+import { logDataSourceFingerprint } from '../../../../lib/dataSourceFingerprint';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -13,6 +14,12 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  // Log data source fingerprint
+  logDataSourceFingerprint('admin_orders_api', {
+    readTables: ['simple_orders'],
+    writeTables: [],
+  });
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

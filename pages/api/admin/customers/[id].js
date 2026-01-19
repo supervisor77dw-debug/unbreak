@@ -1,65 +1,90 @@
 /**
- * 🔥 MESSE-MVP: Admin Customer Details API
- * CANONICAL SOURCE: customers + simple_orders (Supabase) via Repositories
- * RULE: NO DUAL-SOURCE, only canonical simple_orders
+ * Admin Customer Details API
+ * GET /api/admin/customers/[id] - Get customer details (id = email)
+ * Extracts customer data from simple_orders
  */
 
 import { getSupabaseAdmin } from '../../../../lib/supabase';
-import { requireAdmin } from '../../../../lib/adminAuth';
-import { OrderRepository, CustomerRepository } from '../../../../lib/repositories';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]';
+import { logDataSourceFingerprint } from '../../../../lib/dataSourceFingerprint';
 
 export default async function handler(req, res) {
-  // Require admin API key
-  if (!requireAdmin(req, res)) return;
+  // Log data source fingerprint
+  logDataSourceFingerprint('customer_detail_api', {
+    readTables: ['simple_orders'],
+    writeTables: [],
+  });
 
-  const { id } = req.query;
+  // Session-based auth (consistent with other admin APIs)
+  const session = await getServerSession(req, res, authOptions);
+  if (!session || !session.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { id } = req.query; // id is the customer email
 
   if (req.method === 'GET') {
     return handleGetCustomerDetails(req, res, id);
   }
 
-  if (req.method === 'PATCH') {
-    return handleUpdateCustomer(req, res, id);
-  }
-
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-async function handleGetCustomerDetails(req, res, customerId) {
+async function handleGetCustomerDetails(req, res, customerEmail) {
   const supabaseAdmin = getSupabaseAdmin();
 
   try {
-    // Get customer
-    const customer = await CustomerRepository.getCustomerById(customerId);
+    console.log(`[Customer Details API] Fetching customer: ${customerEmail}`);
 
-    if (!customer) {
+    // Get all orders for this customer from simple_orders
+    const { data: orders, error } = await supabaseAdmin
+      .from('simple_orders')
+      .select('*')
+      .ilike('customer_email', customerEmail)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ [Customer Details API] Error:', error);
+      return res.status(500).json({ error: 'Failed to fetch customer', details: error.message });
+    }
+
+    if (!orders || orders.length === 0) {
       return res.status(404).json({ error: 'Customer not found' });
     }
 
-    // 🔥 Get orders - ONLY FROM CANONICAL TABLE (simple_orders with UO-numbers)
-    const orders = await OrderRepository.listOrdersByCustomer(customer);
+    // Aggregate customer data from orders
+    const firstOrder = orders[orders.length - 1]; // Oldest order
+    const latestOrder = orders[0]; // Newest order
 
-    // Get tickets
-    const { data: tickets, error: ticketsError } = await supabaseAdmin
-      .from('tickets')
-      .select(`
-        id,
-        ticket_number,
-        subject,
-        status,
-        priority,
-        category,
-        created_at,
-        updated_at
-      `)
-      .eq('customer_id', customerId)
-      .order('created_at', { ascending: false });
+    const customer = {
+      id: customerEmail, // Use email as ID
+      email: latestOrder.customer_email,
+      name: latestOrder.customer_name || firstOrder.customer_name || null,
+      phone: latestOrder.customer_phone || firstOrder.customer_phone || null,
+      shipping_address: latestOrder.shipping_address || firstOrder.shipping_address || null,
+      created_at: firstOrder.created_at,
+      updated_at: latestOrder.created_at,
+    };
 
-    // Calculate stats (only from canonical orders)
+    // Calculate stats
     const totalOrders = orders.length;
-    const totalSpentCents = orders.reduce((sum, order) => {
-      return sum + (order.total_amount_cents || 0);
-    }, 0);
+    const totalSpentCents = orders.reduce((sum, order) => sum + (order.total_amount_cents || 0), 0);
+
+    // Format orders for display
+    const formattedOrders = orders.map(order => ({
+      id: order.id,
+      order_number: order.order_number || `UO-${order.id?.substring(0, 8)}`,
+      product_name: order.product_name,
+      product_sku: order.product_sku,
+      total_amount_cents: order.total_amount_cents,
+      total_amount_eur: ((order.total_amount_cents || 0) / 100).toFixed(2),
+      payment_status: order.payment_status,
+      fulfillment_status: order.fulfillment_status,
+      created_at: order.created_at,
+    }));
+
+    console.log(`✅ [Customer Details API] Found ${totalOrders} orders for ${customerEmail}`);
 
     return res.status(200).json({
       success: true,
@@ -67,61 +92,20 @@ async function handleGetCustomerDetails(req, res, customerId) {
         ...customer,
         total_spent_eur: (totalSpentCents / 100).toFixed(2),
       },
-      orders, // 🔥 CANONICAL ONLY - no more dual-source
-      tickets: tickets || [],
+      orders: formattedOrders,
+      tickets: [], // Tickets not implemented yet
       stats: {
         total_orders: totalOrders,
         total_spent_cents: totalSpentCents,
         total_spent_eur: (totalSpentCents / 100).toFixed(2),
-        open_tickets: (tickets || []).filter(t => t.status === 'open').length,
+        open_tickets: 0,
       },
     });
 
   } catch (error) {
-    console.error('❌ [ADMIN CUSTOMER DETAILS] Error:', error);
+    console.error('❌ [Customer Details API] Exception:', error);
     return res.status(500).json({
       error: 'Failed to fetch customer details',
-      message: error.message,
-    });
-  }
-}
-
-async function handleUpdateCustomer(req, res, customerId) {
-  const supabaseAdmin = getSupabaseAdmin();
-
-  try {
-    const { name, phone, shipping_address, billing_address, metadata } = req.body;
-
-    const updateData = {};
-    if (name !== undefined) updateData.name = name;
-    if (phone !== undefined) updateData.phone = phone;
-    if (shipping_address !== undefined) updateData.shipping_address = shipping_address;
-    if (billing_address !== undefined) updateData.billing_address = billing_address;
-    if (metadata !== undefined) updateData.metadata = { ...(metadata || {}) };
-    
-    updateData.updated_at = new Date().toISOString();
-
-    const { data: customer, error } = await supabaseAdmin
-      .from('customers')
-      .update(updateData)
-      .eq('id', customerId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('❌ [ADMIN CUSTOMER UPDATE] Error:', error);
-      return res.status(500).json({ error: 'Failed to update customer', details: error.message });
-    }
-
-    return res.status(200).json({
-      success: true,
-      customer,
-    });
-
-  } catch (error) {
-    console.error('❌ [ADMIN CUSTOMER UPDATE] Exception:', error);
-    return res.status(500).json({
-      error: 'Failed to update customer',
       message: error.message,
     });
   }

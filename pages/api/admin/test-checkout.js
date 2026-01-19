@@ -11,7 +11,13 @@ import { authOptions } from '../auth/[...nextauth]';
 import { getStripeClient } from '../../../lib/stripe-config';
 import { createClient } from '@supabase/supabase-js';
 
-const PRODUCTION_URL = 'https://unbreak-one.com';
+// Use localhost for dev, production URL otherwise
+const getBaseUrl = (req) => {
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:3000';
+  }
+  return process.env.NEXTAUTH_URL || 'https://unbreak-one.com';
+};
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -53,40 +59,52 @@ export default async function handler(req, res) {
     const stripe = getStripeClient('test');
     
     // 1. First, create an order in simple_orders
-    const orderId = `TEST-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+    const orderNumber = `TEST-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
     
-    const orderData = {
-      order_id: orderId,
-      customer_email: session.user?.email,
-      status: 'pending',
-      amount_total: 100, // 1.00 EUR in cents
-      currency: 'eur',
-      items: JSON.stringify([{
-        name: '🧪 Admin Test Order',
-        description: 'Test-Bestellung für Admin-Verifizierung',
-        quantity: 1,
-        price: 100,
-      }]),
-      shipping_address: JSON.stringify({
-        name: 'Admin Test',
-        line1: 'Test Street 1',
-        city: 'Test City',
-        postal_code: '12345',
-        country: 'DE',
-      }),
-      metadata: JSON.stringify({
-        source: 'admin_test_checkout',
-        admin_email: session.user?.email,
-        test_mode: true,
-      }),
-      created_at: new Date().toISOString(),
+    // Item data for email
+    const testItem = {
+      name: '🧪 Admin Test Order',
+      sku: 'TEST-ADMIN-ORDER',
+      quantity: 1,
+      price_cents: 100, // 1.00 EUR per unit
+      line_total_cents: 100, // 1.00 EUR total
     };
 
-    console.log('📝 [ADMIN TEST CHECKOUT] Creating order:', orderId);
+    // Schema: id (UUID auto), customer_email, product_sku, quantity, total_amount_cents, currency, status, order_type, stripe_session_id
+    const orderData = {
+      // id is auto-generated UUID
+      customer_email: session.user?.email || 'admin@test.local',
+      customer_name: session.user?.name || 'Admin Test',
+      product_sku: 'TEST-ADMIN-ORDER',
+      // Note: product_name column doesn't exist in simple_orders, item name is in items array
+      quantity: 1,
+      total_amount_cents: 100, // 1.00 EUR in cents
+      subtotal_cents: 100, // Product price without shipping
+      shipping_cents: 0, // No shipping for test
+      tax_cents: 0, // No tax for test
+      currency: 'EUR',
+      status: 'pending',
+      order_type: 'test',
+      // Items array for email template
+      items: [testItem],
+      // Price breakdown for debugging
+      price_breakdown_json: {
+        items: [testItem],
+        subtotal_cents: 100,
+        shipping_cents: 0,
+        tax_cents: 0,
+        grand_total_cents: 100,
+        currency: 'EUR',
+      },
+    };
 
-    const { error: insertError } = await supabase
+    console.log('📝 [ADMIN TEST CHECKOUT] Creating order:', orderNumber);
+
+    const { data: insertedOrder, error: insertError } = await supabase
       .from('simple_orders')
-      .insert([orderData]);
+      .insert([orderData])
+      .select('id')
+      .single();
 
     if (insertError) {
       console.error('❌ [ADMIN TEST CHECKOUT] Failed to create order:', insertError.message);
@@ -96,9 +114,12 @@ export default async function handler(req, res) {
       });
     }
 
-    console.log('✅ [ADMIN TEST CHECKOUT] Order created:', orderId);
+    const orderId = insertedOrder.id;
+    console.log('✅ [ADMIN TEST CHECKOUT] Order created with ID:', orderId);
 
     // 2. Create Stripe checkout session with order_id in metadata
+    const baseUrl = getBaseUrl(req);
+    
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -116,8 +137,12 @@ export default async function handler(req, res) {
         },
       ],
       customer_email: session.user?.email,
-      success_url: `${PRODUCTION_URL}/success?session_id={CHECKOUT_SESSION_ID}&test=true`,
-      cancel_url: `${PRODUCTION_URL}/admin/orders?canceled=true`,
+      // Collect shipping address in Stripe Checkout
+      shipping_address_collection: {
+        allowed_countries: ['DE', 'AT', 'CH'],
+      },
+      success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}&test=true`,
+      cancel_url: `${baseUrl}/admin/orders?canceled=true`,
       metadata: {
         order_id: orderId,
         source: 'admin_test_checkout',
@@ -130,7 +155,7 @@ export default async function handler(req, res) {
     const { error: updateError } = await supabase
       .from('simple_orders')
       .update({ stripe_session_id: checkoutSession.id })
-      .eq('order_id', orderId);
+      .eq('id', orderId);
 
     if (updateError) {
       console.error('⚠️ [ADMIN TEST CHECKOUT] Failed to update stripe_session_id:', updateError.message);

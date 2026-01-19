@@ -7,6 +7,7 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import { createClient } from '@supabase/supabase-js';
+import { logDataSourceFingerprint } from '../../../../lib/dataSourceFingerprint';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -14,6 +15,12 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  // Log data source fingerprint
+  logDataSourceFingerprint('order_detail_api', {
+    readTables: ['simple_orders'],
+    writeTables: req.method === 'PATCH' ? ['simple_orders'] : [],
+  });
+
   const session = await getServerSession(req, res, authOptions);
 
   if (!session) {
@@ -74,6 +81,8 @@ export default async function handler(req, res) {
         notes: order.notes,
         _source: 'simple_orders',
         _debug: {
+          order_number: order.order_number || order.id,
+          stripe_session_id: order.stripe_session_id || '(not set)',
           has_billing_address: !!(order.billing_address && order.billing_address.line1),
           has_shipping_address: !!(order.shipping_address && order.shipping_address.line1),
           items_count: order.items?.length || 0,

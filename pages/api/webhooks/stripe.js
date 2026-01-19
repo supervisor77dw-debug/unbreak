@@ -6,6 +6,7 @@ import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.
 import { countryToRegion } from '../../../lib/utils/shipping.js';
 import { sendOrderConfirmation } from '../../../lib/email/emailService';
 import { stripe, getWebhookSecret, IS_TEST_MODE } from '../../../lib/stripe-config.js';
+import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -18,6 +19,12 @@ export const config = {
 };
 
 export default async function handler(req, res) {
+  // Log data source fingerprint
+  logDataSourceFingerprint('webhook_stripe', {
+    readTables: ['simple_orders'],
+    writeTables: ['simple_orders'],
+  });
+
   // === DIAGNOSTIC LOGGING ===
   console.log('🪝 [WEBHOOK HIT] Method:', req.method);
   console.log('🪝 [WEBHOOK HIT] Has stripe-signature:', !!req.headers['stripe-signature']);
@@ -449,9 +456,10 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     logData.status = 'success';
     
     // ═══════════════════════════════════════════════════════════════════
-    // SEND EMAILS from simple_orders data
+    // SEND EMAILS from simple_orders data (SINGLE SOURCE OF TRUTH)
+    // Uses atomic claim mechanism to prevent duplicates
     // ═══════════════════════════════════════════════════════════════════
-    await sendOrderEmailsFromSimpleOrders(updatedOrder, trace_id, eventMode);
+    await sendOrderEmailsFromSimpleOrders(updatedOrder, trace_id, eventMode, 'webhook', stripeEventId);
     
     await logWebhookEvent(logData);
     
@@ -557,8 +565,13 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
       return; // Don't send email but event was processed successfully
     }
     
-    // === SEND EMAIL (with idempotency + required fields gate) ===
-    await sendOrderEmailFromAdminOrders(adminOrder.id, trace_id, eventMode);
+    // ═══════════════════════════════════════════════════════════════════
+    // DISABLED: Old email path using admin_orders (Prisma)
+    // E-Mails werden jetzt NUR über sendOrderEmailsFromSimpleOrders gesendet
+    // (aufgerufen in Zeile ~461 nach updateSimpleOrderFromStripe)
+    // ═══════════════════════════════════════════════════════════════════
+    // await sendOrderEmailFromAdminOrders(adminOrder.id, trace_id, eventMode);
+    console.log('⏭️ [EMAIL_SKIP] Old admin_orders email path DISABLED - using simple_orders only');
     
     await logWebhookEvent(logData);
     
@@ -697,8 +710,11 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     }
     
     // 6. Log routing info
-    const adminEmail = process.env.ADMIN_ORDER_EMAIL || 'orders@unbreak-one.com';
-    console.log(`[EMAIL_ROUTE] customer=${orderWithItems.email} admin=${adminEmail}`);
+    const adminEmail = process.env.ADMIN_ORDER_EMAIL;
+    if (!adminEmail) {
+      console.error('❌ [EMAIL] ADMIN_ORDER_EMAIL not set - skipping admin email');
+    }
+    console.log(`[EMAIL_ROUTE] customer=${orderWithItems.email} admin=${adminEmail || 'NOT SET'}`);
     
     // 7. Format items for email
     const emailItems = orderWithItems.items.map(item => ({
@@ -1983,7 +1999,26 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
       ? session.payment_intent 
       : session.payment_intent?.id || null;
     
-    // Update the order
+    // Calculate totals from Stripe session
+    const totalAmountCents = session.amount_total || existingOrder.total_amount_cents;
+    const subtotalCents = session.amount_subtotal || totalAmountCents;
+    const shippingCents = session.shipping_cost?.amount_total || 0;
+    
+    // Format items for database storage (convert from Stripe format)
+    const formattedItems = items.map(item => ({
+      name: item.name,
+      sku: item.sku,
+      quantity: item.qty || 1,
+      price_cents: item.unitPrice || 0,
+      line_total_cents: item.totalPrice || (item.unitPrice * (item.qty || 1)),
+    }));
+    
+    console.log('📦 [SSOT] Items to store:', formattedItems.length);
+    formattedItems.forEach((item, idx) => {
+      console.log(`  [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
+    });
+    
+    // Update the order with ALL relevant data
     const updateData = {
       status: 'paid',
       customer_email: customerEmail,
@@ -1994,12 +2029,23 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
       stripe_payment_intent_id: paymentIntentId,
       paid_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      // CRITICAL: Update items and totals from Stripe
+      items: formattedItems.length > 0 ? formattedItems : existingOrder.items,
+      total_amount_cents: totalAmountCents,
+      subtotal_cents: subtotalCents,
+      shipping_cents: shippingCents,
+      // Note: product_name column doesn't exist - product info is in items array
+      product_sku: formattedItems[0]?.sku || existingOrder.product_sku,
     };
     
     console.log('📝 [SSOT] Update data:', {
       status: updateData.status,
       customer_email: updateData.customer_email,
       has_shipping: !!updateData.shipping_address,
+      items_count: updateData.items?.length || 0,
+      total_amount_cents: updateData.total_amount_cents,
+      subtotal_cents: updateData.subtotal_cents,
+      shipping_cents: updateData.shipping_cents,
       payment_intent: paymentIntentId?.substring(0, 15) + '...'
     });
     
@@ -2028,15 +2074,80 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
 }
 
 /**
- * Send order confirmation emails from simple_orders data
- * Sends both customer and admin emails with detailed logging
+ * ATOMIC EMAIL CLAIM MECHANISM
+ * Claims the right to send an email by atomically setting the timestamp.
+ * Returns true if claim was successful (we can send), false if already claimed by another process.
+ * 
+ * This prevents duplicate emails even with:
+ * - Webhook retries
+ * - Parallel requests
+ * - Vercel replays
+ * - finalize + webhook race conditions
  */
-async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode) {
+async function claimEmailSend(orderId, emailType, claimId) {
+  const column = emailType === 'customer' ? 'customer_email_sent_at' : 'admin_email_sent_at';
+  
+  // ATOMIC UPDATE: Only succeeds if column IS NULL
+  // This is the CRITICAL idempotency mechanism
+  const { data, error, count } = await supabase
+    .from('simple_orders')
+    .update({ 
+      [column]: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', orderId)
+    .is(column, null) // CRITICAL: Only update if not already set
+    .select('id')
+    .single();
+  
+  if (error) {
+    // Could be "no rows returned" which means already claimed
+    console.log(`🔒 [EMAIL_CLAIM] ${emailType} for ${orderId.substring(0,8)}: ALREADY_CLAIMED (${error.code || error.message})`);
+    return { claimed: false, reason: 'already_sent_or_error' };
+  }
+  
+  if (data) {
+    console.log(`✅ [EMAIL_CLAIM] ${emailType} for ${orderId.substring(0,8)}: CLAIMED by ${claimId}`);
+    return { claimed: true, reason: 'success' };
+  }
+  
+  console.log(`⚠️ [EMAIL_CLAIM] ${emailType} for ${orderId.substring(0,8)}: NO_MATCH (probably already claimed)`);
+  return { claimed: false, reason: 'no_match' };
+}
+
+/**
+ * Release email claim on failure (allows manual retry later)
+ */
+async function releaseEmailClaim(orderId, emailType) {
+  const column = emailType === 'customer' ? 'customer_email_sent_at' : 'admin_email_sent_at';
+  
+  await supabase
+    .from('simple_orders')
+    .update({ 
+      [column]: null,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', orderId);
+    
+  console.log(`🔓 [EMAIL_CLAIM] ${emailType} for ${orderId.substring(0,8)}: RELEASED (can retry)`);
+}
+
+/**
+ * Send order confirmation emails from simple_orders data
+ * Uses ATOMIC CLAIM mechanism to prevent duplicate emails
+ * 
+ * CRITICAL: This is the ONLY function that sends order emails.
+ * All other email paths have been removed.
+ */
+async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, source = 'webhook', stripeEventId = null) {
   const orderId = order.id;
   const orderIdShort = orderId.substring(0, 8);
+  const claimId = `${source}_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
   
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log(`📧 [EMAIL_FLOW_START] order_id=${orderIdShort} trace_id=${trace_id || 'none'}`);
+  console.log(`📧 [EMAIL_FLOW_START] IDEMPOTENT EMAIL SENDER`);
+  console.log(`📧 [EMAIL_CONTEXT] order_id=${orderIdShort} trace_id=${trace_id || 'none'}`);
+  console.log(`📧 [EMAIL_CONTEXT] source=${source} event_id=${stripeEventId || 'none'} claim_id=${claimId}`);
   
   try {
     // 1. VALIDATION: Check required fields
@@ -2044,31 +2155,32 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode) {
     if (!customerEmail || !customerEmail.includes('@')) {
       console.error(`❌ [EMAIL] No valid customer_email for order ${orderIdShort}: "${customerEmail}"`);
       await updateEmailStatus(orderId, 'blocked_no_email', 'customer_email missing or invalid');
-      return;
+      return { customerSent: false, adminSent: false, reason: 'invalid_email' };
     }
     
-    // 2. IDEMPOTENCY: Check if already sent
-    if (order.customer_email_sent_at || order.admin_email_sent_at) {
-      console.log(`⚠️ [EMAIL] Already sent for order ${orderIdShort} - skipping`);
-      return;
-    }
-    
-    // 3. Check DISABLE_EMAILS env
+    // 2. Check DISABLE_EMAILS env
     if (process.env.DISABLE_EMAILS === 'true') {
       console.warn(`⚠️ [EMAIL] DISABLE_EMAILS=true - marking order ${orderIdShort}`);
       await updateEmailStatus(orderId, 'disabled', 'DISABLE_EMAILS=true');
-      return;
+      return { customerSent: false, adminSent: false, reason: 'disabled' };
     }
     
-    // 4. Prepare email data
+    // 3. Prepare email data
     const customerName = order.customer_name || 'Kunde';
     const orderNumber = order.order_number || orderIdShort.toUpperCase();
     const totalAmount = order.total_amount_cents || 0;
     const items = order.items || [];
     const shippingAddress = order.shipping_address;
     const billingAddress = order.billing_address;
-    const adminEmail = process.env.ADMIN_ORDER_EMAIL || 'orders@unbreak-one.com';
-    const emailFrom = process.env.EMAIL_FROM || 'UNBREAK ONE <no-reply@unbreak-one.com>';
+    const adminEmail = process.env.ADMIN_ORDER_EMAIL;
+    const emailFrom = process.env.EMAIL_FROM_ORDERS;
+    
+    if (!adminEmail) {
+      console.error('❌ [EMAIL] ADMIN_ORDER_EMAIL not set');
+    }
+    if (!emailFrom) {
+      console.error('❌ [EMAIL] EMAIL_FROM_ORDERS not set');
+    }
     
     console.log(`📧 [EMAIL] Customer: ${customerEmail}`);
     console.log(`📧 [EMAIL] Admin: ${adminEmail}`);
@@ -2076,52 +2188,85 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode) {
     console.log(`📧 [EMAIL] Order: ${orderNumber} | Total: ${totalAmount}¢`);
     console.log(`📧 [EMAIL] Items: ${items.length}`);
     
-    // 5. Mark as processing
-    await updateEmailStatus(orderId, 'processing', null);
+    // Debug items structure
+    console.log(`📧 [EMAIL] Items from DB:`, JSON.stringify(items, null, 2));
+    console.log(`📧 [EMAIL] Subtotal from DB: ${order.subtotal_cents}¢ | Shipping: ${order.shipping_cents}¢`);
     
-    // 6. SEND CUSTOMER EMAIL
-    let customerResult = { sent: false, error: null, id: null };
-    try {
-      const result = await sendOrderConfirmation({
-        orderId: orderId,
-        orderNumber: orderNumber,
-        customerEmail: customerEmail,
-        customerName: customerName,
-        items: items.map(item => ({
-          name: item.name,
-          quantity: item.quantity || item.qty || 1,
-          price_cents: item.unit_price_cents || item.unitPrice || 0,
-          line_total_cents: item.line_total_cents || item.totalPrice || 0
-        })),
-        totalAmount: totalAmount,
-        language: 'de',
-        shippingAddress: shippingAddress,
-        billingAddress: billingAddress,
-        amountSubtotal: order.subtotal_cents || totalAmount,
-        shippingCost: order.shipping_cents || 0,
-        orderDate: order.created_at ? new Date(order.created_at) : new Date(),
-        paymentStatus: order.status,
-      });
-      
-      customerResult = {
-        sent: result.sent || !!result.id,
-        id: result.id,
-        error: result.error
-      };
-      
-      console.log(`📧 [EMAIL_CUSTOMER] ${customerResult.sent ? '✅ SENT' : '❌ FAILED'} | resend_id=${customerResult.id || 'none'} | error=${customerResult.error || 'none'}`);
-      
-    } catch (emailError) {
-      customerResult.error = emailError.message;
-      console.error(`❌ [EMAIL_CUSTOMER] Exception: ${emailError.message}`);
+    // ═══════════════════════════════════════════════════════════════════
+    // 4. ATOMIC CLAIM: CUSTOMER EMAIL
+    // ═══════════════════════════════════════════════════════════════════
+    let customerResult = { sent: false, error: null, id: null, skipped: false };
+    
+    const customerClaim = await claimEmailSend(orderId, 'customer', claimId);
+    console.log(`📧 [EMAIL_CLAIM_RESULT] customer: claimed=${customerClaim.claimed} reason=${customerClaim.reason}`);
+    
+    if (!customerClaim.claimed) {
+      console.log(`⏭️ [EMAIL_SKIP] Customer email SKIPPED - already claimed/sent`);
+      customerResult.skipped = true;
+    } else {
+      // We have the claim - send the email
+      try {
+        const result = await sendOrderConfirmation({
+          orderId: orderId,
+          orderNumber: orderNumber,
+          customerEmail: customerEmail,
+          customerName: customerName,
+          items: items.map(item => ({
+            name: item.name,
+            quantity: item.quantity || item.qty || 1,
+            price_cents: item.price_cents || item.unit_price_cents || item.unitPrice || 0,
+            line_total_cents: item.line_total_cents || item.totalPrice || 0
+          })),
+          totalAmount: totalAmount,
+          language: 'de',
+          shippingAddress: shippingAddress,
+          billingAddress: billingAddress,
+          amountSubtotal: order.subtotal_cents || totalAmount,
+          shippingCost: order.shipping_cents || 0,
+          orderDate: order.created_at ? new Date(order.created_at) : new Date(),
+          paymentStatus: order.status,
+        });
+        
+        customerResult = {
+          sent: result.sent || !!result.id,
+          id: result.id,
+          error: result.error,
+          skipped: false
+        };
+        
+        if (!customerResult.sent) {
+          // Send failed - release claim for retry
+          await releaseEmailClaim(orderId, 'customer');
+          console.log(`❌ [EMAIL_CUSTOMER] FAILED - claim released for retry`);
+        } else {
+          console.log(`✅ [EMAIL_CUSTOMER] SENT | resend_id=${customerResult.id || 'none'}`);
+        }
+        
+      } catch (emailError) {
+        customerResult.error = emailError.message;
+        // Release claim on exception
+        await releaseEmailClaim(orderId, 'customer');
+        console.error(`❌ [EMAIL_CUSTOMER] Exception: ${emailError.message} - claim released`);
+      }
     }
     
-    // 7. SEND ADMIN NOTIFICATION EMAIL
-    let adminResult = { sent: false, error: null, id: null };
-    try {
-      const adminSubject = eventMode === 'TEST' 
-        ? `🧪 TEST: Neue Bestellung ${orderNumber}`
-        : `📦 Neue Bestellung ${orderNumber}`;
+    // ═══════════════════════════════════════════════════════════════════
+    // 5. ATOMIC CLAIM: ADMIN EMAIL
+    // ═══════════════════════════════════════════════════════════════════
+    let adminResult = { sent: false, error: null, id: null, skipped: false };
+    
+    const adminClaim = await claimEmailSend(orderId, 'admin', claimId);
+    console.log(`📧 [EMAIL_CLAIM_RESULT] admin: claimed=${adminClaim.claimed} reason=${adminClaim.reason}`);
+    
+    if (!adminClaim.claimed) {
+      console.log(`⏭️ [EMAIL_SKIP] Admin email SKIPPED - already claimed/sent`);
+      adminResult.skipped = true;
+    } else {
+      // We have the claim - send admin notification
+      try {
+        const adminSubject = eventMode === 'TEST' 
+          ? `🧪 TEST: Neue Bestellung ${orderNumber}`
+          : `📦 Neue Bestellung ${orderNumber}`;
       
       const adminHtml = `
 <!DOCTYPE html>
@@ -2180,57 +2325,78 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode) {
       adminResult = {
         sent: result.sent || !!result.id,
         id: result.id,
-        error: result.error
+        error: result.error,
+        skipped: false
       };
       
-      console.log(`📧 [EMAIL_ADMIN] ${adminResult.sent ? '✅ SENT' : '❌ FAILED'} | to=${adminEmail} | resend_id=${adminResult.id || 'none'} | error=${adminResult.error || 'none'}`);
+      if (!adminResult.sent) {
+        // Send failed - release claim for retry
+        await releaseEmailClaim(orderId, 'admin');
+        console.log(`❌ [EMAIL_ADMIN] FAILED - claim released for retry`);
+      } else {
+        console.log(`✅ [EMAIL_ADMIN] SENT | to=${adminEmail} | resend_id=${adminResult.id || 'none'}`);
+      }
       
-    } catch (emailError) {
-      adminResult.error = emailError.message;
-      console.error(`❌ [EMAIL_ADMIN] Exception: ${emailError.message}`);
+      } catch (emailError) {
+        adminResult.error = emailError.message;
+        // Release claim on exception
+        await releaseEmailClaim(orderId, 'admin');
+        console.error(`❌ [EMAIL_ADMIN] Exception: ${emailError.message} - claim released`);
+      }
     }
     
-    // 8. UPDATE DATABASE with email results
-    const now = new Date().toISOString();
+    // ═══════════════════════════════════════════════════════════════════
+    // 6. UPDATE EMAIL STATUS (based on actual send results, not claims)
+    // ═══════════════════════════════════════════════════════════════════
     const updateData = {
-      updated_at: now
+      updated_at: new Date().toISOString()
     };
     
-    if (customerResult.sent) {
-      updateData.customer_email_sent_at = now;
-    }
-    if (adminResult.sent) {
-      updateData.admin_email_sent_at = now;
-    }
+    // Determine overall status
+    const customerOk = customerResult.sent || customerResult.skipped;
+    const adminOk = adminResult.sent || adminResult.skipped;
     
     if (customerResult.sent && adminResult.sent) {
       updateData.email_status = 'sent';
-    } else if (customerResult.sent || adminResult.sent) {
+    } else if (customerResult.skipped && adminResult.skipped) {
+      updateData.email_status = 'already_sent';
+    } else if (customerOk && adminOk) {
+      updateData.email_status = 'sent'; // Mix of sent and already sent = OK
+    } else {
       updateData.email_status = 'partial';
       const errors = [];
-      if (!customerResult.sent) errors.push(`Customer: ${customerResult.error || 'Failed'}`);
-      if (!adminResult.sent) errors.push(`Admin: ${adminResult.error || 'Failed'}`);
+      if (!customerOk) errors.push(`Customer: ${customerResult.error || 'Failed'}`);
+      if (!adminOk) errors.push(`Admin: ${adminResult.error || 'Failed'}`);
       updateData.email_last_error = errors.join('; ').substring(0, 500);
-    } else {
-      updateData.email_status = 'failed';
-      updateData.email_last_error = `Customer: ${customerResult.error || 'Failed'}, Admin: ${adminResult.error || 'Failed'}`.substring(0, 500);
     }
     
-    const { error: dbError } = await supabase
+    await supabase
       .from('simple_orders')
       .update(updateData)
       .eq('id', orderId);
     
-    if (dbError) {
-      console.error(`❌ [EMAIL_DB] Failed to update email status: ${dbError.message}`);
-    }
-    
-    console.log(`📧 [EMAIL_COMPLETE] order=${orderIdShort} | customer=${customerResult.sent ? '✅' : '❌'} | admin=${adminResult.sent ? '✅' : '❌'} | status=${updateData.email_status}`);
+    // ═══════════════════════════════════════════════════════════════════
+    // 7. FINAL SUMMARY LOG
+    // ═══════════════════════════════════════════════════════════════════
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📧 [EMAIL_SUMMARY] order=${orderIdShort}`);
+    console.log(`📧 [EMAIL_SUMMARY] customer: ${customerResult.skipped ? 'SKIPPED (already sent)' : customerResult.sent ? '✅ SENT' : '❌ FAILED'}`);
+    console.log(`📧 [EMAIL_SUMMARY] admin: ${adminResult.skipped ? 'SKIPPED (already sent)' : adminResult.sent ? '✅ SENT' : '❌ FAILED'}`);
+    console.log(`📧 [EMAIL_SUMMARY] status=${updateData.email_status} claim_id=${claimId}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    return { 
+      customerSent: customerResult.sent, 
+      customerSkipped: customerResult.skipped,
+      adminSent: adminResult.sent,
+      adminSkipped: adminResult.skipped,
+      status: updateData.email_status
+    };
     
   } catch (error) {
     console.error(`❌ [EMAIL_EXCEPTION] order=${orderIdShort}: ${error.message}`);
     await updateEmailStatus(orderId, 'error', error.message);
+    return { customerSent: false, adminSent: false, reason: 'exception', error: error.message };
   }
 }
 
