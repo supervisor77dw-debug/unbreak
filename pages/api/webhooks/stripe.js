@@ -552,26 +552,36 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
         
         // Update customer_email_sent_at
         const customerSentAt = new Date();
-        await prisma.order.update({
-          where: { id: orderId },
-          data: {
-            customerEmailSentAt: customerSentAt,
-            emailStatus: 'sent'
-          }
-        });
-        console.log(`[EMAIL_STATUS_UPDATE_OK] customer_email_sent_at updated`);
-        console.log(`[EMAIL_FLAGS_AFTER] customer_sent_at=${customerSentAt.toISOString()} admin_sent_at=${orderWithItems.adminEmailSentAt || 'null'}`);
+        try {
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              customerEmailSentAt: customerSentAt,
+              emailStatus: 'sent'
+            }
+          });
+          console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} customer_email_sent_at=${customerSentAt.toISOString()}`);
+          console.log(`[EMAIL_FLAGS_AFTER] customer_sent_at=${customerSentAt.toISOString()} admin_sent_at=${orderWithItems.adminEmailSentAt || 'null'}`);
+        } catch (updateError) {
+          console.error(`❌ [EMAIL_DB_UPDATE_FAIL] Could not update customer_email_sent_at:`, updateError.message);
+          console.error(`❌ This likely means: customer_email_sent_at column does NOT exist in DB`);
+        }
       } else if (customerEmailResult.preview) {
         console.log(`📋 [EMAIL PREVIEW] Customer email - EMAILS DISABLED`);
       } else {
-        console.error(`❌ [EMAIL FAILED] Customer email: ${customerEmailResult.error}`);
-        await prisma.order.update({
-          where: { id: orderId },
-          data: {
-            emailStatus: 'error',
-            emailLastError: `Customer: ${customerEmailResult.error}`
-          }
-        });
+        console.error(`❌ [EMAIL_FAILED] Customer email: ${customerEmailResult.error}`);
+        try {
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              emailStatus: 'error',
+              emailLastError: `Customer: ${customerEmailResult.error}`
+            }
+          });
+          console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} emailStatus=error`);
+        } catch (updateError) {
+          console.error(`❌ [EMAIL_DB_UPDATE_FAIL] Could not update emailStatus:`, updateError.message);
+        }
       }
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else {
@@ -614,18 +624,36 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
           
           // Update admin_email_sent_at
           const adminSentAt = new Date();
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              adminEmailSentAt: adminSentAt
-            }
-          });
-          console.log(`[EMAIL_STATUS_UPDATE_OK] admin_email_sent_at updated`);
-          console.log(`[EMAIL_FLAGS_AFTER] customer_sent_at=${orderWithItems.customerEmailSentAt || 'null'} admin_sent_at=${adminSentAt.toISOString()}`);
+          try {
+            await prisma.order.update({
+              where: { id: orderId },
+              data: {
+                adminEmailSentAt: adminSentAt,
+                emailStatus: 'sent' // Ensure status is 'sent' after both emails
+              }
+            });
+            console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} admin_email_sent_at=${adminSentAt.toISOString()}`);
+            console.log(`[EMAIL_FLAGS_AFTER] customer_sent_at=${orderWithItems.customerEmailSentAt || 'null'} admin_sent_at=${adminSentAt.toISOString()}`);
+          } catch (updateError) {
+            console.error(`❌ [EMAIL_DB_UPDATE_FAIL] Could not update admin_email_sent_at:`, updateError.message);
+            console.error(`❌ This likely means: admin_email_sent_at column does NOT exist in DB`);
+          }
         } else if (adminEmailResult.preview) {
           console.log(`📋 [EMAIL PREVIEW] Admin email - EMAILS DISABLED`);
         } else {
           console.error(`❌ [EMAIL FAILED] Admin email: ${adminEmailResult.error}`);
+          try {
+            await prisma.order.update({
+              where: { id: orderId },
+              data: {
+                emailStatus: 'error',
+                emailLastError: `Admin: ${adminEmailResult.error}`
+              }
+            });
+            console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} emailStatus=error (admin)`);
+          } catch (updateError) {
+            console.error(`❌ [EMAIL_DB_UPDATE_FAIL] Could not update emailStatus:`, updateError.message);
+          }
         }
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       }
