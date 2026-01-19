@@ -14,11 +14,20 @@ export default async function handler(req, res) {
   try {
     const { format = 'csv' } = req.query;
 
-    // Fetch all orders with customer and items
-    const orders = await prisma.adminOrder.findMany({
+    // ✅ SSOT: Fetch all orders from admin_orders with items
+    const orders = await prisma.order.findMany({
       include: {
-        customer: true,
-        items: true,
+        items: {
+          select: {
+            id: true,
+            sku: true,
+            name: true,
+            variant: true,
+            qty: true,
+            unitPrice: true,
+            totalPrice: true,
+          }
+        },
       },
       orderBy: {
         createdAt: 'desc',

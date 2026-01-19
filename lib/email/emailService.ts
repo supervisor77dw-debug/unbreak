@@ -648,6 +648,19 @@ ${localizedProductItems.map(item => {
               </div>
               ` : ''}
               
+              <!-- Billing Address -->
+              ${billingAddress ? `
+              <div style="background-color: #F5F5F5; border-left: 4px solid #757575; border-radius: 4px; padding: 20px; margin: 30px 0;">
+                <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px; font-weight: 600;">💳 Rechnungsadresse</h3>
+                <p style="margin: 3px 0; font-size: 14px; color: #333;"><strong>${billingAddress.name || customerName || ''}</strong></p>
+                <p style="margin: 3px 0; font-size: 14px; color: #666;">${billingAddress.line1 || ''}</p>
+                ${billingAddress.line2 ? `<p style="margin: 3px 0; font-size: 14px; color: #666;">${billingAddress.line2}</p>` : ''}
+                <p style="margin: 3px 0; font-size: 14px; color: #666;">${billingAddress.postal_code || ''} ${billingAddress.city || ''}</p>
+                ${billingAddress.state ? `<p style="margin: 3px 0; font-size: 14px; color: #666;">${billingAddress.state}</p>` : ''}
+                <p style="margin: 3px 0; font-size: 14px; color: #333; font-weight: 600;">${billingAddress.country || ''}</p>
+              </div>
+              ` : ''}
+              
               <!-- Shipping Info -->
               <div style="background-color: #FFF9E6; border-left: 4px solid #FFC107; border-radius: 4px; padding: 20px; margin: 30px 0;">
                 <h3 style="margin: 0 0 10px 0; color: #856404; font-size: 16px; font-weight: 600;">📦 Versand & Service</h3>

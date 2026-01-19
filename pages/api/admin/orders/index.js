@@ -1,12 +1,11 @@
 /**
- * 🔥 MESSE-MVP: Admin Orders List API
- * CANONICAL SOURCE: simple_orders (Supabase) via OrderRepository
- * RULE: NO PRISMA, only Supabase
+ * ✅ SSOT: Admin Orders List API
+ * CANONICAL SOURCE: admin_orders (Prisma)
+ * RULE: NO simple_orders, NO OrderRepository - ONLY Prisma admin_orders
  */
 
 import { requireAuth } from '../../../../lib/auth-helpers';
-import { OrderRepository } from '../../../../lib/repositories';
-import { mapPaymentStatus } from '../../../../lib/utils/paymentStatusMapper';
+import prisma from '../../../../lib/prisma';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -25,42 +24,65 @@ export default async function handler(req, res) {
       statusPayment,
       statusFulfillment,
       search,
-      sortBy = 'created_at',
+      sortBy = 'createdAt',
       sortOrder = 'desc',
     } = req.query;
 
-    // 🔥 USE REPOSITORY - CANONICAL SOURCE (simple_orders with UO-numbers only)
-    const result = await OrderRepository.listOrders({
-      page: parseInt(page),
-      limit: parseInt(limit),
-      statusPayment,
-      statusFulfillment,
-      search,
-      sortBy,
-      sortOrder,
-    });
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
 
-    // Normalize field names for frontend compatibility
-    const normalizedOrders = result.orders.map(order => ({
-      ...order,
-      // Ensure frontend gets expected field names
-      createdAt: order.created_at,
-      updatedAt: order.updated_at,
-      statusPayment: mapPaymentStatus(order), // 🔥 MESSE-FIX: Consistent UPPERCASE status
-      statusFulfillment: order.status_fulfillment,
-      stripeCheckoutSessionId: order.stripe_checkout_session_id || order.stripe_session_id,
-      totalGross: order.total_amount_cents,
-      email: order.customer_email || order.customers?.email,
-      customer: order.customers,
-    }));
+    // Build where filter
+    const where = {};
+    
+    if (statusPayment) {
+      where.statusPayment = statusPayment;
+    }
+    
+    if (statusFulfillment) {
+      where.statusFulfillment = statusFulfillment;
+    }
+    
+    if (search) {
+      where.OR = [
+        { email: { contains: search, mode: 'insensitive' } },
+        { shippingName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    // ✅ SSOT: Fetch from admin_orders (Prisma)
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: {
+          items: {
+            select: {
+              id: true,
+              sku: true,
+              name: true,
+              variant: true,
+              qty: true,
+              unitPrice: true,
+              totalPrice: true,
+            }
+          }
+        },
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip: offset,
+        take: limitNum,
+      }),
+      prisma.order.count({ where }),
+    ]);
 
     res.status(200).json({
-      orders: normalizedOrders,
+      orders,
       pagination: {
-        total: result.total,
-        page: result.page,
-        limit: result.limit,
-        totalPages: result.totalPages,
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
       },
     });
 
