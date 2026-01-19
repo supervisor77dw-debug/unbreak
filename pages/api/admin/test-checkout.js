@@ -28,6 +28,18 @@ export default async function handler(req, res) {
   console.log('🔑 [ADMIN TEST CHECKOUT] User:', session.user?.email);
 
   try {
+    // Check if test key is available
+    const testKey = process.env.STRIPE_SECRET_KEY_TEST || 
+                    (process.env.STRIPE_SECRET_KEY?.startsWith('sk_test') ? process.env.STRIPE_SECRET_KEY : null);
+    
+    if (!testKey) {
+      console.error('❌ [ADMIN TEST CHECKOUT] No test key available');
+      return res.status(500).json({
+        error: 'No test key configured',
+        message: 'STRIPE_SECRET_KEY_TEST ist nicht konfiguriert. Bitte in Vercel Environment setzen.',
+      });
+    }
+    
     // Get test mode Stripe client
     const stripe = getStripeClient('test');
     

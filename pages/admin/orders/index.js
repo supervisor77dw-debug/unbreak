@@ -125,7 +125,21 @@ export default function AdminOrders() {
         headers: { 'Content-Type': 'application/json' },
       });
       
-      const data = await res.json();
+      // Handle empty response
+      const text = await res.text();
+      if (!text) {
+        alert('Fehler: Server hat keine Antwort gesendet. Bitte Vercel Logs prüfen.');
+        return;
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseErr) {
+        console.error('JSON Parse Error:', text);
+        alert('Fehler: Ungültige Server-Antwort: ' + text.substring(0, 200));
+        return;
+      }
       
       if (res.ok && data.url) {
         // Open Stripe test checkout in new tab
@@ -134,6 +148,7 @@ export default function AdminOrders() {
         alert('Fehler: ' + (data.message || data.error || 'Unbekannter Fehler'));
       }
     } catch (err) {
+      console.error('Test Checkout Error:', err);
       alert('Fehler: ' + err.message);
     } finally {
       setTestCheckoutLoading(false);
