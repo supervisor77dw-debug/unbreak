@@ -248,6 +248,7 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     // === EXTRACT ADDRESSES ===
     const shippingAddress = fullSession.shipping_details?.address ?? fullSession.customer_details?.address ?? null;
     const billingAddress = fullSession.customer_details?.address ?? fullSession.shipping_details?.address ?? null;
+    const shippingName = fullSession.shipping_details?.name || customerName || null;
     
     console.log('🏠 [ADDRESS] Shipping:', shippingAddress ? `${shippingAddress.line1}, ${shippingAddress.city}` : 'MISSING');
     console.log('📋 [ADDRESS] Billing:', billingAddress ? `${billingAddress.line1}, ${billingAddress.city}` : 'MISSING');
@@ -292,6 +293,7 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
       customerPhone,
       shippingAddress,
       billingAddress,
+      shippingName,
       items
     });
     
@@ -333,8 +335,10 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     const hasBilling = !!(orderWithItems.billingAddress && orderWithItems.billingAddress.line1);
     const hasShipping = !!(orderWithItems.shippingAddress && orderWithItems.shippingAddress.line1);
     const hasTotals = !!(orderWithItems.subtotalNet && orderWithItems.totalGross);
+    const hasEmail = !!orderWithItems.email;
+    const hasPhone = !!orderWithItems.customer?.phone;
     
-    console.log(`[DB_RELOAD_OK] order_id=${adminOrder.id.substring(0, 8)} items_count=${itemsCount} has_billing=${hasBilling} has_shipping=${hasShipping} totals={subtotal:${orderWithItems.subtotalNet}¢,shipping:${orderWithItems.amountShipping}¢,tax:${orderWithItems.taxAmount}¢,total:${orderWithItems.totalGross}¢}`);
+    console.log(`[DB_RELOAD_OK] order_id=${adminOrder.id.substring(0, 8)} fields={email:${hasEmail},phone:${hasPhone},billing:${hasBilling},shipping:${hasShipping},items:${itemsCount},totals:{subtotal:${orderWithItems.subtotalNet}¢,shipping:${orderWithItems.amountShipping}¢,tax:${orderWithItems.taxAmount}¢,total:${orderWithItems.totalGross}¢}}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     // === VALIDATION: Check completeness ===
@@ -467,6 +471,10 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     }
     
     console.log('✅ [EMAIL GATE] All required fields present');
+    
+    // Log routing info
+    const adminEmail = process.env.ADMIN_ORDER_EMAIL || '(not set)';
+    console.log(`[EMAIL_ROUTE] customer=${orderWithItems.email} admin=${adminEmail}`);
     
     // 4. Format items for email
     const emailItems = orderWithItems.items.map(item => ({
@@ -820,7 +828,7 @@ async function syncStripeSessionToAdminOrders(session, extractedData) {
     console.log('💾 [SSOT WRITE] Customer:', extractedData.customerEmail);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    const { customerEmail, customerName, customerPhone, shippingAddress, billingAddress, items } = extractedData;
+    const { customerEmail, customerName, customerPhone, shippingAddress, billingAddress, shippingName, items } = extractedData;
     
     // 1. Upsert customer in admin_customers
     const customer = await prisma.customer.upsert({
@@ -916,7 +924,7 @@ async function syncStripeSessionToAdminOrders(session, extractedData) {
         taxAmount: taxAmount,
         totalGross: totalGross,
         email: customerEmail,
-        shippingName: shippingAddress?.name || customerName,
+        shippingName: shippingName,
         shippingAddress: shippingAddress,
         billingAddress: billingAddress,
         shippingRegion: shippingRegion,
