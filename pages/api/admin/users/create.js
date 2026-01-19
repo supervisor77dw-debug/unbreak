@@ -2,8 +2,13 @@
  * ADMIN API: Create User
  * 
  * POST /api/admin/users/create
- * - Create admin user with email and password
- * - Hash password with bcrypt
+ * - Create admin user in Supabase Auth (SSOT for credentials)
+ * - Then create/update metadata in admin_users table via Prisma
+ * 
+ * ARCHITECTURE DECISION (2026-01-19):
+ * - Credentials (email/password) → Supabase Auth ONLY
+ * - Metadata (name, role, isActive) → Prisma admin_users table
+ * - auth.users.id is stored in admin_users for linking
  * 
  * Requires: ADMIN role
  */
@@ -11,16 +16,26 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import prisma from '../../../../lib/prisma';
-import bcrypt from 'bcryptjs';
+import { createClient } from '@supabase/supabase-js';
 import { logDataSourceFingerprint } from '../../../../lib/dataSourceFingerprint';
+
+// Supabase Admin Client for auth operations
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
 
 const VALID_ROLES = ['ADMIN', 'STAFF', 'SUPPORT'];
 
 export default async function handler(req, res) {
-  // Log data source fingerprint (SSOT: Prisma User table)
+  // Log data source fingerprint
+  const supabaseHost = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace('https://', '').split('.')[0];
   logDataSourceFingerprint('admin_users_create', {
-    readTables: ['User (Prisma)'],
-    writeTables: ['User (Prisma)'],
+    readTables: ['auth.users (Supabase Auth)'],
+    writeTables: ['auth.users (Supabase Auth)', 'admin_users (Prisma - metadata only)'],
+    supabaseProject: supabaseHost,
+    note: 'Credentials in Supabase Auth, metadata in Prisma',
   });
 
   // Check authentication
@@ -48,23 +63,45 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` });
       }
 
-      // Check if user already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { email }
+      // Step 1: Create user in Supabase Auth (SSOT for credentials)
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true, // Auto-confirm email for admin-created users
+        user_metadata: {
+          name: display_name || null,
+          role: roleUpper,
+        },
       });
 
-      if (existingUser) {
-        return res.status(400).json({ error: 'User with this email already exists' });
+      if (authError) {
+        console.error('[CREATE USER] Supabase Auth error:', authError);
+        
+        // Handle duplicate email
+        if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
+          return res.status(400).json({ error: 'User with this email already exists' });
+        }
+        
+        return res.status(500).json({ error: `Failed to create auth user: ${authError.message}` });
       }
 
-      // Hash password
-      const passwordHash = await bcrypt.hash(password, 10);
+      const authUserId = authData.user.id;
+      console.log(`✅ [CREATE USER] Supabase Auth user created: ${email} (auth_id: ${authUserId})`);
 
-      // Create user
-      const user = await prisma.user.create({
-        data: {
+      // Step 2: Create/Update metadata in admin_users table (Prisma)
+      // Use the Supabase Auth ID as the primary key for consistency
+      const user = await prisma.user.upsert({
+        where: { id: authUserId },
+        create: {
+          id: authUserId, // Use Supabase Auth ID
           email,
-          passwordHash,
+          role: roleUpper,
+          name: display_name || null,
+          isActive: true,
+          passwordHash: 'SUPABASE_AUTH', // Placeholder - not used for auth
+        },
+        update: {
+          email,
           role: roleUpper,
           name: display_name || null,
           isActive: true,
@@ -79,11 +116,14 @@ export default async function handler(req, res) {
         },
       });
 
+      console.log(`✅ [CREATE USER] Prisma metadata saved for: ${email}`);
+      console.log(`   [FINGERPRINT] Supabase Project: ${supabaseHost}`);
+
       return res.status(200).json({
         success: true,
         message: 'User created successfully',
         user: {
-          id: user.id,
+          id: user.id, // This is now the Supabase Auth ID
           email: user.email,
           role: user.role.toLowerCase(),
           display_name: user.name,

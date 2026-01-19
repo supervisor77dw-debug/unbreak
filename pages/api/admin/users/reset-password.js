@@ -3,25 +3,36 @@
  * 
  * POST /api/admin/users/reset-password
  * - Reset password for any user
- * - Uses Prisma User table (SSOT)
+ * - SSOT: Supabase Auth (auth.users table)
  * 
- * CRITICAL FIX: This was previously using Supabase admin_users table (BUG!)
- * Now unified to use Prisma User table like all other user endpoints.
+ * ARCHITECTURE DECISION (2026-01-19):
+ * - Credentials (email/password) → Supabase Auth ONLY
+ * - Metadata (name, role, isActive) → Prisma admin_users table
+ * - This ensures single source of truth for authentication
  * 
  * Requires: ADMIN role
  */
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
-import prisma from '../../../../lib/prisma';
-import bcrypt from 'bcryptjs';
+import { createClient } from '@supabase/supabase-js';
 import { logDataSourceFingerprint } from '../../../../lib/dataSourceFingerprint';
 
+// Supabase Admin Client for auth operations
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
 export default async function handler(req, res) {
-  // Log data source fingerprint (SSOT: Prisma User table)
+  // Log data source fingerprint - SSOT is Supabase Auth
+  const supabaseHost = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace('https://', '').split('.')[0];
   logDataSourceFingerprint('admin_users_reset_password', {
-    readTables: ['User (Prisma)'],
-    writeTables: ['User (Prisma)'],
+    readTables: ['auth.users (Supabase Auth)'],
+    writeTables: ['auth.users (Supabase Auth)'],
+    supabaseProject: supabaseHost,
+    note: 'Credentials SSOT = Supabase Auth, NOT Prisma',
   });
 
   if (req.method !== 'POST') {
@@ -34,10 +45,11 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Forbidden - Admin access required' });
   }
 
-  const { userId, newPassword } = req.body;
+  // Accept either userId (Supabase Auth ID) or email
+  const { userId, email, newPassword } = req.body;
 
-  if (!userId || !newPassword) {
-    return res.status(400).json({ error: 'userId and newPassword are required' });
+  if ((!userId && !email) || !newPassword) {
+    return res.status(400).json({ error: 'userId or email, and newPassword are required' });
   }
 
   if (newPassword.length < 8) {
@@ -45,49 +57,46 @@ export default async function handler(req, res) {
   }
 
   try {
-    // First verify user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true },
-    });
+    let authUserId = userId;
 
-    if (!existingUser) {
-      console.error(`[RESET PASSWORD] User not found: ${userId}`);
-      return res.status(404).json({ error: 'User not found' });
+    // If only email provided, find Supabase Auth user by email
+    if (!authUserId && email) {
+      const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      if (listError) {
+        console.error('[RESET PASSWORD] Error listing users:', listError);
+        return res.status(500).json({ error: 'Failed to find user' });
+      }
+      
+      const authUser = users.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+      if (!authUser) {
+        console.error(`[RESET PASSWORD] No Supabase Auth user found for email: ${email}`);
+        return res.status(404).json({ error: 'User not found in authentication system' });
+      }
+      authUserId = authUser.id;
     }
 
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // Update password in Supabase Auth (SSOT for credentials)
+    const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      authUserId,
+      { password: newPassword }
+    );
 
-    // Update password in Prisma User table (SSOT)
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: { 
-        passwordHash: hashedPassword,
-        updatedAt: new Date(),
-      },
-      select: {
-        id: true,
-        email: true,
-        updatedAt: true,
-      },
-    });
+    if (updateError) {
+      console.error('[RESET PASSWORD] Supabase Auth error:', updateError);
+      return res.status(500).json({ error: `Failed to update password: ${updateError.message}` });
+    }
 
-    console.log(`✅ [ADMIN] Password reset for user ${updatedUser.email} by ${session.user.email}`);
+    console.log(`✅ [ADMIN] Password reset for user ${updatedUser.user.email} (auth_id: ${authUserId}) by ${session.user.email}`);
+    console.log(`   [FINGERPRINT] Supabase Project: ${supabaseHost}`);
 
     return res.status(200).json({ 
       success: true,
-      message: 'Password updated successfully' 
+      message: 'Password updated successfully in Supabase Auth',
+      authUserId: authUserId,
     });
 
   } catch (error) {
     console.error('[RESET PASSWORD] Error:', error);
-    
-    // Handle Prisma-specific errors
-    if (error.code === 'P2025') {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

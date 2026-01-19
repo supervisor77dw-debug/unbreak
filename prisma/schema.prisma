@@ -23,7 +23,10 @@ model User {
   id           String   @id @default(uuid())
   email        String   @unique
   name         String?
-  passwordHash String
+  // DEPRECATED (2026-01-19): passwordHash is no longer used for authentication
+  // Credentials are now stored in Supabase Auth (auth.users table)
+  // This field is kept for backwards compatibility but contains "SUPABASE_AUTH" placeholder
+  passwordHash String   @default("SUPABASE_AUTH")
   role         Role     @default(SUPPORT)
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())

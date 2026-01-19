@@ -2,9 +2,14 @@
  * ADMIN API: Users Management
  * 
  * GET /api/admin/users
- * - List all admin users from Prisma
+ * - List all admin users from Prisma (metadata)
  * - Search by email, name
  * - Filter by role, isActive
+ * 
+ * ARCHITECTURE DECISION (2026-01-19):
+ * - Credentials (email/password) → Supabase Auth ONLY
+ * - Metadata (name, role, isActive) → Prisma admin_users table
+ * - User IDs in admin_users = Supabase Auth IDs
  * 
  * Requires: ADMIN role
  */
@@ -15,10 +20,13 @@ import prisma from '../../../lib/prisma';
 import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
 
 export default async function handler(req, res) {
-  // Log data source fingerprint (SSOT: Prisma User table)
+  // Log data source fingerprint
+  const supabaseHost = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace('https://', '').split('.')[0];
   logDataSourceFingerprint('admin_users_list', {
-    readTables: ['User (Prisma)'],
+    readTables: ['admin_users (Prisma - metadata)'],
     writeTables: [],
+    supabaseProject: supabaseHost,
+    note: 'User list from Prisma, IDs match Supabase Auth IDs',
   });
 
   // Check authentication
