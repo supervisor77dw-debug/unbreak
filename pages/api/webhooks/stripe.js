@@ -23,6 +23,17 @@ export default async function handler(req, res) {
   console.log('🪝 [WEBHOOK HIT] Has stripe-signature:', !!req.headers['stripe-signature']);
   console.log('🪝 [ENV CHECK] STRIPE_SECRET_KEY present:', !!process.env.STRIPE_SECRET_KEY);
   console.log('🪝 [ENV CHECK] STRIPE_WEBHOOK_SECRET present:', !!process.env.STRIPE_WEBHOOK_SECRET);
+  
+  // === DB ENVIRONMENT DEBUG (Masked) ===
+  const dbUrl = process.env.DATABASE_URL || '';
+  const dbHost = dbUrl.match(/@([^:]+)/)?.[1] || 'unknown';
+  const dbUrlLast6 = dbUrl.slice(-6);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('[DB_ENV] APP_ENV:', process.env.APP_ENV || 'production');
+  console.log('[DB_ENV] DB_HOST:', dbHost);
+  console.log('[DB_ENV] DB_URL_TAIL:', '...' + dbUrlLast6);
+  console.log('[DB_ENV] DB_LABEL:', process.env.DB_PROJECT_LABEL || 'unbreak-one-prod');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   if (req.method !== 'POST') {
     console.log('⚠️ [Webhook] Non-POST request received:', req.method);
@@ -103,6 +114,41 @@ export default async function handler(req, res) {
       event_mode: eventMode,
       timestamp: new Date().toISOString()
     });
+    
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // EVENT IDEMPOTENCY: Check if event already processed
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    try {
+      await prisma.orderEvent.create({
+        data: {
+          stripeEventId: event.id,
+          type: 'STRIPE_WEBHOOK',
+          source: 'stripe',
+          payload: { 
+            type: event.type, 
+            livemode: event.livemode,
+            created: event.created 
+          }
+        }
+      });
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`[EVENT_DEDUP_OK] event_id=${event.id} type=${event.type}`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    } catch (eventError) {
+      // Check if it's a unique constraint violation
+      if (eventError.code === 'P2002' || eventError.message?.includes('unique constraint')) {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`[EVENT_DUPLICATE] event_id=${event.id} - Already processed`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return res.status(200).json({ 
+          received: true, 
+          duplicate: true, 
+          event_id: event.id 
+        });
+      }
+      // Other error - continue processing but log it
+      console.warn('⚠️ [EVENT_LOG_FAIL] Could not log event, continuing:', eventError.message);
+    }
     
     // 3. Handle specific events
     switch (event.type) {
@@ -257,6 +303,71 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     logData.order_id = adminOrder.id;
     logData.status = 'success';
     
+    // === DB-RELOAD: Load order with items from admin_orders (VALIDATION) ===
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔄 [DB_RELOAD] Loading order from admin_orders for validation...');
+    
+    const orderWithItems = await prisma.order.findUnique({
+      where: { id: adminOrder.id },
+      include: {
+        items: {
+          select: {
+            id: true,
+            sku: true,
+            name: true,
+            variant: true,
+            qty: true,
+            unitPrice: true,
+            totalPrice: true,
+          }
+        }
+      }
+    });
+    
+    if (!orderWithItems) {
+      console.error('❌ [DB_RELOAD] Order not found after write!');
+      throw new Error('DB-Reload failed: order not found');
+    }
+    
+    const itemsCount = orderWithItems.items?.length || 0;
+    const hasBilling = !!(orderWithItems.billingAddress && orderWithItems.billingAddress.line1);
+    const hasShipping = !!(orderWithItems.shippingAddress && orderWithItems.shippingAddress.line1);
+    const hasTotals = !!(orderWithItems.subtotalNet && orderWithItems.totalGross);
+    
+    console.log(`[DB_RELOAD_OK] order_id=${adminOrder.id.substring(0, 8)} items_count=${itemsCount} has_billing=${hasBilling} has_shipping=${hasShipping} totals={subtotal:${orderWithItems.subtotalNet}¢,shipping:${orderWithItems.amountShipping}¢,tax:${orderWithItems.taxAmount}¢,total:${orderWithItems.totalGross}¢}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    // === VALIDATION: Check completeness ===
+    if (itemsCount === 0 || !hasTotals) {
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ [VALIDATION_FAIL] Order incomplete after DB write!');
+      console.error(`❌ items_count=${itemsCount} has_totals=${hasTotals}`);
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      await prisma.order.update({
+        where: { id: adminOrder.id },
+        data: { 
+          emailStatus: 'blocked_incomplete',
+          emailLastError: `Validation failed: items=${itemsCount}, totals=${hasTotals}`
+        }
+      });
+      
+      await prisma.orderEvent.create({
+        data: {
+          orderId: adminOrder.id,
+          type: 'ERROR',
+          source: 'webhook',
+          payload: { 
+            reason: 'validation_failed', 
+            items_count: itemsCount,
+            has_totals: hasTotals
+          }
+        }
+      });
+      
+      return; // Don't send email
+    }
+    
     // === SEND EMAIL (with idempotency + required fields gate) ===
     await sendOrderEmailFromAdminOrders(adminOrder.id, trace_id, eventMode);
     
@@ -374,53 +485,109 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     console.log(`[EMAIL_PAYLOAD_FROM_DB] Totals: subtotal=${orderWithItems.subtotalNet}¢ shipping=${orderWithItems.amountShipping}¢ tax=${orderWithItems.taxAmount}¢ total=${orderWithItems.totalGross}¢`);
     console.log(`[EMAIL_PAYLOAD_FROM_DB] Addresses: billing=${orderWithItems.billingAddress ? 'YES' : 'NO'} shipping=${orderWithItems.shippingAddress ? 'YES' : 'NO'}`);
     
-    // 5. Send email
-    const emailResult = await sendOrderConfirmation({
-      orderId: orderWithItems.id,
-      orderNumber: orderWithItems.id.substring(0, 8).toUpperCase(),
-      customerEmail: orderWithItems.email,
-      customerName: orderWithItems.shippingName,
-      items: emailItems,
-      totalAmount: orderWithItems.totalGross,
-      language: 'de', // TODO: detect from country
-      shippingAddress: orderWithItems.shippingAddress,
-      billingAddress: orderWithItems.billingAddress,
-      amountSubtotal: orderWithItems.subtotalNet,
-      shippingCost: orderWithItems.amountShipping,
-      orderDate: orderWithItems.createdAt,
-      bcc: ['admin@unbreak-one.com', 'orders@unbreak-one.com']
-    });
-    
-    if (emailResult.sent) {
+    // 5. CUSTOMER EMAIL (with guard)
+    let customerEmailSent = false;
+    if (!orderWithItems.customerEmailSentAt) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`[EMAIL_SENT_CUSTOMER] order_id=${orderId.substring(0, 8)} resend_id=${emailResult.id}`);
-      console.log(`[EMAIL_SENT_ADMIN] order_id=${orderId.substring(0, 8)} bcc=orders@unbreak-one.com`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log('📧 [CUSTOMER EMAIL] Sending to:', orderWithItems.email);
       
-      // Update email status
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          emailStatus: 'sent',
-          customerEmailSentAt: new Date(),
-          adminEmailSentAt: new Date(),
-        }
+      const customerEmailResult = await sendOrderConfirmation({
+        orderId: orderWithItems.id,
+        orderNumber: orderWithItems.id.substring(0, 8).toUpperCase(),
+        customerEmail: orderWithItems.email,
+        customerName: orderWithItems.shippingName,
+        items: emailItems,
+        totalAmount: orderWithItems.totalGross,
+        language: 'de', // TODO: detect from country
+        shippingAddress: orderWithItems.shippingAddress,
+        billingAddress: orderWithItems.billingAddress,
+        amountSubtotal: orderWithItems.subtotalNet,
+        shippingCost: orderWithItems.amountShipping,
+        orderDate: orderWithItems.createdAt,
+        bcc: [] // NO BCC for customer email
       });
       
-      console.log('[EMAIL_STATUS_UPDATE_OK] email_status=sent timestamps_updated=true');
-      
-    } else if (emailResult.preview) {
-      console.log(`📋 [EMAIL PREVIEW] trace_id=${trace_id} - EMAILS DISABLED`);
+      if (customerEmailResult.sent) {
+        console.log(`[EMAIL_SENT_CUSTOMER] order_id=${orderId.substring(0, 8)} resend_id=${customerEmailResult.id}`);
+        customerEmailSent = true;
+        
+        // Update customer_email_sent_at
+        await prisma.order.update({
+          where: { id: orderId },
+          data: {
+            customerEmailSentAt: new Date(),
+            emailStatus: 'sent'
+          }
+        });
+        console.log('[EMAIL_STATUS_UPDATE_OK] customer_email_sent_at updated');
+      } else if (customerEmailResult.preview) {
+        console.log(`📋 [EMAIL PREVIEW] Customer email - EMAILS DISABLED`);
+      } else {
+        console.error(`❌ [EMAIL FAILED] Customer email: ${customerEmailResult.error}`);
+        await prisma.order.update({
+          where: { id: orderId },
+          data: {
+            emailStatus: 'error',
+            emailLastError: `Customer: ${customerEmailResult.error}`
+          }
+        });
+      }
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else {
-      console.error(`❌ [EMAIL FAILED] trace_id=${trace_id} - ${emailResult.error}`);
+      console.log(`[EMAIL_SKIP] Customer email already sent at ${orderWithItems.customerEmailSentAt}`);
+    }
+    
+    // 6. ADMIN EMAIL (with guard + ADMIN_ORDER_EMAIL required)
+    let adminEmailSent = false;
+    if (!orderWithItems.adminEmailSentAt) {
+      const adminEmail = process.env.ADMIN_ORDER_EMAIL;
       
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          emailStatus: 'error',
-          emailLastError: emailResult.error
+      if (!adminEmail) {
+        console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.warn('⚠️ [ADMIN EMAIL SKIP] ADMIN_ORDER_EMAIL not set - skipping admin notification');
+        console.warn('⚠️ NO FALLBACK to customer email (by design)');
+        console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      } else {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📧 [ADMIN EMAIL] Sending to:', adminEmail);
+        
+        const adminEmailResult = await sendOrderConfirmation({
+          orderId: orderWithItems.id,
+          orderNumber: orderWithItems.id.substring(0, 8).toUpperCase(),
+          customerEmail: adminEmail, // Admin gets copy
+          customerName: orderWithItems.shippingName,
+          items: emailItems,
+          totalAmount: orderWithItems.totalGross,
+          language: 'de',
+          shippingAddress: orderWithItems.shippingAddress,
+          billingAddress: orderWithItems.billingAddress,
+          amountSubtotal: orderWithItems.subtotalNet,
+          shippingCost: orderWithItems.amountShipping,
+          orderDate: orderWithItems.createdAt,
+          bcc: []
+        });
+        
+        if (adminEmailResult.sent) {
+          console.log(`[EMAIL_SENT_ADMIN] order_id=${orderId.substring(0, 8)} resend_id=${adminEmailResult.id} to=${adminEmail}`);
+          adminEmailSent = true;
+          
+          // Update admin_email_sent_at
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              adminEmailSentAt: new Date()
+            }
+          });
+          console.log('[EMAIL_STATUS_UPDATE_OK] admin_email_sent_at updated');
+        } else if (adminEmailResult.preview) {
+          console.log(`📋 [EMAIL PREVIEW] Admin email - EMAILS DISABLED`);
+        } else {
+          console.error(`❌ [EMAIL FAILED] Admin email: ${adminEmailResult.error}`);
         }
-      });
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      }
+    } else {
+      console.log(`[EMAIL_SKIP] Admin email already sent at ${orderWithItems.adminEmailSentAt}`);
     }
     
   } catch (error) {
@@ -428,6 +595,10 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     throw error;
   }
 }
+    
+  } catch (error) {
+    console.error('❌ [EMAIL EXCEPTION]', error.message);
+    throw error;
   }
 }
 

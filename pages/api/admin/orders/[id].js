@@ -91,6 +91,12 @@ export default async function handler(req, res) {
           status_raw: order.status,
           status_mapped: mapPaymentStatus(order),
           status_fulfillment_raw: order.status_fulfillment,
+          // 🔥 DB ENVIRONMENT (Masked)
+          db_env: {
+            app_env: process.env.APP_ENV || 'production',
+            db_url_tail: (process.env.DATABASE_URL || '').slice(-6),
+            db_label: process.env.DB_PROJECT_LABEL || 'unbreak-one-prod'
+          }
         }
       });
     }

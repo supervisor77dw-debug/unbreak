@@ -100,6 +100,12 @@ model Order {
   shippedAt               DateTime?         @map("shipped_at")
   notes                   String?
   configJson              Json?             @map("config_json") // Configurator config with colors
+  
+  // Email tracking (separate flags for customer + admin)
+  emailStatus           String?   @map("email_status") // 'pending', 'sent', 'blocked_incomplete', 'error'
+  emailLastError        String?   @map("email_last_error")
+  customerEmailSentAt   DateTime? @map("customer_email_sent_at") // Idempotency: customer email
+  adminEmailSentAt      DateTime? @map("admin_email_sent_at") // Idempotency: admin email
 
   customer Customer     @relation(fields: [customerId], references: [id])
   items    OrderItem[]
@@ -151,12 +157,13 @@ enum EventType {
 }
 
 model OrderEvent {
-  id        String    @id @default(uuid())
-  orderId   String?   @map("order_id")
-  type      EventType
-  source    String // 'stripe', 'resend', 'admin', 'system'
-  payload   Json
-  createdAt DateTime  @default(now()) @map("created_at")
+  id            String    @id @default(uuid())
+  orderId       String?   @map("order_id")
+  stripeEventId String?   @unique @map("stripe_event_id") // For idempotency
+  type          EventType
+  source        String // 'stripe', 'resend', 'admin', 'system'
+  payload       Json
+  createdAt     DateTime  @default(now()) @map("created_at")
 
   order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
 

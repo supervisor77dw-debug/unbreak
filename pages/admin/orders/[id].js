@@ -498,6 +498,39 @@ export default function OrderDetail() {
                       <span className="mono" style={{ fontSize: '11px' }}>{order._debug.customer_id}</span>
                     </div>
                   )}
+                  
+                  {/* 🔥 DB ENVIRONMENT INFO */}
+                  {order._debug.db_env && (
+                    <>
+                      <div style={{ gridColumn: '1 / -1', borderTop: '1px solid #334155', paddingTop: '12px', marginTop: '12px' }}>
+                        <strong style={{ color: '#0891b2', fontSize: '14px' }}>🗄️ Datenbankumgebung</strong>
+                      </div>
+                      
+                      <div>
+                        <strong>APP_ENV:</strong>
+                        <span style={{ 
+                          color: order._debug.db_env.app_env === 'production' ? '#10b981' : '#f59e0b',
+                          fontWeight: 'bold'
+                        }}>
+                          {order._debug.db_env.app_env}
+                        </span>
+                      </div>
+                      
+                      <div>
+                        <strong>DB_URL (letzte 6 Zeichen):</strong>
+                        <span className="mono" style={{ fontSize: '11px', color: '#94a3b8' }}>
+                          ...{order._debug.db_env.db_url_tail}
+                        </span>
+                      </div>
+                      
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <strong>DB_PROJECT_LABEL:</strong>
+                        <span className="mono" style={{ fontSize: '13px', color: '#0891b2', marginLeft: '12px' }}>
+                          {order._debug.db_env.db_label}
+                        </span>
+                      </div>
+                    </>
+                  )}
 
                   <div>
                     <strong>Erstellt:</strong>
