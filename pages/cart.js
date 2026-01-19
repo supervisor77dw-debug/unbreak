@@ -488,8 +488,8 @@ export default function CartPage() {
         </div>
       </div>
 
-      {/* Admin Test Mode Toggle (only visible to admins) */}
-      {isAdmin && (
+      {/* Admin Test Mode Toggle (only visible to admins after hydration) */}
+      {isClient && isAdmin && (
         <div style={{
           marginBottom: '15px',
           padding: '12px',
@@ -522,6 +522,13 @@ export default function CartPage() {
               ADMIN TEST
             </span>
           )}
+        </div>
+      )}
+      
+      {/* Debug: Show admin status (remove in production) */}
+      {isClient && (
+        <div style={{ fontSize: '10px', color: '#999', marginBottom: '10px', textAlign: 'right' }}>
+          Admin: {isAdmin ? '✅' : '❌'} | Key: {typeof window !== 'undefined' && localStorage.getItem('unbreak_admin_api_key') ? '✅' : '❌'}
         </div>
       )}
 
