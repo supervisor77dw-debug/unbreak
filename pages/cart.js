@@ -524,13 +524,6 @@ export default function CartPage() {
           )}
         </div>
       )}
-      
-      {/* Debug: Show admin status (remove in production) */}
-      {isClient && (
-        <div style={{ fontSize: '10px', color: '#999', marginBottom: '10px', textAlign: 'right' }}>
-          Admin: {isAdmin ? '✅' : '❌'} | Key: {typeof window !== 'undefined' && localStorage.getItem('unbreak_admin_api_key') ? '✅' : '❌'}
-        </div>
-      )}
 
       {/* Checkout Button */}
       <button

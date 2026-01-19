@@ -26,6 +26,7 @@ export default function AdminOrders() {
   });
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [bulkAction, setBulkAction] = useState('');
+  const [testCheckoutLoading, setTestCheckoutLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -116,6 +117,29 @@ export default function AdminOrders() {
     }
   };
 
+  const handleTestCheckout = async () => {
+    setTestCheckoutLoading(true);
+    try {
+      const res = await fetch('/api/admin/test-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.url) {
+        // Open Stripe test checkout in new tab
+        window.open(data.url, '_blank');
+      } else {
+        alert('Fehler: ' + (data.message || data.error || 'Unbekannter Fehler'));
+      }
+    } catch (err) {
+      alert('Fehler: ' + err.message);
+    } finally {
+      setTestCheckoutLoading(false);
+    }
+  };
+
   if (status === 'loading' || !session) {
     return <div>Loading...</div>;
   }
@@ -161,9 +185,19 @@ export default function AdminOrders() {
             <h1>Bestellungen</h1>
             <p>Kundenbestellungen und Versand verwalten</p>
           </div>
-          <button onClick={handleExport} className="export-button">
-            📥 Als CSV exportieren
-          </button>
+          <div className="admin-header-buttons">
+            <button 
+              onClick={handleTestCheckout} 
+              className="test-checkout-button"
+              disabled={testCheckoutLoading}
+              title="Erstellt eine 1€ Test-Bestellung über Stripe Test Mode"
+            >
+              {testCheckoutLoading ? '⏳ Lädt...' : '🧪 Test-Bestellung'}
+            </button>
+            <button onClick={handleExport} className="export-button">
+              📥 Als CSV exportieren
+            </button>
+          </div>
         </div>
 
         <div className="admin-filters">
@@ -348,6 +382,37 @@ export default function AdminOrders() {
           .admin-page-header p {
             color: #666;
             margin: 0;
+          }
+
+          .admin-header-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+          }
+
+          .test-checkout-button {
+            background: linear-gradient(135deg, #ff6b35 0%, #e85d04 100%);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+          }
+
+          .test-checkout-button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #ff7f50 0%, #f56d18 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+          }
+
+          .test-checkout-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
           }
 
           .export-button {
