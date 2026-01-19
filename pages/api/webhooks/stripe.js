@@ -465,7 +465,7 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
 async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
   try {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`📧 [EMAIL PIPELINE] Starting for order ${orderId.substring(0, 8)}`);
+    console.log(`[EMAIL_FLOW_START] order_id=${orderId.substring(0, 8)}`);
     
     // 1. Load order with items from admin_orders
     const orderWithItems = await prisma.order.findUnique({
@@ -543,15 +543,31 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     
     console.log('✅ [EMAIL GATE] All required fields present');
     
-    // Log routing info
-    const adminEmail = process.env.ADMIN_ORDER_EMAIL || '(not set)';
-    const envAdminSet = !!process.env.ADMIN_ORDER_EMAIL;
-    console.log(`[EMAIL_ROUTE] customer=${orderWithItems.email} admin=${adminEmail} envAdminSet=${envAdminSet}`);
+    // 4. Check if emails are DISABLED globally
+    const emailsDisabled = process.env.DISABLE_EMAILS === 'true';
     
-    // Log flags BEFORE send
-    console.log(`[EMAIL_FLAGS_BEFORE] customer_sent_at=${orderWithItems.customerEmailSentAt || 'null'} admin_sent_at=${orderWithItems.adminEmailSentAt || 'null'}`);
+    if (emailsDisabled) {
+      console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.warn('⚠️ [EMAIL DISABLED] DISABLE_EMAILS=true - marking order');
+      console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          emailStatus: 'disabled',
+          emailLastError: 'DISABLE_EMAILS=true in env'
+        }
+      });
+      
+      console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} emailStatus=disabled`);
+      return;
+    }
     
-    // 4. Format items for email
+    // 5. Log routing info
+    const adminEmail = process.env.ADMIN_ORDER_EMAIL || 'orders@unbreak-one.com';
+    console.log(`[EMAIL_ROUTE] customer=${orderWithItems.email} admin=${adminEmail}`);
+    
+    // 6. Format items for email
     const emailItems = orderWithItems.items.map(item => ({
       name: item.name,
       quantity: item.qty,
@@ -562,148 +578,116 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     console.log('[EMAIL_PAYLOAD_FROM_DB] Supabase admin_orders data:');
     console.log(`[EMAIL_PAYLOAD_FROM_DB] order_id=${orderId.substring(0, 8)}`);
     console.log(`[EMAIL_PAYLOAD_FROM_DB] items_count=${emailItems.length}`);
-    emailItems.forEach((item, idx) => {
-      console.log(`[EMAIL_PAYLOAD_FROM_DB]   [${idx + 1}] ${item.quantity}× ${item.name} @ ${item.price_cents}¢ = ${item.line_total_cents}¢`);
-    });
-    console.log(`[EMAIL_PAYLOAD_FROM_DB] Totals: subtotal=${orderWithItems.subtotalNet}¢ shipping=${orderWithItems.amountShipping}¢ tax=${orderWithItems.taxAmount}¢ total=${orderWithItems.totalGross}¢`);
-    console.log(`[EMAIL_PAYLOAD_FROM_DB] Addresses: billing=${orderWithItems.billingAddress ? 'YES' : 'NO'} shipping=${orderWithItems.shippingAddress ? 'YES' : 'NO'}`);
     
-    // 5. CUSTOMER EMAIL (with guard)
-    let customerEmailSent = false;
-    if (!orderWithItems.customerEmailSentAt) {
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('📧 [CUSTOMER EMAIL] Sending to:', orderWithItems.email);
-      
-      const customerEmailResult = await sendOrderConfirmation({
+    // 7. SEND CUSTOMER EMAIL
+    let customerResult = { sent: false, error: null, id: null };
+    try {
+      const result = await sendOrderConfirmation({
         orderId: orderWithItems.id,
         orderNumber: orderWithItems.id.substring(0, 8).toUpperCase(),
         customerEmail: orderWithItems.email,
         customerName: orderWithItems.shippingName,
         items: emailItems,
         totalAmount: orderWithItems.totalGross,
-        language: 'de', // TODO: detect from country
+        language: 'de',
         shippingAddress: orderWithItems.shippingAddress,
         billingAddress: orderWithItems.billingAddress,
         amountSubtotal: orderWithItems.subtotalNet,
         shippingCost: orderWithItems.amountShipping,
         orderDate: orderWithItems.createdAt,
-        bcc: [] // NO BCC for customer email
+        bcc: []
       });
       
-      if (customerEmailResult.sent) {
-        console.log(`[EMAIL_SENT_CUSTOMER] order_id=${orderId.substring(0, 8)} resend_id=${customerEmailResult.id}`);
-        customerEmailSent = true;
-        
-        // Update customer_email_sent_at
-        const customerSentAt = new Date();
-        try {
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              customerEmailSentAt: customerSentAt,
-              emailStatus: 'sent'
-            }
-          });
-          console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} customer_email_sent_at=${customerSentAt.toISOString()}`);
-          console.log(`[EMAIL_FLAGS_AFTER] customer_sent_at=${customerSentAt.toISOString()} admin_sent_at=${orderWithItems.adminEmailSentAt || 'null'}`);
-        } catch (updateError) {
-          console.error(`❌ [EMAIL_DB_UPDATE_FAIL] Could not update customer_email_sent_at:`, updateError.message);
-          console.error(`❌ This likely means: customer_email_sent_at column does NOT exist in DB`);
-        }
-      } else if (customerEmailResult.preview) {
-        console.log(`📋 [EMAIL PREVIEW] Customer email - EMAILS DISABLED`);
-      } else {
-        console.error(`❌ [EMAIL_FAILED] Customer email: ${customerEmailResult.error}`);
-        try {
-          await prisma.order.update({
-            where: { id: orderId },
-            data: {
-              emailStatus: 'error',
-              emailLastError: `Customer: ${customerEmailResult.error}`
-            }
-          });
-          console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} emailStatus=error`);
-        } catch (updateError) {
-          console.error(`❌ [EMAIL_DB_UPDATE_FAIL] Could not update emailStatus:`, updateError.message);
-        }
-      }
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    } else {
-      console.log(`[EMAIL_SKIP_ALREADY_SENT_CUSTOMER] order_id=${orderId.substring(0, 8)} sent_at=${orderWithItems.customerEmailSentAt}`);
+      customerResult = {
+        sent: result.sent || false,
+        error: result.error || null,
+        id: result.id || null
+      };
+    } catch (emailError) {
+      customerResult = {
+        sent: false,
+        error: emailError.message,
+        id: null
+      };
     }
     
-    // 6. ADMIN EMAIL (with guard + ADMIN_ORDER_EMAIL required)
-    let adminEmailSent = false;
-    if (!orderWithItems.adminEmailSentAt) {
-      const adminEmail = process.env.ADMIN_ORDER_EMAIL;
+    // 8. SEND ADMIN EMAIL
+    let adminResult = { sent: false, error: null, id: null };
+    try {
+      const result = await sendOrderConfirmation({
+        orderId: orderWithItems.id,
+        orderNumber: orderWithItems.id.substring(0, 8).toUpperCase(),
+        customerEmail: adminEmail,
+        customerName: orderWithItems.shippingName,
+        items: emailItems,
+        totalAmount: orderWithItems.totalGross,
+        language: 'de',
+        shippingAddress: orderWithItems.shippingAddress,
+        billingAddress: orderWithItems.billingAddress,
+        amountSubtotal: orderWithItems.subtotalNet,
+        shippingCost: orderWithItems.amountShipping,
+        orderDate: orderWithItems.createdAt,
+        bcc: []
+      });
       
-      if (!adminEmail) {
-        console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.warn('⚠️ [ADMIN EMAIL SKIP] ADMIN_ORDER_EMAIL not set - skipping admin notification');
-        console.warn('⚠️ NO FALLBACK to customer email (by design)');
-        console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      } else {
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📧 [ADMIN EMAIL] Sending to:', adminEmail);
-        
-        const adminEmailResult = await sendOrderConfirmation({
-          orderId: orderWithItems.id,
-          orderNumber: orderWithItems.id.substring(0, 8).toUpperCase(),
-          customerEmail: adminEmail, // Admin gets copy
-          customerName: orderWithItems.shippingName,
-          items: emailItems,
-          totalAmount: orderWithItems.totalGross,
-          language: 'de',
-          shippingAddress: orderWithItems.shippingAddress,
-          billingAddress: orderWithItems.billingAddress,
-          amountSubtotal: orderWithItems.subtotalNet,
-          shippingCost: orderWithItems.amountShipping,
-          orderDate: orderWithItems.createdAt,
-          bcc: []
-        });
-        
-        if (adminEmailResult.sent) {
-          console.log(`[EMAIL_SENT_ADMIN] order_id=${orderId.substring(0, 8)} resend_id=${adminEmailResult.id} to=${adminEmail}`);
-          adminEmailSent = true;
-          
-          // Update admin_email_sent_at
-          const adminSentAt = new Date();
-          try {
-            await prisma.order.update({
-              where: { id: orderId },
-              data: {
-                adminEmailSentAt: adminSentAt,
-                emailStatus: 'sent' // Ensure status is 'sent' after both emails
-              }
-            });
-            console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} admin_email_sent_at=${adminSentAt.toISOString()}`);
-            console.log(`[EMAIL_FLAGS_AFTER] customer_sent_at=${orderWithItems.customerEmailSentAt || 'null'} admin_sent_at=${adminSentAt.toISOString()}`);
-          } catch (updateError) {
-            console.error(`❌ [EMAIL_DB_UPDATE_FAIL] Could not update admin_email_sent_at:`, updateError.message);
-            console.error(`❌ This likely means: admin_email_sent_at column does NOT exist in DB`);
-          }
-        } else if (adminEmailResult.preview) {
-          console.log(`📋 [EMAIL PREVIEW] Admin email - EMAILS DISABLED`);
-        } else {
-          console.error(`❌ [EMAIL FAILED] Admin email: ${adminEmailResult.error}`);
-          try {
-            await prisma.order.update({
-              where: { id: orderId },
-              data: {
-                emailStatus: 'error',
-                emailLastError: `Admin: ${adminEmailResult.error}`
-              }
-            });
-            console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} emailStatus=error (admin)`);
-          } catch (updateError) {
-            console.error(`❌ [EMAIL_DB_UPDATE_FAIL] Could not update emailStatus:`, updateError.message);
-          }
-        }
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      }
-    } else {
-      console.log(`[EMAIL_SKIP_ALREADY_SENT_ADMIN] order_id=${orderId.substring(0, 8)} sent_at=${orderWithItems.adminEmailSentAt}`);
+      adminResult = {
+        sent: result.sent || false,
+        error: result.error || null,
+        id: result.id || null
+      };
+    } catch (emailError) {
+      adminResult = {
+        sent: false,
+        error: emailError.message,
+        id: null
+      };
     }
+    
+    // 9. LOG RESULTS
+    console.log(`[EMAIL_SEND_RESULT] customer=${customerResult.sent ? 'ok' : 'error'} admin=${adminResult.sent ? 'ok' : 'error'}`);
+    
+    // 10. UPDATE DB BASED ON RESULTS
+    const updateData = {};
+    
+    // Customer email timestamp
+    if (customerResult.sent) {
+      updateData.customerEmailSentAt = new Date();
+      console.log(`✅ [EMAIL_SENT] customer → ${orderWithItems.email} (resend_id=${customerResult.id})`);
+    } else {
+      console.error(`❌ [EMAIL_FAILED] customer → ${customerResult.error}`);
+    }
+    
+    // Admin email timestamp  
+    if (adminResult.sent) {
+      updateData.adminEmailSentAt = new Date();
+      console.log(`✅ [EMAIL_SENT] admin → ${adminEmail} (resend_id=${adminResult.id})`);
+    } else {
+      console.error(`❌ [EMAIL_FAILED] admin → ${adminResult.error}`);
+    }
+    
+    // Email status
+    if (customerResult.sent && adminResult.sent) {
+      updateData.emailStatus = 'sent';
+      updateData.emailLastError = null;
+    } else if (!customerResult.sent && !adminResult.sent) {
+      updateData.emailStatus = 'error';
+      updateData.emailLastError = `Customer: ${customerResult.error}; Admin: ${adminResult.error}`;
+    } else {
+      updateData.emailStatus = 'partial';
+      const errors = [];
+      if (!customerResult.sent) errors.push(`Customer: ${customerResult.error}`);
+      if (!adminResult.sent) errors.push(`Admin: ${adminResult.error}`);
+      updateData.emailLastError = errors.join('; ');
+    }
+    
+    // 11. COMMIT TO DATABASE
+    await prisma.order.update({
+      where: { id: orderId },
+      data: updateData
+    });
+    
+    console.log(`[EMAIL_DB_UPDATE_OK] order_id=${orderId.substring(0, 8)} status=${updateData.emailStatus} customer_sent=${!!updateData.customerEmailSentAt} admin_sent=${!!updateData.adminEmailSentAt}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
   } catch (error) {
     console.error('❌ [EMAIL EXCEPTION]', error.message);
