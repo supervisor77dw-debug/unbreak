@@ -30,16 +30,38 @@ export default function CartPage() {
     // Admin can be detected via: URL param, localStorage, or session role
     const urlParams = new URLSearchParams(window.location.search);
     const adminFromUrl = urlParams.get('admin_test') === 'true';
+    const adminKeyFromUrl = urlParams.get('admin_key'); // Secret key for test mode
     const adminFromStorage = localStorage.getItem('unbreak_admin_test_enabled') === 'true';
+    
+    // If URL has admin_key, store it for checkout
+    if (adminKeyFromUrl) {
+      localStorage.setItem('unbreak_admin_api_key', adminKeyFromUrl);
+      console.log('🔑 [CART] Admin API key stored from URL');
+    }
+    
+    // If URL has admin_test=true, persist it to localStorage for future visits
+    if (adminFromUrl) {
+      localStorage.setItem('unbreak_admin_test_enabled', 'true');
+      setIsAdmin(true);
+      console.log('🔑 [CART] Admin mode enabled via URL param');
+      return; // No need to check Supabase
+    }
+    
+    // If localStorage has admin enabled
+    if (adminFromStorage) {
+      setIsAdmin(true);
+      console.log('🔑 [CART] Admin mode enabled via localStorage');
+      return;
+    }
     
     // Also check Supabase session for admin role
     supabase.auth.getSession().then(({ data: { session } }) => {
       const userRole = session?.user?.user_metadata?.role || session?.user?.app_metadata?.role;
       const isAdminUser = userRole === 'admin' || userRole === 'ops';
       
-      if (isAdminUser || adminFromUrl || adminFromStorage) {
+      if (isAdminUser) {
         setIsAdmin(true);
-        console.log('🔑 [CART] Admin mode available');
+        console.log('🔑 [CART] Admin mode enabled via Supabase role:', userRole);
       }
     });
   }, []);
@@ -173,10 +195,13 @@ export default function CartPage() {
       
       // ADMIN TEST MODE: Add admin key header
       if (adminTestMode && isAdmin) {
-        const adminKey = localStorage.getItem('unbreak_admin_api_key') || 
-                         process.env.NEXT_PUBLIC_ADMIN_API_KEY;
+        const adminKey = localStorage.getItem('unbreak_admin_api_key');
         if (adminKey) {
           headers['x-admin-test-key'] = adminKey;
+          console.log('🔑 [CHECKOUT] Admin key attached to request');
+        } else {
+          console.warn('⚠️ [CHECKOUT] Admin test mode enabled but no admin key found!');
+          console.warn('⚠️ [CHECKOUT] Use URL: /cart?admin_test=true&admin_key=YOUR_KEY');
         }
       }
 
