@@ -231,14 +231,58 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     console.log('🔍 [STRIPE DATA EXTRACTION] Loading complete session...');
     
     const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-    const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
-      expand: [
-        'line_items',
-        'line_items.data.price.product',
-        'customer',
-        'payment_intent'
-      ]
-    });
+    
+    let fullSession;
+    try {
+      fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+        expand: [
+          'line_items',
+          'line_items.data.price.product',
+          'customer',
+          'payment_intent'
+        ]
+      });
+    } catch (sessionError) {
+      // Handle expired or missing sessions gracefully
+      if (sessionError.statusCode === 404 || sessionError.code === 'resource_missing') {
+        console.warn('⚠️ [STRIPE SESSION NOT FOUND] Session does not exist or has expired');
+        console.warn('⚠️ [SESSION ID]:', session.id);
+        console.warn('⚠️ [REASON] Likely causes:');
+        console.warn('   - Session expired (>24h old)');
+        console.warn('   - Webhook replay of old event');
+        console.warn('   - Test/Live mode mismatch');
+        console.warn('⚠️ [ACTION] Marking event as processed, returning 200 OK');
+        
+        // Log event as processed with error status
+        await prisma.orderEvent.create({
+          data: {
+            type: 'ERROR',
+            source: 'stripe',
+            payload: {
+              error: 'session_not_found',
+              session_id: session.id,
+              message: sessionError.message,
+              code: sessionError.code
+            },
+            stripeEventId: event.id,
+            eventType: event.type
+          }
+        }).catch(() => {
+          console.error('Failed to log session_not_found event');
+        });
+        
+        // Return 200 OK to prevent Stripe from retrying
+        return res.status(200).json({ 
+          received: true, 
+          skipped: true,
+          reason: 'session_not_found',
+          session_id: session.id
+        });
+      }
+      
+      // Other Stripe errors - rethrow
+      throw sessionError;
+    }
     
     console.log('✅ [STRIPE DATA] Session loaded with expansions');
     console.log('✅ [STRIPE DATA] Line items:', fullSession.line_items?.data?.length || 0);
