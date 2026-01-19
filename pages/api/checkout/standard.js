@@ -5,7 +5,7 @@ import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.
 import { resolvePriceCents, validatePricing } from '../../../lib/pricing/pricingResolver.js';
 import { getEnvFingerprint, formatFingerprintLog } from '../../../lib/utils/envFingerprint.js';
 import { generateOrderNumber, generatePublicId } from '../../../lib/utils/orderNumber.js';
-import { stripe, guardCheckoutSession } from '../../../lib/stripe-config.js';
+import { getStripeClient, getCheckoutMode, guardCheckoutSession } from '../../../lib/stripe-config.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -124,19 +124,27 @@ export default async function handler(req, res) {
   });
 
   try {
-    // ENV CHECK
-    if (!process.env.STRIPE_SECRET_KEY) {
-      console.error('❌ [Checkout] STRIPE_SECRET_KEY not set');
-      return res.status(500).json({ error: 'Server configuration error: STRIPE_SECRET_KEY missing' });
+    // DUAL-MODE STRIPE CLIENT
+    // Mode can be passed in request body, otherwise uses STRIPE_CHECKOUT_MODE env
+    const stripeMode = req.body.mode || getCheckoutMode();
+    let stripe;
+    
+    try {
+      stripe = getStripeClient(stripeMode);
+    } catch (keyError) {
+      console.error('❌ [Checkout] Stripe key error:', keyError.message);
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        message: keyError.message,
+        hint: 'Set STRIPE_SECRET_KEY_TEST and/or STRIPE_SECRET_KEY_LIVE in Vercel ENV'
+      });
     }
 
     // STRIPE ACCOUNT VERIFICATION
-    const secretKey = process.env.STRIPE_SECRET_KEY;
-    const keyPrefix = secretKey.substring(0, 8); // sk_test_ or sk_live_
-    const isTestMode = keyPrefix.includes('test');
+    const isTestMode = stripeMode === 'test';
     
-    console.log('🔑 [STRIPE ACCOUNT] Key prefix:', keyPrefix);
     console.log('🔑 [STRIPE ACCOUNT] Mode:', isTestMode ? 'TEST' : 'LIVE');
+    console.log('🔑 [STRIPE ACCOUNT] Source:', req.body.mode ? 'request body' : 'STRIPE_CHECKOUT_MODE env');
     
     // Get Stripe account ID
     try {

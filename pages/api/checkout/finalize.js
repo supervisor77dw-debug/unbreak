@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import Stripe from 'stripe';
+import { getStripeClient } from '../../../lib/stripe-config.js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -23,6 +22,12 @@ export default async function handler(req, res) {
 
   try {
     const isPreview = req.headers.origin?.includes('vercel.app');
+    
+    // Detect mode from session ID prefix
+    const mode = session_id.startsWith('cs_test_') ? 'test' : 'live';
+    const stripe = getStripeClient(mode);
+    
+    console.log('[FINALIZE] Using Stripe mode:', mode.toUpperCase());
     
     // 1. Retrieve session from Stripe (with expanded payment_intent)
     const session = await stripe.checkout.sessions.retrieve(session_id, {
