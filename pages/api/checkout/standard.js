@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
 import { resolvePriceCents, validatePricing } from '../../../lib/pricing/pricingResolver.js';
 import { getEnvFingerprint, formatFingerprintLog } from '../../../lib/utils/envFingerprint.js';
-import { generateOrderNumber, generatePublicId } from '../../../lib/utils/orderNumber.js';
+import { generatePublicId } from '../../../lib/utils/orderNumber.js'; // NOTE: generateOrderNumber moved to webhook
 import { getStripeClient, getCheckoutMode, guardCheckoutSession } from '../../../lib/stripe-config.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -506,21 +506,25 @@ export default async function handler(req, res) {
         .map(i => i.config?.colors?.base || 'unknown'),
     });
 
-    // 2.5 Generate order identifiers BEFORE creating order
+    // 2.5 Generate DRAFT identifiers (NO final order number yet!)
+    // CRITICAL: Use DRAFT- prefix to bypass DB trigger that auto-generates UO- numbers
+    // Real UO- order_number is only assigned in webhook after successful payment
     const orderId = randomUUID(); // Generate UUID upfront
-    const orderNumber = await generateOrderNumber(); // UO-2026-000123
     const publicId = generatePublicId(orderId); // First 8 chars of UUID
+    const draftOrderNumber = `DRAFT-${orderId.substring(0, 8)}`; // Bypasses DB trigger
     
-    log('identifiers_generated', {
+    log('draft_identifiers_generated', {
       order_id: orderId,
-      order_number: orderNumber,
       public_id: publicId,
+      draft_order_number: draftOrderNumber,
+      note: 'DRAFT- prefix bypasses DB trigger, real UO- assigned on payment',
     });
 
-    // 3. Create order record with pricing snapshot
+    // 3. Create order record with pricing snapshot (real order_number assigned in webhook)
+    // CRITICAL: DRAFT- prefix marks unpaid checkouts, replaced with UO- on payment
     const orderData = {
       id: orderId, // Explicitly set UUID
-      order_number: orderNumber, // Human-readable order number
+      order_number: draftOrderNumber, // ← DRAFT- bypasses auto-generation trigger
       public_id: publicId, // Short public ID
       
       customer_user_id: userId,
@@ -528,7 +532,7 @@ export default async function handler(req, res) {
       items: cartItems, // JSON array of cart items
       total_amount_cents: grandTotalCents,
       currency: 'EUR',
-      status: 'pending',
+      status: 'pending', // ← pending until payment confirmed (DB constraint only allows pending/paid)
       order_type: 'standard',
       
       // CRITICAL: Store pricing snapshot in dedicated column (primary source)
@@ -546,7 +550,7 @@ export default async function handler(req, res) {
         build_id: BUILD_ID,
         trace_id: traceId,
         snapshot_id: snapshotId,
-        order_number: orderNumber, // Also in metadata for easy access
+        // order_number: deferred to webhook
         public_id: publicId,
         
         // DIAGNOSTIC: Environment fingerprint for mismatch detection
@@ -561,7 +565,7 @@ export default async function handler(req, res) {
     // DEBUG: Log what we're trying to save
     log('order_data_prepared', {
       order_id: orderId,
-      order_number: orderNumber,
+      order_number: null, // Deferred to webhook
       public_id: publicId,
       has_price_breakdown_json: !!orderData.price_breakdown_json,
       has_metadata: !!orderData.metadata,
@@ -780,9 +784,10 @@ export default async function handler(req, res) {
       }),
       
       // METADATA: Link session to order in DB (SINGLE SOURCE OF TRUTH)
+      // NOTE: order_number is NOT set here - it will be assigned in webhook after payment
       metadata: {
         order_id: order.id, // UUID - PRIMARY identifier for webhook lookup
-        order_number: order.order_number, // Human-readable (UO-2026-000123)
+        // order_number: DEFERRED - assigned by webhook on payment success
         public_id: order.public_id, // Short ID (8 chars)
         customer_email: customerEmail || 'guest',
         source: 'shop_checkout',
@@ -793,6 +798,7 @@ export default async function handler(req, res) {
         ui_lang: userLanguage, // 'de' or 'en' for debugging
         accept_language: req.headers['accept-language'] ? req.headers['accept-language'].substring(0, 50) : 'NONE',
         build_commit: process.env.VERCEL_GIT_COMMIT_SHA || 'local',
+        is_draft: 'true', // Flag to indicate order_number not yet assigned
       },
     });
 
@@ -831,14 +837,16 @@ export default async function handler(req, res) {
     }
 
     // 8. Return checkout URL
-    log('checkout_success', {
+    log('checkout_draft_created', {
       order_id: order.id,
-      order_number: order.order_number, // ← CRITICAL: Log order_number for tracking
+      public_id: order.public_id,
+      status: 'draft',
       stripe_session_id: session.id,
       session_url_length: session.url?.length || 0,
+      note: 'order_number assigned on payment success via webhook',
     });
 
-    console.log(`✅ [CHECKOUT SUCCESS] Order ${order.order_number} - Session: ${session.id}`);
+    console.log(`✅ [CHECKOUT DRAFT] Order ${order.id.substring(0,8)} (draft) - Session: ${session.id}`);
 
     res.status(200).json({ 
       url: session.url,

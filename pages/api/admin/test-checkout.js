@@ -71,8 +71,12 @@ export default async function handler(req, res) {
     };
 
     // Schema: id (UUID auto), customer_email, product_sku, quantity, total_amount_cents, currency, status, order_type, stripe_session_id
+    // DRAFT/PAID PATTERN: Use DRAFT- prefix to bypass DB trigger (which auto-generates UO- numbers)
+    // The DRAFT- prefix marks unpaid checkouts and is replaced with real UO- number on payment
+    const draftOrderNumber = `DRAFT-${Date.now()}`;
     const orderData = {
       // id is auto-generated UUID
+      order_number: draftOrderNumber, // ← DRAFT prefix bypasses auto-generation trigger
       customer_email: session.user?.email || 'admin@test.local',
       customer_name: session.user?.name || 'Admin Test',
       product_sku: 'TEST-ADMIN-ORDER',
@@ -83,7 +87,7 @@ export default async function handler(req, res) {
       shipping_cents: 0, // No shipping for test
       tax_cents: 0, // No tax for test
       currency: 'EUR',
-      status: 'pending',
+      status: 'pending', // ← pending until payment, then 'paid' (DB constraint)
       order_type: 'test',
       // Items array for email template
       items: [testItem],

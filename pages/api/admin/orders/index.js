@@ -45,9 +45,12 @@ export default async function handler(req, res) {
     const offset = (pageNum - 1) * limitNum;
 
     // Build query
+    // CRITICAL: Only show REAL orders (UO- prefix), exclude DRAFT- orders (unpaid checkouts)
     let query = supabase
       .from('simple_orders')
-      .select('*', { count: 'exact' });
+      .select('*', { count: 'exact' })
+      .not('order_number', 'is', null)
+      .not('order_number', 'like', 'DRAFT-%'); // ← Exclude unpaid draft orders
 
     // Filters
     if (statusPayment) {

@@ -28,17 +28,25 @@ export default async function handler(req, res) {
 
     console.log('[ADMIN STATS] Fetching statistics from simple_orders...');
 
-    // Orders today
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // CRITICAL: Only count REAL orders (with order_number, not drafts)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    // Orders today (only paid orders with UO- prefix, exclude DRAFT- checkouts)
     const { count: ordersToday } = await supabase
       .from('simple_orders')
       .select('*', { count: 'exact', head: true })
+      .not('order_number', 'is', null)
+      .not('order_number', 'like', 'DRAFT-%') // ← Exclude unpaid checkouts
       .gte('created_at', todayStart.toISOString());
     console.log('[ADMIN STATS] Orders today:', ordersToday);
 
-    // Orders yesterday
+    // Orders yesterday (only paid orders with UO- prefix, exclude DRAFT- checkouts)
     const { count: ordersYesterday } = await supabase
       .from('simple_orders')
       .select('*', { count: 'exact', head: true })
+      .not('order_number', 'is', null)
+      .not('order_number', 'like', 'DRAFT-%') // ← Exclude unpaid checkouts
       .gte('created_at', yesterdayStart.toISOString())
       .lt('created_at', todayStart.toISOString());
     console.log('[ADMIN STATS] Orders yesterday:', ordersYesterday);
@@ -87,12 +95,19 @@ export default async function handler(req, res) {
     const revenueYesterday = paidOrdersYesterday.reduce((sum, order) => sum + (order.total_amount_cents || 0), 0);
     console.log('[ADMIN STATS] Revenue yesterday:', revenueYesterday, `(${paidOrdersYesterday.length} paid orders)`);
 
-    // Pending orders (fulfillment_status = 'pending' or 'processing')
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // CRITICAL FIX: Pending orders = orders with UO- order_number but not yet fulfilled
+    // - DRAFT- orders are pre-payment checkouts (not real orders yet)
+    // - Only count orders WITH UO- order_number (payment confirmed)
+    // ═══════════════════════════════════════════════════════════════════════════════
     const { count: pendingOrders } = await supabase
       .from('simple_orders')
       .select('*', { count: 'exact', head: true })
+      .not('order_number', 'is', null)
+      .not('order_number', 'like', 'DRAFT-%') // ← Exclude unpaid checkouts
+      .not('status', 'in', '("cancelled","expired")')
       .in('fulfillment_status', ['pending', 'processing', null]);
-    console.log('[ADMIN STATS] Pending orders:', pendingOrders);
+    console.log('[ADMIN STATS] Pending orders (real orders only):', pendingOrders);
 
     // Calculate changes
     const ordersChange = ordersYesterday > 0 

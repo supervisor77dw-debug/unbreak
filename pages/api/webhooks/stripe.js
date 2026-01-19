@@ -7,6 +7,7 @@ import { countryToRegion } from '../../../lib/utils/shipping.js';
 import { sendOrderConfirmation } from '../../../lib/email/emailService';
 import { stripe, getWebhookSecret, IS_TEST_MODE } from '../../../lib/stripe-config.js';
 import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
+import { generateOrderNumber } from '../../../lib/utils/orderNumber.js'; // CRITICAL: Order numbers assigned here!
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -1959,7 +1960,36 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
       return null;
     }
     
-    console.log('✅ [SSOT] Found order:', existingOrder.order_number, 'ID:', existingOrder.id.substring(0, 8));
+    console.log('✅ [SSOT] Found draft order ID:', existingOrder.id.substring(0, 8));
+    console.log('✅ [SSOT] Current status:', existingOrder.status);
+    console.log('✅ [SSOT] Current order_number:', existingOrder.order_number || '(none)');
+    
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CRITICAL: ATOMIC ORDER NUMBER ASSIGNMENT
+    // Assign real UO- order_number if current is DRAFT- prefix (idempotent)
+    // ═══════════════════════════════════════════════════════════════════════════
+    let orderNumber = existingOrder.order_number;
+    
+    // Check if order needs real order number (DRAFT- prefix or null)
+    const needsOrderNumber = !orderNumber || orderNumber.startsWith('DRAFT-');
+    
+    if (needsOrderNumber) {
+      // FIRST TIME: Assign real order number atomically
+      console.log('📝 [ORDER_NUMBER] Draft order detected (', orderNumber, '), generating real order number...');
+      
+      try {
+        orderNumber = await generateOrderNumber();
+        console.log('✅ [ORDER_NUMBER] Generated:', orderNumber);
+      } catch (orderNumErr) {
+        console.error('❌ [ORDER_NUMBER] Generation failed:', orderNumErr.message);
+        // Fallback: Use UUID-based number
+        orderNumber = `UO-${new Date().getFullYear()}-${existingOrder.id.substring(0, 8).toUpperCase()}`;
+        console.log('⚠️ [ORDER_NUMBER] Using fallback:', orderNumber);
+      }
+    } else {
+      // IDEMPOTENT: Already has real UO- order number (webhook replay)
+      console.log('✅ [ORDER_NUMBER] Already assigned (idempotent):', orderNumber);
+    }
     
     // Extract payment_intent ID
     const paymentIntentId = typeof session.payment_intent === 'string' 
@@ -1986,7 +2016,9 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
     });
     
     // Update the order with ALL relevant data
+    // CRITICAL: order_number is set here (first time) or preserved (replay)
     const updateData = {
+      order_number: orderNumber, // ← CRITICAL: Assigned here on payment success!
       status: 'paid',
       customer_email: customerEmail,
       customer_name: customerName || existingOrder.customer_name,
@@ -1994,7 +2026,7 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
       shipping_address: shippingAddress || existingOrder.shipping_address,
       billing_address: billingAddress || existingOrder.billing_address,
       stripe_payment_intent_id: paymentIntentId,
-      paid_at: new Date().toISOString(),
+      paid_at: existingOrder.paid_at || new Date().toISOString(), // Preserve if already set
       updated_at: new Date().toISOString(),
       // CRITICAL: Update items and totals from Stripe
       items: formattedItems.length > 0 ? formattedItems : existingOrder.items,
