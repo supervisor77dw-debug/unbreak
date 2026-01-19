@@ -161,6 +161,7 @@ model OrderEvent {
   id            String    @id @default(uuid())
   orderId       String?   @map("order_id")
   stripeEventId String?   @unique @map("stripe_event_id") // For idempotency
+  eventType     String?   @map("event_type") // Stripe event type (e.g. 'checkout.session.completed')
   type          EventType
   source        String // 'stripe', 'resend', 'admin', 'system'
   payload       Json

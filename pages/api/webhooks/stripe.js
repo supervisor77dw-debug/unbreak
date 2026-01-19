@@ -122,23 +122,20 @@ export default async function handler(req, res) {
       await prisma.orderEvent.create({
         data: {
           stripeEventId: event.id,
+          eventType: event.type,
           type: 'STRIPE_WEBHOOK',
           source: 'stripe',
-          payload: { 
-            type: event.type, 
-            livemode: event.livemode,
-            created: event.created 
-          }
+          payload: event // FULL event object
         }
       });
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`[EVENT_DEDUP_OK] event_id=${event.id} type=${event.type}`);
+      console.log(`[EVENT_DEDUP_OK] event_id=${event.id} event_type=${event.type}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } catch (eventError) {
       // Check if it's a unique constraint violation
       if (eventError.code === 'P2002' || eventError.message?.includes('unique constraint')) {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`[EVENT_DUPLICATE] event_id=${event.id} - Already processed`);
+        console.log(`[EVENT_DUPLICATE] event_id=${event.id} event_type=${event.type} - Already processed`);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return res.status(200).json({ 
           received: true, 

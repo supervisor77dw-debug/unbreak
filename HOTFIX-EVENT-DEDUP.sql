@@ -25,10 +25,18 @@ END$$;
 ALTER TABLE "admin_order_events" 
   ADD COLUMN IF NOT EXISTS "stripe_event_id" TEXT;
 
+-- 2b. Add event_type column for Stripe event type (e.g. 'checkout.session.completed')
+ALTER TABLE "admin_order_events" 
+  ADD COLUMN IF NOT EXISTS "event_type" TEXT;
+
 -- 3. Create UNIQUE index on stripe_event_id (partial index to allow NULL)
 CREATE UNIQUE INDEX IF NOT EXISTS "admin_order_events_stripe_event_id_key" 
   ON "admin_order_events"("stripe_event_id") 
   WHERE "stripe_event_id" IS NOT NULL;
+
+-- 3b. Create index on event_type for filtering
+CREATE INDEX IF NOT EXISTS "admin_order_events_event_type_idx" 
+  ON "admin_order_events"("event_type");
 
 -- 4. Add email tracking fields to admin_orders
 ALTER TABLE "admin_orders" 
@@ -56,7 +64,9 @@ BEGIN
   RAISE NOTICE '✅ Migration complete:';
   RAISE NOTICE '   - EventType enum extended with EMAIL_BLOCKED';
   RAISE NOTICE '   - admin_order_events.stripe_event_id column added';
+  RAISE NOTICE '   - admin_order_events.event_type column added';
   RAISE NOTICE '   - UNIQUE index on stripe_event_id created';
+  RAISE NOTICE '   - Index on event_type created';
   RAISE NOTICE '   - Email tracking fields added to admin_orders';
   RAISE NOTICE '   - Email tracking indexes created';
 END$$;
