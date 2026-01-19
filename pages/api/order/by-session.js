@@ -32,11 +32,12 @@ export default async function handler(req, res) {
     // SSOT: Query admin_orders ONLY
     const order = await prisma.order.findFirst({
       where: {
-        stripeSessionId: session_id
+        stripeCheckoutSessionId: session_id
       },
       select: {
         id: true,
-        status: true,
+        statusPayment: true,
+        statusFulfillment: true,
         email: true,
         totalGross: true,
         currency: true,
@@ -62,7 +63,8 @@ export default async function handler(req, res) {
       found: true,
       order_id: order.id,
       order_number: order.id.substring(0, 8).toUpperCase(),
-      status: order.status,
+      status_payment: order.statusPayment,
+      status_fulfillment: order.statusFulfillment,
       total_amount_cents: order.totalGross,
       customer_email: order.email,
       currency: order.currency,
@@ -73,7 +75,8 @@ export default async function handler(req, res) {
       order: {
         id: order.id,
         orderNumber: order.id.substring(0, 8).toUpperCase(),
-        status: order.status,
+        statusPayment: order.statusPayment,
+        statusFulfillment: order.statusFulfillment,
         email: order.email,
         totalGross: order.totalGross,
         currency: order.currency,
@@ -85,9 +88,11 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('[ORDER_BY_SESSION] Database error:', error);
+    console.error('[ORDER_BY_SESSION] Error details:', error.message);
     return res.status(500).json({ 
       error: 'Failed to retrieve order',
-      message: error.message 
+      message: error.message,
+      code: error.code
     });
   }
 }
