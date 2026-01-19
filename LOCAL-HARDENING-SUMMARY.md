@@ -7,6 +7,7 @@
 2. `e749ca1` - Fix: Finalize endpoint - fallback to stripe_session_id lookup
 3. `43c6c6b` - Fix: Admin Test Checkout now creates simple_orders entry first
 4. `2390a20` - CLEANUP: Remove dead Prisma code from webhook, switch to Supabase-only dedup
+5. `b26ae65` - FIX: User APIs SSOT - all endpoints now use Prisma User table
 
 ---
 
@@ -60,7 +61,34 @@ if (data) {
 
 ---
 
-## 3. Finalize Robustness
+## 3. User/Staff SSOT (CRITICAL FIX)
+
+### Problem Fixed:
+- `reset-password.js` was using **Supabase** (`admin_users` via direct query)
+- All other user APIs were using **Prisma** (`User` model)
+- **This caused password changes to go to different data source!**
+
+### Solution: All User APIs now use Prisma
+```
+SSOT: Prisma User model → admin_users table (PostgreSQL)
+```
+
+### APIs unified:
+- `/api/admin/users` (GET) → Prisma ✅
+- `/api/admin/users/[id]` (PATCH) → Prisma ✅
+- `/api/admin/users/create` (POST) → Prisma ✅
+- `/api/admin/users/reset-password` (POST) → Prisma ✅ (was Supabase!)
+
+### Fingerprint in logs:
+All user endpoints now log:
+```
+[FINGERPRINT] admin_users_list | readTables: ["User (Prisma)"]
+[FINGERPRINT] admin_users_reset_password | writeTables: ["User (Prisma)"]
+```
+
+---
+
+## 4. Finalize Robustness
 
 ### Lookup Order (priority):
 1. `metadata.order_id` - UUID from Stripe session metadata
