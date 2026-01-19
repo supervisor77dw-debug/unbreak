@@ -264,53 +264,49 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     
     // Check if line_items are already in the event
     let fullSession = session;
+    let lineItemsData = [];
     
-    // Only retrieve session if line_items are not expanded
-    if (!session.line_items || !session.line_items.data || session.line_items.data.length === 0) {
-      console.log('⚠️ [STRIPE DATA] line_items not in event, attempting retrieve...');
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CRITICAL: Use listLineItems() - expand doesn't work for line_items!
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    console.log('📦 [LINE ITEMS] Fetching via stripe.checkout.sessions.listLineItems...');
+    
+    try {
+      const lineItemsResponse = await stripeClient.checkout.sessions.listLineItems(session.id, {
+        limit: 100,
+        expand: ['data.price.product']
+      });
+      lineItemsData = lineItemsResponse.data || [];
+      console.log(`✅ [LINE ITEMS] listLineItems returned ${lineItemsData.length} items`);
+    } catch (listError) {
+      console.error('❌ [LINE ITEMS] listLineItems failed:', listError.message);
+      console.error('❌ [LINE ITEMS] Code:', listError.code);
+      // Continue with empty items - order will be marked incomplete
+    }
+    
+    // Only retrieve session for additional data (customer, payment_intent)
+    if (!session.customer_details || !session.payment_intent) {
+      console.log('⚠️ [STRIPE DATA] Missing customer_details or payment_intent, retrieving...');
       
       try {
         fullSession = await stripeClient.checkout.sessions.retrieve(session.id, {
-          expand: [
-            'line_items',
-            'line_items.data.price.product',
-            'customer',
-            'payment_intent'
-          ]
+          expand: ['customer', 'payment_intent']
         });
         console.log('✅ [STRIPE DATA] Session retrieved successfully');
       } catch (sessionError) {
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // CRITICAL FIX: session.retrieve failure does NOT block order creation
-        // We continue with event.data.object and try to extract what we can
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.warn('⚠️ [STRIPE SESSION RETRIEVE FAILED]');
-        console.warn('⚠️ [SESSION ID]:', sessionId);
-        console.warn('⚠️ [ERROR]:', sessionError.message);
-        console.warn('⚠️ [CODE]:', sessionError.code);
-        console.warn('⚠️ [STATUS CODE]:', sessionError.statusCode);
-        console.warn('⚠️ [ACTION] Continuing with event.data.object (may have incomplete data)');
-        console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        
-        // Use session from event as fallback
+        console.warn('⚠️ [STRIPE SESSION RETRIEVE FAILED]', sessionError.message);
         fullSession = session;
-        
-        // Check if we have metadata with cart/config info as fallback
-        if (session.metadata?.config_json || session.metadata?.cart_json) {
-          console.log('✅ [FALLBACK] Found cart/config data in session.metadata');
-        } else {
-          console.warn('⚠️ [FALLBACK] No metadata fallback - order may be incomplete');
-        }
       }
     } else {
-      console.log('✅ [STRIPE DATA] line_items already in event, skipping retrieve');
+      console.log('✅ [STRIPE DATA] customer_details already in event');
     }
     
     console.log('✅ [STRIPE DATA] Session ready');
-    console.log('✅ [STRIPE DATA] Line items:', fullSession.line_items?.data?.length || 0);
+    console.log('✅ [STRIPE DATA] Line items:', lineItemsData.length);
     console.log('✅ [STRIPE DATA] Customer:', fullSession.customer_details?.email);
     console.log('✅ [STRIPE DATA] Payment Intent:', fullSession.payment_intent);
+    console.log('✅ [STRIPE DATA] Amount Total:', fullSession.amount_total, '¢');
+    console.log('✅ [STRIPE DATA] Currency:', fullSession.currency);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     // === EXTRACT CUSTOMER DATA ===
@@ -348,34 +344,12 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     console.log('📋 [ADDRESS] Billing:', billingAddress ? `${billingAddress.line1}, ${billingAddress.city}` : 'MISSING');
     
     // === EXTRACT LINE ITEMS ===
-    const lineItems = fullSession.line_items?.data || [];
+    // lineItemsData is already fetched via listLineItems above
+    const lineItems = lineItemsData;
     
-    // Try to extract from metadata if line_items are missing
     if (lineItems.length === 0) {
-      console.warn('⚠️ [LINE ITEMS] No line_items in session data');
-      
-      // Check for fallback in metadata
-      if (fullSession.metadata?.cart_json || fullSession.metadata?.config_json) {
-        console.warn('⚠️ [LINE ITEMS] Attempting to parse from metadata...');
-        try {
-          const cartData = fullSession.metadata.cart_json 
-            ? JSON.parse(fullSession.metadata.cart_json)
-            : null;
-          const configData = fullSession.metadata.config_json
-            ? JSON.parse(fullSession.metadata.config_json)
-            : null;
-          
-          if (cartData || configData) {
-            console.warn('⚠️ [LINE ITEMS] Found metadata but parsing not implemented yet');
-            console.warn('⚠️ [LINE ITEMS] Order will be created but may be incomplete');
-          }
-        } catch (parseError) {
-          console.error('❌ [METADATA PARSE] Failed:', parseError.message);
-        }
-      }
-      
-      // Don't throw - allow order creation even if incomplete
-      console.warn('⚠️ [VALIDATION] No line items - order will be marked incomplete');
+      console.warn('⚠️ [LINE ITEMS] No line_items returned from Stripe');
+      console.warn('⚠️ [VALIDATION] Order will be marked incomplete');
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -1066,53 +1040,66 @@ async function syncStripeSessionToAdminOrders(session, extractedData) {
     
     console.log('🌍 [SHIPPING] Country:', shippingCountry, '→ Region:', shippingRegion);
     
-    // 3. Calculate subtotal
-    const subtotalNet = items.reduce((sum, item) => sum + item.totalPrice, 0);
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CRITICAL: Use Stripe session.amount_total as PRIMARY source (always correct)
+    // Calculate from items as fallback only
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    // Get totals directly from Stripe session
+    const stripeAmountTotal = session.amount_total || 0;  // in cents
+    const stripeAmountShipping = session.shipping_cost?.amount_total || session.total_details?.amount_shipping || 0;
+    const stripeAmountTax = session.total_details?.amount_tax || 0;
+    const stripeSubtotal = session.amount_subtotal || (stripeAmountTotal - stripeAmountShipping);
+    
+    console.log('💳 [STRIPE TOTALS] amount_total:', stripeAmountTotal, '¢');
+    console.log('💳 [STRIPE TOTALS] amount_subtotal:', stripeSubtotal, '¢');
+    console.log('💳 [STRIPE TOTALS] shipping:', stripeAmountShipping, '¢');
+    console.log('💳 [STRIPE TOTALS] tax:', stripeAmountTax, '¢');
+    
+    // Calculate from items (for comparison/fallback)
+    const calculatedSubtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
     const taxRate = 0.19;
     
-    // 4. Get shipping rate from DB (GROSS calculation)
-    let amountShipping = 0;
-    try {
-      const shippingRate = await prisma.shippingRate.findFirst({
-        where: { 
-          countryCode: shippingRegion,
-          active: true 
-        },
-        select: {
-          priceNet: true,
-          labelDe: true
-        }
-      });
+    // Use Stripe totals as primary, calculated as fallback
+    let subtotalNet, taxAmount, totalGross, amountShipping;
+    
+    if (stripeAmountTotal > 0) {
+      // PRIMARY: Use Stripe's authoritative totals
+      totalGross = stripeAmountTotal;
+      amountShipping = stripeAmountShipping;
+      taxAmount = stripeAmountTax || Math.round((stripeAmountTotal - stripeAmountShipping) * taxRate / (1 + taxRate));
+      subtotalNet = stripeSubtotal - taxAmount; // Net = Subtotal - Tax (German VAT included)
       
-      if (shippingRate) {
-        const shippingNet = shippingRate.priceNet;
-        const shippingTax = Math.round(shippingNet * taxRate);
-        amountShipping = shippingNet + shippingTax; // GROSS
-        
-        console.log('✅ [SHIPPING] From DB:', shippingRegion, '→ Net:', shippingNet, '¢ + Tax:', shippingTax, '¢ = Gross:', amountShipping, '¢');
-      } else {
-        const fallbackNetRates = { DE: 490, EU: 1290, INT: 2490 };
-        const shippingNet = fallbackNetRates[shippingRegion] || 2490;
-        const shippingTax = Math.round(shippingNet * taxRate);
-        amountShipping = shippingNet + shippingTax;
-        
-        console.warn('⚠️ [SHIPPING] No DB rate, using fallback: Net', shippingNet, '¢ + Tax', shippingTax, '¢ = Gross', amountShipping, '¢');
+      console.log('✅ [PRICING] Using STRIPE totals (authoritative)');
+    } else if (calculatedSubtotal > 0) {
+      // FALLBACK: Calculate from items
+      subtotalNet = calculatedSubtotal;
+      taxAmount = Math.round(subtotalNet * taxRate);
+      
+      // Get shipping from DB
+      try {
+        const shippingRate = await prisma.shippingRate.findFirst({
+          where: { countryCode: shippingRegion, active: true },
+          select: { priceNet: true }
+        });
+        const shippingNet = shippingRate?.priceNet || 490;
+        amountShipping = shippingNet + Math.round(shippingNet * taxRate);
+      } catch (e) {
+        amountShipping = 583; // Default DE shipping gross
       }
-    } catch (error) {
-      console.error('❌ [SHIPPING] DB query failed:', error.message);
-      const fallbackNetRates = { DE: 490, EU: 1290, INT: 2490 };
-      const shippingNet = fallbackNetRates[shippingRegion] || 2490;
-      const shippingTax = Math.round(shippingNet * taxRate);
-      amountShipping = shippingNet + shippingTax;
       
-      console.warn('⚠️ [SHIPPING] Using fallback: Net', shippingNet, '¢ + Tax', shippingTax, '¢ = Gross', amountShipping, '¢');
+      totalGross = subtotalNet + taxAmount + amountShipping;
+      console.log('⚠️ [PRICING] Using CALCULATED totals (Stripe totals unavailable)');
+    } else {
+      // NO DATA - set minimums to indicate incomplete
+      subtotalNet = 0;
+      taxAmount = 0;
+      amountShipping = 0;
+      totalGross = 0;
+      console.error('❌ [PRICING] No totals available - order will be incomplete');
     }
     
-    // 5. Calculate tax and total
-    const taxAmount = Math.round(subtotalNet * taxRate);
-    const totalGross = subtotalNet + taxAmount + amountShipping;
-    
-    console.log('💰 [PRICING] Subtotal:', subtotalNet, '¢ | Shipping (GROSS):', amountShipping, '¢ | Tax:', taxAmount, '¢ | Total:', totalGross, '¢');
+    console.log('💰 [PRICING] Final: Subtotal:', subtotalNet, '¢ | Shipping:', amountShipping, '¢ | Tax:', taxAmount, '¢ | Total:', totalGross, '¢');
     
     // 6. Create/update order in admin_orders
     // Extract payment_intent ID (handle both string and object)
