@@ -1054,11 +1054,18 @@ async function syncStripeSessionToAdminOrders(session, extractedData) {
     console.log('💰 [PRICING] Subtotal:', subtotalNet, '¢ | Shipping (GROSS):', amountShipping, '¢ | Tax:', taxAmount, '¢ | Total:', totalGross, '¢');
     
     // 6. Create/update order in admin_orders
+    // Extract payment_intent ID (handle both string and object)
+    const paymentIntentId = typeof session.payment_intent === 'string' 
+      ? session.payment_intent 
+      : session.payment_intent?.id || null;
+    
+    console.log('💳 [PAYMENT] payment_intent:', paymentIntentId);
+    
     const order = await prisma.order.upsert({
       where: { stripeCheckoutSessionId: session.id },
       update: {
         statusPayment: 'PAID',
-        stripePaymentIntentId: session.payment_intent,
+        ...(paymentIntentId && { stripePaymentIntentId: paymentIntentId }),
         email: customerEmail,
         shippingName: shippingName,
         shippingAddress: shippingAddress,
@@ -1073,7 +1080,7 @@ async function syncStripeSessionToAdminOrders(session, extractedData) {
       },
       create: {
         stripeCheckoutSessionId: session.id,
-        stripePaymentIntentId: session.payment_intent,
+        ...(paymentIntentId && { stripePaymentIntentId: paymentIntentId }),
         statusPayment: 'PAID',
         statusFulfillment: 'NEW',
         currency: (session.currency || 'EUR').toUpperCase(),
@@ -1154,8 +1161,24 @@ async function syncStripeSessionToAdminOrders(session, extractedData) {
     return order;
 
   } catch (error) {
-    console.error('⚠️ [SSOT WRITE] Failed:', error.message);
-    console.error('⚠️ [SSOT WRITE] Stack:', error.stack);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ [SSOT WRITE] CRITICAL FAILURE');
+    console.error('❌ [SSOT WRITE] Error:', error.message);
+    console.error('❌ [SSOT WRITE] Code:', error.code);
+    console.error('❌ [SSOT WRITE] Stack:', error.stack);
+    
+    // Log specific Prisma errors
+    if (error.code === 'P2002') {
+      console.error('❌ [PRISMA] Unique constraint violation');
+      console.error('❌ [PRISMA] Target:', error.meta?.target);
+    } else if (error.code === 'P2025') {
+      console.error('❌ [PRISMA] Record not found');
+    } else if (error.code?.startsWith('P')) {
+      console.error('❌ [PRISMA] Database error code:', error.code);
+      console.error('❌ [PRISMA] Meta:', error.meta);
+    }
+    
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     return null;
   }
 }
