@@ -11,7 +11,7 @@ mark-*.js
 migrate-*.js
 quick-*.js
 run-*.js
-test-*.js
+# Note: test-*.js pattern removed - was blocking pages/api/admin/test-checkout.js
 EMERGENCY-*.js
 
 # SQL Scripts
