@@ -1,18 +1,14 @@
 /**
  * API Endpoint: Get Order by Stripe Session ID
  * 
- * Purpose: Retrieve order number for success page display
+ * Purpose: Retrieve order status for success page (SSOT: admin_orders ONLY)
  * 
  * Usage: /api/order/by-session?session_id=cs_xxx
  * 
- * Returns: { order_number: 'UO-2026-000123', order_id: 'uuid' }
+ * Returns: { found: boolean, order: {...} }
  */
 
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import prisma from '../../../lib/prisma';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -26,48 +22,66 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'session_id parameter required' });
   }
 
+  if (!session_id.startsWith('cs_')) {
+    return res.status(400).json({ error: 'Invalid session_id format' });
+  }
+
   try {
-    console.log(`[ORDER_BY_SESSION] Looking up order for session: ${session_id}`);
+    console.log(`[ORDER_BY_SESSION] Looking up order in admin_orders for session: ${session_id}`);
 
-    // Try simple_orders first (shop orders)
-    const { data: shopOrder, error: shopError } = await supabase
-      .from('simple_orders')
-      .select('id, order_number, status, total_amount_cents, customer_email')
-      .or(`stripe_session_id.eq.${session_id},stripe_checkout_session_id.eq.${session_id}`)
-      .maybeSingle();
+    // SSOT: Query admin_orders ONLY
+    const order = await prisma.order.findFirst({
+      where: {
+        stripeSessionId: session_id
+      },
+      select: {
+        id: true,
+        status: true,
+        email: true,
+        totalGross: true,
+        currency: true,
+        emailStatus: true,
+        customerEmailSentAt: true,
+        createdAt: true
+      }
+    });
 
-    if (shopOrder) {
-      console.log(`[ORDER_BY_SESSION] ✅ Found shop order: ${shopOrder.order_number || shopOrder.id}`);
+    if (!order) {
+      // Order not yet created - webhook may still be processing
+      console.log(`[ORDER_BY_SESSION] ⏳ Order not found yet for session: ${session_id}`);
       return res.status(200).json({
-        order_id: shopOrder.id,
-        order_number: shopOrder.order_number,
-        status: shopOrder.status,
-        total_amount_cents: shopOrder.total_amount_cents,
-        customer_email: shopOrder.customer_email,
+        found: false,
+        session_id,
+        message: 'Order is being processed. Please wait...'
       });
     }
 
-    // Try configurator orders (orders table)
-    const { data: configuratorOrder, error: configError } = await supabase
-      .from('orders')
-      .select('id, order_number, status, total_amount_cents, customer_email')
-      .eq('stripe_checkout_session_id', session_id)
-      .maybeSingle();
-
-    if (configuratorOrder) {
-      console.log(`[ORDER_BY_SESSION] ✅ Found configurator order: ${configuratorOrder.order_number || configuratorOrder.id}`);
-      return res.status(200).json({
-        order_id: configuratorOrder.id,
-        order_number: configuratorOrder.order_number,
-        status: configuratorOrder.status,
-        total_amount_cents: configuratorOrder.total_amount_cents,
-        customer_email: configuratorOrder.customer_email,
-      });
-    }
-
-    // Not found in either table
-    console.error(`[ORDER_BY_SESSION] ❌ Order not found for session: ${session_id}`);
-    return res.status(404).json({ error: 'Order not found for this session' });
+    // Order found
+    console.log(`[ORDER_BY_SESSION] ✅ Found order: ${order.id.substring(0, 8)}`);
+    return res.status(200).json({
+      found: true,
+      order_id: order.id,
+      order_number: order.id.substring(0, 8).toUpperCase(),
+      status: order.status,
+      total_amount_cents: order.totalGross,
+      customer_email: order.email,
+      currency: order.currency,
+      email_sent: !!order.customerEmailSentAt,
+      email_status: order.emailStatus,
+      created_at: order.createdAt,
+      // Legacy compat for existing success page
+      order: {
+        id: order.id,
+        orderNumber: order.id.substring(0, 8).toUpperCase(),
+        status: order.status,
+        email: order.email,
+        totalGross: order.totalGross,
+        currency: order.currency,
+        emailSent: !!order.customerEmailSentAt,
+        emailStatus: order.emailStatus,
+        createdAt: order.createdAt
+      }
+    });
 
   } catch (error) {
     console.error('[ORDER_BY_SESSION] Database error:', error);

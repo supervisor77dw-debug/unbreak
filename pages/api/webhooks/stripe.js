@@ -168,7 +168,7 @@ export default async function handler(req, res) {
     // 3. Handle specific events
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object, trace_id, eventMode);
+        await handleCheckoutSessionCompleted({ event, session: event.data.object, trace_id, eventMode });
         break;
 
       case 'customer.created':
@@ -189,6 +189,19 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('❌ [Webhook] Fatal error:', error);
     console.error('❌ [Webhook] Error stack:', error.stack);
+    
+    // Handle expected errors (like expired sessions) with 200 OK
+    if (error.isExpectedError) {
+      console.log('⚠️ [Webhook] Expected error - returning 200 OK to prevent retry');
+      return res.status(200).json({ 
+        received: true, 
+        skipped: true,
+        reason: error.message,
+        session_id: error.sessionId
+      });
+    }
+    
+    // Unexpected errors - return 500 to trigger Stripe retry
     res.status(500).json({ 
       error: 'Webhook handler failed',
       message: error.message 
@@ -196,9 +209,10 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
+async function handleCheckoutSessionCompleted({ event, session, trace_id, eventMode }) {
   console.log('[TRACE] WEBHOOK_SESSION_DATA', {
     trace_id,
+    event_id: event.id,
     stripe_session_id: session.id,
     stripe_customer_id: session.customer,
     email: session.customer_details?.email || session.customer_email,
@@ -228,63 +242,70 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔍 [STRIPE DATA EXTRACTION] Loading complete session...');
+    console.log('🔍 [STRIPE DATA EXTRACTION] Using event.data.object directly...');
     
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    // Check if line_items are already in the event
+    let fullSession = session;
     
-    let fullSession;
-    try {
-      fullSession = await stripe.checkout.sessions.retrieve(session.id, {
-        expand: [
-          'line_items',
-          'line_items.data.price.product',
-          'customer',
-          'payment_intent'
-        ]
-      });
-    } catch (sessionError) {
-      // Handle expired or missing sessions gracefully
-      if (sessionError.statusCode === 404 || sessionError.code === 'resource_missing') {
-        console.warn('⚠️ [STRIPE SESSION NOT FOUND] Session does not exist or has expired');
-        console.warn('⚠️ [SESSION ID]:', session.id);
-        console.warn('⚠️ [REASON] Likely causes:');
-        console.warn('   - Session expired (>24h old)');
-        console.warn('   - Webhook replay of old event');
-        console.warn('   - Test/Live mode mismatch');
-        console.warn('⚠️ [ACTION] Marking event as processed, returning 200 OK');
-        
-        // Log event as processed with error status
-        await prisma.orderEvent.create({
-          data: {
-            type: 'ERROR',
-            source: 'stripe',
-            payload: {
-              error: 'session_not_found',
-              session_id: session.id,
-              message: sessionError.message,
-              code: sessionError.code
-            },
-            stripeEventId: event.id,
-            eventType: event.type
-          }
-        }).catch(() => {
-          console.error('Failed to log session_not_found event');
-        });
-        
-        // Return 200 OK to prevent Stripe from retrying
-        return res.status(200).json({ 
-          received: true, 
-          skipped: true,
-          reason: 'session_not_found',
-          session_id: session.id
-        });
-      }
+    // Only retrieve session if line_items are not expanded
+    if (!session.line_items || !session.line_items.data || session.line_items.data.length === 0) {
+      console.log('⚠️ [STRIPE DATA] line_items not in event, retrieving session...');
       
-      // Other Stripe errors - rethrow
-      throw sessionError;
+      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      
+      try {
+        fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+          expand: [
+            'line_items',
+            'line_items.data.price.product',
+            'customer',
+            'payment_intent'
+          ]
+        });
+      } catch (sessionError) {
+        // Handle expired or missing sessions gracefully
+        if (sessionError.statusCode === 404 || sessionError.code === 'resource_missing') {
+          console.warn('⚠️ [STRIPE SESSION NOT FOUND] Session does not exist or has expired');
+          console.warn('⚠️ [SESSION ID]:', session.id);
+          console.warn('⚠️ [REASON] Likely causes:');
+          console.warn('   - Session expired (>24h old)');
+          console.warn('   - Webhook replay of old event');
+          console.warn('   - Test/Live mode mismatch');
+          console.warn('⚠️ [ACTION] Logging error event and throwing to prevent order creation');
+          
+          // Log event as processed with error status
+          await prisma.orderEvent.create({
+            data: {
+              type: 'ERROR',
+              source: 'stripe',
+              payload: {
+                error: 'session_not_found',
+                session_id: session.id,
+                message: sessionError.message,
+                code: sessionError.code
+              },
+              stripeEventId: event.id,
+              eventType: event.type
+            }
+          }).catch(() => {
+            console.error('Failed to log session_not_found event');
+          });
+          
+          // Throw error with special marker for graceful handling in main handler
+          const error = new Error('STRIPE_SESSION_NOT_FOUND: Session does not exist or has expired');
+          error.isExpectedError = true; // Marker for 200 OK response
+          error.sessionId = session.id;
+          throw error;
+        }
+        
+        // Other Stripe errors - rethrow
+        throw sessionError;
+      }
+    } else {
+      console.log('✅ [STRIPE DATA] line_items already in event, skipping retrieve');
     }
     
-    console.log('✅ [STRIPE DATA] Session loaded with expansions');
+    console.log('✅ [STRIPE DATA] Session ready');
     console.log('✅ [STRIPE DATA] Line items:', fullSession.line_items?.data?.length || 0);
     console.log('✅ [STRIPE DATA] Customer:', fullSession.customer_details?.email);
     console.log('✅ [STRIPE DATA] Payment Intent:', fullSession.payment_intent);
