@@ -1,11 +1,16 @@
 /**
  * ✅ SSOT: Admin Orders List API
- * CANONICAL SOURCE: admin_orders (Prisma)
- * RULE: NO simple_orders, NO OrderRepository - ONLY Prisma admin_orders
+ * CANONICAL SOURCE: simple_orders (Supabase)
+ * UPDATED: 2026-01-19 - Switched from admin_orders to simple_orders
  */
 
 import { requireAuth } from '../../../../lib/auth-helpers';
-import prisma from '../../../../lib/prisma';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -24,7 +29,7 @@ export default async function handler(req, res) {
       statusPayment,
       statusFulfillment,
       search,
-      sortBy = 'createdAt',
+      sortBy = 'created_at',
       sortOrder = 'desc',
     } = req.query;
 
@@ -32,57 +37,95 @@ export default async function handler(req, res) {
     const limitNum = parseInt(limit);
     const offset = (pageNum - 1) * limitNum;
 
-    // Build where filter
-    const where = {};
-    
+    // Build query
+    let query = supabase
+      .from('simple_orders')
+      .select('*', { count: 'exact' });
+
+    // Filters
     if (statusPayment) {
-      where.statusPayment = statusPayment;
-    }
-    
-    if (statusFulfillment) {
-      where.statusFulfillment = statusFulfillment;
-    }
-    
-    if (search) {
-      where.OR = [
-        { email: { contains: search, mode: 'insensitive' } },
-        { shippingName: { contains: search, mode: 'insensitive' } },
-      ];
+      // Map PAID/PENDING to simple_orders status field
+      const statusMap = {
+        'PENDING': 'pending',
+        'PAID': 'paid',
+        'FAILED': 'failed',
+        'REFUNDED': 'refunded'
+      };
+      query = query.eq('status', statusMap[statusPayment] || statusPayment.toLowerCase());
     }
 
-    // ✅ SSOT: Fetch from admin_orders (Prisma)
-    const [orders, total] = await Promise.all([
-      prisma.order.findMany({
-        where,
-        include: {
-          items: {
-            select: {
-              id: true,
-              sku: true,
-              name: true,
-              variant: true,
-              qty: true,
-              unitPrice: true,
-              totalPrice: true,
-            }
-          }
-        },
-        orderBy: {
-          [sortBy]: sortOrder,
-        },
-        skip: offset,
-        take: limitNum,
-      }),
-      prisma.order.count({ where }),
-    ]);
+    if (statusFulfillment) {
+      query = query.eq('fulfillment_status', statusFulfillment.toLowerCase());
+    }
+
+    if (search) {
+      query = query.or(`customer_email.ilike.%${search}%,customer_name.ilike.%${search}%,order_number.ilike.%${search}%`);
+    }
+
+    // Sorting (map camelCase to snake_case)
+    const sortFieldMap = {
+      'createdAt': 'created_at',
+      'updatedAt': 'updated_at',
+      'totalGross': 'total_amount_cents',
+      'status': 'status'
+    };
+    const sortField = sortFieldMap[sortBy] || sortBy;
+
+    query = query
+      .order(sortField, { ascending: sortOrder === 'asc' })
+      .range(offset, offset + limitNum - 1);
+
+    const { data: orders, error, count } = await query;
+
+    if (error) {
+      console.error('❌ [ADMIN ORDERS] Supabase error:', error);
+      throw error;
+    }
+
+    // Transform to match Admin UI expectations
+    const transformedOrders = orders.map(order => ({
+      id: order.id,
+      order_number: order.order_number,
+      email: order.customer_email,
+      shippingName: order.customer_name,
+      customer: {
+        name: order.customer_name,
+        email: order.customer_email,
+        phone: order.customer_phone
+      },
+      // Map simple_orders status to Admin UI format
+      statusPayment: (order.status || 'pending').toUpperCase(),
+      statusFulfillment: (order.fulfillment_status || 'NEW').toUpperCase(),
+      amountTotal: order.total_amount_cents,
+      totalGross: order.total_amount_cents,
+      currency: order.currency || 'EUR',
+      // Items from JSON
+      items: order.items || [],
+      // Addresses from JSON
+      shippingAddress: order.shipping_address,
+      billingAddress: order.billing_address,
+      // Dates
+      createdAt: order.created_at,
+      updatedAt: order.updated_at,
+      paidAt: order.paid_at,
+      // Stripe
+      stripeSessionId: order.stripe_session_id,
+      stripePaymentIntentId: order.stripe_payment_intent_id,
+      // Email tracking
+      customerEmailSentAt: order.customer_email_sent_at,
+      adminEmailSentAt: order.admin_email_sent_at,
+      emailStatus: order.email_status
+    }));
+
+    console.log(`✅ [ADMIN ORDERS] Fetched ${transformedOrders.length} orders from simple_orders`);
 
     res.status(200).json({
-      orders,
+      orders: transformedOrders,
       pagination: {
-        total,
+        total: count || 0,
         page: pageNum,
         limit: limitNum,
-        totalPages: Math.ceil(total / limitNum),
+        totalPages: Math.ceil((count || 0) / limitNum),
       },
     });
 

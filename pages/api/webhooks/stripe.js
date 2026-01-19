@@ -427,8 +427,10 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     console.log(`✅ [LINE ITEMS] Extracted ${items.length} items`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
-    // === WRITE TO SUPABASE admin_orders ===
-    const adminOrder = await syncStripeSessionToAdminOrders(fullSession, {
+    // ═══════════════════════════════════════════════════════════════════
+    // SSOT: UPDATE simple_orders (NEW CANONICAL SOURCE)
+    // ═══════════════════════════════════════════════════════════════════
+    const updatedOrder = await updateSimpleOrderFromStripe(sessionId, fullSession, {
       customerEmail,
       customerName,
       customerPhone,
@@ -438,13 +440,20 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
       items
     });
     
-    if (!adminOrder) {
-      console.error('❌ [SSOT] Failed to write to admin_orders');
-      throw new Error('Failed to create admin_orders entry');
+    if (!updatedOrder) {
+      console.error('❌ [SSOT] Failed to update simple_orders');
+      throw new Error('Failed to update simple_orders entry');
     }
     
-    logData.order_id = adminOrder.id;
+    logData.order_id = updatedOrder.id;
     logData.status = 'success';
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SEND EMAILS from simple_orders data
+    // ═══════════════════════════════════════════════════════════════════
+    await sendOrderEmailsFromSimpleOrders(updatedOrder, trace_id, eventMode);
+    
+    await logWebhookEvent(logData);
     
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // CRITICAL: Mark event as processed ONLY AFTER successful order write
@@ -1935,5 +1944,315 @@ async function handleCustomerUpdated(customer) {
     }
   } catch (error) {
     console.error('❌ [CUSTOMER.UPDATED] Exception:', error.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW SSOT: simple_orders functions (added 2026-01-19)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Update simple_orders with Stripe session data
+ * This is the CANONICAL SOURCE for orders
+ */
+async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
+  try {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('💾 [SSOT] Updating simple_orders with Stripe data...');
+    console.log('💾 [SSOT] Session ID:', sessionId);
+    
+    const { customerEmail, customerName, customerPhone, shippingAddress, billingAddress, items } = extractedData;
+    
+    // Find existing order by stripe_session_id
+    const { data: existingOrder, error: findError } = await supabase
+      .from('simple_orders')
+      .select('*')
+      .eq('stripe_session_id', sessionId)
+      .single();
+    
+    if (findError || !existingOrder) {
+      console.error('❌ [SSOT] Order not found in simple_orders for session:', sessionId);
+      console.error('❌ [SSOT] Error:', findError?.message);
+      return null;
+    }
+    
+    console.log('✅ [SSOT] Found order:', existingOrder.order_number, 'ID:', existingOrder.id.substring(0, 8));
+    
+    // Extract payment_intent ID
+    const paymentIntentId = typeof session.payment_intent === 'string' 
+      ? session.payment_intent 
+      : session.payment_intent?.id || null;
+    
+    // Update the order
+    const updateData = {
+      status: 'paid',
+      customer_email: customerEmail,
+      customer_name: customerName || existingOrder.customer_name,
+      customer_phone: customerPhone || existingOrder.customer_phone,
+      shipping_address: shippingAddress || existingOrder.shipping_address,
+      billing_address: billingAddress || existingOrder.billing_address,
+      stripe_payment_intent_id: paymentIntentId,
+      paid_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    
+    console.log('📝 [SSOT] Update data:', {
+      status: updateData.status,
+      customer_email: updateData.customer_email,
+      has_shipping: !!updateData.shipping_address,
+      payment_intent: paymentIntentId?.substring(0, 15) + '...'
+    });
+    
+    const { data: updatedOrder, error: updateError } = await supabase
+      .from('simple_orders')
+      .update(updateData)
+      .eq('id', existingOrder.id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('❌ [SSOT] Update failed:', updateError.message);
+      return null;
+    }
+    
+    console.log('✅ [SSOT] simple_orders updated successfully');
+    console.log('✅ [SSOT] Order:', updatedOrder.order_number, '| Status:', updatedOrder.status, '| Email:', updatedOrder.customer_email);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    return updatedOrder;
+    
+  } catch (error) {
+    console.error('❌ [SSOT] Exception in updateSimpleOrderFromStripe:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Send order confirmation emails from simple_orders data
+ * Sends both customer and admin emails with detailed logging
+ */
+async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode) {
+  const orderId = order.id;
+  const orderIdShort = orderId.substring(0, 8);
+  
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`📧 [EMAIL_FLOW_START] order_id=${orderIdShort} trace_id=${trace_id || 'none'}`);
+  
+  try {
+    // 1. VALIDATION: Check required fields
+    const customerEmail = order.customer_email;
+    if (!customerEmail || !customerEmail.includes('@')) {
+      console.error(`❌ [EMAIL] No valid customer_email for order ${orderIdShort}: "${customerEmail}"`);
+      await updateEmailStatus(orderId, 'blocked_no_email', 'customer_email missing or invalid');
+      return;
+    }
+    
+    // 2. IDEMPOTENCY: Check if already sent
+    if (order.customer_email_sent_at || order.admin_email_sent_at) {
+      console.log(`⚠️ [EMAIL] Already sent for order ${orderIdShort} - skipping`);
+      return;
+    }
+    
+    // 3. Check DISABLE_EMAILS env
+    if (process.env.DISABLE_EMAILS === 'true') {
+      console.warn(`⚠️ [EMAIL] DISABLE_EMAILS=true - marking order ${orderIdShort}`);
+      await updateEmailStatus(orderId, 'disabled', 'DISABLE_EMAILS=true');
+      return;
+    }
+    
+    // 4. Prepare email data
+    const customerName = order.customer_name || 'Kunde';
+    const orderNumber = order.order_number || orderIdShort.toUpperCase();
+    const totalAmount = order.total_amount_cents || 0;
+    const items = order.items || [];
+    const shippingAddress = order.shipping_address;
+    const billingAddress = order.billing_address;
+    const adminEmail = process.env.ADMIN_ORDER_EMAIL || 'orders@unbreak-one.com';
+    const emailFrom = process.env.EMAIL_FROM || 'UNBREAK ONE <no-reply@unbreak-one.com>';
+    
+    console.log(`📧 [EMAIL] Customer: ${customerEmail}`);
+    console.log(`📧 [EMAIL] Admin: ${adminEmail}`);
+    console.log(`📧 [EMAIL] From: ${emailFrom}`);
+    console.log(`📧 [EMAIL] Order: ${orderNumber} | Total: ${totalAmount}¢`);
+    console.log(`📧 [EMAIL] Items: ${items.length}`);
+    
+    // 5. Mark as processing
+    await updateEmailStatus(orderId, 'processing', null);
+    
+    // 6. SEND CUSTOMER EMAIL
+    let customerResult = { sent: false, error: null, id: null };
+    try {
+      const result = await sendOrderConfirmation({
+        orderId: orderId,
+        orderNumber: orderNumber,
+        customerEmail: customerEmail,
+        customerName: customerName,
+        items: items.map(item => ({
+          name: item.name,
+          quantity: item.quantity || item.qty || 1,
+          price_cents: item.unit_price_cents || item.unitPrice || 0,
+          line_total_cents: item.line_total_cents || item.totalPrice || 0
+        })),
+        totalAmount: totalAmount,
+        language: 'de',
+        shippingAddress: shippingAddress,
+        billingAddress: billingAddress,
+        amountSubtotal: order.subtotal_cents || totalAmount,
+        shippingCost: order.shipping_cents || 0,
+        orderDate: order.created_at ? new Date(order.created_at) : new Date(),
+        paymentStatus: order.status,
+      });
+      
+      customerResult = {
+        sent: result.sent || !!result.id,
+        id: result.id,
+        error: result.error
+      };
+      
+      console.log(`📧 [EMAIL_CUSTOMER] ${customerResult.sent ? '✅ SENT' : '❌ FAILED'} | resend_id=${customerResult.id || 'none'} | error=${customerResult.error || 'none'}`);
+      
+    } catch (emailError) {
+      customerResult.error = emailError.message;
+      console.error(`❌ [EMAIL_CUSTOMER] Exception: ${emailError.message}`);
+    }
+    
+    // 7. SEND ADMIN NOTIFICATION EMAIL
+    let adminResult = { sent: false, error: null, id: null };
+    try {
+      const adminSubject = eventMode === 'TEST' 
+        ? `🧪 TEST: Neue Bestellung ${orderNumber}`
+        : `📦 Neue Bestellung ${orderNumber}`;
+      
+      const adminHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; border-left: 4px solid ${eventMode === 'TEST' ? '#ffc107' : '#2F6F55'};">
+    <h1 style="color: ${eventMode === 'TEST' ? '#856404' : '#2F6F55'}; margin-top: 0;">
+      ${eventMode === 'TEST' ? '🧪 TEST-BESTELLUNG' : '📦 Neue Bestellung'}
+    </h1>
+    
+    <table style="width: 100%; margin: 20px 0; font-size: 14px;">
+      <tr><td style="padding: 8px 0; color: #666; width: 140px;"><strong>Bestellnummer:</strong></td><td>${orderNumber}</td></tr>
+      <tr><td style="padding: 8px 0; color: #666;"><strong>Kunde:</strong></td><td>${customerName}</td></tr>
+      <tr><td style="padding: 8px 0; color: #666;"><strong>E-Mail:</strong></td><td>${customerEmail}</td></tr>
+      <tr><td style="padding: 8px 0; color: #666;"><strong>Betrag:</strong></td><td><strong>€${(totalAmount / 100).toFixed(2)}</strong></td></tr>
+      <tr><td style="padding: 8px 0; color: #666;"><strong>Artikel:</strong></td><td>${items.length} Produkt(e)</td></tr>
+      <tr><td style="padding: 8px 0; color: #666;"><strong>Status:</strong></td><td><span style="background: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px;">BEZAHLT</span></td></tr>
+    </table>
+    
+    ${shippingAddress ? `
+    <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+      <strong>📍 Lieferadresse:</strong><br>
+      ${shippingAddress.name || customerName}<br>
+      ${shippingAddress.line1 || ''}<br>
+      ${shippingAddress.line2 ? shippingAddress.line2 + '<br>' : ''}
+      ${shippingAddress.postal_code || ''} ${shippingAddress.city || ''}<br>
+      ${shippingAddress.country || 'DE'}
+    </div>
+    ` : ''}
+    
+    <p style="margin-top: 30px;">
+      <a href="https://unbreak-one.com/admin/orders/${orderId}" style="background: #2F6F55; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+        → Im Admin öffnen
+      </a>
+    </p>
+    
+    <p style="color: #999; font-size: 12px; margin-top: 30px;">
+      Order ID: ${orderId}<br>
+      Stripe Mode: ${eventMode}
+    </p>
+  </div>
+</body>
+</html>`;
+      
+      const { sendEmail } = require('../../../lib/email/emailService');
+      const result = await sendEmail({
+        type: 'order-confirmation',
+        to: adminEmail,
+        subject: adminSubject,
+        html: adminHtml,
+        from: emailFrom,
+        meta: { orderId, orderNumber, type: 'admin-notification' }
+      });
+      
+      adminResult = {
+        sent: result.sent || !!result.id,
+        id: result.id,
+        error: result.error
+      };
+      
+      console.log(`📧 [EMAIL_ADMIN] ${adminResult.sent ? '✅ SENT' : '❌ FAILED'} | to=${adminEmail} | resend_id=${adminResult.id || 'none'} | error=${adminResult.error || 'none'}`);
+      
+    } catch (emailError) {
+      adminResult.error = emailError.message;
+      console.error(`❌ [EMAIL_ADMIN] Exception: ${emailError.message}`);
+    }
+    
+    // 8. UPDATE DATABASE with email results
+    const now = new Date().toISOString();
+    const updateData = {
+      updated_at: now
+    };
+    
+    if (customerResult.sent) {
+      updateData.customer_email_sent_at = now;
+    }
+    if (adminResult.sent) {
+      updateData.admin_email_sent_at = now;
+    }
+    
+    if (customerResult.sent && adminResult.sent) {
+      updateData.email_status = 'sent';
+    } else if (customerResult.sent || adminResult.sent) {
+      updateData.email_status = 'partial';
+      const errors = [];
+      if (!customerResult.sent) errors.push(`Customer: ${customerResult.error || 'Failed'}`);
+      if (!adminResult.sent) errors.push(`Admin: ${adminResult.error || 'Failed'}`);
+      updateData.email_last_error = errors.join('; ').substring(0, 500);
+    } else {
+      updateData.email_status = 'failed';
+      updateData.email_last_error = `Customer: ${customerResult.error || 'Failed'}, Admin: ${adminResult.error || 'Failed'}`.substring(0, 500);
+    }
+    
+    const { error: dbError } = await supabase
+      .from('simple_orders')
+      .update(updateData)
+      .eq('id', orderId);
+    
+    if (dbError) {
+      console.error(`❌ [EMAIL_DB] Failed to update email status: ${dbError.message}`);
+    }
+    
+    console.log(`📧 [EMAIL_COMPLETE] order=${orderIdShort} | customer=${customerResult.sent ? '✅' : '❌'} | admin=${adminResult.sent ? '✅' : '❌'} | status=${updateData.email_status}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+  } catch (error) {
+    console.error(`❌ [EMAIL_EXCEPTION] order=${orderIdShort}: ${error.message}`);
+    await updateEmailStatus(orderId, 'error', error.message);
+  }
+}
+
+/**
+ * Helper to update email status in simple_orders
+ */
+async function updateEmailStatus(orderId, status, errorMessage) {
+  try {
+    const updateData = {
+      email_status: status,
+      updated_at: new Date().toISOString()
+    };
+    if (errorMessage) {
+      updateData.email_last_error = errorMessage.substring(0, 500);
+    }
+    
+    await supabase
+      .from('simple_orders')
+      .update(updateData)
+      .eq('id', orderId);
+      
+  } catch (e) {
+    console.error(`❌ [EMAIL_STATUS_UPDATE] Failed: ${e.message}`);
   }
 }
