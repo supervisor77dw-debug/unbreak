@@ -26,7 +26,7 @@ export const authOptions = {
         }
 
         try {
-          // Authenticate with Supabase Auth
+          // Authenticate with Supabase Auth (SSOT for credentials)
           const { data, error } = await supabaseAdmin.auth.signInWithPassword({
             email: credentials.email,
             password: credentials.password,
@@ -41,12 +41,34 @@ export const authOptions = {
             throw new Error('No user found');
           }
 
-          // Return user data for session
+          // Fetch metadata from admin_users (SSOT for metadata)
+          const { data: adminUser, error: adminError } = await supabaseAdmin
+            .from('admin_users')
+            .select('name, role, "isActive"')
+            .eq('id', data.user.id)
+            .single();
+
+          if (adminError) {
+            console.warn('[AUTH] admin_users lookup failed:', adminError.message);
+            // Fallback to user_metadata if admin_users not found
+          }
+
+          // Check if user is active
+          if (adminUser && adminUser.isActive === false) {
+            throw new Error('User account is deactivated');
+          }
+
+          // SSOT: admin_users for metadata, fallback to user_metadata
+          const displayName = adminUser?.name || data.user.user_metadata?.name || 'Admin';
+          const role = adminUser?.role || data.user.user_metadata?.role || 'ADMIN';
+
+          console.log(`[AUTH] ✅ Login successful: ${data.user.email} (${role})`);
+
           return {
             id: data.user.id,
             email: data.user.email,
-            name: data.user.user_metadata?.name || 'Admin',
-            role: data.user.user_metadata?.role || 'ADMIN',
+            name: displayName,
+            role: role,
           };
         } catch (err) {
           console.error('[AUTH] Authorization failed:', err.message);
@@ -59,6 +81,7 @@ export const authOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name;
         token.role = user.role;
       }
       return token;
@@ -66,6 +89,7 @@ export const authOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id;
+        session.user.name = token.name;
         session.user.role = token.role;
       }
       return session;

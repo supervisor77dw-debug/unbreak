@@ -1,10 +1,12 @@
-import { getSession } from 'next-auth/react';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
 import { createClient } from '@supabase/supabase-js';
 import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
 export default async function handler(req, res) {
@@ -15,17 +17,18 @@ export default async function handler(req, res) {
     note: 'SSOT: pricing_configs table via Supabase Client',
   });
 
-  const session = await getSession({ req });
+  const session = await getServerSession(req, res, authOptions);
 
   console.log('[API][Pricing] Session check:', {
     hasSession: !!session,
     user: session?.user?.email || 'none',
+    role: session?.user?.role || 'none',
     method: req.method,
   });
 
-  if (!session) {
-    console.error('[API][Pricing] 401 - No session found');
-    return res.status(401).json({ error: 'Unauthorized - No session' });
+  if (!session || session.user.role !== 'ADMIN') {
+    console.error('[API][Pricing] 401 - No valid admin session');
+    return res.status(401).json({ error: 'Unauthorized - Admin session required' });
   }
 
   // GET: Fetch active pricing configs

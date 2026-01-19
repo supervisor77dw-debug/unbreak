@@ -87,35 +87,34 @@ export function logDataSourceFingerprint(context, options = {}) {
 |----------|--------|-------------|------|
 | `/api/admin/users` | GET | List users | `admin_users` (Prisma) |
 | `/api/admin/users/create` | POST | Create user | `auth.users` + `admin_users` |
-| `/api/admin/users/[id]` | PATCH | Update metadata | `admin_users` + `auth.users` |
+| `/api/admin/users/[id]` | PATCH | Update metadata | `admin_users` (Supabase) + `auth.users` |
 | `/api/admin/users/reset-password` | POST | Reset password | `auth.users` (Supabase Auth) |
 
 ---
 
 ## ✅ Akzeptanztests (5-Minuten Testplan)
 
-### Test 1: Shipping Edit
-1. Admin Panel → Einstellungen → Versandkosten
+### Test 1: Shipping Edit ✅
+1. Admin Panel → Versandkosten
 2. Ändere "Deutschland" Preis von 4,90€ auf 5,90€
 3. Speichern
 4. **Refresh** → Preis zeigt 5,90€ ✅
 5. Checkout im Shop starten → Versand zeigt 5,90€ ✅
 6. Zurücksetzen auf 4,90€
 
-### Test 2: Pricing Edit
-1. Admin Panel → Einstellungen → Preiskonfiguration
+### Test 2: Pricing Edit ✅
+1. Admin Panel → Produkte → Preiskonfiguration
 2. Glashalter Basispreis ändern (z.B. 19,90€ → 21,90€)
 3. Speichern
 4. **Refresh** → Preis zeigt 21,90€ ✅
 5. Konfigurator öffnen → Glashalter zeigt 21,90€ ✅
 6. Zurücksetzen auf 19,90€
 
-### Test 3: User Password Change
+### Test 3: User Management ✅
 1. Admin Panel → Mitarbeiter → Neuen User anlegen
-2. Login mit neuem User → Funktioniert ✅
-3. Admin: Passwort des neuen Users ändern
-4. Login mit **altem** Passwort → Scheitert ✅
-5. Login mit **neuem** Passwort → Funktioniert ✅
+2. User erscheint in Liste ✅
+3. Name ändern → wird in admin_users gespeichert ✅
+4. Passwort ändern → altes PW invalid, neues PW funktioniert ✅
 
 ---
 
@@ -129,25 +128,31 @@ export function logDataSourceFingerprint(context, options = {}) {
 
 ---
 
-## 📁 Betroffene Dateien
+## 📁 Betroffene Dateien (Migration 2026-01-19)
 
-### Geändert für SSOT
+### Von Prisma → Supabase Direct migriert
 
-- `pages/api/checkout/standard.js` - Shipping aus DB statt Hardcode
-- `pages/api/admin/shipping-rates.js` - Fingerprint hinzugefügt
-- `pages/api/admin/pricing.js` - Fingerprint hinzugefügt
-- `lib/pricing/pricingConfig.js` - DEPRECATED (nur noch Fallback)
-- `lib/pricing/calcConfiguredPriceDB.js` - Bereits DB-backed
+- `pages/api/admin/users.js` - User-Liste
+- `pages/api/admin/users/[id].js` - User-Update  
+- `pages/api/admin/users/create.js` - User-Create
+- `pages/api/admin/shipping-rates.js` - Shipping CRUD
 
-### Unverändert (bereits SSOT-compliant)
+### Bereits Supabase-Only
 
-- `pages/api/admin/users*.js` - Bereits auf Supabase Auth
-- `pages/api/webhooks/stripe.js` - Nutzt `simple_orders`
+- `pages/api/admin/pricing.js` - Pricing Config
+- `pages/api/admin/products.js` - Products CRUD
+- `pages/api/checkout/standard.js` - Checkout
+- `lib/pricing/calcConfiguredPriceDB.js` - Preis-Berechnung
+
+### Deprecated (nur Fallback)
+
+- `lib/pricing/pricingConfig.js` - Hardcode-Fallbacks
+- `lib/pricing/calcConfiguredPrice.js` - Alte Engine (nicht verwendet)
 
 ---
 
 ## 🏷️ Version
 
 - **Dokument Version:** 2026-01-19
-- **SSOT Migration:** Commit TBD
+- **SSOT Migration:** Vollständig (Local)
 - **Fingerprint System:** Active

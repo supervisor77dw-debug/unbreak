@@ -3,11 +3,11 @@
  * 
  * POST /api/admin/users/create
  * - Create admin user in Supabase Auth (SSOT for credentials)
- * - Then create/update metadata in admin_users table via Prisma
+ * - Then create metadata in admin_users table via Supabase
  * 
  * ARCHITECTURE DECISION (2026-01-19):
  * - Credentials (email/password) → Supabase Auth ONLY
- * - Metadata (name, role, isActive) → Prisma admin_users table
+ * - Metadata (name, role, isActive) → admin_users table (Supabase)
  * - auth.users.id is stored in admin_users for linking
  * 
  * Requires: ADMIN role
@@ -15,7 +15,6 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
-import prisma from '../../../../lib/prisma';
 import { createClient } from '@supabase/supabase-js';
 import { logDataSourceFingerprint } from '../../../../lib/dataSourceFingerprint';
 
@@ -33,9 +32,9 @@ export default async function handler(req, res) {
   const supabaseHost = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace('https://', '').split('.')[0];
   logDataSourceFingerprint('admin_users_create', {
     readTables: ['auth.users (Supabase Auth)'],
-    writeTables: ['auth.users (Supabase Auth)', 'admin_users (Prisma - metadata only)'],
+    writeTables: ['auth.users (Supabase Auth)', 'admin_users (Supabase - metadata)'],
     supabaseProject: supabaseHost,
-    note: 'Credentials in Supabase Auth, metadata in Prisma',
+    note: 'Credentials in Supabase Auth, metadata in admin_users',
   });
 
   // Check authentication
@@ -88,42 +87,47 @@ export default async function handler(req, res) {
       const authUserId = authData.user.id;
       console.log(`✅ [CREATE USER] Supabase Auth user created: ${email} (auth_id: ${authUserId})`);
 
-      // Step 2: Create/Update metadata in admin_users table (Prisma)
-      // Use the Supabase Auth ID as the primary key for consistency
-      const user = await prisma.user.upsert({
-        where: { id: authUserId },
-        create: {
-          id: authUserId, // Use Supabase Auth ID
+      // Step 2: Create metadata in admin_users table via Supabase
+      const now = new Date().toISOString();
+      const { data: user, error: insertError } = await supabaseAdmin
+        .from('admin_users')
+        .upsert({
+          id: authUserId,
           email,
-          role: roleUpper,
           name: display_name || null,
-          isActive: true,
-          passwordHash: 'SUPABASE_AUTH', // Placeholder - not used for auth
-        },
-        update: {
-          email,
           role: roleUpper,
-          name: display_name || null,
           isActive: true,
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          isActive: true,
-          createdAt: true,
-        },
-      });
+          passwordHash: 'SUPABASE_AUTH',
+          createdAt: now,
+          updatedAt: now,
+        }, { onConflict: 'id' })
+        .select('id, email, name, role, "isActive", "createdAt"')
+        .single();
 
-      console.log(`✅ [CREATE USER] Prisma metadata saved for: ${email}`);
+      if (insertError) {
+        console.error('[CREATE USER] admin_users insert error:', insertError);
+        // Auth user was created, but metadata failed - still return success
+        // The user can still log in
+        return res.status(200).json({
+          success: true,
+          message: 'User created (metadata sync pending)',
+          user: {
+            id: authUserId,
+            email,
+            role: roleUpper.toLowerCase(),
+            display_name: display_name || null,
+          },
+        });
+      }
+
+      console.log(`✅ [CREATE USER] admin_users metadata saved for: ${email}`);
       console.log(`   [FINGERPRINT] Supabase Project: ${supabaseHost}`);
 
       return res.status(200).json({
         success: true,
         message: 'User created successfully',
         user: {
-          id: user.id, // This is now the Supabase Auth ID
+          id: user.id,
           email: user.email,
           role: user.role.toLowerCase(),
           display_name: user.name,

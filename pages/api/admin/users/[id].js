@@ -8,14 +8,13 @@
  * 
  * ARCHITECTURE DECISION (2026-01-19):
  * - Credentials (email/password) → Supabase Auth ONLY
- * - Metadata (name, role, isActive) → Prisma admin_users + Supabase Auth user_metadata
+ * - Metadata (name, role, isActive) → admin_users (Supabase) + auth.users user_metadata
  * 
  * Requires: ADMIN role
  */
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
-import prisma from '../../../../lib/prisma';
 import { createClient } from '@supabase/supabase-js';
 import { logDataSourceFingerprint } from '../../../../lib/dataSourceFingerprint';
 
@@ -32,8 +31,8 @@ export default async function handler(req, res) {
   // Log data source fingerprint
   const supabaseHost = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace('https://', '').split('.')[0];
   logDataSourceFingerprint('admin_users_detail', {
-    readTables: ['admin_users (Prisma - metadata)'],
-    writeTables: req.method === 'PATCH' ? ['admin_users (Prisma)', 'auth.users (Supabase - metadata sync)'] : [],
+    readTables: ['admin_users (Supabase - metadata)'],
+    writeTables: req.method === 'PATCH' ? ['admin_users (Supabase)', 'auth.users (Supabase - metadata sync)'] : [],
     supabaseProject: supabaseHost,
     note: 'Role/Name synced to Supabase Auth user_metadata',
   });
@@ -72,19 +71,18 @@ export default async function handler(req, res) {
         authMetadataUpdates.name = display_name || null;
       }
 
-      // Update Prisma (metadata)
-      const user = await prisma.user.update({
-        where: { id },
-        data: updates,
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          isActive: true,
-          updatedAt: true,
-        },
-      });
+      // Update admin_users via Supabase (metadata)
+      const { data: user, error: updateError } = await supabaseAdmin
+        .from('admin_users')
+        .update(updates)
+        .eq('id', id)
+        .select('id, email, name, role, "isActive"')
+        .single();
+
+      if (updateError) {
+        console.error('❌ [UPDATE USER] Supabase error:', updateError);
+        return res.status(500).json({ error: 'Database update failed' });
+      }
 
       // Sync metadata to Supabase Auth (for session consistency)
       if (Object.keys(authMetadataUpdates).length > 0) {
@@ -94,11 +92,13 @@ export default async function handler(req, res) {
         
         if (authError) {
           console.warn(`⚠️ [UPDATE USER] Supabase Auth metadata sync failed: ${authError.message}`);
-          // Non-fatal: Prisma is primary for metadata
+          // Non-fatal: admin_users is primary for metadata
         } else {
           console.log(`✅ [UPDATE USER] Supabase Auth metadata synced for ${user.email}`);
         }
       }
+
+      console.log(`✅ [UPDATE USER] Updated ${user.email}`);
 
       return res.status(200).json({
         success: true,

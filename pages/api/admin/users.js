@@ -2,13 +2,13 @@
  * ADMIN API: Users Management
  * 
  * GET /api/admin/users
- * - List all admin users from Prisma (metadata)
+ * - List all admin users from admin_users table (via Supabase)
  * - Search by email, name
  * - Filter by role, isActive
  * 
  * ARCHITECTURE DECISION (2026-01-19):
  * - Credentials (email/password) → Supabase Auth ONLY
- * - Metadata (name, role, isActive) → Prisma admin_users table
+ * - Metadata (name, role, isActive) → admin_users table (Supabase)
  * - User IDs in admin_users = Supabase Auth IDs
  * 
  * Requires: ADMIN role
@@ -16,17 +16,24 @@
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import prisma from '../../../lib/prisma';
+import { createClient } from '@supabase/supabase-js';
 import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
+
+// Supabase Admin Client
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
 
 export default async function handler(req, res) {
   // Log data source fingerprint
   const supabaseHost = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace('https://', '').split('.')[0];
   logDataSourceFingerprint('admin_users_list', {
-    readTables: ['admin_users (Prisma - metadata)'],
+    readTables: ['admin_users (Supabase - metadata)'],
     writeTables: [],
     supabaseProject: supabaseHost,
-    note: 'User list from Prisma, IDs match Supabase Auth IDs',
+    note: 'User list from Supabase, IDs match auth.users IDs',
   });
 
   // Check authentication
@@ -40,40 +47,34 @@ export default async function handler(req, res) {
     try {
       const { search = '', role = '', is_active = '' } = req.query;
 
-      // Build where clause
-      const where = {};
-      
+      // Build query
+      let query = supabaseAdmin
+        .from('admin_users')
+        .select('id, email, name, role, "isActive", "createdAt", "updatedAt"')
+        .order('createdAt', { ascending: false });
+
+      // Apply filters
       if (search) {
-        where.OR = [
-          { email: { contains: search, mode: 'insensitive' } },
-          { name: { contains: search, mode: 'insensitive' } },
-        ];
+        query = query.or(`email.ilike.%${search}%,name.ilike.%${search}%`);
       }
 
       if (role) {
-        where.role = role.toUpperCase();
+        query = query.eq('role', role.toUpperCase());
       }
 
       if (is_active !== '') {
-        where.isActive = is_active === 'true';
+        query = query.eq('isActive', is_active === 'true');
       }
 
-      const users = await prisma.user.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          isActive: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
+      const { data: users, error } = await query;
+
+      if (error) {
+        console.error('❌ [USERS API] Supabase error:', error);
+        return res.status(500).json({ error: 'Database error' });
+      }
 
       // Transform to match frontend expectations
-      const transformedUsers = users.map(user => ({
+      const transformedUsers = (users || []).map(user => ({
         id: user.id,
         email: user.email,
         display_name: user.name,
@@ -82,6 +83,8 @@ export default async function handler(req, res) {
         created_at: user.createdAt,
         last_sign_in_at: null, // Not tracked in current schema
       }));
+
+      console.log(`✅ [USERS API] Returned ${transformedUsers.length} users`);
 
       return res.status(200).json({
         success: true,

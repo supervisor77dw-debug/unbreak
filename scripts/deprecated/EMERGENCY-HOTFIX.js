@@ -1,4 +1,13 @@
 /**
+ * ============================================================================
+ * DEPRECATED – DO NOT RUN IN PRODUCTION
+ * ============================================================================
+ * This was a one-time hotfix reference from early 2026.
+ * The fix has been integrated into the codebase.
+ * ============================================================================
+ */
+
+/**
  * EMERGENCY HOTFIX - Deploy to Vercel IMMEDIATELY
  * 
  * Problem: Configurator sendet {color: "petrol"} statt {colors: {base, top, middle}}
