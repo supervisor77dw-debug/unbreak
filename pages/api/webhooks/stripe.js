@@ -129,13 +129,14 @@ export default async function handler(req, res) {
       // Verify it's actually a live key
       if (!stripeApiKey?.startsWith('sk_live')) {
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.error('❌ [KEY_MISMATCH] Live event but no live key available!');
-        console.error('❌ Selected key prefix:', stripeApiKey?.substring(0, 7));
-        console.error('❌ Set STRIPE_SECRET_KEY_LIVE or STRIPE_SECRET_KEY with sk_live_*');
+        console.error('❌ [MISSING_KEY] Live event but no STRIPE_SECRET_KEY_LIVE!');
+        console.error('❌ Available key prefix:', stripeApiKey?.substring(0, 7) || '(none)');
+        console.error('❌ Set STRIPE_SECRET_KEY_LIVE=sk_live_xxx in Vercel ENV');
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        return res.status(500).json({
-          error: 'KEY_MISMATCH: Live event requires live API key',
-          event_livemode: event.livemode
+        return res.status(501).json({
+          error: 'Missing STRIPE_SECRET_KEY_LIVE',
+          message: 'Live event received but no live API key configured',
+          hint: 'Set STRIPE_SECRET_KEY_LIVE=sk_live_xxx in Vercel ENV'
         });
       }
     } else {
@@ -149,16 +150,16 @@ export default async function handler(req, res) {
         console.log('🔑 [API_KEY] Event is TEST - using STRIPE_SECRET_KEY (is test key)');
       } else {
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.error('❌ [KEY_MISMATCH] Test event but no test key available!');
+        console.error('❌ [MISSING_KEY] Test event but no STRIPE_SECRET_KEY_TEST!');
         console.error('❌ STRIPE_SECRET_KEY_TEST:', testKeyPrefix || '(not set)');
         console.error('❌ STRIPE_SECRET_KEY:', defaultKeyPrefix);
         console.error('❌ Cannot query cs_test_* sessions with sk_live_* key');
         console.error('❌ Set STRIPE_SECRET_KEY_TEST=sk_test_xxx in Vercel ENV');
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        return res.status(500).json({
-          error: 'KEY_MISMATCH: Test event requires test API key. Set STRIPE_SECRET_KEY_TEST in Vercel ENV.',
-          event_livemode: event.livemode,
-          hint: 'Add STRIPE_SECRET_KEY_TEST=sk_test_xxx to your Vercel environment variables'
+        return res.status(501).json({
+          error: 'Missing STRIPE_SECRET_KEY_TEST',
+          message: 'Test event received but no test API key configured',
+          hint: 'Set STRIPE_SECRET_KEY_TEST=sk_test_xxx in Vercel ENV'
         });
       }
     }

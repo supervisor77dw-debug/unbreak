@@ -4,6 +4,11 @@
  * 
  * Creates a Stripe Checkout Session for configured product
  * 
+ * Supports Dual Mode (Test/Live):
+ * - Pass `mode: 'test' | 'live'` in request body
+ * - Or set STRIPE_CHECKOUT_MODE env var
+ * - Automatically uses correct keys for each mode
+ * 
  * Flow:
  * 1. Validate product + config (with canonical color validation)
  * 2. Calculate price (server-side, trusted)
@@ -15,7 +20,7 @@
  */
 
 import { getSupabaseAdmin } from '../../../lib/supabase';
-import { stripe } from '../../../lib/stripe';
+import { getStripeClient, getCheckoutMode } from '../../../lib/stripe';
 import { calculatePrice, calculateShipping, calculateTax } from '../../../lib/pricing';
 import { validateConfiguratorConfig } from '../../../lib/configValidation';
 
@@ -237,6 +242,12 @@ export default async function handler(req, res) {
     // 6. CREATE STRIPE CHECKOUT SESSION
     // ========================================
     
+    // Determine mode: from request body, or ENV, or default to 'live'
+    const stripeMode = req.body.mode || getCheckoutMode();
+    const stripeClient = getStripeClient(stripeMode);
+    
+    console.log('[CHECKOUT_CREATE] trace_id=' + trace_id + ' using Stripe mode:', stripeMode);
+    
     // Try to get existing Stripe customer ID from profiles (if user is logged in)
     let stripeCustomerId = null;
     if (req.headers.authorization) {
@@ -255,7 +266,7 @@ export default async function handler(req, res) {
       }
     }
 
-    const checkoutSession = await stripe.checkout.sessions.create({
+    const checkoutSession = await stripeClient.checkout.sessions.create({
       mode: 'payment',
       // Payment methods: card, PayPal, SEPA, Klarna
       payment_method_types: ['card'], // PayPal temporarily disabled (verification pending)
