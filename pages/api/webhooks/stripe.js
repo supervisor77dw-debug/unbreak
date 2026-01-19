@@ -199,23 +199,31 @@ export default async function handler(req, res) {
     });
     
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // EVENT IDEMPOTENCY: Check if event already processed (CHECK FIRST, CREATE LATER)
+    // EVENT IDEMPOTENCY: Check if event already processed 
+    // Uses stripe_event_id column in simple_orders (if column exists)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const existingEvent = await prisma.orderEvent.findFirst({
-      where: { stripeEventId: event.id }
-    });
-    
-    if (existingEvent) {
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log(`[EVENT_DUPLICATE] event_id=${event.id} event_type=${event.type} - Already processed`);
-      console.log(`[EVENT_DUPLICATE] Existing event record: ${existingEvent.id}`);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      return res.status(200).json({ 
-        received: true, 
-        duplicate: true, 
-        event_id: event.id,
-        existing_event_id: existingEvent.id
-      });
+    try {
+      const { data: existingOrder, error: dedupCheckError } = await supabase
+        .from('simple_orders')
+        .select('id, order_number')
+        .eq('stripe_event_id', event.id)
+        .single();
+      
+      if (!dedupCheckError && existingOrder) {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`[EVENT_DUPLICATE] event_id=${event.id} event_type=${event.type} - Already processed`);
+        console.log(`[EVENT_DUPLICATE] Existing order: ${existingOrder.order_number}`);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return res.status(200).json({ 
+          received: true, 
+          duplicate: true, 
+          event_id: event.id,
+          existing_order_number: existingOrder.order_number
+        });
+      }
+    } catch (dedupErr) {
+      // stripe_event_id column may not exist yet - continue
+      console.warn(`⚠️ [DEDUP] Top-level dedup check failed: ${dedupErr.message} - continuing`);
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -298,8 +306,39 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
   console.log('💳 [STRIPE SESSION] ID:', sessionId);
   console.log('💳 [STRIPE SESSION] Payment status:', session.payment_status);
   console.log('💳 [STRIPE EVENT] ID:', stripeEventId, 'Type:', stripeEventType);
-  console.log('💳 [SSOT MODE] Writing directly to admin_orders (NO legacy tables)');
+  console.log('💳 [SSOT MODE] Writing to simple_orders (Supabase) ONLY');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // DEDUP CHECK: Skip if this stripe_event_id was already processed
+  // Note: Requires stripe_event_id column in simple_orders (graceful if missing)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  if (stripeEventId) {
+    try {
+      const { data: existingOrder, error: dedupError } = await supabase
+        .from('simple_orders')
+        .select('id, order_number, stripe_event_id')
+        .eq('stripe_event_id', stripeEventId)
+        .single();
+      
+      if (!dedupError && existingOrder) {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log(`⏭️ [DEDUP] Event ${stripeEventId} already processed!`);
+        console.log(`⏭️ [DEDUP] Order: ${existingOrder.order_number} (${existingOrder.id.substring(0,8)})`);
+        console.log('⏭️ [DEDUP] Skipping to prevent duplicate processing');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return; // Already processed - skip
+      }
+      // If column doesn't exist, dedupError will be set but we continue
+      if (dedupError && !dedupError.message.includes('stripe_event_id')) {
+        // Some other error - log but continue
+        console.warn(`⚠️ [DEDUP] Query error: ${dedupError.message}`);
+      }
+    } catch (dedupErr) {
+      // Column might not exist yet - continue without dedup
+      console.warn(`⚠️ [DEDUP] Dedup check failed: ${dedupErr.message} - continuing without dedup`);
+    }
+  }
 
   let logData = {
     event_type: 'checkout.session.completed',
@@ -461,117 +500,45 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     // ═══════════════════════════════════════════════════════════════════
     await sendOrderEmailsFromSimpleOrders(updatedOrder, trace_id, eventMode, 'webhook', stripeEventId);
     
-    await logWebhookEvent(logData);
-    
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // CRITICAL: Mark event as processed ONLY AFTER successful order write
+    // MARK EVENT PROCESSED in simple_orders (for dedup on retry)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('[EVENT_MARK_PROCESSED] Order write successful, marking event as processed...');
+    console.log('[EVENT_MARK_PROCESSED] Order updated, marking event in simple_orders...');
     
-    try {
-      await prisma.orderEvent.create({
-        data: {
-          stripeEventId: stripeEventId,
-          eventType: stripeEventType,
-          type: 'STRIPE_WEBHOOK',
-          source: 'stripe',
-          orderId: adminOrder.id,
-          payload: {
-            session_id: sessionId,
-            order_id: adminOrder.id,
-            marked_at: new Date().toISOString()
-          }
-        }
-      });
-      console.log(`[EVENT_MARK_PROCESSED] ✅ Event ${stripeEventId} marked as processed`);
-    } catch (eventMarkError) {
-      // If this fails, it might be a duplicate (race condition) - that's OK
-      if (eventMarkError.code === 'P2002') {
-        console.log(`[EVENT_MARK_PROCESSED] ⚠️ Event already marked (race condition) - OK`);
-      } else {
-        console.error(`[EVENT_MARK_PROCESSED] ❌ Failed to mark event:`, eventMarkError.message);
-        // Don't throw - order is already written
-      }
-    }
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // Store stripe_event_id for dedup (prevents processing same event twice)
+    const { error: eventMarkError } = await supabase
+      .from('simple_orders')
+      .update({ 
+        stripe_event_id: stripeEventId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', updatedOrder.id);
     
-    // === DB-RELOAD: Load order with items from admin_orders (VALIDATION) ===
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔄 [DB_RELOAD] Loading order from admin_orders for validation...');
-    
-    const orderWithItems = await prisma.order.findUnique({
-      where: { id: adminOrder.id },
-      include: {
-        items: {
-          select: {
-            id: true,
-            sku: true,
-            name: true,
-            variant: true,
-            qty: true,
-            unitPrice: true,
-            totalPrice: true,
-          }
-        }
-      }
-    });
-    
-    if (!orderWithItems) {
-      console.error('❌ [DB_RELOAD] Order not found after write!');
-      throw new Error('DB-Reload failed: order not found');
+    if (eventMarkError) {
+      console.warn(`[EVENT_MARK_PROCESSED] ⚠️ Failed to mark event: ${eventMarkError.message}`);
+      // Don't throw - order is already processed successfully
+    } else {
+      console.log(`[EVENT_MARK_PROCESSED] ✅ Event ${stripeEventId} marked on order ${updatedOrder.id.substring(0,8)}`);
     }
     
-    const itemsCount = orderWithItems.items?.length || 0;
-    const hasBilling = !!(orderWithItems.billingAddress && orderWithItems.billingAddress.line1);
-    const hasShipping = !!(orderWithItems.shippingAddress && orderWithItems.shippingAddress.line1);
-    const hasTotals = !!(orderWithItems.subtotalNet && orderWithItems.totalGross);
-    const hasEmail = !!orderWithItems.email;
-    const hasPhone = !!orderWithItems.customer?.phone;
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // VALIDATION: Check order completeness (from simple_orders)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    const itemsCount = updatedOrder.items?.length || 0;
+    const hasEmail = !!updatedOrder.customer_email;
+    const hasTotals = updatedOrder.total_amount_cents > 0;
     
-    console.log(`[DB_RELOAD_OK] order_id=${adminOrder.id.substring(0, 8)} fields={email:${hasEmail},phone:${hasPhone},billing:${hasBilling},shipping:${hasShipping},items:${itemsCount},totals:{subtotal:${orderWithItems.subtotalNet}¢,shipping:${orderWithItems.amountShipping}¢,tax:${orderWithItems.taxAmount}¢,total:${orderWithItems.totalGross}¢}}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`[VALIDATION] order_id=${updatedOrder.id.substring(0,8)} items=${itemsCount} email=${hasEmail} totals=${hasTotals}`);
     
-    // === VALIDATION: Check completeness ===
-    if (itemsCount === 0 || !hasTotals) {
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error('❌ [VALIDATION_FAIL] Order incomplete after DB write!');
-      console.error(`❌ items_count=${itemsCount} has_totals=${hasTotals}`);
-      console.error('❌ Order was created but email will NOT be sent');
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      
-      await prisma.order.update({
-        where: { id: adminOrder.id },
-        data: { 
-          emailStatus: 'blocked_incomplete',
-          emailLastError: `Validation failed: items=${itemsCount}, totals=${hasTotals}`
-        }
-      });
-      
-      await prisma.orderEvent.create({
-        data: {
-          orderId: adminOrder.id,
-          type: 'ERROR',
-          source: 'webhook',
-          payload: { 
-            reason: 'validation_failed', 
-            items_count: itemsCount,
-            has_totals: hasTotals
-          }
-        }
-      });
-      
-      console.log('✅ [DB_WRITE_OK] Order created (incomplete) - will not retry');
-      return; // Don't send email but event was processed successfully
+    if (itemsCount === 0) {
+      console.warn('⚠️ [VALIDATION] Order has no items - may be incomplete');
+      // Don't fail - webhook succeeded, email was sent (if claimed)
     }
     
-    // ═══════════════════════════════════════════════════════════════════
-    // DISABLED: Old email path using admin_orders (Prisma)
-    // E-Mails werden jetzt NUR über sendOrderEmailsFromSimpleOrders gesendet
-    // (aufgerufen in Zeile ~461 nach updateSimpleOrderFromStripe)
-    // ═══════════════════════════════════════════════════════════════════
-    // await sendOrderEmailFromAdminOrders(adminOrder.id, trace_id, eventMode);
-    console.log('⏭️ [EMAIL_SKIP] Old admin_orders email path DISABLED - using simple_orders only');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('✅ [WEBHOOK] handleCheckoutSessionCompleted SUCCESS');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     await logWebhookEvent(logData);
     
