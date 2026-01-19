@@ -18,11 +18,30 @@ export default function CartPage() {
   const [pricingSnapshot, setPricingSnapshot] = useState(null);
   const [loadingPricing, setLoadingPricing] = useState(false);
   const [isClient, setIsClient] = useState(false); // Fix hydration mismatch
+  const [adminTestMode, setAdminTestMode] = useState(false); // Admin test checkout
+  const [isAdmin, setIsAdmin] = useState(false); // Admin detection
   const cart = getCart();
 
   // Fix SSR/Client hydration mismatch for i18n
   useEffect(() => {
     setIsClient(true);
+    
+    // Check for admin role to enable test mode toggle
+    // Admin can be detected via: URL param, localStorage, or session role
+    const urlParams = new URLSearchParams(window.location.search);
+    const adminFromUrl = urlParams.get('admin_test') === 'true';
+    const adminFromStorage = localStorage.getItem('unbreak_admin_test_enabled') === 'true';
+    
+    // Also check Supabase session for admin role
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const userRole = session?.user?.user_metadata?.role || session?.user?.app_metadata?.role;
+      const isAdminUser = userRole === 'admin' || userRole === 'ops';
+      
+      if (isAdminUser || adminFromUrl || adminFromStorage) {
+        setIsAdmin(true);
+        console.log('🔑 [CART] Admin mode available');
+      }
+    });
   }, []);
 
   // Safe translation wrapper (prevents SSR/Client mismatch)
@@ -137,6 +156,12 @@ export default function CartPage() {
         email: session?.user?.email || null,
         locale: currentLang, // Pass language to Stripe Checkout
       };
+      
+      // ADMIN TEST MODE: Add mode=test if admin has enabled it
+      if (adminTestMode && isAdmin) {
+        payload.mode = 'test';
+        console.log('🧪 [CHECKOUT] Admin Test Mode - using mode=test');
+      }
 
       const headers = {
         'Content-Type': 'application/json',
@@ -144,6 +169,15 @@ export default function CartPage() {
 
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      // ADMIN TEST MODE: Add admin key header
+      if (adminTestMode && isAdmin) {
+        const adminKey = localStorage.getItem('unbreak_admin_api_key') || 
+                         process.env.NEXT_PUBLIC_ADMIN_API_KEY;
+        if (adminKey) {
+          headers['x-admin-test-key'] = adminKey;
+        }
       }
 
       const response = await fetch('/api/checkout/standard', {
@@ -429,6 +463,43 @@ export default function CartPage() {
         </div>
       </div>
 
+      {/* Admin Test Mode Toggle (only visible to admins) */}
+      {isAdmin && (
+        <div style={{
+          marginBottom: '15px',
+          padding: '12px',
+          backgroundColor: adminTestMode ? '#fff3cd' : '#f8f9fa',
+          border: adminTestMode ? '2px solid #ffc107' : '1px solid #dee2e6',
+          borderRadius: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={adminTestMode}
+              onChange={(e) => setAdminTestMode(e.target.checked)}
+              style={{ marginRight: '10px', width: '18px', height: '18px' }}
+            />
+            <span style={{ fontWeight: 'bold', color: adminTestMode ? '#856404' : '#495057' }}>
+              🧪 Test-Modus (keine echte Zahlung)
+            </span>
+          </label>
+          {adminTestMode && (
+            <span style={{ 
+              fontSize: '12px', 
+              color: '#856404',
+              backgroundColor: '#ffc107',
+              padding: '2px 8px',
+              borderRadius: '4px'
+            }}>
+              ADMIN TEST
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Checkout Button */}
       <button
         onClick={handleCheckout}
@@ -439,13 +510,13 @@ export default function CartPage() {
           fontSize: '18px',
           fontWeight: 'bold',
           color: 'white',
-          backgroundColor: loading ? '#6c757d' : '#28a745',
+          backgroundColor: loading ? '#6c757d' : (adminTestMode ? '#ffc107' : '#28a745'),
           border: 'none',
           borderRadius: '4px',
           cursor: loading ? 'not-allowed' : 'pointer'
         }}
       >
-        {loading ? t('cart.redirectingToStripe') : t('cart.checkout')}
+        {loading ? t('cart.redirectingToStripe') : (adminTestMode ? '🧪 Test-Checkout' : t('cart.checkout'))}
       </button>
     </div>
   );

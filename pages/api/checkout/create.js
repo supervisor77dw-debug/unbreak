@@ -234,8 +234,24 @@ export default async function handler(req, res) {
     // 6. CREATE STRIPE CHECKOUT SESSION
     // ========================================
     
-    // Determine mode: from request body, or ENV, or default to 'live'
-    const stripeMode = req.body.mode || getCheckoutMode();
+    // Determine mode: admin can override with x-admin-test-key header
+    // ADMIN TEST MODE: To use mode=test on production, pass x-admin-test-key header
+    let stripeMode = getCheckoutMode(); // Default from ENV (live on production)
+    
+    if (req.body.mode === 'test') {
+      const adminTestKey = req.headers['x-admin-test-key'];
+      const validAdminKey = process.env.ADMIN_API_KEY || process.env.ADMIN_TEST_KEY;
+      
+      if (adminTestKey && adminTestKey === validAdminKey) {
+        console.log('[CHECKOUT_CREATE] trace_id=' + trace_id + ' ADMIN TEST MODE activated');
+        stripeMode = 'test';
+      } else {
+        console.warn('[CHECKOUT_CREATE] trace_id=' + trace_id + ' test mode requested without valid admin key');
+      }
+    } else if (req.body.mode === 'live') {
+      stripeMode = 'live';
+    }
+    
     const stripeClient = getStripeClient(stripeMode);
     
     console.log('[CHECKOUT_CREATE] trace_id=' + trace_id + ' using Stripe mode:', stripeMode);

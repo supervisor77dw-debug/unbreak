@@ -115,8 +115,27 @@ export default async function handler(req, res) {
 
   try {
     // DUAL-MODE STRIPE CLIENT
-    // Mode can be passed in request body, otherwise uses STRIPE_CHECKOUT_MODE env
-    const stripeMode = req.body.mode || getCheckoutMode();
+    // Mode can be passed in request body (admin only), otherwise uses STRIPE_CHECKOUT_MODE env
+    // ADMIN TEST MODE: To use mode=test on production, pass x-admin-test-key header
+    let stripeMode = getCheckoutMode(); // Default from ENV (live on production)
+    
+    if (req.body.mode === 'test') {
+      // Validate admin access for test mode
+      const adminTestKey = req.headers['x-admin-test-key'];
+      const validAdminKey = process.env.ADMIN_API_KEY || process.env.ADMIN_TEST_KEY;
+      
+      if (!adminTestKey || adminTestKey !== validAdminKey) {
+        console.warn('⚠️ [Checkout] Attempted test mode without valid admin key');
+        // Silently fall back to default mode (don't reveal admin test feature exists)
+        stripeMode = getCheckoutMode();
+      } else {
+        console.log('🔑 [Checkout] ADMIN TEST MODE activated');
+        stripeMode = 'test';
+      }
+    } else if (req.body.mode === 'live') {
+      stripeMode = 'live';
+    }
+    
     let stripe;
     
     try {
