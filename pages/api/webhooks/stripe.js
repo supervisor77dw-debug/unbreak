@@ -130,9 +130,10 @@ export default async function handler(req, res) {
       });
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`[EVENT_DEDUP_OK] event_id=${event.id} event_type=${event.type}`);
+      console.log(`[EVENT_DEDUP_OK] stripe_event_id WRITTEN to admin_order_events`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } catch (eventError) {
-      // Check if it's a unique constraint violation
+      // Check if it's a unique constraint violation (duplicate event)
       if (eventError.code === 'P2002' || eventError.message?.includes('unique constraint')) {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log(`[EVENT_DUPLICATE] event_id=${event.id} event_type=${event.type} - Already processed`);
@@ -143,8 +144,25 @@ export default async function handler(req, res) {
           event_id: event.id 
         });
       }
-      // Other error - continue processing but log it
-      console.warn('⚠️ [EVENT_LOG_FAIL] Could not log event, continuing:', eventError.message);
+      
+      // ❌ CRITICAL: Event logging FAILED - this means DB schema mismatch or connection issue
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.error('❌ [EVENT_LOG_CRITICAL] Event logging FAILED - Cannot proceed without deduplication!');
+      console.error('❌ Error code:', eventError.code);
+      console.error('❌ Error message:', eventError.message);
+      console.error('❌ This likely means:');
+      console.error('   - stripe_event_id or event_type columns do NOT exist in DB');
+      console.error('   - Migration was not executed');
+      console.error('   - Prisma client out of sync');
+      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      // Return 500 to trigger Stripe retry
+      return res.status(500).json({
+        error: 'Event logging failed',
+        code: eventError.code,
+        message: eventError.message,
+        event_id: event.id
+      });
     }
     
     // 3. Handle specific events
