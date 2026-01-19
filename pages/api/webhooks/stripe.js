@@ -101,43 +101,31 @@ export default async function handler(req, res) {
     console.log(`🔒 [MODE] event.livemode=${event.livemode} → ${eventMode}`);
     
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // MODE/KEY CONSISTENCY CHECK
+    // DYNAMIC STRIPE API KEY SELECTION based on event.livemode
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    const stripeKeyPrefix = process.env.STRIPE_SECRET_KEY?.substring(0, 7) || 'unknown';
-    const keyIsLive = stripeKeyPrefix.includes('sk_live');
-    const keyIsTest = stripeKeyPrefix.includes('sk_test');
+    let stripeApiKey;
+    let stripeClient;
     
-    console.log(`🔑 [KEY_CHECK] STRIPE_SECRET_KEY prefix: ${stripeKeyPrefix}`);
-    console.log(`🔑 [KEY_CHECK] Key mode: ${keyIsLive ? 'LIVE' : keyIsTest ? 'TEST' : 'UNKNOWN'}`);
-    
-    // Check for mode mismatch
-    if (event.livemode && keyIsTest) {
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error('❌ [MODE_MISMATCH] Event is LIVE but key is TEST');
-      console.error(`❌ event.livemode=${event.livemode} but STRIPE_SECRET_KEY=${stripeKeyPrefix}`);
-      console.error('❌ Cannot process - wrong API key for this event');
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      return res.status(500).json({
-        error: 'MODE_MISMATCH: Live event with test key',
-        event_livemode: event.livemode,
-        key_prefix: stripeKeyPrefix
-      });
+    if (event.livemode) {
+      // Live event - use live key
+      stripeApiKey = process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY;
+      console.log('🔑 [API_KEY] Event is LIVE - using STRIPE_SECRET_KEY_LIVE');
+    } else {
+      // Test event - use test key
+      stripeApiKey = process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY;
+      console.log('🔑 [API_KEY] Event is TEST - using STRIPE_SECRET_KEY_TEST');
     }
     
-    if (!event.livemode && keyIsLive) {
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.error('❌ [MODE_MISMATCH] Event is TEST but key is LIVE');
-      console.error(`❌ event.livemode=${event.livemode} but STRIPE_SECRET_KEY=${stripeKeyPrefix}`);
-      console.error('❌ Cannot process - wrong API key for this event');
-      console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      return res.status(500).json({
-        error: 'MODE_MISMATCH: Test event with live key',
-        event_livemode: event.livemode,
-        key_prefix: stripeKeyPrefix
-      });
-    }
+    const keyPrefix = stripeApiKey?.substring(0, 7) || 'unknown';
+    console.log(`🔑 [API_KEY] Selected key prefix: ${keyPrefix}`);
     
-    console.log('✅ [MODE_CHECK] Event mode and key mode are consistent');
+    // Create Stripe client with correct key
+    stripeClient = new Stripe(stripeApiKey, {
+      apiVersion: '2023-10-16',
+      typescript: true,
+    });
+    
+    console.log(`✅ [API_KEY] Stripe client created for ${eventMode} mode`);
     
     console.log('[WEBHOOK HIT]', event.type);
     console.log('[EVENT MODE]', eventMode);
@@ -181,7 +169,13 @@ export default async function handler(req, res) {
     // 3. Handle specific events
     switch (event.type) {
       case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted({ event, session: event.data.object, trace_id, eventMode });
+        await handleCheckoutSessionCompleted({ 
+          event, 
+          session: event.data.object, 
+          trace_id, 
+          eventMode,
+          stripeClient // Pass dynamic client based on event.livemode
+        });
         break;
 
       case 'customer.created':
@@ -222,13 +216,16 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleCheckoutSessionCompleted({ event, session, trace_id, eventMode }) {
+async function handleCheckoutSessionCompleted({ event, session, trace_id, eventMode, stripeClient }) {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   // CRITICAL: Create stable variables IMMEDIATELY to prevent ReferenceError in nested scopes
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const stripeEventId = event?.id || null;
   const stripeEventType = event?.type || 'unknown';
   const sessionId = session?.id || 'unknown';
+  
+  // Use the passed stripeClient (already initialized with correct API key based on event.livemode)
+  console.log('🔑 [STRIPE_CLIENT] Using dynamic client for', eventMode, 'mode');
   
   console.log('[TRACE] WEBHOOK_SESSION_DATA', {
     trace_id,
@@ -273,7 +270,7 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
       console.log('⚠️ [STRIPE DATA] line_items not in event, attempting retrieve...');
       
       try {
-        fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+        fullSession = await stripeClient.checkout.sessions.retrieve(session.id, {
           expand: [
             'line_items',
             'line_items.data.price.product',
