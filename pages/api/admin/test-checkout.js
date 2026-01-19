@@ -2,6 +2,8 @@
  * Admin Test Checkout API
  * Creates a Stripe test checkout session for admin testing
  * Requires NextAuth session with admin role
+ * 
+ * Version: 2.0.0 - Force Deploy
  */
 
 import { getServerSession } from 'next-auth/next';
