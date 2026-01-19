@@ -246,8 +246,20 @@ async function handleCheckoutSessionCompleted(session, trace_id, eventMode) {
     console.log('👤 [CUSTOMER] Phone:', customerPhone || '(none)');
     
     // === EXTRACT ADDRESSES ===
-    const shippingAddress = fullSession.shipping_details?.address ?? fullSession.customer_details?.address ?? null;
-    const billingAddress = fullSession.customer_details?.address ?? fullSession.shipping_details?.address ?? null;
+    // Log session shape for debugging
+    const hasCustomerAddress = !!fullSession.customer_details?.address;
+    const hasShippingAddress = !!fullSession.shipping_details?.address;
+    const customerAddrKeys = hasCustomerAddress ? Object.keys(fullSession.customer_details.address) : [];
+    const shippingAddrKeys = hasShippingAddress ? Object.keys(fullSession.shipping_details.address) : [];
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`[STRIPE_SESSION_SHAPE] hasCustomerAddress=${hasCustomerAddress} hasShippingAddress=${hasShippingAddress}`);
+    console.log(`[STRIPE_SESSION_SHAPE] customerAddrKeys=[${customerAddrKeys.join(',')}]`);
+    console.log(`[STRIPE_SESSION_SHAPE] shippingAddrKeys=[${shippingAddrKeys.join(',')}]`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    const billingAddress = fullSession.customer_details?.address ?? null;
+    const shippingAddress = fullSession.shipping_details?.address ?? billingAddress ?? null;
     const shippingName = fullSession.shipping_details?.name || customerName || null;
     
     console.log('🏠 [ADDRESS] Shipping:', shippingAddress ? `${shippingAddress.line1}, ${shippingAddress.city}` : 'MISSING');
@@ -474,7 +486,11 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     
     // Log routing info
     const adminEmail = process.env.ADMIN_ORDER_EMAIL || '(not set)';
-    console.log(`[EMAIL_ROUTE] customer=${orderWithItems.email} admin=${adminEmail}`);
+    const envAdminSet = !!process.env.ADMIN_ORDER_EMAIL;
+    console.log(`[EMAIL_ROUTE] customer=${orderWithItems.email} admin=${adminEmail} envAdminSet=${envAdminSet}`);
+    
+    // Log flags BEFORE send
+    console.log(`[EMAIL_FLAGS_BEFORE] customer_sent_at=${orderWithItems.customerEmailSentAt || 'null'} admin_sent_at=${orderWithItems.adminEmailSentAt || 'null'}`);
     
     // 4. Format items for email
     const emailItems = orderWithItems.items.map(item => ({
@@ -520,14 +536,16 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
         customerEmailSent = true;
         
         // Update customer_email_sent_at
+        const customerSentAt = new Date();
         await prisma.order.update({
           where: { id: orderId },
           data: {
-            customerEmailSentAt: new Date(),
+            customerEmailSentAt: customerSentAt,
             emailStatus: 'sent'
           }
         });
-        console.log('[EMAIL_STATUS_UPDATE_OK] customer_email_sent_at updated');
+        console.log(`[EMAIL_STATUS_UPDATE_OK] customer_email_sent_at updated`);
+        console.log(`[EMAIL_FLAGS_AFTER] customer_sent_at=${customerSentAt.toISOString()} admin_sent_at=${orderWithItems.adminEmailSentAt || 'null'}`);
       } else if (customerEmailResult.preview) {
         console.log(`📋 [EMAIL PREVIEW] Customer email - EMAILS DISABLED`);
       } else {
@@ -542,7 +560,7 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
       }
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     } else {
-      console.log(`[EMAIL_SKIP] Customer email already sent at ${orderWithItems.customerEmailSentAt}`);
+      console.log(`[EMAIL_SKIP_ALREADY_SENT_CUSTOMER] order_id=${orderId.substring(0, 8)} sent_at=${orderWithItems.customerEmailSentAt}`);
     }
     
     // 6. ADMIN EMAIL (with guard + ADMIN_ORDER_EMAIL required)
@@ -580,13 +598,15 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
           adminEmailSent = true;
           
           // Update admin_email_sent_at
+          const adminSentAt = new Date();
           await prisma.order.update({
             where: { id: orderId },
             data: {
-              adminEmailSentAt: new Date()
+              adminEmailSentAt: adminSentAt
             }
           });
-          console.log('[EMAIL_STATUS_UPDATE_OK] admin_email_sent_at updated');
+          console.log(`[EMAIL_STATUS_UPDATE_OK] admin_email_sent_at updated`);
+          console.log(`[EMAIL_FLAGS_AFTER] customer_sent_at=${orderWithItems.customerEmailSentAt || 'null'} admin_sent_at=${adminSentAt.toISOString()}`);
         } else if (adminEmailResult.preview) {
           console.log(`📋 [EMAIL PREVIEW] Admin email - EMAILS DISABLED`);
         } else {
@@ -595,7 +615,7 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       }
     } else {
-      console.log(`[EMAIL_SKIP] Admin email already sent at ${orderWithItems.adminEmailSentAt}`);
+      console.log(`[EMAIL_SKIP_ALREADY_SENT_ADMIN] order_id=${orderId.substring(0, 8)} sent_at=${orderWithItems.adminEmailSentAt}`);
     }
     
   } catch (error) {
@@ -907,6 +927,15 @@ async function syncStripeSessionToAdminOrders(session, extractedData) {
       update: {
         statusPayment: 'PAID',
         stripePaymentIntentId: session.payment_intent,
+        email: customerEmail,
+        shippingName: shippingName,
+        shippingAddress: shippingAddress,
+        billingAddress: billingAddress,
+        shippingRegion: shippingRegion,
+        subtotalNet: subtotalNet,
+        taxAmount: taxAmount,
+        totalGross: totalGross,
+        amountShipping: amountShipping,
         paidAt: new Date(),
         updatedAt: new Date(),
       },
