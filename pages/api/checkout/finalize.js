@@ -50,29 +50,55 @@ export default async function handler(req, res) {
       });
     }
 
-    // 3. Get order_id from metadata
-    const orderId = session.metadata?.order_id;
+    // 3. Get order_id from metadata OR find by stripe_session_id
+    let orderId = session.metadata?.order_id;
+    let order = null;
     
-    if (!orderId) {
-      console.warn('[FINALIZE] No order_id in session metadata');
-      return res.status(400).json({ 
-        error: 'No order_id in session metadata',
-        cleared: false,
-      });
+    if (orderId) {
+      // Primary: Find by order_id in metadata
+      const { data, error: orderError } = await supabase
+        .from('simple_orders')
+        .select('*')
+        .eq('order_id', orderId)
+        .single();
+      
+      if (!orderError && data) {
+        order = data;
+        console.log('[FINALIZE] Found order by order_id:', orderId);
+      }
     }
-
-    // 4. Verify order exists and update status
-    const { data: order, error: orderError } = await supabase
-      .from('simple_orders')
-      .select('*')
-      .eq('id', orderId)
-      .single();
-
-    if (orderError || !order) {
-      console.error('[FINALIZE] Order not found:', orderId);
-      return res.status(404).json({ 
+    
+    // Fallback: Find by stripe_session_id
+    if (!order) {
+      console.log('[FINALIZE] Trying fallback: find by stripe_session_id');
+      const { data, error: sessionError } = await supabase
+        .from('simple_orders')
+        .select('*')
+        .eq('stripe_session_id', session_id)
+        .single();
+      
+      if (!sessionError && data) {
+        order = data;
+        orderId = data.order_id;
+        console.log('[FINALIZE] Found order by stripe_session_id:', orderId);
+      }
+    }
+    
+    if (!order) {
+      console.warn('[FINALIZE] Order not found by any method');
+      // For test checkouts without pre-created order, just return success
+      if (session.metadata?.source === 'admin_test_checkout') {
+        console.log('[FINALIZE] Admin test checkout - returning success without order');
+        return res.status(200).json({
+          ok: true,
+          test_mode: true,
+          cleared: true,
+          message: 'Test payment verified (no order tracking)',
+        });
+      }
+      return res.status(400).json({ 
         error: 'Order not found',
-        order_id: orderId,
+        session_id: session_id,
         cleared: false,
       });
     }
@@ -96,9 +122,10 @@ export default async function handler(req, res) {
         status: 'paid',
         paid_at: new Date().toISOString(),
         stripe_payment_intent_id: session.payment_intent?.id || session.payment_intent,
+        customer_email: session.customer_details?.email || order.customer_email,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', orderId);
+      .eq('id', order.id);
 
     if (updateError) {
       console.error('[FINALIZE] Failed to update order:', {
