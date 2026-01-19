@@ -1,8 +1,16 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import prisma from '../../../lib/prisma';
+import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
 
 export default async function handler(req, res) {
+  // Log SSOT fingerprint
+  logDataSourceFingerprint('admin_shipping_rates', {
+    readTables: req.method === 'GET' ? ['shipping_rates (Prisma)'] : [],
+    writeTables: ['PUT', 'POST', 'DELETE'].includes(req.method) ? ['shipping_rates (Prisma)'] : [],
+    note: 'SSOT: shipping_rates table via Prisma ORM',
+  });
+
   const session = await getServerSession(req, res, authOptions);
 
   if (!session?.user || session.user.role !== 'ADMIN') {

@@ -51,16 +51,69 @@ const SHIPPING_LABELS_I18N = {
   }
 };
 
-// Shipping calculation (from DB rules - TODO: fetch from shipping_rules table)
-function calculateShipping(country = 'DE') {
-  const SHIPPING_RULES = {
-    DE: 490, // €4.90 for Germany
-    AT: 790, // €7.90 for Austria
-    CH: 990, // €9.90 for Switzerland
-    EU: 690, // €6.90 for EU
-    DEFAULT: 990, // €9.90 for rest
-  };
-  return SHIPPING_RULES[country] || SHIPPING_RULES.DEFAULT;
+// ============================================
+// SHIPPING SSOT: Fetch from DB (shipping_rates table)
+// ============================================
+let shippingRatesCache = null;
+let shippingRatesCacheTime = 0;
+const SHIPPING_CACHE_TTL = 60000; // 1 minute
+
+async function getShippingRatesFromDB() {
+  // Return cached if fresh
+  if (shippingRatesCache && Date.now() - shippingRatesCacheTime < SHIPPING_CACHE_TTL) {
+    return shippingRatesCache;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('shipping_rates')
+      .select('country_code, price_net, active')
+      .eq('active', true);
+
+    if (error) throw error;
+
+    // Build lookup map
+    const rates = {};
+    data.forEach(row => {
+      rates[row.country_code] = row.price_net;
+    });
+
+    // Ensure defaults exist
+    if (!rates.DEFAULT && rates.INT) rates.DEFAULT = rates.INT;
+    if (!rates.DEFAULT) rates.DEFAULT = 990; // Ultimate fallback
+
+    shippingRatesCache = rates;
+    shippingRatesCacheTime = Date.now();
+
+    console.log('[SHIPPING SSOT] Loaded rates from DB:', rates);
+    return rates;
+  } catch (err) {
+    console.error('[SHIPPING SSOT] DB error, using fallback:', err.message);
+    // Fallback if DB fails
+    return {
+      DE: 490,
+      EU: 1290,
+      INT: 2490,
+      DEFAULT: 990,
+    };
+  }
+}
+
+// Shipping calculation (SSOT: from shipping_rates table)
+async function calculateShipping(country = 'DE') {
+  const rates = await getShippingRatesFromDB();
+  
+  // Direct match
+  if (rates[country]) return rates[country];
+  
+  // EU mapping (common European countries)
+  const EU_COUNTRIES = ['AT', 'BE', 'BG', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'GR', 
+                        'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PL', 
+                        'PT', 'RO', 'SE', 'SI', 'SK', 'ES'];
+  if (EU_COUNTRIES.includes(country) && rates.EU) return rates.EU;
+  
+  // International fallback
+  return rates.INT || rates.DEFAULT;
 }
 
 // PRODUCTION ONLY: All Stripe checkouts must redirect to production domain
@@ -391,9 +444,10 @@ export default async function handler(req, res) {
 
     console.log('👤 [Checkout] Customer email:', customerEmail || 'none provided');
 
-    // 2.5. Calculate shipping and create comprehensive pricing snapshot
+    // 2.5. Calculate shipping (SSOT: from shipping_rates DB table)
     const shippingCountry = 'DE'; // TODO: Get from user selection or session
-    const shippingCents = calculateShipping(shippingCountry);
+    const shippingCents = await calculateShipping(shippingCountry);
+    console.log(`[SHIPPING SSOT] Country: ${shippingCountry}, Cost: ${shippingCents}¢`);
     
     // Tax will be calculated by Stripe automatic_tax
     // We store 0 here and update after payment with actual amount

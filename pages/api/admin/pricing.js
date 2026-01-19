@@ -1,5 +1,6 @@
 import { getSession } from 'next-auth/react';
 import { createClient } from '@supabase/supabase-js';
+import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -7,6 +8,13 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+  // Log SSOT fingerprint
+  logDataSourceFingerprint('admin_pricing', {
+    readTables: req.method === 'GET' ? ['pricing_configs (Supabase)'] : [],
+    writeTables: req.method === 'PUT' ? ['pricing_configs (Supabase)'] : [],
+    note: 'SSOT: pricing_configs table via Supabase Client',
+  });
+
   const session = await getSession({ req });
 
   console.log('[API][Pricing] Session check:', {
