@@ -102,22 +102,70 @@ export default async function handler(req, res) {
     
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // DYNAMIC STRIPE API KEY SELECTION based on event.livemode
+    // CRITICAL: Test events REQUIRE test key, Live events REQUIRE live key
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     let stripeApiKey;
     let stripeClient;
     
+    // Get both keys
+    const liveKey = process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY;
+    const testKey = process.env.STRIPE_SECRET_KEY_TEST;
+    const defaultKey = process.env.STRIPE_SECRET_KEY;
+    
+    // Detect key types
+    const liveKeyPrefix = liveKey?.substring(0, 7) || '';
+    const testKeyPrefix = testKey?.substring(0, 7) || '';
+    const defaultKeyPrefix = defaultKey?.substring(0, 7) || '';
+    
+    console.log('🔑 [KEY_ENV] STRIPE_SECRET_KEY_LIVE:', liveKeyPrefix || '(not set)');
+    console.log('🔑 [KEY_ENV] STRIPE_SECRET_KEY_TEST:', testKeyPrefix || '(not set)');
+    console.log('🔑 [KEY_ENV] STRIPE_SECRET_KEY:', defaultKeyPrefix || '(not set)');
+    
     if (event.livemode) {
-      // Live event - use live key
-      stripeApiKey = process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY;
-      console.log('🔑 [API_KEY] Event is LIVE - using STRIPE_SECRET_KEY_LIVE');
+      // Live event - MUST use live key
+      stripeApiKey = liveKey;
+      console.log('🔑 [API_KEY] Event is LIVE - using live key');
+      
+      // Verify it's actually a live key
+      if (!stripeApiKey?.startsWith('sk_live')) {
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('❌ [KEY_MISMATCH] Live event but no live key available!');
+        console.error('❌ Selected key prefix:', stripeApiKey?.substring(0, 7));
+        console.error('❌ Set STRIPE_SECRET_KEY_LIVE or STRIPE_SECRET_KEY with sk_live_*');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return res.status(500).json({
+          error: 'KEY_MISMATCH: Live event requires live API key',
+          event_livemode: event.livemode
+        });
+      }
     } else {
-      // Test event - use test key
-      stripeApiKey = process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY;
-      console.log('🔑 [API_KEY] Event is TEST - using STRIPE_SECRET_KEY_TEST');
+      // Test event - MUST use test key
+      // Priority: STRIPE_SECRET_KEY_TEST > STRIPE_SECRET_KEY (if it's test) > error
+      if (testKey?.startsWith('sk_test')) {
+        stripeApiKey = testKey;
+        console.log('🔑 [API_KEY] Event is TEST - using STRIPE_SECRET_KEY_TEST');
+      } else if (defaultKey?.startsWith('sk_test')) {
+        stripeApiKey = defaultKey;
+        console.log('🔑 [API_KEY] Event is TEST - using STRIPE_SECRET_KEY (is test key)');
+      } else {
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.error('❌ [KEY_MISMATCH] Test event but no test key available!');
+        console.error('❌ STRIPE_SECRET_KEY_TEST:', testKeyPrefix || '(not set)');
+        console.error('❌ STRIPE_SECRET_KEY:', defaultKeyPrefix);
+        console.error('❌ Cannot query cs_test_* sessions with sk_live_* key');
+        console.error('❌ Set STRIPE_SECRET_KEY_TEST=sk_test_xxx in Vercel ENV');
+        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        return res.status(500).json({
+          error: 'KEY_MISMATCH: Test event requires test API key. Set STRIPE_SECRET_KEY_TEST in Vercel ENV.',
+          event_livemode: event.livemode,
+          hint: 'Add STRIPE_SECRET_KEY_TEST=sk_test_xxx to your Vercel environment variables'
+        });
+      }
     }
     
     const keyPrefix = stripeApiKey?.substring(0, 7) || 'unknown';
     console.log(`🔑 [API_KEY] Selected key prefix: ${keyPrefix}`);
+    console.log(`✅ [API_KEY] Key mode matches event mode: ${event.livemode ? 'LIVE' : 'TEST'}`);
     
     // Create Stripe client with correct key
     stripeClient = new Stripe(stripeApiKey, {
