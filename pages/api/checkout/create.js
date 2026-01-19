@@ -24,22 +24,14 @@ import { getStripeClient, getCheckoutMode } from '../../../lib/stripe';
 import { calculatePrice, calculateShipping, calculateTax } from '../../../lib/pricing';
 import { validateConfiguratorConfig } from '../../../lib/configValidation';
 
-// Helper: Get origin from request (no hardcoded domains)
+// PRODUCTION ONLY: All Stripe checkouts must redirect to production domain
+// This ensures webhooks, success/cancel URLs work correctly regardless of caller origin
+const PRODUCTION_URL = 'https://unbreak-one.com';
+
 function getOrigin(req) {
-  // 1. Try ENV variable first (most reliable for production)
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL;
-  }
-  
-  // 2. Try origin header
-  if (req.headers.origin) {
-    return req.headers.origin;
-  }
-  
-  // 3. Fallback: construct from host header
-  const host = req.headers.host || 'localhost:3000';
-  const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
-  return `${protocol}://${host}`;
+  // Always return production URL for Stripe checkout redirects
+  // Preview/staging deployments should NOT handle Stripe flows
+  return PRODUCTION_URL;
 }
 
 /**
