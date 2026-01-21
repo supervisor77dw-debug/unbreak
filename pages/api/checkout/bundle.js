@@ -80,7 +80,7 @@ export default async function handler(req, res) {
     // 4. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create(guardCheckoutSession({
       // Payment methods: card, PayPal, SEPA, Klarna
-      payment_method_types: ['card', 'paypal'],
+      payment_method_types: ['card'], // PayPal temporarily disabled (verification pending)
       locale: 'de', // Bundle endpoint defaults to German
       line_items: [
         {
