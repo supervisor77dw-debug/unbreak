@@ -481,10 +481,21 @@ export default function CartPage() {
           paddingTop: '10px',
           borderTop: '2px solid #dee2e6',
           fontSize: '20px',
-          fontWeight: 'bold'
+          fontWeight: 'bold',
+          marginBottom: '10px'
         }}>
           <span>{t('cart.grandTotal')}:</span>
           <span>€{formatPrice(safeTotal)}</span>
+        </div>
+        {/* VAT Notice - Legal Requirement for B2C in DE/EU */}
+        <div style={{ 
+          fontSize: '14px',
+          color: '#666',
+          marginTop: '10px',
+          paddingTop: '10px',
+          borderTop: '1px solid #dee2e6'
+        }}>
+          {t('cart.vatNotice')}
         </div>
       </div>
 
