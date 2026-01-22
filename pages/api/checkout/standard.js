@@ -449,8 +449,7 @@ export default async function handler(req, res) {
     const shippingCents = await calculateShipping(shippingCountry);
     console.log(`[SHIPPING SSOT] Country: ${shippingCountry}, Cost: ${shippingCents}¢`);
     
-    // Tax will be calculated by Stripe automatic_tax
-    // We store 0 here and update after payment with actual amount
+    // Tax handling: Prices are INCLUSIVE (tax handled in backend/invoice, not in Stripe Checkout)
     const taxCents = 0;
     const subtotalCents = totalAmount;
     const grandTotalCents = totalAmount + shippingCents; // Pre-tax total
@@ -767,11 +766,6 @@ export default async function handler(req, res) {
         allowed_countries: ['DE', 'AT', 'CH', 'NL', 'BE', 'LU', 'FR', 'IT', 'ES', 'PT'],
       },
       phone_number_collection: {
-        enabled: true,
-      },
-      
-      // TAX: Automatic tax calculation
-      automatic_tax: {
         enabled: true,
       },
       
