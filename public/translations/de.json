@@ -207,7 +207,9 @@
     "backToHome": "Zurück zur Startseite",
     "impressum": {
       "title": "Impressum",
-      "company": "Unbreak-One<br>eine Marke der<br>Rick's Gastro & Event GmbH",
+      "companyLine1": "Unbreak-One",
+      "companyLine2": "eine Marke der",
+      "companyLine3": "Rick's Gastro & Event GmbH",
       "address": "Grasweg 48<br>24118 Kiel<br>Deutschland",
       "managingDirectors": "Vertreten durch die Geschäftsführer:",
       "director1": "Nina Wilkens (Kauffrau)",
