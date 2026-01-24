@@ -86,49 +86,59 @@ export default function Header() {
         onLoad={() => setScriptsLoaded(true)}
       />
       <Script
-        src="/language-switch.js?v=2.0.4"
+        src="/language-switch.js?v=2.0.5"
         strategy="afterInteractive"
       />
 
-      <header>
-      <nav>
-        <div className="logo">
-          <a href="/index.html" className="logo-link">
-            <img src="/images/logo.png" alt="UNBREAK ONE" className="nav-logo" />
-          </a>
-        </div>
+      {/* Deterministic Header Structure - CSS Grid Layout */}
+      <header className="site-header">
+        <nav className="header-nav">
+          {/* GRID AREA: logo (left) */}
+          <div className="header-logo">
+            <a href="/index.html" className="logo-link">
+              <img src="/images/logo.png" alt="UNBREAK ONE" className="nav-logo" />
+            </a>
+          </div>
 
-        {/* Mobile Burger Menu */}
-        <div 
-          className={`burger-menu ${isMenuOpen ? 'active' : ''}`}
-          id="burgerMenu" 
-          onClick={toggleMenu}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
+          {/* GRID AREA: controls (right, fixed position) */}
+          <div className="header-controls">
+            {/* Language Switch Placeholder - filled by language-switch.js */}
+            <div className="header-lang-slot" id="headerLangSlot"></div>
+            
+            {/* Burger Menu - ALWAYS in this exact DOM position */}
+            <button 
+              className={`header-burger ${isMenuOpen ? 'active' : ''}`}
+              id="burgerMenu" 
+              onClick={toggleMenu}
+              aria-label="Menu"
+              aria-expanded={isMenuOpen}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+          </div>
 
-        {/* Navigation Links */}
-        <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`} id="navLinks">
-          <li><a href="/index.html" data-page="index" data-i18n="nav.home" className={activePage === 'index' ? 'active' : ''}>Start</a></li>
-          <li><a href="/produkt.html" data-page="produkt" data-i18n="nav.product" className={activePage === 'produkt' ? 'active' : ''}>Produkt</a></li>
-          <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
-          <li><a href="/gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition" className={activePage === 'gastro-edition' ? 'active' : ''}>Gastro Edition</a></li>
-          <li><a href="/technik.html" data-page="technik" data-i18n="nav.tech" className={activePage === 'technik' ? 'active' : ''}>Technik</a></li>
-          <li><a href="#" onClick={handleConfiguratorClick} data-page="configurator" data-i18n="nav.configurator" className={activePage === 'configurator' ? 'active' : ''}>Konfigurator</a></li>
-          <li><a href="/shop" data-page="shop" data-i18n="nav.shop" className={activePage === 'shop' ? 'active' : ''}>Shop</a></li>
-          <li><a href="/kontakt.html" data-page="kontakt" data-i18n="nav.contact" className={activePage === 'kontakt' ? 'active' : ''}>Kontakt</a></li>
+          {/* GRID AREA: nav (desktop: inline, mobile: slides in) */}
+          <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`} id="navLinks">
+            <li><a href="/index.html" data-page="index" data-i18n="nav.home" className={activePage === 'index' ? 'active' : ''}>Start</a></li>
+            <li><a href="/produkt.html" data-page="produkt" data-i18n="nav.product" className={activePage === 'produkt' ? 'active' : ''}>Produkt</a></li>
+            <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
+            <li><a href="/gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition" className={activePage === 'gastro-edition' ? 'active' : ''}>Gastro Edition</a></li>
+            <li><a href="/technik.html" data-page="technik" data-i18n="nav.tech" className={activePage === 'technik' ? 'active' : ''}>Technik</a></li>
+            <li><a href="#" onClick={handleConfiguratorClick} data-page="configurator" data-i18n="nav.configurator" className={activePage === 'configurator' ? 'active' : ''}>Konfigurator</a></li>
+            <li><a href="/shop" data-page="shop" data-i18n="nav.shop" className={activePage === 'shop' ? 'active' : ''}>Shop</a></li>
+            <li><a href="/kontakt.html" data-page="kontakt" data-i18n="nav.contact" className={activePage === 'kontakt' ? 'active' : ''}>Kontakt</a></li>
 
-          {/* Mobile Only Legal Links */}
-          <li className="mobile-only"><a href="/impressum.html" data-page="impressum" data-i18n="nav.impressum">Impressum</a></li>
-          <li className="mobile-only"><a href="/datenschutz.html" data-page="datenschutz" data-i18n="nav.privacy">Datenschutz</a></li>
-          <li className="mobile-only"><a href="/agb.html" data-page="agb" data-i18n="nav.terms">AGB</a></li>
+            {/* Mobile Only Legal Links */}
+            <li className="mobile-only"><a href="/impressum.html" data-page="impressum" data-i18n="nav.impressum">Impressum</a></li>
+            <li className="mobile-only"><a href="/datenschutz.html" data-page="datenschutz" data-i18n="nav.privacy">Datenschutz</a></li>
+            <li className="mobile-only"><a href="/agb.html" data-page="agb" data-i18n="nav.terms">AGB</a></li>
 
-          <li><a href="/shop" className="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
-        </ul>
-      </nav>
-    </header>
+            <li><a href="/shop" className="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
+          </ul>
+        </nav>
+      </header>
     </>
   );
 }
