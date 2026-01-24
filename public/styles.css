@@ -46,7 +46,9 @@
 }
 
 /* === RESET & BASE STYLES === */
-* {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -58,6 +60,11 @@ html {
   min-height: 100%;
   /* Dark background covers full scrollable area (no white on scroll) */
   background: linear-gradient(135deg, #14181E 0%, #0A6C74 100%);
+  /* Prevent horizontal overflow */
+  overflow-x: clip;
+  overflow-x: hidden; /* Fallback for browsers without clip support */
+  width: 100%;
+  max-width: 100%;
 }
 
 body {
@@ -70,12 +77,22 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent horizontal overflow */
+  overflow-x: clip;
+  overflow-x: hidden; /* Fallback */
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Next.js app wrapper - ensure full viewport coverage */
 #__next {
   min-height: 100vh;
   background: transparent;
+  /* Prevent horizontal overflow */
+  overflow-x: clip;
+  overflow-x: hidden; /* Fallback */
+  width: 100%;
+  max-width: 100%;
 }
 
 /* === TYPOGRAPHY === */
@@ -116,6 +133,15 @@ a {
   text-decoration: none;
   color: inherit;
   transition: all 0.3s ease;
+}
+
+/* Responsive media - prevent overflow */
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+  height: auto;
 }
 
 /* === 12-COLUMN GRID SYSTEM === */
@@ -323,7 +349,9 @@ nav {
   align-items: center;
   padding: var(--spacing-sm) var(--spacing-md);
   max-width: var(--container-max-width);
+  width: 100%;
   margin: 0 auto;
+  gap: var(--spacing-sm);
 }
 
 .logo {
@@ -332,6 +360,8 @@ nav {
   font-weight: 700;
   color: var(--color-petrol-deep);
   letter-spacing: 0.05em;
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .nav-links {
@@ -339,6 +369,9 @@ nav {
   gap: var(--spacing-md);
   list-style: none;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Überschrieben durch header .nav-links a im Header-Bereich */
