@@ -4,9 +4,13 @@
 
 /* Language Switch Container */
 .language-switch {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  width: fit-content;
+  max-width: max-content;
+  flex: 0 0 auto;
+  white-space: nowrap;
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(10, 108, 116, 0.2);
@@ -26,6 +30,7 @@
 .language-switch button {
   position: relative;
   z-index: 2;
+  flex: 0 0 auto;
   padding: 6px 14px;
   font-family: var(--font-heading);
   font-size: 13px;
@@ -74,6 +79,7 @@
 
 /* Separator */
 .language-switch .separator {
+  flex: 0 0 auto;
   width: 1px;
   height: 18px;
   background: rgba(10, 108, 116, 0.2);
