@@ -5,6 +5,7 @@ import '../public/readability-optimization.css';
 import '../public/i18n.css';
 import '../public/premium.css';
 import '../public/header-deterministic.css';
+import '../public/no-horizontal-scroll.css';
 import { SessionProvider } from 'next-auth/react';
 import { useEffect } from 'react';
 import DebugBanner from '../components/DebugBanner';
