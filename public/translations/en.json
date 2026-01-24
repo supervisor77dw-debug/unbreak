@@ -378,6 +378,14 @@
       "buy": "Buy Now"
     },
     "loading": "Loading products...",
+    "configurableSection": {
+      "title": "Customizable",
+      "badge": "Customizable",
+      "ctaButton": "Customize now",
+      "priceUnavailable": "Price unavailable",
+      "customManufacturing": "Custom manufacturing",
+      "defaultDescription": "Design your custom product according to your preferences."
+    },
     "configurableProducts": {
       "glassHolder": {
         "name": "Custom Glass Holder",

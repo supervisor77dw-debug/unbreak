@@ -48,10 +48,11 @@ const translateBadge = (badgeLabel, currentLang = 'de') => {
   return badgeMap[badgeLabel] || badgeLabel; // Fallback to original
 };
 
-export default function Shop({ initialProducts }) {
+export default function Shop({ initialProducts, configurableProducts }) {
   // Use vanilla i18n system (window.i18n) - synced with language-switch.js
   const [currentLang, setCurrentLang] = useState('de');
   const [products, setProducts] = useState(initialProducts || []);
+  const [configurables, setConfigurables] = useState(configurableProducts || []);
   const [loading, setLoading] = useState(!initialProducts);
   const [error, setError] = useState(null);
   const [cartCount, setCartCount] = useState(0);
@@ -727,78 +728,89 @@ export default function Shop({ initialProducts }) {
         {/* Configurable Products Section */}
         <section className="products-section">
           <div className="container">
-            <h2 className="section-title">{currentLang === 'de' ? 'Individuell konfigurierbar' : 'Customizable Products'}</h2>
+            <h2 className="section-title">{t('shop.configurableSection.title')}</h2>
             
             <div className="shop-grid">
-              {/* Glass Holder Configurable */}
-              <div className="product-card">
-                <div className="product-badge">{currentLang === 'de' ? 'Konfigurierbar' : 'Customizable'}</div>
+              {configurables.map((product, index) => {
+                const isGlass = product.sku === 'UNBREAK-GLAS-01';
+                const configuratorType = isGlass ? 'glass' : 'bottle';
                 
-                <div className="product-image-placeholder">
-                  <div className="placeholder-icon">🍷</div>
-                </div>
+                return (
+                  <div key={product.id} className="product-card">
+                    <div className="product-badge">{t('shop.configurableSection.badge')}</div>
+                    
+                    {/* Product Image - same logic as regular products */}
+                    {(() => {
+                      const hasServerCrop = product.shop_image_path || product.shopImagePath;
+                      
+                      if (hasServerCrop) {
+                        const shopPath = product.shop_image_path || product.shopImagePath;
+                        const supabase = getSupabasePublic();
+                        const { data } = supabase.storage.from('product-images').getPublicUrl(shopPath);
+                        
+                        if (data?.publicUrl) {
+                          const cacheVersion = product.image_updated_at || product.imageUpdatedAt || Date.now();
+                          const cacheBustedUrl = `${data.publicUrl}?v=${cacheVersion}`;
+                          
+                          return (
+                            <ProductImage
+                              key={`configurable-${product.id}-${shopPath}`}
+                              src={cacheBustedUrl}
+                              alt={product.name}
+                              crop={{ scale: 1.0, x: 0, y: 0 }}
+                              variant="card"
+                            />
+                          );
+                        }
+                      }
+                      
+                      // Fallback: Placeholder with icon
+                      return (
+                        <div className="product-image-placeholder">
+                          <div className="placeholder-icon">{isGlass ? '🍷' : '🍾'}</div>
+                        </div>
+                      );
+                    })()}
 
-                <div className="product-content">
-                  <h3 className="product-title">{t('shop.configurableProducts.glassHolder.name')}</h3>
-                  <p className="product-description">
-                    {t('shop.configurableProducts.glassHolder.description')}
-                  </p>
+                    <div className="product-content">
+                      <h3 className="product-title">{product.name}</h3>
+                      <p className="product-description">
+                        {currentLang === 'de' 
+                          ? (product.short_description_de || product.description || t('shop.configurableSection.defaultDescription'))
+                          : (product.short_description_en || product.description_en || t('shop.configurableSection.defaultDescription'))
+                        }
+                      </p>
 
-                  <div className="product-price-section">
-                    <div className="price-wrapper">
-                      <span className="product-price">
-                        {currentLang === 'de' ? 'ab 49,90 €' : 'from €49.90'}
-                      </span>
-                      <span className="price-label">{currentLang === 'de' ? 'inkl. MwSt.' : 'incl. VAT'}</span>
-                    </div>
-                    <div className="product-trust">
-                      <span className="trust-icon-small">⚙️</span> {currentLang === 'de' ? 'Individuelle Fertigung' : 'Custom manufacturing'}
+                      <div className="product-price-section">
+                        <div className="price-wrapper">
+                          {product.base_price_cents ? (
+                            <>
+                              <span className="product-price">
+                                {formatPrice(product.base_price_cents, currentLang)}
+                              </span>
+                              <span className="price-label">{currentLang === 'de' ? 'inkl. MwSt.' : 'incl. VAT'}</span>
+                            </>
+                          ) : (
+                            <span className="product-price product-price-unavailable">
+                              {t('shop.configurableSection.priceUnavailable')}
+                            </span>
+                          )}
+                        </div>
+                        <div className="product-trust">
+                          <span className="trust-icon-small">⚙️</span> {t('shop.configurableSection.customManufacturing')}
+                        </div>
+                      </div>
+
+                      <a
+                        href={`/konfigurator?type=${configuratorType}`}
+                        className="btn-add-to-cart"
+                      >
+                        {t('shop.configurableSection.ctaButton')}
+                      </a>
                     </div>
                   </div>
-
-                  <a
-                    href="/konfigurator?product=glass"
-                    className="btn-add-to-cart"
-                  >
-                    {t('shop.configurableProducts.glassHolder.button')}
-                  </a>
-                </div>
-              </div>
-
-              {/* Bottle Holder Configurable */}
-              <div className="product-card">
-                <div className="product-badge">{currentLang === 'de' ? 'Konfigurierbar' : 'Customizable'}</div>
-                
-                <div className="product-image-placeholder">
-                  <div className="placeholder-icon">🍾</div>
-                </div>
-
-                <div className="product-content">
-                  <h3 className="product-title">{t('shop.configurableProducts.bottleHolder.name')}</h3>
-                  <p className="product-description">
-                    {t('shop.configurableProducts.bottleHolder.description')}
-                  </p>
-
-                  <div className="product-price-section">
-                    <div className="price-wrapper">
-                      <span className="product-price">
-                        {currentLang === 'de' ? 'ab 54,90 €' : 'from €54.90'}
-                      </span>
-                      <span className="price-label">{currentLang === 'de' ? 'inkl. MwSt.' : 'incl. VAT'}</span>
-                    </div>
-                    <div className="product-trust">
-                      <span className="trust-icon-small">⚙️</span> {currentLang === 'de' ? 'Individuelle Fertigung' : 'Custom manufacturing'}
-                    </div>
-                  </div>
-
-                  <a
-                    href="/konfigurator?product=bottle"
-                    className="btn-add-to-cart"
-                  >
-                    {t('shop.configurableProducts.bottleHolder.button')}
-                  </a>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -1259,6 +1271,7 @@ export async function getServerSideProps({ res }) {
   try {
     const supabase = getSupabaseAdmin();
 
+    // Fetch regular products
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -1267,12 +1280,30 @@ export async function getServerSideProps({ res }) {
 
     if (error) {
       logger.error('[SSR] Error fetching products:', error);
-      return { props: { initialProducts: [] } };
+      return { props: { initialProducts: [], configurableProducts: [] } };
     }
+
+    // Fetch configurable products by SKU (SINGLE SOURCE OF TRUTH)
+    const CONFIGURABLE_SKUS = ['UNBREAK-GLAS-01', 'UNBREAK-FLASCHE-01'];
+    const { data: configurableData, error: configurableError } = await supabase
+      .from('products')
+      .select('*')
+      .in('sku', CONFIGURABLE_SKUS)
+      .eq('active', true);
+
+    if (configurableError) {
+      logger.error('[SSR] Error fetching configurable products:', configurableError);
+    }
+
+    // Sort configurable products to match SKU order (glass first, bottle second)
+    const sortedConfigurables = CONFIGURABLE_SKUS
+      .map(sku => configurableData?.find(p => p.sku === sku))
+      .filter(Boolean);
 
     // LOG: What DB returned (verify fresh data)
     logger.log('📦 [SHOP SSR] Products loaded from DB:', {
       count: data?.length || 0,
+      configurableCount: sortedConfigurables?.length || 0,
       products: data?.map(p => ({
         id: p.id,
         sku: p.sku,
@@ -1280,15 +1311,22 @@ export async function getServerSideProps({ res }) {
         thumb_path: p.thumb_path,
         image_updated_at: p.image_updated_at,
       })),
+      configurables: sortedConfigurables?.map(p => ({
+        id: p.id,
+        sku: p.sku,
+        name: p.name,
+        base_price_cents: p.base_price_cents,
+      })),
     });
 
     return {
       props: {
         initialProducts: data || [],
+        configurableProducts: sortedConfigurables || [],
       },
     };
   } catch (err) {
     logger.error('[SSR] Unexpected error:', err);
-    return { props: { initialProducts: [] } };
+    return { props: { initialProducts: [], configurableProducts: [] } };
   }
 }

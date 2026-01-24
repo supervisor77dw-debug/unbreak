@@ -380,6 +380,14 @@
       "buy": "Jetzt kaufen"
     },
     "loading": "Produkte werden geladen...",
+    "configurableSection": {
+      "title": "Individuell konfigurierbar",
+      "badge": "Konfigurierbar",
+      "ctaButton": "Jetzt individuell gestalten",
+      "priceUnavailable": "Preis nicht verfügbar",
+      "customManufacturing": "Individuelle Fertigung",
+      "defaultDescription": "Gestalte dein individuelles Produkt nach deinen Wünschen."
+    },
     "configurableProducts": {
       "glassHolder": {
         "name": "Individueller Glashalter",
