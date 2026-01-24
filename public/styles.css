@@ -226,6 +226,7 @@ header,
               inset 0 1px 0 rgba(255, 255, 255, 0.04);
   z-index: 1000;
   padding: 0 16px;  /* KRITISCH: Logo nicht in Ecke quetschen */
+  position: relative;  /* Stacking context für Controls */
   transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
               backdrop-filter 0.4s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
@@ -257,13 +258,14 @@ header.scrolled {
   white-space: nowrap;
 }
 
-/* Zone 1: Brand/Logo - Links, nie shrink */
+/* Zone 1: Brand/Logo - Links, nie shrink, KEIN auto-margin */
 .header-brand {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   padding: 8px 0;  /* Optischer Abstand oben/unten */
   white-space: nowrap;
+  margin: 0;  /* KRITISCH: Kein auto-margin (verhindert Drift) */
 }
 
 .header-brand .nav-logo {
@@ -285,6 +287,8 @@ header.scrolled {
   min-width: 0;  /* KRITISCH: ohne dies kann Nav nicht shrink */
   overflow: visible;
   white-space: nowrap;
+  display: flex;
+  justify-content: center;
 }
 
 /* Zone 3: Controls - Rechts, nie shrink/wrap */
@@ -295,6 +299,8 @@ header.scrolled {
   gap: 10px;
   white-space: nowrap;
   min-width: 0;
+  position: relative;  /* Stacking context */
+  z-index: 50;  /* Über Video/Hero */
 }
 
 /* Language-Switch Mount Point - muss inline sein */
@@ -411,7 +417,7 @@ main {
 .nav-links,
 .header-nav-list {
   display: flex;
-  gap: clamp(10px, 2vw, 20px);  /* responsive spacing */
+  gap: clamp(10px, 1.6vw, 16px);  /* NICHT zu weit (max 16px) */
   list-style: none;
   align-items: center;
   flex-wrap: nowrap;
@@ -524,6 +530,12 @@ main {
   box-shadow: 0 2px 6px rgba(10, 108, 116, 0.25);
   white-space: nowrap;
   flex: 0 0 auto;
+  display: inline-flex;  /* Base style */
+}
+
+/* CTA Standard: hidden (sicher) */
+.header-cta {
+  display: none;  /* Default versteckt */
 }
 
 .btn-nav:hover,
@@ -532,44 +544,44 @@ main {
   box-shadow: 0 3px 10px rgba(10, 108, 116, 0.35);
 }
 
-/* === RESPONSIVE HEADER STRATEGY === */
+/* === RESPONSIVE HEADER STRATEGY (3 Stufen) === */
 
-/* Desktop Breite (>=1201px): Alles sichtbar */
-@media (min-width: 1201px) {
-  .header-cta {
-    display: inline-block;
+/* Burger-Mode: < 1200px */
+@media (max-width: 1199px) {
+  .header-nav {
+    display: none;  /* Nav versteckt */
   }
   .header-burger {
-    display: none;
+    display: inline-flex;  /* Burger sichtbar */
   }
-  .header-nav {
-    display: block;
+  .header-cta {
+    display: none;  /* CTA versteckt */
   }
 }
 
-/* Medium Breite (901-1200px): CTA verstecken (Platzmangel) */
-@media (min-width: 901px) and (max-width: 1200px) {
-  .header-cta {
-    display: none !important;  /* CTA zuerst weg */
+/* Desktop ohne CTA: 1200px - 1349px */
+@media (min-width: 1200px) and (max-width: 1349px) {
+  .header-nav {
+    display: flex;  /* Nav sichtbar */
   }
   .header-burger {
-    display: none;
+    display: none;  /* Burger versteckt */
   }
-  .header-nav {
-    display: block;
+  .header-cta {
+    display: none;  /* CTA noch versteckt (kein Platz) */
   }
 }
 
-/* Mobile (<= 900px): Burger aktiv, Nav hidden */
-@media (max-width: 900px) {
-  .header-cta {
-    display: none !important;
+/* Desktop mit CTA: >= 1350px */
+@media (min-width: 1350px) {
+  .header-nav {
+    display: flex;  /* Nav sichtbar */
   }
   .header-burger {
-    display: inline-flex !important;
+    display: none;  /* Burger versteckt */
   }
-  .header-nav {
-    display: none;
+  .header-cta {
+    display: inline-flex;  /* CTA sichtbar (genug Platz) */
   }
 }
 
