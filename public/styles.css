@@ -1402,6 +1402,79 @@ footer a:hover {
   #einsatzbereiche .grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* === EXTRA SMALL DEVICES (≤480px) - Maximale Kompaktheit === */
+@media (max-width: 480px) {
+  /* Header: Reduziertes Padding */
+  .header-inner {
+    padding: 6px 12px;
+    gap: 8px;
+  }
+
+  /* Logo: Kleinere Größe */
+  .header-brand .nav-logo {
+    max-height: 32px;
+  }
+
+  /* Language Switch: Kompakter */
+  .language-switch {
+    gap: 4px;
+  }
+
+  .language-switch button {
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: 28px;
+  }
+
+  /* Burger Menu: Bessere Touchziele */
+  .burger-menu {
+    padding: 12px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .burger-menu span {
+    width: 24px;
+    height: 2px;
+  }
+
+  /* Mobile Nav: Größere Touchziele */
+  .nav-links a {
+    font-size: 15px;
+    padding: 14px 0;
+  }
+}
+
+/* === VERY SMALL DEVICES (≤360px) - Extreme Kompaktheit === */
+@media (max-width: 360px) {
+  .header-inner {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+
+  .header-brand .nav-logo {
+    max-height: 28px;
+  }
+
+  .language-switch button {
+    padding: 3px 6px;
+    font-size: 11px;
+    min-width: 24px;
+  }
+
+  .burger-menu span {
+    width: 20px;
+  }
+}
+
+/* Continue with Mobile Cards... */
+@media (max-width: 899px) {
+  /* Cards Mobile */
+  #einsatzbereiche .grid {
+    grid-template-columns: 1fr;
+  }
 
   .shopping-bar {
     flex-direction: column;
