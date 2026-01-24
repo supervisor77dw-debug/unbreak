@@ -104,44 +104,32 @@
 
   /**
    * Inject language switch into navbar
-   * PRIORITY: #headerLangSlot (deterministic header) > header nav > nav-links parent
    */
   function injectLanguageSwitch() {
+    // Find nav-links element
+    const navLinks = document.querySelector('.nav-links');
+    
+    if (!navLinks) {
+      console.warn('Navigation links not found, retrying...');
+      setTimeout(injectLanguageSwitch, 100);
+      return;
+    }
+
     // Check if already injected
     if (document.querySelector('.language-switch')) {
       return;
     }
 
-    // PRIORITY 1: Deterministic header slot (new structure)
-    const langSlot = document.getElementById('headerLangSlot');
-    if (langSlot) {
-      const languageSwitch = createLanguageSwitch();
-      langSlot.appendChild(languageSwitch);
-      console.info('[LANG_SWITCH] Injected into #headerLangSlot');
-      return;
-    }
-
-    // PRIORITY 2: Legacy header nav
-    const headerNav = document.querySelector('header nav');
-    if (headerNav) {
-      const languageSwitch = createLanguageSwitch();
-      headerNav.appendChild(languageSwitch);
-      console.info('[LANG_SWITCH] Injected into header nav (legacy)');
-      return;
-    }
-
-    // PRIORITY 3: Find nav-links as fallback
-    const navLinks = document.querySelector('.nav-links');
-    if (navLinks) {
-      const languageSwitch = createLanguageSwitch();
+    // Create and inject switch
+    const languageSwitch = createLanguageSwitch();
+    
+    // Insert after nav-links (on desktop) or in header (on mobile)
+    const header = document.querySelector('header nav');
+    if (header) {
+      header.appendChild(languageSwitch);
+    } else {
       navLinks.parentNode.appendChild(languageSwitch);
-      console.info('[LANG_SWITCH] Injected into nav-links parent (fallback)');
-      return;
     }
-
-    // Retry if nothing found yet
-    console.warn('[LANG_SWITCH] No injection target found, retrying...');
-    setTimeout(injectLanguageSwitch, 100);
   }
 
   /**

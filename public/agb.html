@@ -13,21 +13,37 @@
     <link rel="stylesheet" href="legal-styles.css">
     <link rel="stylesheet" href="readability-optimization.css">
     <link rel="stylesheet" href="i18n.css">
-    <link rel="stylesheet" href="header-deterministic.css">
-    <link rel="stylesheet" href="no-horizontal-scroll.css">
 
     <!-- i18n System -->
     <script src="i18n.js"></script>
     <script src="language-switch.js" defer></script>
-    
-    <!-- Header Component -->
-    <script src="components/header.js" defer></script>
 </head>
 
 <body>
 
-    <!-- Header / Navigation - Single Source of Truth -->
-    <div id="header-container"></div>
+    <!-- Header / Navigation -->
+    <header>
+        <nav>
+            <div class="logo">
+                <a href="index.html" class="logo-link">
+                    <img src="images/logo.png" alt="UNBREAK ONE" class="nav-logo">
+                </a>
+            </div>
+
+            <!-- Mobile Burger Menu -->
+            <div class="burger-menu" id="burgerMenu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html" data-i18n="nav.home">Zurück zur Startseite</a></li>
+                <li><a href="impressum.html" data-i18n="nav.impressum">Impressum</a></li>
+                <li><a href="datenschutz.html" data-i18n="nav.privacy">Datenschutz</a></li>
+            </ul>
+        </nav>
+    </header>
 
     <section class="legal-content">
         <div class="container">

@@ -2,100 +2,23 @@
    RESPONSIVE HEADER FIXES
    Fixes für kleine Bildschirme (320px-480px)
    Verhindert Overlays und verbessert Navigation
-   SINGLE SOURCE OF TRUTH für Mobile Header Layout
    =================================== */
-
-/* === MOBILE HEADER LAYOUT (768px and below) === */
-@media (max-width: 768px) {
-  /* Nav: Flex container mit Logo links, Rest rechts */
-  header nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    gap: var(--spacing-xs);
-    flex-wrap: nowrap;
-    position: relative;
-  }
-
-  /* Logo: Links fixiert, kein shrink */
-  header nav .logo {
-    flex-shrink: 0;
-    order: 1;
-  }
-
-  /* Right Container: Language Switch + Burger Menu */
-  /* Diese werden via CSS order angeordnet */
-  
-  /* Language Switch: Vor dem Burger */
-  header nav .language-switch {
-    order: 2;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-    z-index: 10001;
-    position: relative;
-  }
-
-  /* Burger Menu: Ganz rechts, nach Language Switch */
-  /* Support both old .burger-menu and new .header-burger classes */
-  header nav .burger-menu,
-  .header-burger {
-    order: 3;
-    display: flex !important;
-    flex-direction: column;
-    gap: 5px;
-    cursor: pointer;
-    padding: var(--spacing-sm);
-    width: 44px;
-    height: 44px;
-    justify-content: center;
-    align-items: center;
-    flex-shrink: 0;
-    z-index: 10001;
-    position: relative;
-    pointer-events: auto !important;
-    background: transparent;
-    border: none;
-  }
-
-  /* Nav-Links: Versteckt auf Mobile (werden durch burger aktiviert) */
-  header nav .nav-links {
-    order: 99;
-    position: fixed;
-    top: var(--header-height, 72px);
-    left: -100%;
-    width: 100%;
-    height: calc(100vh - var(--header-height, 72px));
-    transition: left 0.3s ease;
-    z-index: 9999;
-  }
-
-  header nav .nav-links.active {
-    left: 0;
-  }
-
-  /* Klare z-index Hierarchie */
-  header {
-    z-index: 10000;
-  }
-}
 
 /* Extra Small Devices (320px - 480px) - Language Switch & Cart Issues */
 @media (max-width: 480px) {
   /* Header: Reduziere Padding für mehr Platz */
-  header nav {
+  nav {
     padding: var(--spacing-xs) var(--spacing-sm);
     gap: var(--spacing-xs);
   }
 
   /* Language Switch: Kompaktere Darstellung */
-  .language-switch {
+  .lang-switch {
     gap: 4px;
+    margin-left: 0;
   }
 
-  .language-switch button {
+  .lang-switch button {
     padding: 4px 8px !important;
     font-size: 13px !important;
     min-width: 32px !important;
@@ -111,11 +34,78 @@
     font-size: 15px;
     padding: var(--spacing-sm) 0;
   }
+
+  /* Burger Menu: Größere Touchziele */
+  .burger-menu {
+    padding: var(--spacing-sm);
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+  }
+
+  /* Prevent Overlays: Klare z-index Hierarchie */
+  header {
+    z-index: 10000;
+  }
+
+  .nav-links {
+    z-index: 9999;
+  }
+
+  .lang-switch, .language-switch {
+    z-index: 10001;
+    position: relative;
+    pointer-events: auto !important;
+  }
+
+  /* Burger Menu: Above language switch */
+  .burger-menu {
+    z-index: 10001;
+    position: relative;
+  }
+
+  /* Fix: Flexbox Layout für Header Nav */
+  nav {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: visible;
+  }
+
+  /* Logo: Flex-Shrink verhindern */
+  .logo {
+    flex-shrink: 0;
+  }
+
+  /* Fix: Language Switcher in Hamburger Menu verschieben (optional) */
+  /* Wenn Language Switcher zu viel Platz braucht, kann er ins Mobile Menu */
+  .nav-links .mobile-lang-switch {
+    display: block;
+    width: 100%;
+    margin-top: var(--spacing-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: var(--spacing-md);
+  }
+
+  .nav-links .mobile-lang-switch button {
+    width: 48%;
+    margin-right: 4%;
+  }
+
+  .nav-links .mobile-lang-switch button:last-child {
+    margin-right: 0;
+  }
+
+  /* Desktop Language Switcher: Ausblenden auf sehr kleinen Screens */
+  @media (max-width: 360px) {
+    #langSwitch:not(.mobile-lang-switch) {
+      display: none;
+    }
+  }
 }
 
 /* Very Small Devices (320px - 360px) - Extreme Kompaktheit */
 @media (max-width: 360px) {
-  header nav {
+  nav {
     padding: 6px 12px;
   }
 
@@ -123,22 +113,21 @@
     max-height: 28px;
   }
 
-  .language-switch button {
+  .lang-switch button {
     padding: 3px 6px !important;
     font-size: 12px !important;
     min-width: 28px !important;
   }
 
   /* Noch kompakterer Burger */
-  .burger-menu span,
-  .header-burger span {
+  .burger-menu span {
     width: 22px;
     height: 2px;
   }
 }
 
 /* Fix für Language Switch Pointer Events */
-.language-switch button {
+.lang-switch button {
   pointer-events: auto !important;
   cursor: pointer;
   touch-action: manipulation;
@@ -147,25 +136,11 @@
 }
 
 /* Prevent accidental clicks on overlay elements */
-.language-switch {
+.lang-switch {
   pointer-events: auto !important;
 }
 
 /* Fix: Ensure buttons are clickable even if parent has pointer-events: none */
-.language-switch * {
+.lang-switch * {
   pointer-events: auto !important;
-}
-
-/* CRITICAL: Burger Menu must ALWAYS be clickable */
-.burger-menu,
-.header-burger {
-  pointer-events: auto !important;
-  cursor: pointer !important;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.burger-menu span,
-.header-burger span {
-  pointer-events: none; /* Let clicks pass through to button */
 }
