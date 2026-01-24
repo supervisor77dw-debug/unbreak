@@ -258,12 +258,13 @@ header.scrolled {
   white-space: nowrap;
 }
 
-/* Zone 1: Brand/Logo - Links, nie shrink, KEIN auto-margin */
+/* Zone 1: Brand/Logo - Links, EIGENE ZONE mit GUTTER */
 .header-brand {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   padding: 8px 0;  /* Optischer Abstand oben/unten */
+  padding-right: 24px;  /* KRITISCH: GUTTER - Nav startet danach */
   white-space: nowrap;
   margin: 0;  /* KRITISCH: Kein auto-margin (verhindert Drift) */
 }
@@ -417,7 +418,7 @@ main {
 .nav-links,
 .header-nav-list {
   display: flex;
-  gap: clamp(10px, 1.6vw, 16px);  /* NICHT zu weit (max 16px) */
+  gap: clamp(10px, 1.4vw, 16px);  /* NICHT zu weit (max 16px) */
   list-style: none;
   align-items: center;
   flex-wrap: nowrap;
@@ -530,12 +531,11 @@ main {
   box-shadow: 0 2px 6px rgba(10, 108, 116, 0.25);
   white-space: nowrap;
   flex: 0 0 auto;
-  display: inline-flex;  /* Base style */
 }
 
-/* CTA Standard: hidden (sicher) */
+/* CTA DEFAULT: VERSTECKT (wird nur per Media Query eingeschaltet) */
 .header-cta {
-  display: none;  /* Default versteckt */
+  display: none !important;  /* Hart versteckt */
 }
 
 .btn-nav:hover,
@@ -544,44 +544,44 @@ main {
   box-shadow: 0 3px 10px rgba(10, 108, 116, 0.35);
 }
 
-/* === RESPONSIVE HEADER STRATEGY (3 Stufen) === */
+/* === RESPONSIVE HEADER STRATEGY (3 Stufen HART) === */
 
 /* Burger-Mode: < 1200px */
 @media (max-width: 1199px) {
   .header-nav {
-    display: none;  /* Nav versteckt */
+    display: none !important;  /* Nav versteckt */
   }
   .header-burger {
-    display: inline-flex;  /* Burger sichtbar */
+    display: inline-flex !important;  /* Burger sichtbar */
   }
   .header-cta {
-    display: none;  /* CTA versteckt */
+    display: none !important;  /* CTA versteckt */
   }
 }
 
 /* Desktop ohne CTA: 1200px - 1349px */
 @media (min-width: 1200px) and (max-width: 1349px) {
   .header-nav {
-    display: flex;  /* Nav sichtbar */
+    display: flex !important;  /* Nav sichtbar */
   }
   .header-burger {
-    display: none;  /* Burger versteckt */
+    display: none !important;  /* Burger versteckt */
   }
   .header-cta {
-    display: none;  /* CTA noch versteckt (kein Platz) */
+    display: none !important;  /* CTA VERSTECKT (nicht genug Platz) */
   }
 }
 
 /* Desktop mit CTA: >= 1350px */
 @media (min-width: 1350px) {
   .header-nav {
-    display: flex;  /* Nav sichtbar */
+    display: flex !important;  /* Nav sichtbar */
   }
   .header-burger {
-    display: none;  /* Burger versteckt */
+    display: none !important;  /* Burger versteckt */
   }
   .header-cta {
-    display: inline-flex;  /* CTA sichtbar (genug Platz) */
+    display: inline-flex !important;  /* CTA SICHTBAR (erst ab 1350px!) */
   }
 }
 
