@@ -1,0 +1,145 @@
+/* ===================================
+   RESPONSIVE HEADER FIXES
+   Fixes für kleine Bildschirme (320px-480px)
+   Verhindert Overlays und verbessert Navigation
+   =================================== */
+
+/* Extra Small Devices (320px - 480px) - Language Switch & Cart Issues */
+@media (max-width: 480px) {
+  /* Header: Reduziere Padding für mehr Platz */
+  nav {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    gap: var(--spacing-xs);
+  }
+
+  /* Language Switch: Kompaktere Darstellung */
+  .lang-switch {
+    gap: 4px;
+    margin-left: 0;
+  }
+
+  .lang-switch button {
+    padding: 4px 8px !important;
+    font-size: 13px !important;
+    min-width: 32px !important;
+  }
+
+  /* Logo: Kleinere Größe auf very small screens */
+  header .nav-logo {
+    max-height: 32px;
+  }
+
+  /* Nav-Links: Bessere Touchziele für mobiles Menü */
+  .nav-links a {
+    font-size: 15px;
+    padding: var(--spacing-sm) 0;
+  }
+
+  /* Burger Menu: Größere Touchziele */
+  .burger-menu {
+    padding: var(--spacing-sm);
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+  }
+
+  /* Prevent Overlays: Klare z-index Hierarchie */
+  header {
+    z-index: 10000;
+  }
+
+  .nav-links {
+    z-index: 9999;
+  }
+
+  .lang-switch {
+    z-index: 10001; /* Über allem anderen */
+    position: relative;
+  }
+
+  /* Shopping Cart Icon: Verhindern von Overlap */
+  .cart-icon {
+    z-index: 10001;
+    position: relative;
+  }
+
+  /* Fix: Flexbox Layout für Header Nav */
+  nav {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: visible;
+  }
+
+  /* Logo: Flex-Shrink verhindern */
+  .logo {
+    flex-shrink: 0;
+  }
+
+  /* Fix: Language Switcher in Hamburger Menu verschieben (optional) */
+  /* Wenn Language Switcher zu viel Platz braucht, kann er ins Mobile Menu */
+  .nav-links .mobile-lang-switch {
+    display: block;
+    width: 100%;
+    margin-top: var(--spacing-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: var(--spacing-md);
+  }
+
+  .nav-links .mobile-lang-switch button {
+    width: 48%;
+    margin-right: 4%;
+  }
+
+  .nav-links .mobile-lang-switch button:last-child {
+    margin-right: 0;
+  }
+
+  /* Desktop Language Switcher: Ausblenden auf sehr kleinen Screens */
+  @media (max-width: 360px) {
+    #langSwitch:not(.mobile-lang-switch) {
+      display: none;
+    }
+  }
+}
+
+/* Very Small Devices (320px - 360px) - Extreme Kompaktheit */
+@media (max-width: 360px) {
+  nav {
+    padding: 6px 12px;
+  }
+
+  header .nav-logo {
+    max-height: 28px;
+  }
+
+  .lang-switch button {
+    padding: 3px 6px !important;
+    font-size: 12px !important;
+    min-width: 28px !important;
+  }
+
+  /* Noch kompakterer Burger */
+  .burger-menu span {
+    width: 22px;
+    height: 2px;
+  }
+}
+
+/* Fix für Language Switch Pointer Events */
+.lang-switch button {
+  pointer-events: auto !important;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent accidental clicks on overlay elements */
+.lang-switch {
+  pointer-events: auto !important;
+}
+
+/* Fix: Ensure buttons are clickable even if parent has pointer-events: none */
+.lang-switch * {
+  pointer-events: auto !important;
+}

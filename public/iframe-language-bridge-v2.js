@@ -29,6 +29,15 @@
 (function() {
   'use strict';
 
+  // Production-safe logging (only on localhost)
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const logger = {
+    log: (...args) => { if (isLocalhost) console.log(...args); },
+    info: (...args) => { if (isLocalhost) console.info(...args); },
+    warn: (...args) => { if (isLocalhost) console.warn(...args); },
+    error: (...args) => { console.error(...args); }, // Always log errors
+  };
+
   // Wait for dependencies
   if (!window.UnbreakBridge || !window.UnbreakBridgeDebug) {
     console.error('[BRIDGE] Dependencies not loaded! Requires: bridge-schema.js, bridge-debug.js');

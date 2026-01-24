@@ -10,6 +10,7 @@ import { buildConfiguratorUrl, getCurrentLanguage, createConfiguratorClickHandle
 import { debugLog, debugWarn, errorLog } from '../lib/debugUtils';
 import { showUserMessage } from '../lib/uiMessages';
 import { getSiteUrl } from '../lib/urls';
+import { logger } from '../lib/logger';
 
 // CRITICAL: Force dynamic rendering - no ISR, no static, no edge cache
 export const dynamic = 'force-dynamic';
@@ -144,13 +145,13 @@ export default function Shop({ initialProducts }) {
     };
     
     if (!cfgParam) {
-      if (debugMode) console.log('[CFG2CART][0] No cfg parameter in URL');
+      if (debugMode) logger.log('[CFG2CART][0] No cfg parameter in URL');
       return;
     }
     
     // CRITICAL: Only run when cart is ready
     if (!cart) {
-      if (debugMode) console.log('[CFG2CART][WAIT] Cart not ready yet');
+      if (debugMode) logger.log('[CFG2CART][WAIT] Cart not ready yet');
       return;
     }
     
@@ -182,24 +183,24 @@ export default function Shop({ initialProducts }) {
         const onceKey = `cfg2cart_done_${cfgHash}`;
         
         if (sessionStorage.getItem(onceKey)) {
-          if (debugMode) console.log('[CFG2CART][SKIP] Already processed this config (hash:', cfgHash, ')');
+          if (debugMode) logger.log('[CFG2CART][SKIP] Already processed this config (hash:', cfgHash, ')');
           window.history.replaceState({}, '', '/shop');
           return;
         }
         
-        if (debugMode) console.log('[CFG2CART][HASH] Config hash:', cfgHash);
+        if (debugMode) logger.log('[CFG2CART][HASH] Config hash:', cfgHash);
         
         // Step 1: cfg parameter found
-        if (debugMode) console.log('[CFG2CART][1] cfg found', cfgParam.length);
+        if (debugMode) logger.log('[CFG2CART][1] cfg found', cfgParam.length);
         debugState.step1_cfgFound = true;
         
         // Step 2: Already decoded above for hashing
-        if (debugMode) console.log('[CFG2CART][2] decoded json', jsonString.slice(0, 200));
+        if (debugMode) logger.log('[CFG2CART][2] decoded json', jsonString.slice(0, 200));
         debugState.step2_decoded = jsonString.slice(0, 100);
         
         // Step 3: Parse JSON
         const item = JSON.parse(jsonString);
-        if (debugMode) console.log('[CFG2CART][3] parsed item', item);
+        if (debugMode) logger.log('[CFG2CART][3] parsed item', item);
         debugState.step3_parsed = item;
       
       // ========================================
@@ -214,7 +215,7 @@ export default function Shop({ initialProducts }) {
         'de';
       
       if (debugMode) {
-        console.log('[CFG2CART][LANG] Language resolution:', {
+        logger.log('[CFG2CART][LANG] Language resolution:', {
           'item.lang': item.lang || 'not set',
           'item.meta.lang': item.meta?.lang || 'not set',
           'URL lang': new URLSearchParams(window.location.search).get('lang') || 'not set',
@@ -225,13 +226,13 @@ export default function Shop({ initialProducts }) {
       
       // Set site language to match configurator item (CRITICAL for Cart/Checkout/Email)
       if (effectiveLang !== currentLang && window.i18n?.setLanguage) {
-        console.log(`[CFG2CART][LANG] Setting site language to: ${effectiveLang}`);
+        logger.log(`[CFG2CART][LANG] Setting site language to: ${effectiveLang}`);
         window.i18n.setLanguage(effectiveLang);
         setCurrentLang(effectiveLang);
       }
       
       // Step 4: Cart ready check
-      if (debugMode) console.log('[CFG2CART][4] cart ready?', !!cart, cart?.items?.length);
+      if (debugMode) logger.log('[CFG2CART][4] cart ready?', !!cart, cart?.items?.length);
       
       // ========================================
       // NORMALIZE CONFIGURATOR ITEM (PRICE FIX)
@@ -267,7 +268,7 @@ export default function Shop({ initialProducts }) {
       };
       
       if (debugMode) {
-        console.log('[CFG2CART][ITEM] Normalized cart item:', {
+        logger.log('[CFG2CART][ITEM] Normalized cart item:', {
           product_id: cartItem.product_id,
           sku: cartItem.sku,
           price_cents: cartItem.price_cents,
@@ -277,20 +278,20 @@ export default function Shop({ initialProducts }) {
       }
       
       // Step 5: Add to cart
-      if (debugMode) console.log('[CFG2CART][5] addItem called');
+      if (debugMode) logger.log('[CFG2CART][5] addItem called');
       debugState.step5_addItemCalled = true;
       
       const success = cart.addItem(cartItem);
       
       // Step 6: Cart after add
-      if (debugMode) console.log('[CFG2CART][6] cart after add', cart.items.length, cart.items);
+      if (debugMode) logger.log('[CFG2CART][6] cart after add', cart.items.length, cart.items);
       debugState.step6_cartAfter = {
         itemCount: cart.items.length,
         success: success,
       };
       
         if (success) {
-          if (debugMode) console.log('[CFG2CART][SUCCESS] ✅ Item added to cart');
+          if (debugMode) logger.log('[CFG2CART][SUCCESS] ✅ Item added to cart');
           setCartCount(cart.getItemCount());
           showUserMessage('addToCart', 'success', currentLang, 1500);
           
@@ -298,10 +299,10 @@ export default function Shop({ initialProducts }) {
           sessionStorage.setItem(onceKey, Date.now().toString());
           
           // BUG #2 FIX: Clean up URL after successful import
-          if (debugMode) console.log('[CFG2CART][CLEANUP] Removing cfg from URL');
+          if (debugMode) logger.log('[CFG2CART][CLEANUP] Removing cfg from URL');
           window.history.replaceState({}, '', '/shop');
         } else {
-          console.error('[CFG2CART][FAILED] ❌ cart.addItem returned false');
+          logger.error('[CFG2CART][FAILED] ❌ cart.addItem returned false');
           debugState.error = 'addItem returned false - validation failed';
           showUserMessage('cartAddFailed', 'error', currentLang);
           
@@ -310,7 +311,7 @@ export default function Shop({ initialProducts }) {
         }
         
       } catch (err) {
-        console.error('[CFG2CART][ERROR]', err);
+        logger.error('[CFG2CART][ERROR]', err);
         debugState.error = err.message;
         errorLog('shop:configurator', 'Failed to process cfg parameter:', err);
         
@@ -608,7 +609,7 @@ export default function Shop({ initialProducts }) {
                         ? JSON.parse(product.highlights) 
                         : product.highlights;
                     } catch (e) {
-                      console.warn('Failed to parse highlights:', e);
+                      logger.warn('Failed to parse highlights:', e);
                     }
                   }
                   
@@ -634,7 +635,7 @@ export default function Shop({ initialProducts }) {
                             const cacheBustedUrl = `${data.publicUrl}?v=${cacheVersion}`;
                             
                             // 🔍 DEBUG LOG: What Shop renders (SOURCE OF TRUTH)
-                            console.log('🛒 [SHOP RENDER]', {
+                            logger.log('🛒 [SHOP RENDER]', {
                               productId: product.id,
                               sku: product.sku,
                               shop_image_path: product.shop_image_path,
@@ -659,7 +660,7 @@ export default function Shop({ initialProducts }) {
                         }
                         
                         // FEHLT shop_image_path → Platzhalter (KEIN TRANSFORM FALLBACK!)
-                        console.error('❌ [SHOP RENDER] Missing shop_image_path!', {
+                        logger.error('❌ [SHOP RENDER] Missing shop_image_path!', {
                           productId: product.id,
                           sku: product.sku,
                           shop_image_path: product.shop_image_path || 'MISSING',
@@ -1237,12 +1238,12 @@ export async function getServerSideProps({ res }) {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('[SSR] Error fetching products:', error);
+      logger.error('[SSR] Error fetching products:', error);
       return { props: { initialProducts: [] } };
     }
 
     // LOG: What DB returned (verify fresh data)
-    console.log('📦 [SHOP SSR] Products loaded from DB:', {
+    logger.log('📦 [SHOP SSR] Products loaded from DB:', {
       count: data?.length || 0,
       products: data?.map(p => ({
         id: p.id,
@@ -1259,7 +1260,7 @@ export async function getServerSideProps({ res }) {
       },
     };
   } catch (err) {
-    console.error('[SSR] Unexpected error:', err);
+    logger.error('[SSR] Unexpected error:', err);
     return { props: { initialProducts: [] } };
   }
 }

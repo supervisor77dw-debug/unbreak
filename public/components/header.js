@@ -3,6 +3,13 @@
  * Automatische Active-State-Erkennung basierend auf aktueller URL
  */
 
+// Load clientLogger if not already loaded
+if (typeof window.clientLogger === 'undefined') {
+  const script = document.createElement('script');
+  script.src = '/lib/clientLogger.js';
+  document.head.appendChild(script);
+}
+
 function getHeaderHTML() {
   return `
   <header>
@@ -79,9 +86,9 @@ function initHeader() {
     setActiveMenuItem();
     
     // Burger Menu Event (wird von script.js gehandhabt, aber wir stellen sicher dass IDs existieren)
-    console.log('✓ Header loaded');
+    if (window.clientLogger) window.clientLogger.log('✓ Header loaded');
   } else {
-    console.error('❌ Header container (#header-container) not found');
+    if (window.clientLogger) window.clientLogger.error('❌ Header container (#header-container) not found');
   }
 }
 
