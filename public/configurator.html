@@ -18,6 +18,9 @@
     <script src="/i18n.js?v=2.0.5"></script>
     <script src="/language-switch.js?v=2.0.5" defer></script>
     
+    <!-- Shared Header Component -->
+    <script src="/components/header.js?v=2.0.5" defer></script>
+    
     <!-- Configurator Page: Direct text replacement (no i18n keys) -->
     <script>
     (function() {
@@ -99,33 +102,8 @@
 </head>
 
 <body>
-    <!-- Header / Navigation -->
-    <header>
-        <nav>
-            <div class="logo">
-                <a href="index.html" class="logo-link">
-                    <img src="images/logo.png" alt="UNBREAK ONE" class="nav-logo">
-                </a>
-            </div>
-
-            <!-- Mobile Burger Menu -->
-            <div class="burger-menu" id="burgerMenu">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-
-            <ul class="nav-links" id="navLinks">
-                <li><a href="index.html#product" data-i18n="nav.product">Produkt</a></li>
-                <li><a href="index.html#use-cases" data-i18n="nav.useCases">Einsatzbereiche</a></li>
-                <li><a href="index.html#tech" data-i18n="nav.tech">Technologie</a></li>
-                <li><a href="index.html#how-to" data-i18n="nav.howTo">Anwendung</a></li>
-                <li><a href="configurator.html" class="active" data-i18n="nav.configurator">Konfigurator</a></li>
-                <li><a href="/shop" data-i18n="nav.shop">Shop</a></li>
-                <li><a href="index.html#contact" data-i18n="nav.contact">Kontakt</a></li>
-            </ul>
-        </nav>
-    </header>
+    <!-- Header / Navigation - Dynamisch injiziert von header.js -->
+    <div id="header-container"></div>
 
     <!-- Configurator Section -->
     <section class="configurator-section" id="configurator">
