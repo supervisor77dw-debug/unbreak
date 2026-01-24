@@ -55,6 +55,9 @@
 html {
   scroll-behavior: smooth;
   font-size: 16px;
+  min-height: 100%;
+  /* Dark background covers full scrollable area (no white on scroll) */
+  background: linear-gradient(135deg, #14181E 0%, #0A6C74 100%);
 }
 
 body {
@@ -62,9 +65,17 @@ body {
   font-size: 18px;
   line-height: 1.7;
   color: var(--color-graphit);
-  background-color: var(--color-white);
+  /* Inherit dark background from html (prevents white canvas on scroll) */
+  background: transparent;
+  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Next.js app wrapper - ensure full viewport coverage */
+#__next {
+  min-height: 100vh;
+  background: transparent;
 }
 
 /* === TYPOGRAPHY === */
