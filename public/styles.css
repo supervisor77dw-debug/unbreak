@@ -242,23 +242,22 @@ header.scrolled {
               inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-/* Header-Inner: Flex-Container (Brand | Nav | Controls) */
+/* Header-Inner: Grid-Container (Brand | Nav | Controls) */
 .header-inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: nowrap;
-  gap: var(--spacing-md);
-  width: 100%;
+  column-gap: 16px;
   max-width: var(--container-max-width);
   margin: 0 auto;
   padding: var(--spacing-sm) var(--spacing-md);
+  white-space: nowrap;
 }
 
-/* Zone 1: Brand/Logo - Links, nie shrink */
+/* Zone 1: Brand/Logo - Links (Grid Column 1) */
 .header-brand {
-  flex: 0 0 auto;
-  min-width: 0;
+  grid-column: 1;
+  justify-self: start;
   white-space: nowrap;
 }
 
@@ -275,23 +274,22 @@ header.scrolled {
   opacity: 0.85;
 }
 
-/* Zone 2: Nav - Mittig, nimmt alle freie Breite */
+/* Zone 2: Nav - Mittig (Grid Column 2) */
 .header-nav {
-  flex: 1 1 auto;
+  grid-column: 2;
+  justify-self: center;
   min-width: 0;
-  display: flex;
-  justify-content: center;
   overflow: visible;
   white-space: nowrap;
 }
 
-/* Zone 3: Controls - Rechts, nie shrink */
+/* Zone 3: Controls - Rechts (Grid Column 3) */
 .header-controls {
-  flex: 0 0 auto;
+  grid-column: 3;
+  justify-self: end;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-left: auto;
   white-space: nowrap;
 }
 
@@ -402,7 +400,7 @@ main {
 /* === NAV-LINKS & BURGER === */
 .nav-links {
   display: flex;
-  gap: var(--spacing-md);
+  gap: clamp(10px, 2vw, 26px);
   list-style: none;
   align-items: center;
   flex-wrap: nowrap;

@@ -8,40 +8,61 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [currentLang, setCurrentLang] = useState('de');
+  const [ctaHidden, setCtaHidden] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   
   const headerInnerRef = useRef(null);
   const brandRef = useRef(null);
   const navRef = useRef(null);
-  const headerInnerRef = useRef(null);
-  const brandRef = useRef(null);
-  const navRef = useRef(null);
   const controlsRef = useRef(null);
+  const ctaRef = useRef(null);
 
-  // ResizeObserver: Automatische Collapse-Detection
+  // Progressive Collapse: 3 Stufen (Normal → CTA hidden → Burger)
   useLayoutEffect(() => {
     const checkSpace = () => {
       if (!headerInnerRef.current || !brandRef.current || !navRef.current || !controlsRef.current) {
         return;
       }
 
-      const availableWidth = headerInnerRef.current.clientWidth;
-      const brandWidth = brandRef.current.scrollWidth;
-      const navWidth = navRef.current.scrollWidth;
-      const controlsWidth = controlsRef.current.scrollWidth;
-      const gaps = 32; // 2x gap 16px
-      const neededWidth = brandWidth + navWidth + controlsWidth + gaps;
+      const available = headerInnerRef.current.clientWidth;
+      const neededBrand = brandRef.current.scrollWidth;
+      const neededNav = navRef.current.scrollWidth;
+      const neededControls = controlsRef.current.scrollWidth;
+      const gaps = 32; // 2x column-gap 16px
 
-      // Wenn nicht genug Platz: Collapse aktivieren (Burger)
-      const shouldCollapse = neededWidth > availableWidth;
-      
+      // Stufe 1: Mit CTA
+      let neededTotal = neededBrand + neededNav + neededControls + gaps;
+
+      if (neededTotal > available && !ctaHidden) {
+        // Stufe 2: CTA verstecken und neu messen
+        setCtaHidden(true);
+        return;
+      }
+
+      if (ctaHidden) {
+        // Neu messen ohne CTA
+        const neededCTA = ctaRef.current ? ctaRef.current.scrollWidth : 0;
+        neededTotal = neededBrand + neededNav + (neededControls - neededCTA) + gaps;
+      }
+
+      // Stufe 3: Wenn es immer noch nicht passt → Burger aktivieren
+      const shouldCollapse = neededTotal > available;
+
       if (shouldCollapse !== isCollapsed) {
         setIsCollapsed(shouldCollapse);
       }
+
+      // Wenn genug Platz: CTA wieder anzeigen
+      if (ctaHidden && !shouldCollapse) {
+        const neededWithCTA = neededBrand + neededNav + neededControls + gaps;
+        if (neededWithCTA <= available) {
+          setCtaHidden(false);
+        }
+      }
     };
 
-    // Initiale Messung
-    checkSpace();
+    // Initiale Messung nach kurzer Verzögerung (DOM muss gerendert sein)
+    const timer = setTimeout(checkSpace, 50);
 
     // ResizeObserver für dynamische Anpassung
     const resizeObserver = new ResizeObserver(() => {
@@ -53,9 +74,10 @@ export default function Header() {
     }
 
     return () => {
+      clearTimeout(timer);
       resizeObserver.disconnect();
     };
-  }, [isCollapsed]);
+  }, [ctaHidden, isCollapsed]);
 
   // Close menu on route change
   useEffect(() => {
@@ -172,7 +194,9 @@ export default function Header() {
 
           {/* Controls Rechts: CTA + Language + Burger */}
           <div className="header-controls" ref={controlsRef}>
-            {!isCollapsed && <a href="/shop" className="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a>}
+            {!ctaHidden && !isCollapsed && (
+              <a href="/shop" className="btn btn-nav" data-i18n="nav.buyNow" ref={ctaRef}>Jetzt kaufen</a>
+            )}
             {/* Language-Switch wird hier von language-switch.js injiziert */}
             <div 
               className={`burger-menu ${isMenuOpen ? 'active' : ''} ${isCollapsed ? 'visible' : ''}`}

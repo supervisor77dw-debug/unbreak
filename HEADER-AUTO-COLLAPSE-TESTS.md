@@ -1,28 +1,51 @@
-# Header Auto-Collapse Tests
+# Header Progressive Collapse Tests
 
-## Implementierung
+## Implementierung v2 (Grid + 3-Stufen Collapse)
 
 ### Änderungen
 
 **Dateien geändert:**
-- `components/Header.jsx` - ResizeObserver + Auto-Collapse Logik (React)
-- `public/components/header.js` - ResizeObserver + Auto-Collapse Logik (Vanilla JS)
-- `public/styles.css` - CSS-Regeln korrigiert
+- `components/Header.jsx` - Progressive Collapse (React): Normal → CTA hidden → Burger
+- `public/components/header.js` - Progressive Collapse (Vanilla JS): Normal → CTA hidden → Burger
+- `public/styles.css` - Grid Layout + clamp spacing
 
-**CSS-Regeln entfernt/geändert (verursachten Wrap/Abschneiden):**
-- ❌ `.nav-links { overflow: hidden }` → ✅ `overflow: visible`
-- ❌ `.nav-links { justify-content: flex-start }` → ✅ `justify-content: center`
-- ✅ `.header-inner { justify-content: space-between }` hinzugefügt
-- ✅ `.header-controls { margin-left: auto }` hinzugefügt
-- ✅ `white-space: nowrap` überall (brand, nav, controls)
-- ✅ `.burger-menu.visible` für auto-collapse
-- ✅ `.header-nav.collapsed` für ausgeblendete Nav
+**CSS-Regeln entfernt (verursachten Wrap/Abschneiden):**
+- ❌ `.header-inner { display: flex; justify-content: space-between; width: 100% }` 
+- ✅ `.header-inner { display: grid; grid-template-columns: auto 1fr auto; }`
+- ❌ `.nav-links { gap: var(--spacing-md) }` (fest 24px, zu groß)
+- ✅ `.nav-links { gap: clamp(10px, 2vw, 26px) }` (responsive spacing)
+- ❌ Flex-Layout (Brand/Nav/Controls als flex-children)
+- ✅ Grid-Layout (Brand col-1, Nav col-2 center, Controls col-3 end)
 
-**Messlogik (ResizeObserver):**
-- Sitzt in: `components/Header.jsx` (useLayoutEffect Hook)
+**Architektur-Änderung:**
+- Flex → Grid (3 Spalten: auto 1fr auto)
+- `.header-brand { grid-column: 1; justify-self: start; }`
+- `.header-nav { grid-column: 2; justify-self: center; }`
+- `.header-controls { grid-column: 3; justify-self: end; }`
+- Alle Zonen: `white-space: nowrap` (nie umbrechen)
+
+**Messlogik (Progressive Collapse - 3 Stufen):**
+- Sitzt in: `components/Header.jsx` (useLayoutEffect Hook, ctaHidden + isCollapsed states)
 - Sitzt in: `public/components/header.js` (setupAutoCollapse Funktion)
-- Berechnung: `neededWidth = brand.scrollWidth + nav.scrollWidth + controls.scrollWidth + gaps`
-- Wenn `neededWidth > availableWidth`: Auto-Collapse aktiviert (Burger visible, Nav hidden, CTA optional hidden)
+
+**Berechnung:**
+```javascript
+const available = headerInner.clientWidth;
+const neededBrand = brand.scrollWidth;
+const neededNav = nav.scrollWidth;
+const neededControls = controls.scrollWidth;
+const gaps = 32; // 2x column-gap 16px
+let neededTotal = neededBrand + neededNav + neededControls + gaps;
+
+// Stufe 1: Normal (alles sichtbar)
+if (neededTotal <= available) → Normal
+
+// Stufe 2: CTA verstecken
+if (neededTotal > available && !ctaHidden) → setCtaHidden(true)
+
+// Stufe 3: Burger aktivieren
+if (neededTotal > available && ctaHidden) → setIsCollapsed(true)
+```
 
 ## Test-Protokoll
 

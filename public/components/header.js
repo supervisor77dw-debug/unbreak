@@ -11,7 +11,8 @@ if (typeof window.clientLogger === 'undefined') {
   document.head.appendChild(script);
 }
 
-// State für Auto-Collapse
+// State für Progressive Collapse
+let ctaHidden = false;
 let isCollapsed = false;
 let resizeObserver = null;
 
@@ -88,7 +89,7 @@ function setActiveMenuItem() {
 }
 
 /**
- * ResizeObserver: Misst verfügbaren Platz und schaltet automatisch auf Burger um
+ * Progressive Collapse: 3 Stufen (Normal → CTA hidden → Burger)
  */
 function setupAutoCollapse() {
   const headerInner = document.querySelector('.header-inner');
@@ -103,33 +104,57 @@ function setupAutoCollapse() {
   }
 
   function checkSpace() {
-    const availableWidth = headerInner.clientWidth;
-    const brandWidth = headerBrand.scrollWidth;
-    const navWidth = headerNav.scrollWidth;
-    const controlsWidth = headerControls.scrollWidth;
-    const gaps = 32; // 2x gap 16px
-    const neededWidth = brandWidth + navWidth + controlsWidth + gaps;
+    const available = headerInner.clientWidth;
+    const neededBrand = headerBrand.scrollWidth;
+    const neededNav = headerNav.scrollWidth;
+    const neededControls = headerControls.scrollWidth;
+    const gaps = 32; // 2x column-gap 16px
 
-    const shouldCollapse = neededWidth > availableWidth;
+    // Stufe 1: Mit CTA
+    let neededTotal = neededBrand + neededNav + neededControls + gaps;
+
+    if (neededTotal > available && !ctaHidden) {
+      // Stufe 2: CTA verstecken
+      ctaHidden = true;
+      if (ctaButton) ctaButton.style.display = 'none';
+      // Neu messen nach DOM-Update
+      setTimeout(checkSpace, 0);
+      return;
+    }
+
+    if (ctaHidden && ctaButton) {
+      // Neu messen ohne CTA
+      const neededCTA = ctaButton.scrollWidth;
+      neededTotal = neededBrand + neededNav + (neededControls - neededCTA) + gaps;
+    }
+
+    // Stufe 3: Burger aktivieren wenn immer noch nicht genug Platz
+    const shouldCollapse = neededTotal > available;
 
     if (shouldCollapse !== isCollapsed) {
       isCollapsed = shouldCollapse;
       
-      // Toggle CSS classes
       if (isCollapsed) {
         headerNav.classList.add('collapsed');
         burgerMenu.classList.add('visible');
-        if (ctaButton) ctaButton.style.display = 'none';
       } else {
         headerNav.classList.remove('collapsed');
         burgerMenu.classList.remove('visible');
-        if (ctaButton) ctaButton.style.display = 'inline-block';
+      }
+    }
+
+    // Wenn genug Platz: CTA wieder anzeigen
+    if (ctaHidden && !isCollapsed && ctaButton) {
+      const neededWithCTA = neededBrand + neededNav + neededControls + gaps;
+      if (neededWithCTA <= available) {
+        ctaHidden = false;
+        ctaButton.style.display = 'inline-block';
       }
     }
   }
 
-  // Initiale Messung
-  checkSpace();
+  // Initiale Messung nach kurzer Verzögerung
+  setTimeout(checkSpace, 50);
 
   // ResizeObserver
   if (resizeObserver) {
