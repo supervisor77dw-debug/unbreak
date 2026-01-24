@@ -192,15 +192,22 @@ export default function Header() {
           </ul>
           </nav>
 
-          {/* Controls Rechts: CTA + Language + Burger */}
+          {/* Controls Rechts: CTA + Language + Burger - ALLE IMMER IM DOM */}
           <div className="header-controls" ref={controlsRef}>
-            {!ctaHidden && !isCollapsed && (
-              <a href="/shop" className="btn btn-nav header-cta" data-i18n="nav.buyNow" ref={ctaRef}>Jetzt kaufen</a>
-            )}
+            {/* CTA - immer im DOM, hide per CSS */}
+            <a 
+              href="/shop" 
+              className="btn btn-nav header-cta" 
+              data-i18n="nav.buyNow" 
+              ref={ctaRef}
+            >
+              Jetzt kaufen
+            </a>
             {/* Mount-Point für Language-Switch (wird von language-switch.js injiziert) */}
             <div id="language-switch-mount"></div>
-            <div 
-              className={`burger-menu header-burger ${isMenuOpen ? 'active' : ''} ${isCollapsed ? 'visible' : ''}`}
+            {/* Burger - immer im DOM, hide per CSS */}
+            <button 
+              className={`burger-menu header-burger ${isMenuOpen ? 'active' : ''}`}
               id="burgerMenu" 
               onClick={toggleMenu}
               aria-label="Menu"
@@ -209,7 +216,7 @@ export default function Header() {
               <span></span>
               <span></span>
               <span></span>
-            </div>
+            </button>
           </div>
         </div>
       </header>

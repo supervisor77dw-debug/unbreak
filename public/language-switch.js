@@ -103,9 +103,38 @@
   }
 
   /**
-   * Inject language switch into navbar
+   * Wait for mount point (retry strategy for SSR/CSR timing)
+   * @param {string} selector - DOM selector
+   * @param {number} timeoutMs - Max wait time in ms
+   * @returns {Promise<Element|null>}
    */
-  function injectLanguageSwitch() {
+  function waitForMount(selector, timeoutMs = 2000) {
+    return new Promise((resolve) => {
+      const start = Date.now();
+      
+      function tick() {
+        const el = document.querySelector(selector);
+        if (el) {
+          console.info(`[LANG_SWITCH] Found ${selector} after ${Date.now() - start}ms`);
+          return resolve(el);
+        }
+        
+        if (Date.now() - start > timeoutMs) {
+          console.error(`[LANG_SWITCH] TIMEOUT: ${selector} not found after ${timeoutMs}ms`);
+          return resolve(null);
+        }
+        
+        requestAnimationFrame(tick);
+      }
+      
+      tick();
+    });
+  }
+
+  /**
+   * Inject language switch into navbar (with retry logic)
+   */
+  async function injectLanguageSwitch() {
     // Check if already injected
     if (document.querySelector('.language-switch')) {
       console.info('[LANG_SWITCH] Already injected');
@@ -113,19 +142,26 @@
     }
 
     // HARD REQUIREMENT: Mount only in #language-switch-mount
-    const mountPoint = document.querySelector('#language-switch-mount');
+    // Use retry logic to handle SSR/CSR timing issues
+    const mountPoint = await waitForMount('#language-switch-mount', 2000);
     
     if (!mountPoint) {
-      console.error('[LANG_SWITCH] CRITICAL: #language-switch-mount not found. Aborting injection.');
+      console.error('[LANG_SWITCH] CRITICAL: #language-switch-mount not found after 2000ms. Aborting injection.');
       console.error('[LANG_SWITCH] Header structure may be incomplete or timing issue (SSR/CSR).');
       console.error('[LANG_SWITCH] Ensure .header-controls contains <div id="language-switch-mount"></div>');
       return; // NO FALLBACK - fail explicitly
     }
 
+    // Double-check .header-controls exists (parent container)
+    const headerControls = document.querySelector('.header-controls');
+    if (!headerControls) {
+      console.warn('[LANG_SWITCH] WARNING: .header-controls not found. DOM structure may be incomplete.');
+    }
+
     // Create and inject switch
     const languageSwitch = createLanguageSwitch();
     mountPoint.appendChild(languageSwitch);
-    console.info('[LANG_SWITCH] Successfully mounted in #language-switch-mount');
+    console.info('[LANG_SWITCH] ✓ Successfully mounted in #language-switch-mount');
   }
 
   /**
