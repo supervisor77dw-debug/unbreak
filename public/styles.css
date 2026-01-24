@@ -256,18 +256,20 @@ header.scrolled {
   margin: 0 auto;
   padding: var(--spacing-sm) 0;  /* Kein horizontales Padding (kommt von header) */
   white-space: nowrap;
+  overflow: visible;  /* KRITISCH: Logo-Drift Prevention */
 }
 
-/* LEFT BLOCK: Brand + Nav (springen zusammen ab 1350px) */
+/* LEFT BLOCK: Brand + Nav (Logo IMMER links, nur Nav zentriert/links switcht) */
 .header-left {
   display: flex;
   align-items: center;
   flex: 1 1 auto;  /* Kann wachsen */
   min-width: 0;  /* Kritisch für Shrinking */
   gap: 24px;  /* Gutter zwischen Brand und Nav */
+  justify-content: flex-start;  /* KRITISCH: Logo IMMER links (nie center/auto) */
 }
 
-/* Zone 1: Brand/Logo - Links */
+/* Zone 1: Brand/Logo - Links (NIE wandern/driften) */
 .header-brand {
   flex: 0 0 auto;
   display: flex;
@@ -275,6 +277,7 @@ header.scrolled {
   padding: 8px 0;  /* Optischer Abstand oben/unten */
   white-space: nowrap;
   margin: 0;  /* KRITISCH: Kein auto-margin (verhindert Drift) */
+  min-width: 0;  /* Zusätzliche Sicherheit */
 }
 
 .header-brand .nav-logo {
@@ -290,14 +293,14 @@ header.scrolled {
   opacity: 0.85;
 }
 
-/* Zone 2: Nav - Default zentriert (1200-1349), ab 1350 links */
+/* Zone 2: Nav - Default zentriert (1200-1449), ab 1450 links */
 .header-nav {
   flex: 1 1 auto;
   min-width: 0;  /* KRITISCH: ohne dies kann Nav nicht shrink */
   overflow: visible;
   white-space: nowrap;
   display: flex;
-  justify-content: center;  /* Default: zentriert (wird bei >=1350 auf flex-start) */
+  justify-content: center;  /* Default: zentriert (wird bei >=1450 auf flex-start) */
 }
 
 /* Nav-Liste */
@@ -306,7 +309,7 @@ header.scrolled {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: clamp(10px, 1.2vw, 16px);  /* Kompakter Gap */
+  gap: clamp(8px, 1vw, 14px);  /* Kompakter Gap (Kollision-Prevention) */
   list-style: none;
   margin: 0;
   padding: 0;
@@ -325,7 +328,7 @@ header.scrolled {
   align-items: center;
   gap: 10px;
   white-space: nowrap;
-  min-width: 0;
+  min-width: 0;  /* KRITISCH */
   position: relative;  /* Stacking context */
   z-index: 50;  /* Über Video/Hero */
 }
@@ -539,12 +542,17 @@ main {
 .header-cta {
   background-color: var(--color-petrol-deep);
   color: var(--color-white);
-  padding: 10px 16px;  /* Kleiner */
-  font-size: 14px;  /* Kleiner */
+  padding: 8px 12px;  /* KOMPAKT (Kollision-Prevention) */
+  font-size: 13px;  /* KOMPAKT */
+  line-height: 1;
   box-shadow: 0 2px 6px rgba(10, 108, 116, 0.25);
   white-space: nowrap;
   flex: 0 0 auto;
   border-radius: 999px;  /* Pill-Shape */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;  /* Für Icon */
 }
 
 /* CTA DEFAULT: VERSTECKT (wird nur per Media Query eingeschaltet) */
@@ -575,31 +583,33 @@ main {
   }
 }
 
-/* 1200-1349px: Desktop ohne CTA, Nav ZENTRIERT */
-@media (min-width: 1200px) and (max-width: 1349px) {
+/* 1200-1449px: Desktop ohne CTA, Nav ZENTRIERT */
+@media (min-width: 1200px) and (max-width: 1449px) {
   .header-nav {
     display: flex !important;  /* Nav sichtbar */
     justify-content: center !important;  /* Nav ZENTRIERT */
   }
   .header-cta {
-    display: none !important;  /* CTA VERSTECKT */
+    display: none !important;  /* CTA VERSTECKT (bis 1449px) */
   }
   .header-burger {
     display: none !important;  /* Burger versteckt */
   }
 }
 
-/* >=1350px: Desktop mit CTA, Nav LINKS (mit Brand) */
-@media (min-width: 1350px) {
+/* >=1450px: Desktop mit CTA KOMPAKT, Nav LINKS (mit Brand) */
+@media (min-width: 1450px) {
   .header-nav {
     display: flex !important;  /* Nav sichtbar */
     justify-content: flex-start !important;  /* Nav LINKS (Brand+Nav zusammen) */
   }
   .header-cta {
-    display: inline-flex !important;  /* CTA SICHTBAR */
-    padding: 10px 16px;  /* Kleiner */
-    font-size: 14px;  /* Kleiner */
+    display: inline-flex !important;  /* CTA SICHTBAR (erst ab 1450px!) */
+    padding: 8px 12px;  /* KOMPAKT */
+    font-size: 13px;  /* KOMPAKT */
+    line-height: 1;
     border-radius: 999px;
+    gap: 4px;  /* Icon spacing */
   }
   .header-burger {
     display: none !important;  /* Burger versteckt */

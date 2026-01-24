@@ -41,7 +41,12 @@ function getHeaderHTML() {
 
       <!-- RIGHT BLOCK: Controls (CTA + Language + Burger) -->
       <div class="header-controls">
-        <a href="/shop" class="btn btn-nav header-cta" data-i18n="nav.buyNow">Jetzt kaufen</a>
+        <a href="/shop" class="btn btn-nav header-cta" data-i18n="nav.buyNow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+            <path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12z" fill="currentColor"/>
+          </svg>
+          <span>Kaufen</span>
+        </a>
         <!-- Mount-Point für Language-Switch (wird von language-switch.js injiziert) -->
         <div id="language-switch-mount"></div>
         <button class="burger-menu header-burger" id="burgerMenu" type="button" aria-label="Menu" aria-expanded="false">
