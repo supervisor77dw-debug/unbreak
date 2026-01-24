@@ -28,8 +28,8 @@ function getHeaderHTML() {
       </div>
 
       <!-- Navigation Mittig -->
-      <nav class="header-nav">
-        <ul class="nav-links" id="navLinks">
+      <nav class="header-nav" aria-label="Primary">
+        <ul class="nav-links header-nav-list" id="navLinks">
         <li><a href="index.html" data-page="index" data-i18n="nav.home">Start</a></li>
         <li><a href="produkt.html" data-page="produkt" data-i18n="nav.product">Produkt</a></li>
         <li><a href="einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases">Einsatzbereiche</a></li>
@@ -52,9 +52,10 @@ function getHeaderHTML() {
 
       <!-- Controls Rechts: CTA + Language + Burger -->
       <div class="header-controls">
-        <a href="/shop" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a>
-        <!-- Language-Switch wird hier von language-switch.js injiziert -->
-        <div class="burger-menu" id="burgerMenu">
+        <a href="/shop" class="btn btn-nav header-cta" data-i18n="nav.buyNow">Jetzt kaufen</a>
+        <!-- Mount-Point für Language-Switch (wird von language-switch.js injiziert) -->
+        <div id="language-switch-mount"></div>
+        <div class="burger-menu header-burger" id="burgerMenu" aria-label="Menu" aria-expanded="false">
           <span></span>
           <span></span>
           <span></span>

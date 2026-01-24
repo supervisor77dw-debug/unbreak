@@ -170,8 +170,8 @@ export default function Header() {
           </div>
 
           {/* Navigation Mittig */}
-          <nav className={`header-nav ${isCollapsed ? 'collapsed' : ''}`} ref={navRef}>
-            <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`} id="navLinks">
+          <nav className={`header-nav ${isCollapsed ? 'collapsed' : ''}`} ref={navRef} aria-label="Primary">
+            <ul className={`nav-links header-nav-list ${isMenuOpen ? 'active' : ''}`} id="navLinks">
           <li><a href="/index.html" data-page="index" data-i18n="nav.home" className={activePage === 'index' ? 'active' : ''}>Start</a></li>
           <li><a href="/produkt.html" data-page="produkt" data-i18n="nav.product" className={activePage === 'produkt' ? 'active' : ''}>Produkt</a></li>
           <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
@@ -195,13 +195,16 @@ export default function Header() {
           {/* Controls Rechts: CTA + Language + Burger */}
           <div className="header-controls" ref={controlsRef}>
             {!ctaHidden && !isCollapsed && (
-              <a href="/shop" className="btn btn-nav" data-i18n="nav.buyNow" ref={ctaRef}>Jetzt kaufen</a>
+              <a href="/shop" className="btn btn-nav header-cta" data-i18n="nav.buyNow" ref={ctaRef}>Jetzt kaufen</a>
             )}
-            {/* Language-Switch wird hier von language-switch.js injiziert */}
+            {/* Mount-Point für Language-Switch (wird von language-switch.js injiziert) */}
+            <div id="language-switch-mount"></div>
             <div 
-              className={`burger-menu ${isMenuOpen ? 'active' : ''} ${isCollapsed ? 'visible' : ''}`}
+              className={`burger-menu header-burger ${isMenuOpen ? 'active' : ''} ${isCollapsed ? 'visible' : ''}`}
               id="burgerMenu" 
               onClick={toggleMenu}
+              aria-label="Menu"
+              aria-expanded={isMenuOpen}
             >
               <span></span>
               <span></span>

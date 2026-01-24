@@ -106,40 +106,26 @@
    * Inject language switch into navbar
    */
   function injectLanguageSwitch() {
-    // Find nav-links element
-    const navLinks = document.querySelector('.nav-links');
-    
-    if (!navLinks) {
-      console.warn('Navigation links not found, retrying...');
-      setTimeout(injectLanguageSwitch, 100);
+    // Check if already injected
+    if (document.querySelector('.language-switch')) {
+      console.info('[LANG_SWITCH] Already injected');
       return;
     }
 
-    // Check if already injected
-    if (document.querySelector('.language-switch')) {
-      return;
+    // HARD REQUIREMENT: Mount only in #language-switch-mount
+    const mountPoint = document.querySelector('#language-switch-mount');
+    
+    if (!mountPoint) {
+      console.error('[LANG_SWITCH] CRITICAL: #language-switch-mount not found. Aborting injection.');
+      console.error('[LANG_SWITCH] Header structure may be incomplete or timing issue (SSR/CSR).');
+      console.error('[LANG_SWITCH] Ensure .header-controls contains <div id="language-switch-mount"></div>');
+      return; // NO FALLBACK - fail explicitly
     }
 
     // Create and inject switch
     const languageSwitch = createLanguageSwitch();
-    
-    // Insert in .header-controls (always right side)
-    const headerControls = document.querySelector('.header-controls');
-    if (headerControls) {
-      // Insert before burger menu
-      const burgerMenu = headerControls.querySelector('.burger-menu');
-      if (burgerMenu) {
-        headerControls.insertBefore(languageSwitch, burgerMenu);
-      } else {
-        headerControls.appendChild(languageSwitch);
-      }
-    } else {
-      console.warn('.header-controls not found, fallback to header');
-      const header = document.querySelector('header');
-      if (header) {
-        header.appendChild(languageSwitch);
-      }
-    }
+    mountPoint.appendChild(languageSwitch);
+    console.info('[LANG_SWITCH] Successfully mounted in #language-switch-mount');
   }
 
   /**
