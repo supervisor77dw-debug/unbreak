@@ -855,7 +855,8 @@ export default function Shop({ initialProducts, configurableProducts }) {
                       </div>
 
                       <a
-                        href={`/konfigurator?type=${configuratorType}`}
+                        href={getConfiguratorUrl()}
+                        onClick={handleConfiguratorClick}
                         className="btn-add-to-cart"
                       >
                         {ctaButtonText}
