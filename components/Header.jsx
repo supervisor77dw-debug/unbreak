@@ -86,6 +86,26 @@ export default function Header() {
     return () => router.events.off('routeChangeStart', handleRouteChange);
   }, [router.events]);
 
+  // Close menu on ESC key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isMenuOpen) {
+        setIsMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isMenuOpen]);
+
+  // Toggle body class for menu state
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.classList.add('menu-open');
+    } else {
+      document.body.classList.remove('menu-open');
+    }
+  }, [isMenuOpen]);
+
   // Listen to language changes and trigger i18n content update
   useEffect(() => {
     const handleLanguageChange = (e) => {
@@ -162,37 +182,31 @@ export default function Header() {
 
       <header className="site-header">
         <div className="header-inner" ref={headerInnerRef}>
-          {/* Logo Links */}
-          <div className="header-brand" ref={brandRef}>
-            <a href="/index.html" className="logo-link">
-              <img src="/images/logo.png" alt="UNBREAK ONE" className="nav-logo" />
-            </a>
+          {/* LEFT BLOCK: Brand + Nav (springen zusammen) */}
+          <div className="header-left">
+            {/* Logo */}
+            <div className="header-brand" ref={brandRef}>
+              <a href="/index.html" className="logo-link">
+                <img src="/images/logo.png" alt="UNBREAK ONE" className="nav-logo" />
+              </a>
+            </div>
+
+            {/* Navigation */}
+            <nav className={`header-nav ${isCollapsed ? 'collapsed' : ''}`} ref={navRef} aria-label="Primary">
+              <ul className={`nav-links header-nav-list ${isMenuOpen ? 'active' : ''}`} id="navLinks">
+            <li><a href="/index.html" data-page="index" data-i18n="nav.home" className={activePage === 'index' ? 'active' : ''}>Start</a></li>
+            <li><a href="/produkt.html" data-page="produkt" data-i18n="nav.product" className={activePage === 'produkt' ? 'active' : ''}>Produkt</a></li>
+            <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
+            <li><a href="/gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition" className={activePage === 'gastro-edition' ? 'active' : ''}>Gastro Edition</a></li>
+            <li><a href="/technik.html" data-page="technik" data-i18n="nav.tech" className={activePage === 'technik' ? 'active' : ''}>Technik</a></li>
+            <li><a href="#" onClick={handleConfiguratorClick} data-page="configurator" data-i18n="nav.configurator" className={activePage === 'configurator' ? 'active' : ''}>Konfigurator</a></li>
+            <li><a href="/shop" data-page="shop" data-i18n="nav.shop" className={activePage === 'shop' ? 'active' : ''}>Shop</a></li>
+            <li><a href="/kontakt.html" data-page="kontakt" data-i18n="nav.contact" className={activePage === 'kontakt' ? 'active' : ''}>Kontakt</a></li>
+            </ul>
+            </nav>
           </div>
 
-          {/* Navigation Mittig */}
-          <nav className={`header-nav ${isCollapsed ? 'collapsed' : ''}`} ref={navRef} aria-label="Primary">
-            <ul className={`nav-links header-nav-list ${isMenuOpen ? 'active' : ''}`} id="navLinks">
-          <li><a href="/index.html" data-page="index" data-i18n="nav.home" className={activePage === 'index' ? 'active' : ''}>Start</a></li>
-          <li><a href="/produkt.html" data-page="produkt" data-i18n="nav.product" className={activePage === 'produkt' ? 'active' : ''}>Produkt</a></li>
-          <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
-          <li><a href="/gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition" className={activePage === 'gastro-edition' ? 'active' : ''}>Gastro Edition</a></li>
-          <li><a href="/technik.html" data-page="technik" data-i18n="nav.tech" className={activePage === 'technik' ? 'active' : ''}>Technik</a></li>
-          <li><a href="#" onClick={handleConfiguratorClick} data-page="configurator" data-i18n="nav.configurator" className={activePage === 'configurator' ? 'active' : ''}>Konfigurator</a></li>
-          <li><a href="/shop" data-page="shop" data-i18n="nav.shop" className={activePage === 'shop' ? 'active' : ''}>Shop</a></li>
-          <li><a href="/kontakt.html" data-page="kontakt" data-i18n="nav.contact" className={activePage === 'kontakt' ? 'active' : ''}>Kontakt</a></li>
-
-          {/* Mobile Only Legal Links */}
-          <li className="mobile-only"><a href="/impressum.html" data-page="impressum" data-i18n="nav.impressum">Impressum</a></li>
-          <li className="mobile-only"><a href="/datenschutz.html" data-page="datenschutz" data-i18n="nav.privacy">Datenschutz</a></li>
-          <li className="mobile-only"><a href="/agb.html" data-page="agb" data-i18n="nav.terms">AGB</a></li>
-
-          {/* CTA im Mobile-Menü */}
-          <li className="mobile-only"><a href="/shop" className="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
-
-          </ul>
-          </nav>
-
-          {/* Controls Rechts: CTA + Language + Burger - ALLE IMMER IM DOM */}
+          {/* RIGHT BLOCK: Controls (CTA + Language + Burger) */}
           <div className="header-controls" ref={controlsRef}>
             {/* CTA - immer im DOM, hide per CSS */}
             <a 
@@ -212,6 +226,7 @@ export default function Header() {
               onClick={toggleMenu}
               aria-label="Menu"
               aria-expanded={isMenuOpen}
+              type="button"
             >
               <span></span>
               <span></span>
@@ -219,6 +234,29 @@ export default function Header() {
             </button>
           </div>
         </div>
+
+        {/* MOBILE NAV PANEL (Offcanvas) */}
+        <div className={`mobile-nav-panel ${isMenuOpen ? 'open' : ''}`}>
+          <ul className="mobile-nav-list">
+            <li><a href="/index.html" data-page="index" data-i18n="nav.home" onClick={toggleMenu}>Start</a></li>
+            <li><a href="/produkt.html" data-page="produkt" data-i18n="nav.product" onClick={toggleMenu}>Produkt</a></li>
+            <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases" onClick={toggleMenu}>Einsatzbereiche</a></li>
+            <li><a href="/gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition" onClick={toggleMenu}>Gastro Edition</a></li>
+            <li><a href="/technik.html" data-page="technik" data-i18n="nav.tech" onClick={toggleMenu}>Technik</a></li>
+            <li><a href="#" onClick={(e) => { handleConfiguratorClick(e); toggleMenu(); }} data-page="configurator" data-i18n="nav.configurator">Konfigurator</a></li>
+            <li><a href="/shop" data-page="shop" data-i18n="nav.shop" onClick={toggleMenu}>Shop</a></li>
+            <li><a href="/kontakt.html" data-page="kontakt" data-i18n="nav.contact" onClick={toggleMenu}>Kontakt</a></li>
+            <li className="divider"></li>
+            <li><a href="/impressum.html" data-page="impressum" data-i18n="nav.impressum" onClick={toggleMenu}>Impressum</a></li>
+            <li><a href="/datenschutz.html" data-page="datenschutz" data-i18n="nav.privacy" onClick={toggleMenu}>Datenschutz</a></li>
+            <li><a href="/agb.html" data-page="agb" data-i18n="nav.terms" onClick={toggleMenu}>AGB</a></li>
+            <li className="divider"></li>
+            <li><a href="/shop" className="btn btn-primary" data-i18n="nav.buyNow" onClick={toggleMenu}>Jetzt kaufen</a></li>
+          </ul>
+        </div>
+
+        {/* MOBILE NAV OVERLAY (Click-to-close) */}
+        <div className={`mobile-nav-overlay ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}></div>
       </header>
     </>
   );

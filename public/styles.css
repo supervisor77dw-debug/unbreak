@@ -245,11 +245,11 @@ header.scrolled {
               inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-/* Header-Inner: Flex-Container (Brand | Nav | Controls) - IMMER 1 ZEILE */
+/* Header-Inner: Flex-Container (LEFT: Brand+Nav | RIGHT: Controls) - IMMER 1 ZEILE */
 .header-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-between;  /* Left und Right Blöcke */
   flex-wrap: nowrap;  /* KRITISCH: Niemals wrap */
   gap: 12px;
   max-width: var(--container-max-width);
@@ -258,13 +258,21 @@ header.scrolled {
   white-space: nowrap;
 }
 
-/* Zone 1: Brand/Logo - Links, EIGENE ZONE mit GUTTER */
+/* LEFT BLOCK: Brand + Nav (springen zusammen ab 1350px) */
+.header-left {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;  /* Kann wachsen */
+  min-width: 0;  /* Kritisch für Shrinking */
+  gap: 24px;  /* Gutter zwischen Brand und Nav */
+}
+
+/* Zone 1: Brand/Logo - Links */
 .header-brand {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   padding: 8px 0;  /* Optischer Abstand oben/unten */
-  padding-right: 24px;  /* KRITISCH: GUTTER - Nav startet danach */
   white-space: nowrap;
   margin: 0;  /* KRITISCH: Kein auto-margin (verhindert Drift) */
 }
@@ -282,17 +290,35 @@ header.scrolled {
   opacity: 0.85;
 }
 
-/* Zone 2: Nav - Mittig, kann shrink (min-width:0 KRITISCH) */
+/* Zone 2: Nav - Default zentriert (1200-1349), ab 1350 links */
 .header-nav {
   flex: 1 1 auto;
   min-width: 0;  /* KRITISCH: ohne dies kann Nav nicht shrink */
   overflow: visible;
   white-space: nowrap;
   display: flex;
-  justify-content: center;
+  justify-content: center;  /* Default: zentriert (wird bei >=1350 auf flex-start) */
 }
 
-/* Zone 3: Controls - Rechts, nie shrink/wrap */
+/* Nav-Liste */
+.nav-links,
+.header-nav-list {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: clamp(10px, 1.2vw, 16px);  /* Kompakter Gap */
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links li,
+.header-nav-list li {
+  white-space: nowrap;  /* Kein Zeilenumbruch */
+  flex-shrink: 0;  /* Nie shrink */
+}
+
+/* Zone 3: Controls (RIGHT BLOCK) - Rechts, nie shrink/wrap */
 .header-controls {
   flex: 0 0 auto;
   display: inline-flex;  /* shrink-to-fit */
@@ -448,33 +474,20 @@ main {
 /* Mobile Menu Toggle / Burger */
 .burger-menu,
 .header-burger {
-  display: none;  /* Default: hidden */
+  display: none;  /* Default: hidden (per Media Query aktiviert) */
   flex-direction: column;
   gap: 5px;
   cursor: pointer;
   padding: var(--spacing-xs);
   flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  position: relative;
 }
 
-.burger-menu.visible,
-.header-burger.visible {
-  display: flex;
-}
-
-/* Collapsed Nav - ausblenden wenn kein Platz */
-.header-nav.collapsed {
-  display: none;
-}
-
-/* Mobile-Only Links (Impressum, Datenschutz, AGB) - nur im Mobile-Menü */
+/* Mobile-Only Links - nicht mehr verwendet (jetzt in .mobile-nav-panel) */
 .mobile-only {
   display: none;
-}
-
-@media (max-width: 899px) {
-  .mobile-only {
-    display: block;
-  }
 }
 
 /* Burger spans: bereits in header .burger-menu span definiert */
@@ -526,11 +539,12 @@ main {
 .header-cta {
   background-color: var(--color-petrol-deep);
   color: var(--color-white);
-  padding: 10px 24px;
-  font-size: 15px;
+  padding: 10px 16px;  /* Kleiner */
+  font-size: 14px;  /* Kleiner */
   box-shadow: 0 2px 6px rgba(10, 108, 116, 0.25);
   white-space: nowrap;
   flex: 0 0 auto;
+  border-radius: 999px;  /* Pill-Shape */
 }
 
 /* CTA DEFAULT: VERSTECKT (wird nur per Media Query eingeschaltet) */
@@ -544,45 +558,131 @@ main {
   box-shadow: 0 3px 10px rgba(10, 108, 116, 0.35);
 }
 
-/* === RESPONSIVE HEADER STRATEGY (3 Stufen HART) === */
+/* === RESPONSIVE HEADER STRATEGY (3 Breakpoints STRIKT) === */
 
-/* Burger-Mode: < 1200px */
+/* <1200px: Burger-Mode (Mobile) */
 @media (max-width: 1199px) {
   .header-nav {
-    display: none !important;  /* Nav versteckt */
-  }
-  .header-burger {
-    display: inline-flex !important;  /* Burger sichtbar */
+    display: none !important;  /* Desktop-Nav versteckt */
   }
   .header-cta {
     display: none !important;  /* CTA versteckt */
   }
+  .header-burger {
+    display: inline-flex !important;  /* Burger sichtbar */
+    position: relative;
+    z-index: 1002;  /* Über Panel */
+  }
 }
 
-/* Desktop ohne CTA: 1200px - 1349px */
+/* 1200-1349px: Desktop ohne CTA, Nav ZENTRIERT */
 @media (min-width: 1200px) and (max-width: 1349px) {
   .header-nav {
     display: flex !important;  /* Nav sichtbar */
+    justify-content: center !important;  /* Nav ZENTRIERT */
+  }
+  .header-cta {
+    display: none !important;  /* CTA VERSTECKT */
   }
   .header-burger {
     display: none !important;  /* Burger versteckt */
-  }
-  .header-cta {
-    display: none !important;  /* CTA VERSTECKT (nicht genug Platz) */
   }
 }
 
-/* Desktop mit CTA: >= 1350px */
+/* >=1350px: Desktop mit CTA, Nav LINKS (mit Brand) */
 @media (min-width: 1350px) {
   .header-nav {
     display: flex !important;  /* Nav sichtbar */
+    justify-content: flex-start !important;  /* Nav LINKS (Brand+Nav zusammen) */
+  }
+  .header-cta {
+    display: inline-flex !important;  /* CTA SICHTBAR */
+    padding: 10px 16px;  /* Kleiner */
+    font-size: 14px;  /* Kleiner */
+    border-radius: 999px;
   }
   .header-burger {
     display: none !important;  /* Burger versteckt */
   }
-  .header-cta {
-    display: inline-flex !important;  /* CTA SICHTBAR (erst ab 1350px!) */
-  }
+}
+
+/* === MOBILE NAV PANEL (Offcanvas) === */
+.mobile-nav-panel {
+  display: none;  /* Default versteckt */
+  position: absolute;
+  top: 100%;  /* Unter Header */
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, rgba(20, 24, 30, 0.98), rgba(20, 24, 30, 0.95));
+  backdrop-filter: blur(12px) saturate(130%);
+  -webkit-backdrop-filter: blur(12px) saturate(130%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  z-index: 1001;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.menu-open .mobile-nav-panel {
+  display: block;
+  max-height: 80vh;  /* Scrollbar wenn zu lang */
+  overflow-y: auto;
+}
+
+.mobile-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.mobile-nav-list li {
+  margin: 0;
+  padding: 0;
+}
+
+.mobile-nav-list li.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: var(--spacing-sm) 0;
+}
+
+.mobile-nav-list a {
+  display: block;
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: rgba(230, 235, 240, 0.88);
+  text-decoration: none;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-nav-list a:hover,
+.mobile-nav-list a:focus {
+  background: rgba(10, 108, 116, 0.15);
+  color: var(--color-petrol-deep);
+}
+
+.mobile-nav-list a.btn {
+  margin-top: var(--spacing-sm);
+  text-align: center;
+}
+
+/* === MOBILE NAV OVERLAY === */
+.mobile-nav-overlay {
+  display: none;  /* Default versteckt */
+  position: fixed;
+  inset: 0;  /* Full viewport */
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1000;  /* Unter Panel */
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.menu-open .mobile-nav-overlay {
+  display: block;
+  opacity: 1;
 }
 
 /* === CARDS === */
