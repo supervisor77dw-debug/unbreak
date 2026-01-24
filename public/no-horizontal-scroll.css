@@ -24,17 +24,18 @@ main,
   max-width: 100%;
 }
 
-/* === HEADER - NEVER HORIZONTAL SCROLL === */
+/* === HEADER - MUST ALLOW BURGER MENU INTERACTION === */
+/* DO NOT use overflow:hidden on header - it clips the burger menu */
 .site-header,
 header {
-  overflow-x: hidden;
+  overflow: visible;
   max-width: 100%;
   width: 100%;
 }
 
 .header-nav,
 header nav {
-  overflow-x: hidden;
+  overflow: visible;
   max-width: 100%;
 }
 

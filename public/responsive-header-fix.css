@@ -39,9 +39,11 @@
   }
 
   /* Burger Menu: Ganz rechts, nach Language Switch */
-  header nav .burger-menu {
+  /* Support both old .burger-menu and new .header-burger classes */
+  header nav .burger-menu,
+  .header-burger {
     order: 3;
-    display: flex;
+    display: flex !important;
     flex-direction: column;
     gap: 5px;
     cursor: pointer;
@@ -53,6 +55,9 @@
     flex-shrink: 0;
     z-index: 10001;
     position: relative;
+    pointer-events: auto !important;
+    background: transparent;
+    border: none;
   }
 
   /* Nav-Links: Versteckt auf Mobile (werden durch burger aktiviert) */
@@ -125,7 +130,8 @@
   }
 
   /* Noch kompakterer Burger */
-  .burger-menu span {
+  .burger-menu span,
+  .header-burger span {
     width: 22px;
     height: 2px;
   }
@@ -148,4 +154,18 @@
 /* Fix: Ensure buttons are clickable even if parent has pointer-events: none */
 .language-switch * {
   pointer-events: auto !important;
+}
+
+/* CRITICAL: Burger Menu must ALWAYS be clickable */
+.burger-menu,
+.header-burger {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.burger-menu span,
+.header-burger span {
+  pointer-events: none; /* Let clicks pass through to button */
 }

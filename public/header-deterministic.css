@@ -283,10 +283,31 @@
   }
 }
 
-/* === POINTER EVENTS FIX === */
+/* === POINTER EVENTS & VISIBILITY FIX === */
+/* CRITICAL: Ensure burger menu is always clickable */
+.header-controls {
+  position: relative;
+  z-index: 10002;
+  overflow: visible !important;
+}
+
 .header-lang-slot,
 .header-lang-slot .language-switch,
 .header-lang-slot .language-switch button,
 .header-burger {
   pointer-events: auto !important;
+  position: relative;
+  z-index: 10002;
+}
+
+/* Burger must ALWAYS be visible with proper icon */
+.header-burger {
+  overflow: visible !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.header-burger span {
+  display: block !important;
+  opacity: 1 !important;
 }
