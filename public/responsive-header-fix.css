@@ -64,11 +64,6 @@
     position: relative;
   }
 
-  /* Mobile Cart Button: Ensure it's visible and doesn't overlap */
-  .cart-badge-mobile {
-    z-index: 10002 !important;
-  }
-
   /* Fix: Flexbox Layout für Header Nav */
   nav {
     display: flex;

@@ -536,19 +536,11 @@ export default function Shop({ initialProducts }) {
 
       <main className="page-content">
         
-        {/* Cart Badge - Desktop: Floating, Mobile: In Header */}
+        {/* Cart Badge - Desktop Only (Floating) */}
         {cartCount > 0 && (
-          <>
-            {/* Desktop Floating Cart (hidden on mobile) */}
-            <a href="/cart" className="cart-badge-float cart-desktop-only">
-              🛒 {cartCount}
-            </a>
-            
-            {/* Mobile Header Cart (hidden on desktop) */}
-            <a href="/cart" className="cart-badge-mobile cart-mobile-only">
-              🛒 <span className="cart-count-badge">{cartCount}</span>
-            </a>
-          </>
+          <a href="/cart" className="cart-badge-float">
+            🛒 {cartCount}
+          </a>
         )}
 
         {/* Hero Section */}
@@ -810,6 +802,16 @@ export default function Shop({ initialProducts }) {
             </div>
           </div>
         </section>
+
+        {/* Mobile Cart Bottom Bar - Only on Mobile */}
+        {cartCount > 0 && (
+          <div className="mobile-cart-bar">
+            <a href="/cart" className="mobile-cart-button">
+              🛒 <span className="cart-count">{cartCount}</span>
+              <span className="cart-label">{currentLang === 'de' ? 'Zum Warenkorb' : 'View Cart'}</span>
+            </a>
+          </div>
+        )}
       </main>
 
       <style jsx>{`
@@ -817,7 +819,7 @@ export default function Shop({ initialProducts }) {
            SHOP PAGE - PREMIUM DESIGN
            ============================================ */
         
-        /* Cart Badge - Desktop (Floating) */
+        /* Cart Badge - Desktop Only (Floating, >768px) */
         .cart-badge-float {
           position: fixed;
           top: 20px;
@@ -832,6 +834,7 @@ export default function Shop({ initialProducts }) {
           z-index: 1000;
           transition: all 0.3s ease;
           font-size: 16px;
+          display: block;
         }
         
         .cart-badge-float:hover {
@@ -839,81 +842,62 @@ export default function Shop({ initialProducts }) {
           box-shadow: 0 6px 24px rgba(10, 108, 116, 0.5);
         }
 
-        /* Cart Badge - Mobile (In Header) */
-        .cart-badge-mobile {
-          position: fixed;
-          top: 12px;
-          right: 60px; /* Space for burger menu */
+        /* Mobile Cart Bottom Bar (Sticky, ≤768px) */
+        .mobile-cart-bar {
+          display: none;
+          position: sticky;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: white;
+          border-top: 1px solid #E8EDF2;
+          box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+          padding: 12px 16px;
+          z-index: 999;
+        }
+
+        .mobile-cart-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+          padding: 14px 24px;
           background: linear-gradient(135deg, #0A6C74, #084F55);
           color: white;
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          font-weight: 600;
           text-decoration: none;
-          box-shadow: 0 2px 12px rgba(10, 108, 116, 0.3);
-          z-index: 10002; /* Above header */
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 16px;
           transition: all 0.3s ease;
-          font-size: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0;
+          min-height: 48px;
         }
 
-        .cart-badge-mobile:active {
-          transform: scale(0.95);
+        .mobile-cart-button:active {
+          transform: scale(0.98);
         }
 
-        .cart-count-badge {
-          position: absolute;
-          top: -4px;
-          right: -4px;
-          background: #ff4444;
-          color: white;
-          font-size: 11px;
+        .cart-count {
+          background: rgba(255, 255, 255, 0.25);
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 14px;
           font-weight: 700;
-          width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 2px solid white;
         }
 
-        /* Responsive: Show/Hide Cart Variants */
-        .cart-desktop-only {
-          display: block;
+        .cart-label {
+          flex: 1;
+          text-align: center;
         }
 
-        .cart-mobile-only {
-          display: none;
-        }
-
+        /* Responsive: Desktop vs Mobile Cart */
         @media (max-width: 768px) {
-          .cart-desktop-only {
+          .cart-badge-float {
             display: none;
           }
 
-          .cart-mobile-only {
-            display: flex;
-          }
-        }
-
-        /* Adjust mobile cart position on very small screens */
-        @media (max-width: 480px) {
-          .cart-badge-mobile {
-            right: 55px;
-            width: 40px;
-            height: 40px;
-            font-size: 18px;
-          }
-
-          .cart-count-badge {
-            width: 18px;
-            height: 18px;
-            font-size: 10px;
+          .mobile-cart-bar {
+            display: block;
           }
         }
 
