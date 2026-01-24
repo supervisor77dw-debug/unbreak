@@ -732,33 +732,82 @@ export default function Shop({ initialProducts }) {
           </div>
         </section>
 
-        {/* CTA Section - Configurator Tiles */}
-        <section className="configurator-cta-section">
+        {/* Configurable Products Section */}
+        <section className="products-section">
           <div className="container">
-            <div className="configurator-tiles-grid">
-              {/* Glass Holder CTA */}
-              <div className="configurator-tile">
-                <div className="configurator-tile-icon">🍷</div>
-                <h3 className="configurator-tile-title">{t('shop.cta.glassHolder.title')}</h3>
-                <p className="configurator-tile-subtitle">{t('shop.cta.glassHolder.subtitle')}</p>
-                <a href={getConfiguratorUrl()} onClick={handleConfiguratorClick} className="btn-configurator-tile">
-                  {t('shop.cta.glassHolder.button')}
-                </a>
+            <h2 className="section-title">{currentLang === 'de' ? 'Individuell konfigurierbar' : 'Customizable Products'}</h2>
+            
+            <div className="shop-grid">
+              {/* Glass Holder Configurable */}
+              <div className="product-card">
+                <div className="product-badge">{currentLang === 'de' ? 'Konfigurierbar' : 'Customizable'}</div>
+                
+                <div className="product-image-placeholder">
+                  <div className="placeholder-icon">🍷</div>
+                </div>
+
+                <div className="product-content">
+                  <h3 className="product-title">{t('shop.configurableProducts.glassHolder.name')}</h3>
+                  <p className="product-description">
+                    {t('shop.configurableProducts.glassHolder.description')}
+                  </p>
+
+                  <div className="product-price-section">
+                    <div className="price-wrapper">
+                      <span className="product-price">
+                        {currentLang === 'de' ? 'ab 49,90 €' : 'from €49.90'}
+                      </span>
+                      <span className="price-label">{currentLang === 'de' ? 'inkl. MwSt.' : 'incl. VAT'}</span>
+                    </div>
+                    <div className="product-trust">
+                      <span className="trust-icon-small">⚙️</span> {currentLang === 'de' ? 'Individuelle Fertigung' : 'Custom manufacturing'}
+                    </div>
+                  </div>
+
+                  <a
+                    href="/konfigurator?product=glass"
+                    className="btn-add-to-cart"
+                  >
+                    {t('shop.configurableProducts.glassHolder.button')}
+                  </a>
+                </div>
               </div>
 
-              {/* Bottle Holder CTA */}
-              <div className="configurator-tile">
-                <div className="configurator-tile-icon">🍾</div>
-                <h3 className="configurator-tile-title">{t('shop.cta.bottleHolder.title')}</h3>
-                <p className="configurator-tile-subtitle">{t('shop.cta.bottleHolder.subtitle')}</p>
-                <a href={getConfiguratorUrl()} onClick={handleConfiguratorClick} className="btn-configurator-tile">
-                  {t('shop.cta.bottleHolder.button')}
-                </a>
+              {/* Bottle Holder Configurable */}
+              <div className="product-card">
+                <div className="product-badge">{currentLang === 'de' ? 'Konfigurierbar' : 'Customizable'}</div>
+                
+                <div className="product-image-placeholder">
+                  <div className="placeholder-icon">🍾</div>
+                </div>
+
+                <div className="product-content">
+                  <h3 className="product-title">{t('shop.configurableProducts.bottleHolder.name')}</h3>
+                  <p className="product-description">
+                    {t('shop.configurableProducts.bottleHolder.description')}
+                  </p>
+
+                  <div className="product-price-section">
+                    <div className="price-wrapper">
+                      <span className="product-price">
+                        {currentLang === 'de' ? 'ab 54,90 €' : 'from €54.90'}
+                      </span>
+                      <span className="price-label">{currentLang === 'de' ? 'inkl. MwSt.' : 'incl. VAT'}</span>
+                    </div>
+                    <div className="product-trust">
+                      <span className="trust-icon-small">⚙️</span> {currentLang === 'de' ? 'Individuelle Fertigung' : 'Custom manufacturing'}
+                    </div>
+                  </div>
+
+                  <a
+                    href="/konfigurator?product=bottle"
+                    className="btn-add-to-cart"
+                  >
+                    {t('shop.configurableProducts.bottleHolder.button')}
+                  </a>
+                </div>
               </div>
             </div>
-
-            {/* Optional Note */}
-            <p className="configurator-note">{t('shop.cta.note')}</p>
           </div>
         </section>
       </main>
@@ -916,6 +965,14 @@ export default function Shop({ initialProducts }) {
         .products-section {
           padding: clamp(60px, 10vh, 100px) 0;
           background: #F8F9FA;
+        }
+
+        .section-title {
+          font-size: clamp(2rem, 4vw, 2.5rem);
+          font-weight: 700;
+          text-align: center;
+          margin-bottom: clamp(2rem, 4vh, 3rem);
+          color: #1A1A1A;
         }
 
         /* Shop Grid - Responsive */
@@ -1159,103 +1216,6 @@ export default function Shop({ initialProducts }) {
         .btn-retry:hover, .btn-primary:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 16px rgba(10, 108, 116, 0.3);
-        }
-
-        /* Configurator CTA Section */
-        .configurator-cta-section {
-          padding: clamp(80px, 12vh, 120px) 0;
-          background: linear-gradient(135deg, #F8F9FA 0%, #E8EDF2 100%);
-        }
-
-        .configurator-tiles-grid {
-          display: grid;
-          grid-template-columns: 1fr;
-          gap: 2rem;
-          margin-bottom: 2rem;
-        }
-
-        @media (min-width: 768px) {
-          .configurator-tiles-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        .configurator-tile {
-          background: white;
-          border-radius: 16px;
-          padding: clamp(2rem, 4vw, 2.5rem);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          transition: all 0.3s ease;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-        }
-
-        .configurator-tile:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 32px rgba(10, 108, 116, 0.15);
-        }
-
-        .configurator-tile-icon {
-          font-size: clamp(3rem, 6vw, 4rem);
-          margin-bottom: 1.5rem;
-          line-height: 1;
-        }
-
-        .configurator-tile-title {
-          font-size: clamp(1.25rem, 3vw, 1.5rem);
-          font-weight: 700;
-          color: #1A1A1A;
-          margin: 0 0 1rem 0;
-          line-height: 1.3;
-        }
-
-        .configurator-tile-subtitle {
-          font-size: clamp(0.95rem, 2vw, 1.05rem);
-          color: #666;
-          line-height: 1.6;
-          margin: 0 0 1.5rem 0;
-          flex-grow: 1;
-        }
-
-        .btn-configurator-tile {
-          width: 100%;
-          padding: clamp(14px, 2vw, 16px) clamp(24px, 4vw, 32px);
-          background: linear-gradient(135deg, #0A6C74, #084F55);
-          color: white;
-          text-decoration: none;
-          border-radius: 8px;
-          font-size: clamp(1rem, 2vw, 1.05rem);
-          font-weight: 600;
-          transition: all 0.3s ease;
-          display: inline-block;
-          box-shadow: 0 2px 8px rgba(10, 108, 116, 0.2);
-          text-align: center;
-          min-height: 44px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .btn-configurator-tile:hover {
-          background: linear-gradient(135deg, #084F55, #063D43);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(10, 108, 116, 0.3);
-        }
-
-        .btn-configurator-tile:active {
-          transform: translateY(0);
-        }
-
-        .configurator-note {
-          text-align: center;
-          font-size: clamp(0.85rem, 1.5vw, 0.95rem);
-          color: #666;
-          line-height: 1.6;
-          max-width: 700px;
-          margin: 0 auto;
-          font-style: italic;
         }
 
         /* Mobile Optimizations */

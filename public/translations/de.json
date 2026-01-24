@@ -380,21 +380,17 @@
       "buy": "Jetzt kaufen"
     },
     "loading": "Produkte werden geladen...",
-    "cta": {
-      "title": "Individuelle Konfiguration gewünscht?",
-      "text": "Gestalte deinen eigenen UNBREAK ONE mit unserem 3D-Konfigurator",
-      "button": "Zum Konfigurator",
+    "configurableProducts": {
       "glassHolder": {
-        "title": "Gestalte deinen individuellen Glashalter",
-        "subtitle": "Wähle Farben, Finish und Varianten – live im 3D-Konfigurator.",
-        "button": "Zum 3D-Konfigurator"
+        "name": "Individueller Glashalter",
+        "description": "Gestalte deinen individuellen Glashalter – Farben, Materialien und Details nach deinen Wünschen. Ideal für private Nutzung oder Gastronomie.",
+        "button": "Jetzt individuell gestalten"
       },
       "bottleHolder": {
-        "title": "Gestalte deinen individuellen Flaschenhalter",
-        "subtitle": "Konfiguriere deinen Flaschenhalter – passend zu deinem Setup.",
-        "button": "Zum 3D-Konfigurator"
-      },
-      "note": "Hinweis: Konfigurierte Produkte werden als individuelle Variante in den Warenkorb übernommen."
+        "name": "Individueller Flaschenhalter",
+        "description": "Konfiguriere deinen individuellen Flaschenhalter – perfekt abgestimmt auf Einsatzbereich und Designanspruch.",
+        "button": "Jetzt individuell gestalten"
+      }
     }
   },
   "configurator": {
