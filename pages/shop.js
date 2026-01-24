@@ -735,7 +735,24 @@ export default function Shop({ initialProducts, configurableProducts }) {
                 const isGlass = product.sku === 'UNBREAK-GLAS-01';
                 const configuratorType = isGlass ? 'glass' : 'bottle';
                 const productKey = isGlass ? 'glassHolder' : 'bottleHolder';
+                
+                // CRITICAL: Alle Texte explizit laden mit Fehlerprüfung
+                const titleText = t(`shop.configurableProducts.${productKey}.name`);
+                const descriptionText = t(`shop.configurableProducts.${productKey}.description`);
                 const badgeText = t('shop.configurableSection.badge');
+                const ctaButtonText = t('shop.configurableSection.ctaButton');
+                const customManufacturingText = t('shop.configurableSection.customManufacturing');
+                
+                // HARD FAIL: Wenn kritische Texte fehlen, nicht rendern
+                if (!titleText || !descriptionText || !ctaButtonText) {
+                  console.error('[SHOP] FATAL: Missing i18n keys for configurable product', {
+                    productKey,
+                    titleText,
+                    descriptionText,
+                    ctaButtonText
+                  });
+                  return null;
+                }
                 
                 return (
                   <div key={product.id} className="product-card">
@@ -759,7 +776,7 @@ export default function Shop({ initialProducts, configurableProducts }) {
                             <ProductImage
                               key={`configurable-${product.id}-${shopPath}`}
                               src={cacheBustedUrl}
-                              alt={t(`shop.configurableProducts.${productKey}.name`)}
+                              alt={titleText}
                               crop={{ scale: 1.0, x: 0, y: 0 }}
                               variant="card"
                             />
@@ -776,12 +793,8 @@ export default function Shop({ initialProducts, configurableProducts }) {
                     })()}
 
                     <div className="product-content">
-                      <h3 className="product-title">
-                        {t(`shop.configurableProducts.${productKey}.name`)}
-                      </h3>
-                      <p className="product-description">
-                        {t(`shop.configurableProducts.${productKey}.description`)}
-                      </p>
+                      <h3 className="product-title">{titleText}</h3>
+                      <p className="product-description">{descriptionText}</p>
 
                       <div className="product-price-section">
                         <div className="price-wrapper">
@@ -799,7 +812,7 @@ export default function Shop({ initialProducts, configurableProducts }) {
                           )}
                         </div>
                         <div className="product-trust">
-                          <span className="trust-icon-small">⚙️</span> {t('shop.configurableSection.customManufacturing')}
+                          <span className="trust-icon-small">⚙️</span> {customManufacturingText}
                         </div>
                       </div>
 
@@ -807,7 +820,7 @@ export default function Shop({ initialProducts, configurableProducts }) {
                         href={`/konfigurator?type=${configuratorType}`}
                         className="btn-add-to-cart"
                       >
-                        {t('shop.configurableSection.ctaButton')}
+                        {ctaButtonText}
                       </a>
                     </div>
                   </div>
