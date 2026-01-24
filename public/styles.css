@@ -246,6 +246,8 @@ header.scrolled {
 .header-inner {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
   gap: var(--spacing-md);
   width: 100%;
   max-width: var(--container-max-width);
@@ -257,6 +259,7 @@ header.scrolled {
 .header-brand {
   flex: 0 0 auto;
   min-width: 0;
+  white-space: nowrap;
 }
 
 .header-brand .nav-logo {
@@ -278,6 +281,8 @@ header.scrolled {
   min-width: 0;
   display: flex;
   justify-content: center;
+  overflow: visible;
+  white-space: nowrap;
 }
 
 /* Zone 3: Controls - Rechts, nie shrink */
@@ -286,6 +291,8 @@ header.scrolled {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 /* State 3: Navigation Links - Unified Interaction */
@@ -400,8 +407,8 @@ main {
   align-items: center;
   flex-wrap: nowrap;
   white-space: nowrap;
-  overflow: hidden;
-  justify-content: flex-start;
+  overflow: visible;
+  justify-content: center;
   margin: 0;
   padding: 0;
 }
@@ -421,13 +428,22 @@ main {
   display: inline-flex;
 }
 
-/* Mobile Menu Toggle - versteckt im Desktop (>=900px) */
+/* Mobile Menu Toggle - versteckt im Desktop (>=900px), visible bei auto-collapse */
 .burger-menu {
   display: none;
   flex-direction: column;
   gap: 5px;
   cursor: pointer;
   padding: var(--spacing-xs);
+}
+
+.burger-menu.visible {
+  display: flex;
+}
+
+/* Collapsed Nav - ausblenden wenn kein Platz */
+.header-nav.collapsed {
+  display: none;
 }
 
 /* Mobile-Only Links (Impressum, Datenschutz, AGB) - nur im Mobile-Menü */

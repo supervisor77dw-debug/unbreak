@@ -1,6 +1,7 @@
 /**
  * Header Component - Wiederverwendbarer Header für alle Seiten
  * Automatische Active-State-Erkennung basierend auf aktueller URL
+ * Auto-Collapse: Misst verfügbaren Platz und schaltet automatisch auf Burger um
  */
 
 // Load clientLogger if not already loaded
@@ -9,6 +10,10 @@ if (typeof window.clientLogger === 'undefined') {
   script.src = '/lib/clientLogger.js';
   document.head.appendChild(script);
 }
+
+// State für Auto-Collapse
+let isCollapsed = false;
+let resizeObserver = null;
 
 function getHeaderHTML() {
   return `
@@ -83,6 +88,62 @@ function setActiveMenuItem() {
 }
 
 /**
+ * ResizeObserver: Misst verfügbaren Platz und schaltet automatisch auf Burger um
+ */
+function setupAutoCollapse() {
+  const headerInner = document.querySelector('.header-inner');
+  const headerBrand = document.querySelector('.header-brand');
+  const headerNav = document.querySelector('.header-nav');
+  const headerControls = document.querySelector('.header-controls');
+  const burgerMenu = document.querySelector('.burger-menu');
+  const ctaButton = document.querySelector('.header-controls .btn-nav');
+
+  if (!headerInner || !headerBrand || !headerNav || !headerControls) {
+    return;
+  }
+
+  function checkSpace() {
+    const availableWidth = headerInner.clientWidth;
+    const brandWidth = headerBrand.scrollWidth;
+    const navWidth = headerNav.scrollWidth;
+    const controlsWidth = headerControls.scrollWidth;
+    const gaps = 32; // 2x gap 16px
+    const neededWidth = brandWidth + navWidth + controlsWidth + gaps;
+
+    const shouldCollapse = neededWidth > availableWidth;
+
+    if (shouldCollapse !== isCollapsed) {
+      isCollapsed = shouldCollapse;
+      
+      // Toggle CSS classes
+      if (isCollapsed) {
+        headerNav.classList.add('collapsed');
+        burgerMenu.classList.add('visible');
+        if (ctaButton) ctaButton.style.display = 'none';
+      } else {
+        headerNav.classList.remove('collapsed');
+        burgerMenu.classList.remove('visible');
+        if (ctaButton) ctaButton.style.display = 'inline-block';
+      }
+    }
+  }
+
+  // Initiale Messung
+  checkSpace();
+
+  // ResizeObserver
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  }
+  
+  resizeObserver = new ResizeObserver(() => {
+    checkSpace();
+  });
+
+  resizeObserver.observe(headerInner);
+}
+
+/**
  * Initialisiert den Header
  */
 function initHeader() {
@@ -94,8 +155,13 @@ function initHeader() {
     // Active State setzen
     setActiveMenuItem();
     
+    // Auto-Collapse aktivieren
+    setTimeout(() => {
+      setupAutoCollapse();
+    }, 100);
+    
     // Burger Menu Event (wird von script.js gehandhabt, aber wir stellen sicher dass IDs existieren)
-    if (window.clientLogger) window.clientLogger.log('✓ Header loaded');
+    if (window.clientLogger) window.clientLogger.log('✓ Header loaded with auto-collapse');
   } else {
     if (window.clientLogger) window.clientLogger.error('❌ Header container (#header-container) not found');
   }
