@@ -80,19 +80,11 @@
 }
 
 /* Mobile Styles for Language Switch */
-@media (max-width: 768px) {
+@media (max-width: 899px) {
+  /* Language-Switch bleibt in .header-controls, kein position:fixed mehr */
   .language-switch {
-    position: fixed;
-    top: 16px;
-    right: 70px;
-    z-index: 1001;
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
-  }
-
-  /* When mobile menu is open */
-  .nav-links.active ~ .language-switch {
-    background: rgba(255, 255, 255, 0.98);
   }
 
   .language-switch button {
@@ -101,10 +93,10 @@
   }
 }
 
-/* Desktop: Integrate into nav */
-@media (min-width: 769px) {
+/* Desktop: In header-controls, kein extra margin */
+@media (min-width: 900px) {
   .language-switch {
-    margin-left: 8px;
+    /* Wird von .header-controls gap gehandhabt */
   }
 }
 

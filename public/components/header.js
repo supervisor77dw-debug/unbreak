@@ -12,23 +12,18 @@ if (typeof window.clientLogger === 'undefined') {
 
 function getHeaderHTML() {
   return `
-  <header>
-    <nav>
-      <div class="logo">
+  <header class="site-header">
+    <div class="header-inner">
+      <!-- Logo Links -->
+      <div class="header-brand">
         <a href="index.html" class="logo-link">
           <img src="images/logo.png" alt="UNBREAK ONE" class="nav-logo">
         </a>
       </div>
 
-      <!-- Mobile Burger Menu -->
-      <div class="burger-menu" id="burgerMenu">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-
-      <!-- Navigation Links -->
-      <ul class="nav-links" id="navLinks">
+      <!-- Navigation Mittig -->
+      <nav class="header-nav">
+        <ul class="nav-links" id="navLinks">
         <li><a href="index.html" data-page="index" data-i18n="nav.home">Start</a></li>
         <li><a href="produkt.html" data-page="produkt" data-i18n="nav.product">Produkt</a></li>
         <li><a href="einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases">Einsatzbereiche</a></li>
@@ -43,9 +38,23 @@ function getHeaderHTML() {
         <li class="mobile-only"><a href="datenschutz.html" data-page="datenschutz" data-i18n="nav.privacy">Datenschutz</a></li>
         <li class="mobile-only"><a href="agb.html" data-page="agb" data-i18n="nav.terms">AGB</a></li>
 
-        <li><a href="/shop" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
-      </ul>
-    </nav>
+        <!-- CTA im Mobile-Menü -->
+        <li class="mobile-only"><a href="/shop" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
+
+        </ul>
+      </nav>
+
+      <!-- Controls Rechts: CTA + Language + Burger -->
+      <div class="header-controls">
+        <a href="/shop" class="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a>
+        <!-- Language-Switch wird hier von language-switch.js injiziert -->
+        <div class="burger-menu" id="burgerMenu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
   </header>
   `;
 }

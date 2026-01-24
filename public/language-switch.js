@@ -123,12 +123,22 @@
     // Create and inject switch
     const languageSwitch = createLanguageSwitch();
     
-    // Insert after nav-links (on desktop) or in header (on mobile)
-    const header = document.querySelector('header nav');
-    if (header) {
-      header.appendChild(languageSwitch);
+    // Insert in .header-controls (always right side)
+    const headerControls = document.querySelector('.header-controls');
+    if (headerControls) {
+      // Insert before burger menu
+      const burgerMenu = headerControls.querySelector('.burger-menu');
+      if (burgerMenu) {
+        headerControls.insertBefore(languageSwitch, burgerMenu);
+      } else {
+        headerControls.appendChild(languageSwitch);
+      }
     } else {
-      navLinks.parentNode.appendChild(languageSwitch);
+      console.warn('.header-controls not found, fallback to header');
+      const header = document.querySelector('header');
+      if (header) {
+        header.appendChild(languageSwitch);
+      }
     }
   }
 

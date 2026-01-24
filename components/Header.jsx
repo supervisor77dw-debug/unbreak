@@ -90,27 +90,18 @@ export default function Header() {
         strategy="afterInteractive"
       />
 
-      <header>
-      <nav>
-        <div className="logo">
-          <a href="/index.html" className="logo-link">
-            <img src="/images/logo.png" alt="UNBREAK ONE" className="nav-logo" />
-          </a>
-        </div>
+      <header className="site-header">
+        <div className="header-inner">
+          {/* Logo Links */}
+          <div className="header-brand">
+            <a href="/index.html" className="logo-link">
+              <img src="/images/logo.png" alt="UNBREAK ONE" className="nav-logo" />
+            </a>
+          </div>
 
-        {/* Mobile Burger Menu */}
-        <div 
-          className={`burger-menu ${isMenuOpen ? 'active' : ''}`}
-          id="burgerMenu" 
-          onClick={toggleMenu}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-
-        {/* Navigation Links */}
-        <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`} id="navLinks">
+          {/* Navigation Mittig */}
+          <nav className="header-nav">
+            <ul className={`nav-links ${isMenuOpen ? 'active' : ''}`} id="navLinks">
           <li><a href="/index.html" data-page="index" data-i18n="nav.home" className={activePage === 'index' ? 'active' : ''}>Start</a></li>
           <li><a href="/produkt.html" data-page="produkt" data-i18n="nav.product" className={activePage === 'produkt' ? 'active' : ''}>Produkt</a></li>
           <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
@@ -125,10 +116,28 @@ export default function Header() {
           <li className="mobile-only"><a href="/datenschutz.html" data-page="datenschutz" data-i18n="nav.privacy">Datenschutz</a></li>
           <li className="mobile-only"><a href="/agb.html" data-page="agb" data-i18n="nav.terms">AGB</a></li>
 
-          <li><a href="/shop" className="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
-        </ul>
-      </nav>
-    </header>
+          {/* CTA im Mobile-Menü */}
+          <li className="mobile-only"><a href="/shop" className="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a></li>
+
+          </ul>
+          </nav>
+
+          {/* Controls Rechts: CTA + Language + Burger */}
+          <div className="header-controls">
+            <a href="/shop" className="btn btn-nav" data-i18n="nav.buyNow">Jetzt kaufen</a>
+            {/* Language-Switch wird hier von language-switch.js injiziert */}
+            <div 
+              className={`burger-menu ${isMenuOpen ? 'active' : ''}`}
+              id="burgerMenu" 
+              onClick={toggleMenu}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      </header>
     </>
   );
 }

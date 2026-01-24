@@ -231,6 +231,7 @@ header {
   height: auto;
 }
 
+.site-header.scrolled,
 header.scrolled {
   /* State 2: Scrolled - Leicht erhöhte Dichte, aber GLASSMORPHISM BLEIBT */
   background: linear-gradient(180deg, rgba(20, 24, 30, 0.85), rgba(20, 24, 30, 0.78));
@@ -241,7 +242,55 @@ header.scrolled {
               inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+/* Header-Inner: Flex-Container (Brand | Nav | Controls) */
+.header-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  width: 100%;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+/* Zone 1: Brand/Logo - Links, nie shrink */
+.header-brand {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.header-brand .nav-logo {
+  max-height: 48px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  transition: opacity 0.25s ease;
+}
+
+.header-brand .nav-logo:hover {
+  opacity: 0.85;
+}
+
+/* Zone 2: Nav - Mittig, nimmt alle freie Breite */
+.header-nav {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* Zone 3: Controls - Rechts, nie shrink */
+.header-controls {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* State 3: Navigation Links - Unified Interaction */
+.site-header .nav-links a,
+.site-header .nav-links button,
 header .nav-links a,
 header .nav-links button {
   color: rgba(230, 235, 240, 0.88);
@@ -343,37 +392,18 @@ main {
 }
 }
 
-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-sm) var(--spacing-md);
-  max-width: var(--container-max-width);
-  width: 100%;
-  margin: 0 auto;
-  gap: var(--spacing-md);
-}
-
-.logo {
-  font-family: var(--font-heading);
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--color-petrol-deep);
-  letter-spacing: 0.05em;
-  flex: 0 0 auto;
-  min-width: 0;
-}
-
+/* === NAV-LINKS & BURGER === */
 .nav-links {
   display: flex;
   gap: var(--spacing-md);
   list-style: none;
   align-items: center;
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: visible;
   flex-wrap: nowrap;
-  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  justify-content: flex-start;
+  margin: 0;
+  padding: 0;
 }
 
 .nav-links li {
@@ -381,22 +411,34 @@ nav {
   flex-shrink: 0;
 }
 
-/* Überschrieben durch header .nav-links a im Header-Bereich */
+/* Überschrieben durch .site-header .nav-links a im Header-Bereich */
 .nav-links a {
   font-size: 16px;
   font-weight: 500;
   padding: var(--spacing-xs) var(--spacing-sm);
   transition: color 0.3s ease;
   white-space: nowrap;
+  display: inline-flex;
 }
 
-/* Mobile Menu Toggle */
+/* Mobile Menu Toggle - versteckt im Desktop (>=900px) */
 .burger-menu {
   display: none;
   flex-direction: column;
   gap: 5px;
   cursor: pointer;
   padding: var(--spacing-xs);
+}
+
+/* Mobile-Only Links (Impressum, Datenschutz, AGB) - nur im Mobile-Menü */
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .mobile-only {
+    display: block;
+  }
 }
 
 /* Burger spans: bereits in header .burger-menu span definiert */
@@ -443,18 +485,33 @@ nav {
   color: var(--color-petrol-dark);
 }
 
-/* Nav Button - Consistent with Primary */
+/* Nav Button - Consistent with Primary, immer in .header-controls */
 .btn-nav {
   background-color: var(--color-petrol-deep);
   color: var(--color-white);
   padding: 10px 24px;
   font-size: 15px;
   box-shadow: 0 2px 6px rgba(10, 108, 116, 0.25);
+  white-space: nowrap;
 }
 
 .btn-nav:hover {
   background-color: var(--color-petrol-dark);
   box-shadow: 0 3px 10px rgba(10, 108, 116, 0.35);
+}
+
+/* Desktop: CTA sichtbar in header-controls */
+@media (min-width: 900px) {
+  .header-controls .btn-nav {
+    display: inline-block;
+  }
+}
+
+/* Mobile: CTA ausblenden (nur im Desktop) */
+@media (max-width: 899px) {
+  .header-controls .btn-nav {
+    display: none;
+  }
 }
 
 /* === CARDS === */
@@ -1213,8 +1270,8 @@ footer a:hover {
   }
 }
 
-/* === MOBILE (≤ 767px) === */
-@media (max-width: 767px) {
+/* === MOBILE (< 900px - Hamburger aktiv) === */
+@media (max-width: 899px) {
   body {
     font-size: 16px;
   }
@@ -1239,11 +1296,22 @@ footer a:hover {
     padding: 0 var(--spacing-sm);
   }
 
-  /* Mobile Navigation */
-  nav {
+  /* Mobile Header */
+  .header-inner {
     padding: var(--spacing-sm);
   }
 
+  /* Desktop-Nav ausblenden */
+  .header-nav {
+    display: none;
+  }
+
+  /* Burger-Menu anzeigen */
+  .burger-menu {
+    display: flex !important;
+  }
+
+  /* Mobile Navigation Slide-In */
   .nav-links {
     position: fixed;
     top: var(--header-height);
@@ -1285,6 +1353,14 @@ footer a:hover {
 
   .nav-links a:hover {
     color: var(--color-petrol-deep) !important;
+  }
+
+  /* CTA im Mobile-Menü anzeigen */
+  .nav-links .btn-nav {
+    display: block;
+    width: 100%;
+    margin-top: var(--spacing-md);
+    text-align: center;
   }
 
   .burger-menu {
