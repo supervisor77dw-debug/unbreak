@@ -383,7 +383,18 @@
     "cta": {
       "title": "Individuelle Konfiguration gewünscht?",
       "text": "Gestalte deinen eigenen UNBREAK ONE mit unserem 3D-Konfigurator",
-      "button": "Zum Konfigurator"
+      "button": "Zum Konfigurator",
+      "glassHolder": {
+        "title": "Gestalte deinen individuellen Glashalter",
+        "subtitle": "Wähle Farben, Finish und Varianten – live im 3D-Konfigurator.",
+        "button": "Zum 3D-Konfigurator"
+      },
+      "bottleHolder": {
+        "title": "Gestalte deinen individuellen Flaschenhalter",
+        "subtitle": "Konfiguriere deinen Flaschenhalter – passend zu deinem Setup.",
+        "button": "Zum 3D-Konfigurator"
+      },
+      "note": "Hinweis: Konfigurierte Produkte werden als individuelle Variante in den Warenkorb übernommen."
     }
   },
   "configurator": {

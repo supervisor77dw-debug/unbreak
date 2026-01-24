@@ -724,31 +724,33 @@ export default function Shop({ initialProducts }) {
           </div>
         </section>
 
-        {/* CTA Section - Premium Configurator Block */}
+        {/* CTA Section - Configurator Tiles */}
         <section className="configurator-cta-section">
           <div className="container">
-            <div className="configurator-block">
-              <div className="configurator-content">
-                <span className="configurator-badge">{currentLang === 'de' ? 'Individuell' : 'Custom'}</span>
-                <h2>{t('shop.cta.title')}</h2>
-                <p>
-                  {t('shop.cta.text')}
-                </p>
-                <div className="configurator-actions">
-                  <a href={getConfiguratorUrl()} onClick={handleConfiguratorClick} className="btn-configurator-primary">
-                    {t('shop.cta.button')}
-                  </a>
-                  <a href="#products" className="btn-configurator-secondary">
-                    {currentLang === 'de' ? 'Welche Varianten gibt es?' : 'What variants are available?'}
-                  </a>
-                </div>
+            <div className="configurator-tiles-grid">
+              {/* Glass Holder CTA */}
+              <div className="configurator-tile">
+                <div className="configurator-tile-icon">🍷</div>
+                <h3 className="configurator-tile-title">{t('shop.cta.glassHolder.title')}</h3>
+                <p className="configurator-tile-subtitle">{t('shop.cta.glassHolder.subtitle')}</p>
+                <a href={getConfiguratorUrl()} onClick={handleConfiguratorClick} className="btn-configurator-tile">
+                  {t('shop.cta.glassHolder.button')}
+                </a>
               </div>
-              <div className="configurator-visual">
-                <div className="configurator-preview">
-                  <span className="preview-label">{currentLang === 'de' ? 'Live 3D Preview' : 'Live 3D Preview'}</span>
-                </div>
+
+              {/* Bottle Holder CTA */}
+              <div className="configurator-tile">
+                <div className="configurator-tile-icon">🍾</div>
+                <h3 className="configurator-tile-title">{t('shop.cta.bottleHolder.title')}</h3>
+                <p className="configurator-tile-subtitle">{t('shop.cta.bottleHolder.subtitle')}</p>
+                <a href={getConfiguratorUrl()} onClick={handleConfiguratorClick} className="btn-configurator-tile">
+                  {t('shop.cta.bottleHolder.button')}
+                </a>
               </div>
             </div>
+
+            {/* Optional Note */}
+            <p className="configurator-note">{t('shop.cta.note')}</p>
           </div>
         </section>
       </main>
@@ -1078,113 +1080,95 @@ export default function Shop({ initialProducts }) {
           background: linear-gradient(135deg, #F8F9FA 0%, #E8EDF2 100%);
         }
 
-        .configurator-block {
+        .configurator-tiles-grid {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 3rem;
-          background: white;
-          border-radius: 16px;
-          padding: clamp(2rem, 5vw, 3rem);
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-        }
-
-        @media (min-width: 768px) {
-          .configurator-block {
-            grid-template-columns: 1.2fr 1fr;
-            align-items: center;
-          }
-        }
-
-        .configurator-badge {
-          display: inline-block;
-          background: linear-gradient(135deg, #0A6C74, #084F55);
-          color: white;
-          padding: 6px 16px;
-          border-radius: 20px;
-          font-size: 0.9rem;
-          font-weight: 600;
-          margin-bottom: 1rem;
-        }
-
-        .configurator-content h2 {
-          font-size: clamp(1.75rem, 4vw, 2.5rem);
-          font-weight: 700;
-          color: #1A1A1A;
-          margin: 0 0 1rem 0;
-          line-height: 1.2;
-        }
-
-        .configurator-content p {
-          font-size: clamp(1rem, 2vw, 1.15rem);
-          color: #666;
-          line-height: 1.7;
+          gap: 2rem;
           margin-bottom: 2rem;
         }
 
-        .configurator-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 1rem;
+        @media (min-width: 768px) {
+          .configurator-tiles-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
         }
 
-        .btn-configurator-primary {
-          padding: clamp(14px, 2vw, 16px) clamp(28px, 4vw, 40px);
+        .configurator-tile {
+          background: white;
+          border-radius: 16px;
+          padding: clamp(2rem, 4vw, 2.5rem);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+          transition: all 0.3s ease;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+        }
+
+        .configurator-tile:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 32px rgba(10, 108, 116, 0.15);
+        }
+
+        .configurator-tile-icon {
+          font-size: clamp(3rem, 6vw, 4rem);
+          margin-bottom: 1.5rem;
+          line-height: 1;
+        }
+
+        .configurator-tile-title {
+          font-size: clamp(1.25rem, 3vw, 1.5rem);
+          font-weight: 700;
+          color: #1A1A1A;
+          margin: 0 0 1rem 0;
+          line-height: 1.3;
+        }
+
+        .configurator-tile-subtitle {
+          font-size: clamp(0.95rem, 2vw, 1.05rem);
+          color: #666;
+          line-height: 1.6;
+          margin: 0 0 1.5rem 0;
+          flex-grow: 1;
+        }
+
+        .btn-configurator-tile {
+          width: 100%;
+          padding: clamp(14px, 2vw, 16px) clamp(24px, 4vw, 32px);
           background: linear-gradient(135deg, #0A6C74, #084F55);
           color: white;
           text-decoration: none;
           border-radius: 8px;
-          font-size: clamp(1rem, 2vw, 1.1rem);
+          font-size: clamp(1rem, 2vw, 1.05rem);
           font-weight: 600;
           transition: all 0.3s ease;
           display: inline-block;
-          box-shadow: 0 4px 16px rgba(10, 108, 116, 0.2);
+          box-shadow: 0 2px 8px rgba(10, 108, 116, 0.2);
+          text-align: center;
+          min-height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
-        .btn-configurator-primary:hover {
+        .btn-configurator-tile:hover {
+          background: linear-gradient(135deg, #084F55, #063D43);
           transform: translateY(-2px);
-          box-shadow: 0 6px 24px rgba(10, 108, 116, 0.3);
+          box-shadow: 0 4px 16px rgba(10, 108, 116, 0.3);
         }
 
-        .btn-configurator-secondary {
-          padding: clamp(14px, 2vw, 16px) clamp(28px, 4vw, 40px);
-          background: transparent;
-          color: #0A6C74;
-          text-decoration: none;
-          border: 2px solid #0A6C74;
-          border-radius: 8px;
-          font-size: clamp(1rem, 2vw, 1.1rem);
-          font-weight: 600;
-          transition: all 0.3s ease;
-          display: inline-block;
+        .btn-configurator-tile:active {
+          transform: translateY(0);
         }
 
-        .btn-configurator-secondary:hover {
-          background: #0A6C74;
-          color: white;
-        }
-
-        .configurator-visual {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .configurator-preview {
-          width: 100%;
-          max-width: 400px;
-          aspect-ratio: 1;
-          background: linear-gradient(135deg, #E8EDF2, #F8F9FA);
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 2px dashed #0A6C74;
-        }
-
-        .preview-label {
-          color: #0A6C74;
-          font-weight: 600;
-          font-size: 1.1rem;
+        .configurator-note {
+          text-align: center;
+          font-size: clamp(0.85rem, 1.5vw, 0.95rem);
+          color: #666;
+          line-height: 1.6;
+          max-width: 700px;
+          margin: 0 auto;
+          font-style: italic;
         }
 
         /* Mobile Optimizations */
@@ -1199,21 +1183,34 @@ export default function Shop({ initialProducts }) {
             font-size: 0.9rem;
           }
 
-          .configurator-actions {
-            flex-direction: column;
+          .configurator-tiles-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
           }
 
-          .btn-configurator-primary,
-          .btn-configurator-secondary {
-            width: 100%;
-            text-align: center;
+          .configurator-tile {
+            padding: 1.75rem 1.5rem;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .configurator-tile-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+          }
+
+          .configurator-tile-title {
+            font-size: 1.15rem;
+          }
+
+          .configurator-tile-subtitle {
+            font-size: 0.9rem;
           }
         }
 
         /* Accessibility */
         .btn-add-to-cart:focus,
-        .btn-configurator-primary:focus,
-        .btn-configurator-secondary:focus {
+        .btn-configurator-tile:focus {
           outline: 3px solid #0A6C74;
           outline-offset: 2px;
         }
