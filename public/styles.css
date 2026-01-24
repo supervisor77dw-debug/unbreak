@@ -245,42 +245,31 @@ header.scrolled {
               inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-/* Header-Inner: Flex-Container (LEFT: Brand+Nav | RIGHT: Controls) - IMMER 1 ZEILE */
+/* Header-Inner: Flex-Container (Brand | Burger | Nav | Controls) - IMMER 1 ZEILE */
 .header-inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;  /* Left und Right Blöcke */
+  justify-content: space-between;  /* Links und Rechts */
   flex-wrap: nowrap;  /* KRITISCH: Niemals wrap */
-  gap: 12px;
+  gap: 16px;
   max-width: var(--container-max-width);
   margin: 0 auto;
   padding: var(--spacing-sm) 0;  /* Kein horizontales Padding (kommt von header) */
   white-space: nowrap;
-  overflow: visible;  /* KRITISCH: Logo-Drift Prevention */
 }
 
-/* LEFT BLOCK: Brand + Nav (Logo IMMER links, nur Nav zentriert/links switcht) */
-.header-left {
-  display: flex;
-  align-items: center;
-  flex: 1 1 auto;  /* Kann wachsen */
-  min-width: 0;  /* Kritisch für Shrinking */
-  gap: 24px;  /* Gutter zwischen Brand und Nav */
-  justify-content: flex-start;  /* KRITISCH: Logo IMMER links (nie center/auto) */
-}
-
-/* Zone 1: Brand/Logo - Links (NIE wandern/driften) */
-.header-brand {
+/* Brand (Logo) - Links, nie shrink */
+.brand {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  padding: 8px 0;  /* Optischer Abstand oben/unten */
-  white-space: nowrap;
-  margin: 0;  /* KRITISCH: Kein auto-margin (verhindert Drift) */
-  min-width: 0;  /* Zusätzliche Sicherheit */
+  margin: 0;
+  padding: 0;
+  text-decoration: none;
 }
 
-.header-brand .nav-logo {
+.brand .nav-logo,
+.brand img {
   max-height: 48px;
   width: auto;
   height: auto;
@@ -289,18 +278,46 @@ header.scrolled {
   transition: opacity 0.25s ease;
 }
 
-.header-brand .nav-logo:hover {
+.brand:hover .nav-logo,
+.brand:hover img {
   opacity: 0.85;
 }
 
-/* Zone 2: Nav - Default zentriert (1200-1449), ab 1450 links */
+/* Burger - Zwischen Brand und Nav (Mobile only, siehe Media Query) */
+.burger {
+  display: none;  /* Default hidden, per Media Query aktiviert */
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  padding: 8px;
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  position: relative;
+  z-index: 1002;  /* Über Panel */
+}
+
+.burger span {
+  width: 28px;
+  height: 3px;
+  background-color: rgba(230, 235, 240, 0.88);
+  border-radius: 2px;
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.burger:hover span,
+.burger.active span {
+  background-color: var(--color-petrol-deep);
+}
+
+/* Nav - Mittig, kann shrink */
 .header-nav {
   flex: 1 1 auto;
   min-width: 0;  /* KRITISCH: ohne dies kann Nav nicht shrink */
   overflow: visible;
   white-space: nowrap;
   display: flex;
-  justify-content: center;  /* Default: zentriert (wird bei >=1450 auf flex-start) */
+  justify-content: center;  /* Zentriert */
 }
 
 /* Nav-Liste */
@@ -309,10 +326,11 @@ header.scrolled {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: clamp(8px, 1vw, 14px);  /* Kompakter Gap (Kollision-Prevention) */
+  gap: clamp(10px, 1.5vw, 22px);  /* Moderates Gap, mehr Platz ohne CTA */
   list-style: none;
   margin: 0;
   padding: 0;
+  min-width: 0;  /* KRITISCH */
 }
 
 .nav-links li,
@@ -321,7 +339,7 @@ header.scrolled {
   flex-shrink: 0;  /* Nie shrink */
 }
 
-/* Zone 3: Controls (RIGHT BLOCK) - Rechts, nie shrink/wrap */
+/* Controls (Language only) - Rechts, nie shrink/wrap */
 .header-controls {
   flex: 0 0 auto;
   display: inline-flex;  /* shrink-to-fit */
@@ -474,26 +492,10 @@ main {
   display: inline-flex;
 }
 
-/* Mobile Menu Toggle / Burger */
-.burger-menu,
-.header-burger {
-  display: none;  /* Default: hidden (per Media Query aktiviert) */
-  flex-direction: column;
-  gap: 5px;
-  cursor: pointer;
-  padding: var(--spacing-xs);
-  flex: 0 0 auto;
-  border: none;
-  background: transparent;
-  position: relative;
-}
-
 /* Mobile-Only Links - nicht mehr verwendet (jetzt in .mobile-nav-panel) */
 .mobile-only {
   display: none;
 }
-
-/* Burger spans: bereits in header .burger-menu span definiert */
 
 /* === BUTTONS - Premium Differentiation === */
 .btn {
@@ -537,81 +539,24 @@ main {
   color: var(--color-petrol-dark);
 }
 
-/* Nav Button - Consistent with Primary, immer in .header-controls */
-.btn-nav,
-.header-cta {
-  background-color: var(--color-petrol-deep);
-  color: var(--color-white);
-  padding: 8px 12px;  /* KOMPAKT (Kollision-Prevention) */
-  font-size: 13px;  /* KOMPAKT */
-  line-height: 1;
-  box-shadow: 0 2px 6px rgba(10, 108, 116, 0.25);
-  white-space: nowrap;
-  flex: 0 0 auto;
-  border-radius: 999px;  /* Pill-Shape */
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;  /* Für Icon */
-}
-
-/* CTA DEFAULT: VERSTECKT (wird nur per Media Query eingeschaltet) */
-.header-cta {
-  display: none !important;  /* Hart versteckt */
-}
-
-.btn-nav:hover,
-.header-cta:hover {
-  background-color: var(--color-petrol-dark);
-  box-shadow: 0 3px 10px rgba(10, 108, 116, 0.35);
-}
-
-/* === RESPONSIVE HEADER STRATEGY (3 Breakpoints STRIKT) === */
+/* === RESPONSIVE HEADER STRATEGY (NUR BURGER/NAV TOGGLE, KEIN CTA) === */
 
 /* <1200px: Burger-Mode (Mobile) */
 @media (max-width: 1199px) {
   .header-nav {
     display: none !important;  /* Desktop-Nav versteckt */
   }
-  .header-cta {
-    display: none !important;  /* CTA versteckt */
-  }
-  .header-burger {
+  .burger {
     display: inline-flex !important;  /* Burger sichtbar */
-    position: relative;
-    z-index: 1002;  /* Über Panel */
   }
 }
 
-/* 1200-1449px: Desktop ohne CTA, Nav ZENTRIERT */
-@media (min-width: 1200px) and (max-width: 1449px) {
+/* >=1200px: Desktop-Mode (Nav sichtbar, Burger versteckt) */
+@media (min-width: 1200px) {
   .header-nav {
     display: flex !important;  /* Nav sichtbar */
-    justify-content: center !important;  /* Nav ZENTRIERT */
   }
-  .header-cta {
-    display: none !important;  /* CTA VERSTECKT (bis 1449px) */
-  }
-  .header-burger {
-    display: none !important;  /* Burger versteckt */
-  }
-}
-
-/* >=1450px: Desktop mit CTA KOMPAKT, Nav LINKS (mit Brand) */
-@media (min-width: 1450px) {
-  .header-nav {
-    display: flex !important;  /* Nav sichtbar */
-    justify-content: flex-start !important;  /* Nav LINKS (Brand+Nav zusammen) */
-  }
-  .header-cta {
-    display: inline-flex !important;  /* CTA SICHTBAR (erst ab 1450px!) */
-    padding: 8px 12px;  /* KOMPAKT */
-    font-size: 13px;  /* KOMPAKT */
-    line-height: 1;
-    border-radius: 999px;
-    gap: 4px;  /* Icon spacing */
-  }
-  .header-burger {
+  .burger {
     display: none !important;  /* Burger versteckt */
   }
 }

@@ -15,45 +15,36 @@ function getHeaderHTML() {
   return `
   <header class="site-header">
     <div class="header-inner">
-      <!-- LEFT BLOCK: Brand + Nav (springen zusammen) -->
-      <div class="header-left">
-        <!-- Logo -->
-        <div class="header-brand">
-          <a href="index.html" class="logo-link">
-            <img src="images/logo.png" alt="UNBREAK ONE" class="nav-logo">
-          </a>
-        </div>
+      <!-- Brand (Logo) -->
+      <a class="brand" href="index.html">
+        <img src="images/logo.png" alt="UNBREAK ONE" class="nav-logo">
+      </a>
 
-        <!-- Navigation -->
-        <nav class="header-nav" aria-label="Primary">
-          <ul class="nav-links header-nav-list" id="navLinks">
-          <li><a href="index.html" data-page="index" data-i18n="nav.home">Start</a></li>
-          <li><a href="produkt.html" data-page="produkt" data-i18n="nav.product">Produkt</a></li>
-          <li><a href="einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases">Einsatzbereiche</a></li>
-          <li><a href="gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition">Gastro Edition</a></li>
-          <li><a href="technik.html" data-page="technik" data-i18n="nav.tech">Technik</a></li>
-          <li><a href="configurator.html" data-page="configurator" data-i18n="nav.configurator">Konfigurator</a></li>
-          <li><a href="/shop" data-page="shop" data-i18n="nav.shop">Shop</a></li>
-          <li><a href="kontakt.html" data-page="kontakt" data-i18n="nav.contact">Kontakt</a></li>
-          </ul>
-        </nav>
-      </div>
+      <!-- Burger (Mobile only) -->
+      <button class="burger" id="burgerMenu" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
 
-      <!-- RIGHT BLOCK: Controls (CTA + Language + Burger) -->
+      <!-- Navigation (Desktop/Mobile toggle) -->
+      <nav id="primary-nav" class="header-nav" aria-label="Primary">
+        <ul class="nav-links header-nav-list" id="navLinks">
+        <li><a href="index.html" data-page="index" data-i18n="nav.home">Start</a></li>
+        <li><a href="produkt.html" data-page="produkt" data-i18n="nav.product">Produkt</a></li>
+        <li><a href="einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases">Einsatzbereiche</a></li>
+        <li><a href="gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition">Gastro Edition</a></li>
+        <li><a href="technik.html" data-page="technik" data-i18n="nav.tech">Technik</a></li>
+        <li><a href="configurator.html" data-page="configurator" data-i18n="nav.configurator">Konfigurator</a></li>
+        <li><a href="/shop" data-page="shop" data-i18n="nav.shop">Shop</a></li>
+        <li><a href="kontakt.html" data-page="kontakt" data-i18n="nav.contact">Kontakt</a></li>
+        </ul>
+      </nav>
+
+      <!-- Controls (Language only, NO CTA!) -->
       <div class="header-controls">
-        <a href="/shop" class="btn btn-nav header-cta" data-i18n="nav.buyNow">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-            <path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12z" fill="currentColor"/>
-          </svg>
-          <span>Kaufen</span>
-        </a>
         <!-- Mount-Point für Language-Switch (wird von language-switch.js injiziert) -->
         <div id="language-switch-mount"></div>
-        <button class="burger-menu header-burger" id="burgerMenu" type="button" aria-label="Menu" aria-expanded="false">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
       </div>
     </div>
 
@@ -110,13 +101,13 @@ function setActiveMenuItem() {
  * Burger-Menü Funktionalität (Click, Overlay, ESC)
  */
 function setupBurgerMenu() {
-  const burgerButton = document.querySelector('.header-burger');
+  const burgerButton = document.querySelector('.burger');
   const mobilePanel = document.querySelector('.mobile-nav-panel');
   const overlay = document.querySelector('.mobile-nav-overlay');
   const mobileLinks = document.querySelectorAll('.mobile-nav-list a');
 
   if (!burgerButton) {
-    if (window.clientLogger) window.clientLogger.error('❌ BURGER NOT FOUND: .header-burger selector failed');
+    if (window.clientLogger) window.clientLogger.error('❌ BURGER NOT FOUND: .burger selector failed');
     return;
   }
 

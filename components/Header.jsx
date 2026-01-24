@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Script from 'next/script';
 import { navigateToConfigurator, getCurrentLanguage } from '../lib/configuratorLink';
@@ -8,76 +8,6 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scriptsLoaded, setScriptsLoaded] = useState(false);
   const [currentLang, setCurrentLang] = useState('de');
-  const [ctaHidden, setCtaHidden] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  
-  const headerInnerRef = useRef(null);
-  const brandRef = useRef(null);
-  const navRef = useRef(null);
-  const controlsRef = useRef(null);
-  const ctaRef = useRef(null);
-
-  // Progressive Collapse: 3 Stufen (Normal → CTA hidden → Burger)
-  useLayoutEffect(() => {
-    const checkSpace = () => {
-      if (!headerInnerRef.current || !brandRef.current || !navRef.current || !controlsRef.current) {
-        return;
-      }
-
-      const available = headerInnerRef.current.clientWidth;
-      const neededBrand = brandRef.current.scrollWidth;
-      const neededNav = navRef.current.scrollWidth;
-      const neededControls = controlsRef.current.scrollWidth;
-      const gaps = 32; // 2x column-gap 16px
-
-      // Stufe 1: Mit CTA
-      let neededTotal = neededBrand + neededNav + neededControls + gaps;
-
-      if (neededTotal > available && !ctaHidden) {
-        // Stufe 2: CTA verstecken und neu messen
-        setCtaHidden(true);
-        return;
-      }
-
-      if (ctaHidden) {
-        // Neu messen ohne CTA
-        const neededCTA = ctaRef.current ? ctaRef.current.scrollWidth : 0;
-        neededTotal = neededBrand + neededNav + (neededControls - neededCTA) + gaps;
-      }
-
-      // Stufe 3: Wenn es immer noch nicht passt → Burger aktivieren
-      const shouldCollapse = neededTotal > available;
-
-      if (shouldCollapse !== isCollapsed) {
-        setIsCollapsed(shouldCollapse);
-      }
-
-      // Wenn genug Platz: CTA wieder anzeigen
-      if (ctaHidden && !shouldCollapse) {
-        const neededWithCTA = neededBrand + neededNav + neededControls + gaps;
-        if (neededWithCTA <= available) {
-          setCtaHidden(false);
-        }
-      }
-    };
-
-    // Initiale Messung nach kurzer Verzögerung (DOM muss gerendert sein)
-    const timer = setTimeout(checkSpace, 50);
-
-    // ResizeObserver für dynamische Anpassung
-    const resizeObserver = new ResizeObserver(() => {
-      checkSpace();
-    });
-
-    if (headerInnerRef.current) {
-      resizeObserver.observe(headerInnerRef.current);
-    }
-
-    return () => {
-      clearTimeout(timer);
-      resizeObserver.disconnect();
-    };
-  }, [ctaHidden, isCollapsed]);
 
   // Close menu on route change
   useEffect(() => {
@@ -181,60 +111,45 @@ export default function Header() {
       />
 
       <header className="site-header">
-        <div className="header-inner" ref={headerInnerRef}>
-          {/* LEFT BLOCK: Brand + Nav (springen zusammen) */}
-          <div className="header-left">
-            {/* Logo */}
-            <div className="header-brand" ref={brandRef}>
-              <a href="/index.html" className="logo-link">
-                <img src="/images/logo.png" alt="UNBREAK ONE" className="nav-logo" />
-              </a>
-            </div>
+        <div className="header-inner">
+          {/* Brand (Logo) */}
+          <a className="brand" href="/index.html">
+            <img src="/images/logo.png" alt="UNBREAK ONE" className="nav-logo" />
+          </a>
 
-            {/* Navigation */}
-            <nav className={`header-nav ${isCollapsed ? 'collapsed' : ''}`} ref={navRef} aria-label="Primary">
-              <ul className={`nav-links header-nav-list ${isMenuOpen ? 'active' : ''}`} id="navLinks">
-            <li><a href="/index.html" data-page="index" data-i18n="nav.home" className={activePage === 'index' ? 'active' : ''}>Start</a></li>
-            <li><a href="/produkt.html" data-page="produkt" data-i18n="nav.product" className={activePage === 'produkt' ? 'active' : ''}>Produkt</a></li>
-            <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
-            <li><a href="/gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition" className={activePage === 'gastro-edition' ? 'active' : ''}>Gastro Edition</a></li>
-            <li><a href="/technik.html" data-page="technik" data-i18n="nav.tech" className={activePage === 'technik' ? 'active' : ''}>Technik</a></li>
-            <li><a href="#" onClick={handleConfiguratorClick} data-page="configurator" data-i18n="nav.configurator" className={activePage === 'configurator' ? 'active' : ''}>Konfigurator</a></li>
-            <li><a href="/shop" data-page="shop" data-i18n="nav.shop" className={activePage === 'shop' ? 'active' : ''}>Shop</a></li>
-            <li><a href="/kontakt.html" data-page="kontakt" data-i18n="nav.contact" className={activePage === 'kontakt' ? 'active' : ''}>Kontakt</a></li>
-            </ul>
-            </nav>
-          </div>
+          {/* Burger (Mobile only) */}
+          <button 
+            className={`burger ${isMenuOpen ? 'active' : ''}`}
+            id="burgerMenu" 
+            onClick={toggleMenu}
+            aria-controls="primary-nav"
+            aria-expanded={isMenuOpen}
+            aria-label="Menu"
+            type="button"
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
 
-          {/* RIGHT BLOCK: Controls (CTA + Language + Burger) */}
-          <div className="header-controls" ref={controlsRef}>
-            {/* CTA - immer im DOM, hide per CSS */}
-            <a 
-              href="/shop" 
-              className="btn btn-nav header-cta" 
-              data-i18n="nav.buyNow" 
-              ref={ctaRef}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{flexShrink: 0}}>
-                <path d="M19 6h-2c0-2.76-2.24-5-5-5S7 3.24 7 6H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-7-3c1.66 0 3 1.34 3 3H9c0-1.66 1.34-3 3-3zm7 17H5V8h14v12z" fill="currentColor"/>
-              </svg>
-              <span>Kaufen</span>
-            </a>
+          {/* Navigation (Desktop/Mobile toggle) */}
+          <nav id="primary-nav" className="header-nav" aria-label="Primary">
+            <ul className={`nav-links header-nav-list ${isMenuOpen ? 'active' : ''}`} id="navLinks">
+          <li><a href="/index.html" data-page="index" data-i18n="nav.home" className={activePage === 'index' ? 'active' : ''}>Start</a></li>
+          <li><a href="/produkt.html" data-page="produkt" data-i18n="nav.product" className={activePage === 'produkt' ? 'active' : ''}>Produkt</a></li>
+          <li><a href="/einsatzbereiche.html" data-page="einsatzbereiche" data-i18n="nav.useCases" className={activePage === 'einsatzbereiche' ? 'active' : ''}>Einsatzbereiche</a></li>
+          <li><a href="/gastro-edition.html" data-page="gastro-edition" data-i18n="nav.gastroEdition" className={activePage === 'gastro-edition' ? 'active' : ''}>Gastro Edition</a></li>
+          <li><a href="/technik.html" data-page="technik" data-i18n="nav.tech" className={activePage === 'technik' ? 'active' : ''}>Technik</a></li>
+          <li><a href="#" onClick={handleConfiguratorClick} data-page="configurator" data-i18n="nav.configurator" className={activePage === 'configurator' ? 'active' : ''}>Konfigurator</a></li>
+          <li><a href="/shop" data-page="shop" data-i18n="nav.shop" className={activePage === 'shop' ? 'active' : ''}>Shop</a></li>
+          <li><a href="/kontakt.html" data-page="kontakt" data-i18n="nav.contact" className={activePage === 'kontakt' ? 'active' : ''}>Kontakt</a></li>
+          </ul>
+          </nav>
+
+          {/* Controls (Language only, NO CTA!) */}
+          <div className="header-controls">
             {/* Mount-Point für Language-Switch (wird von language-switch.js injiziert) */}
             <div id="language-switch-mount"></div>
-            {/* Burger - immer im DOM, hide per CSS */}
-            <button 
-              className={`burger-menu header-burger ${isMenuOpen ? 'active' : ''}`}
-              id="burgerMenu" 
-              onClick={toggleMenu}
-              aria-label="Menu"
-              aria-expanded={isMenuOpen}
-              type="button"
-            >
-              <span></span>
-              <span></span>
-              <span></span>
-            </button>
           </div>
         </div>
 
