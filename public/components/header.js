@@ -34,17 +34,24 @@ function getHeaderHTML() {
         </ul>
       </nav>
 
-      <!-- Controls (Burger + Language) -->
+      <!-- Controls (Cart + Language + Burger) -->
       <div class="header-controls">
+        <!-- Mount-Point für Cart-Badge (wird von shop.js injiziert, >= 1400px) -->
+        <div id="header-cart-mount"></div>
+        <!-- Mount-Point für Language-Switch (wird von language-switch.js injiziert) -->
+        <div id="language-switch-mount"></div>
         <!-- Burger (Mobile only) -->
         <button class="burger" id="burgerMenu" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Menu">
           <span></span>
           <span></span>
           <span></span>
         </button>
-        <!-- Mount-Point für Language-Switch (wird von language-switch.js injiziert) -->
-        <div id="language-switch-mount"></div>
       </div>
+    </div>
+
+    <!-- Second Header Row - Cart Badge (<1400px only) -->
+    <div class="header-cart-row">
+      <div id="header-cart-mobile-mount"></div>
     </div>
 
     <!-- MOBILE NAV PANEL (Offcanvas) -->

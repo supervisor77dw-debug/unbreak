@@ -131,8 +131,12 @@ export default function Header() {
           </ul>
           </nav>
 
-          {/* Controls (Burger + Language) */}
+          {/* Controls (Cart + Language + Burger) */}
           <div className="header-controls">
+            {/* Mount-Point für Cart-Badge (wird von shop.js injiziert, >= 1400px) */}
+            <div id="header-cart-mount"></div>
+            {/* Mount-Point für Language-Switch (wird von language-switch.js injiziert) */}
+            <div id="language-switch-mount"></div>
             {/* Burger (Mobile only) */}
             <button 
               className={`burger ${isMenuOpen ? 'active' : ''}`}
@@ -147,9 +151,12 @@ export default function Header() {
               <span></span>
               <span></span>
             </button>
-            {/* Mount-Point für Language-Switch (wird von language-switch.js injiziert) */}
-            <div id="language-switch-mount"></div>
           </div>
+        </div>
+        
+        {/* Second Header Row - Cart Badge (<1400px only) */}
+        <div className="header-cart-row">
+          <div id="header-cart-mobile-mount"></div>
         </div>
 
         {/* MOBILE NAV PANEL (Offcanvas) */}

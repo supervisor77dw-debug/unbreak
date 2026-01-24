@@ -357,6 +357,62 @@ header.scrolled {
   align-items: center;
 }
 
+/* Cart Badge Mount Points */
+#header-cart-mount {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Cart Badge in Header Controls (Desktop >= 1400px) */
+.header-cart-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0A6C74, #084F55);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(10, 108, 116, 0.3);
+  transition: all 0.3s ease;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.header-cart-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(10, 108, 116, 0.4);
+  background: linear-gradient(135deg, #0A7C84, #085F65);
+}
+
+.header-cart-badge .cart-count {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Second Header Row - Cart Badge for < 1400px */
+.header-cart-row {
+  display: none; /* Hidden by default */
+  justify-content: flex-end;
+  padding: 0 16px 8px 16px;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  background: linear-gradient(180deg, rgba(20, 24, 30, 0.72), rgba(20, 24, 30, 0.65));
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+}
+
+#header-cart-mobile-mount {
+  display: inline-flex;
+  align-items: center;
+}
+
 /* State 3: Navigation Links - Unified Interaction */
 .site-header .nav-links a,
 .site-header .nav-links button,
@@ -558,6 +614,30 @@ main {
   }
   .burger {
     display: none !important;  /* Burger versteckt */
+  }
+}
+
+/* === CART BADGE RESPONSIVE (NO OVERLAP) === */
+
+/* <1400px: Cart in second header row (below main header) */
+@media (max-width: 1399px) {
+  #header-cart-mount {
+    display: none !important;  /* Hide cart in header controls */
+  }
+  
+  .header-cart-row {
+    display: flex !important;  /* Show second row */
+  }
+}
+
+/* >=1400px: Cart in header controls (next to language toggle) */
+@media (min-width: 1400px) {
+  #header-cart-mount {
+    display: inline-flex !important;  /* Show cart in header controls */
+  }
+  
+  .header-cart-row {
+    display: none !important;  /* Hide second row */
   }
 }
 

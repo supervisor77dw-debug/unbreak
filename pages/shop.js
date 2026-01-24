@@ -119,6 +119,37 @@ export default function Shop({ initialProducts, configurableProducts }) {
     }
   }, []);
 
+  // Inject cart badge into header mount points (responsive: desktop + mobile)
+  useEffect(() => {
+    if (typeof window === 'undefined' || cartCount === 0) return;
+    
+    const desktopMount = document.getElementById('header-cart-mount');
+    const mobileMount = document.getElementById('header-cart-mobile-mount');
+    
+    // Cart badge HTML (same for both mounts)
+    const cartBadgeHTML = `
+      <a href="/cart" class="header-cart-badge">
+        🛒 <span class="cart-count">${cartCount}</span>
+      </a>
+    `;
+    
+    // Inject into desktop mount (visible >= 1400px)
+    if (desktopMount) {
+      desktopMount.innerHTML = cartBadgeHTML;
+    }
+    
+    // Inject into mobile mount (visible < 1400px)
+    if (mobileMount) {
+      mobileMount.innerHTML = cartBadgeHTML;
+    }
+    
+    // Cleanup: remove when component unmounts or cart becomes empty
+    return () => {
+      if (desktopMount) desktopMount.innerHTML = '';
+      if (mobileMount) mobileMount.innerHTML = '';
+    };
+  }, [cartCount]);
+
   useEffect(() => {
     // If no SSR data, fetch client-side
     if (!initialProducts || initialProducts.length === 0) {
@@ -537,13 +568,6 @@ export default function Shop({ initialProducts, configurableProducts }) {
 
       <main className="page-content">
         
-        {/* Cart Badge - Desktop Only (Floating) */}
-        {cartCount > 0 && (
-          <a href="/cart" className="cart-badge-float">
-            🛒 {cartCount}
-          </a>
-        )}
-
         {/* Hero Section */}
         <section className="shop-hero">
           <div className="container">
@@ -885,28 +909,8 @@ export default function Shop({ initialProducts, configurableProducts }) {
            SHOP PAGE - PREMIUM DESIGN
            ============================================ */
         
-        /* Cart Badge - Desktop Only (Floating, >768px) */
-        .cart-badge-float {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: linear-gradient(135deg, #0A6C74, #084F55);
-          color: white;
-          padding: 12px 20px;
-          border-radius: 50px;
-          font-weight: 600;
-          text-decoration: none;
-          box-shadow: 0 4px 16px rgba(10, 108, 116, 0.4);
-          z-index: 1000;
-          transition: all 0.3s ease;
-          font-size: 16px;
-          display: block;
-        }
-        
-        .cart-badge-float:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 24px rgba(10, 108, 116, 0.5);
-        }
+        /* Header Cart Badge - Integrated in Header Controls */
+        /* Styled via global styles.css - see .header-cart-badge */
 
         /* Mobile Cart Bottom Bar (Sticky, ≤768px) */
         .mobile-cart-bar {
