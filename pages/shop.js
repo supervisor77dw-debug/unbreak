@@ -736,28 +736,59 @@ export default function Shop({ initialProducts, configurableProducts }) {
                 const configuratorType = isGlass ? 'glass' : 'bottle';
                 const productKey = isGlass ? 'glassHolder' : 'bottleHolder';
                 
-                // CRITICAL: Alle Texte explizit laden mit Fehlerprüfung
-                const titleText = t(`shop.configurableProducts.${productKey}.name`);
-                const descriptionText = t(`shop.configurableProducts.${productKey}.description`);
-                const badgeText = t('shop.configurableSection.badge');
-                const ctaButtonText = t('shop.configurableSection.ctaButton');
-                const customManufacturingText = t('shop.configurableSection.customManufacturing');
+                // HARDCODED FALLBACKS – Garantierte Texte wenn i18n fehlt
+                const FALLBACK_TEXTS = {
+                  de: {
+                    glassHolder: {
+                      name: 'Individueller Glashalter',
+                      description: 'Dein individueller Glashalter – perfekt abgestimmt auf Einsatzbereich, Material und Designanspruch.'
+                    },
+                    bottleHolder: {
+                      name: 'Individueller Flaschenhalter',
+                      description: 'Dein individueller Flaschenhalter – optimal konfiguriert für Stabilität, Anwendung und Design.'
+                    },
+                    badge: 'Konfigurierbar',
+                    ctaButton: 'Individuell gestalten',
+                    customManufacturing: 'Individuelle Fertigung',
+                    priceUnavailable: 'Preis derzeit nicht verfügbar'
+                  },
+                  en: {
+                    glassHolder: {
+                      name: 'Custom Glass Holder',
+                      description: 'Your custom glass holder – perfectly tailored to use case, materials and design preferences.'
+                    },
+                    bottleHolder: {
+                      name: 'Custom Bottle Holder',
+                      description: 'Your custom bottle holder – optimised for stability, application and design.'
+                    },
+                    badge: 'Configurable',
+                    ctaButton: 'Customize now',
+                    customManufacturing: 'Custom-made',
+                    priceUnavailable: 'Price currently unavailable'
+                  }
+                };
                 
-                // HARD FAIL: Wenn kritische Texte fehlen, nicht rendern
-                if (!titleText || !descriptionText || !ctaButtonText) {
-                  console.error('[SHOP] FATAL: Missing i18n keys for configurable product', {
-                    productKey,
-                    titleText,
-                    descriptionText,
-                    ctaButtonText
-                  });
-                  return null;
-                }
+                const lang = currentLang || 'de';
+                const fallback = FALLBACK_TEXTS[lang] || FALLBACK_TEXTS.de;
+                
+                // i18n mit Fallback – GARANTIERT nie leer
+                const titleText = t(`shop.configurableProducts.${productKey}.name`) || fallback[productKey]?.name;
+                const descriptionText = t(`shop.configurableProducts.${productKey}.description`) || fallback[productKey]?.description;
+                const badgeText = t('shop.configurableSection.badge') || fallback.badge;
+                const ctaButtonText = t('shop.configurableSection.ctaButton') || fallback.ctaButton;
+                const customManufacturingText = t('shop.configurableSection.customManufacturing') || fallback.customManufacturing;
+                const priceUnavailableText = t('shop.configurableSection.priceUnavailable') || fallback.priceUnavailable;
+                
+                // DEV-Mode: Warnung bei fehlenden i18n-Keys
+                const missingKeys = [];
+                if (!t(`shop.configurableProducts.${productKey}.name`)) missingKeys.push(`shop.configurableProducts.${productKey}.name`);
+                if (!t(`shop.configurableProducts.${productKey}.description`)) missingKeys.push(`shop.configurableProducts.${productKey}.description`);
+                const showI18nWarning = process.env.NODE_ENV !== 'production' && missingKeys.length > 0;
                 
                 return (
                   <div key={product.id} className="product-card">
-                    {/* Badge nur rendern wenn Text vorhanden */}
-                    {badgeText && <div className="product-badge">{badgeText}</div>}
+                    {/* Badge IMMER sichtbar */}
+                    <div className="product-badge">{badgeText}</div>
                     
                     {/* Product Image - same logic as regular products */}
                     {(() => {
@@ -795,6 +826,13 @@ export default function Shop({ initialProducts, configurableProducts }) {
                     <div className="product-content">
                       <h3 className="product-title">{titleText}</h3>
                       <p className="product-description">{descriptionText}</p>
+                      
+                      {/* DEV-Mode: i18n Warning (unauffällig) */}
+                      {showI18nWarning && (
+                        <p style={{ fontSize: '10px', color: '#999', marginTop: '4px' }}>
+                          ⚠️ Missing i18n: {missingKeys.join(', ')}
+                        </p>
+                      )}
 
                       <div className="product-price-section">
                         <div className="price-wrapper">
@@ -807,7 +845,7 @@ export default function Shop({ initialProducts, configurableProducts }) {
                             </>
                           ) : (
                             <span className="product-price product-price-unavailable">
-                              {t('shop.configurableSection.priceUnavailable')}
+                              {priceUnavailableText}
                             </span>
                           )}
                         </div>
