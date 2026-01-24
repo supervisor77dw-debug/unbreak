@@ -1,9 +1,12 @@
 /* ===================================
    i18n Language Switch Styles
+   CRITICAL: Styles MUST be identical across ALL breakpoints
+   Only layout (position, order, margin) may change in media queries
    =================================== */
 
-/* Language Switch Container */
-.language-switch {
+/* Language Switch Container - SINGLE SOURCE OF TRUTH */
+.language-switch,
+.uo-language-switch {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -26,8 +29,9 @@
   box-shadow: 0 4px 12px rgba(10, 108, 116, 0.15);
 }
 
-/* Language Button */
-.language-switch button {
+/* Language Button - SINGLE SOURCE OF TRUTH */
+.language-switch button,
+.uo-language-switch button {
   position: relative;
   z-index: 2;
   flex: 0 0 auto;
@@ -46,25 +50,30 @@
   white-space: nowrap;
 }
 
-.language-switch button:focus {
+.language-switch button:focus,
+.uo-language-switch button:focus {
   outline: 2px solid var(--color-petrol-deep);
   outline-offset: 2px;
 }
 
-.language-switch button:hover:not(.active) {
+.language-switch button:hover:not(.active),
+.uo-language-switch button:hover:not(.active) {
   color: var(--color-petrol-deep);
 }
 
-/* Active Language Button */
-.language-switch button.active {
+/* Active Language Button - SINGLE SOURCE OF TRUTH */
+.language-switch button.active,
+.uo-language-switch button.active {
   color: var(--color-white);
   background: var(--color-petrol-deep);
   box-shadow: 0 2px 8px rgba(10, 108, 116, 0.3);
 }
 
-/* Disabled Language Button (Shop page EN) */
+/* Disabled Language Button (Shop page EN) - SINGLE SOURCE OF TRUTH */
 .language-switch button.disabled,
-.language-switch button:disabled {
+.language-switch button:disabled,
+.uo-language-switch button.disabled,
+.uo-language-switch button:disabled {
   color: rgba(100, 100, 100, 0.4);
   cursor: not-allowed;
   opacity: 0.5;
@@ -72,36 +81,54 @@
 }
 
 .language-switch button.disabled:hover,
-.language-switch button:disabled:hover {
+.language-switch button:disabled:hover,
+.uo-language-switch button.disabled:hover,
+.uo-language-switch button:disabled:hover {
   color: rgba(100, 100, 100, 0.4);
   background: transparent;
 }
 
-/* Separator */
-.language-switch .separator {
+/* Separator - SINGLE SOURCE OF TRUTH */
+.language-switch .separator,
+.uo-language-switch .separator {
   flex: 0 0 auto;
   width: 1px;
   height: 18px;
   background: rgba(10, 108, 116, 0.2);
 }
 
-/* Mobile Styles for Language Switch */
+/* RESPONSIVE LAYOUT (ONLY layout properties, NO style overrides) */
+
+/* Mobile <900px: ONLY layout changes, styles stay IDENTICAL */
 @media (max-width: 899px) {
-  /* Language-Switch bleibt in .header-controls, kein position:fixed mehr */
-  .language-switch {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+  /* CRITICAL: NO background/color/border overrides - keep desktop styles */
+  .language-switch,
+  .uo-language-switch {
+    /* Layout only - styles inherit from base */
   }
 
-  .language-switch button {
-    font-size: 12px;
-    padding: 5px 12px;
+  /* CRITICAL: NO style overrides, enforce desktop appearance */
+  .language-switch button,
+  .uo-language-switch button {
+    /* Keep desktop styles with !important to prevent mobile button overrides */
+    background: transparent !important;
+    font-size: 13px !important;
+    padding: 6px 14px !important;
+  }
+  
+  .language-switch button.active,
+  .uo-language-switch button.active {
+    /* Keep desktop active styles */
+    color: var(--color-white) !important;
+    background: var(--color-petrol-deep) !important;
+    box-shadow: 0 2px 8px rgba(10, 108, 116, 0.3) !important;
   }
 }
 
-/* Desktop: In header-controls, kein extra margin */
+/* Desktop >=900px: ONLY layout (if needed) */
 @media (min-width: 900px) {
-  .language-switch {
+  .language-switch,
+  .uo-language-switch {
     /* Wird von .header-controls gap gehandhabt */
   }
 }

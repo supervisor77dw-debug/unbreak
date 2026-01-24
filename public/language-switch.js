@@ -12,7 +12,7 @@
   function createLanguageSwitch() {
     // Create container
     const switchContainer = document.createElement('div');
-    switchContainer.className = 'language-switch';
+    switchContainer.className = 'language-switch uo-language-switch';
     switchContainer.setAttribute('role', 'group');
     switchContainer.setAttribute('aria-label', 'Language selection');
 
