@@ -536,11 +536,19 @@ export default function Shop({ initialProducts }) {
 
       <main className="page-content">
         
-        {/* Cart Badge in Header */}
+        {/* Cart Badge - Desktop: Floating, Mobile: In Header */}
         {cartCount > 0 && (
-          <a href="/cart" className="cart-badge-float">
-            🛒 {cartCount}
-          </a>
+          <>
+            {/* Desktop Floating Cart (hidden on mobile) */}
+            <a href="/cart" className="cart-badge-float cart-desktop-only">
+              🛒 {cartCount}
+            </a>
+            
+            {/* Mobile Header Cart (hidden on desktop) */}
+            <a href="/cart" className="cart-badge-mobile cart-mobile-only">
+              🛒 <span className="cart-count-badge">{cartCount}</span>
+            </a>
+          </>
         )}
 
         {/* Hero Section */}
@@ -760,7 +768,7 @@ export default function Shop({ initialProducts }) {
            SHOP PAGE - PREMIUM DESIGN
            ============================================ */
         
-        /* Cart Badge */
+        /* Cart Badge - Desktop (Floating) */
         .cart-badge-float {
           position: fixed;
           top: 20px;
@@ -776,9 +784,88 @@ export default function Shop({ initialProducts }) {
           transition: all 0.3s ease;
           font-size: 16px;
         }
+        
         .cart-badge-float:hover {
           transform: translateY(-2px);
           box-shadow: 0 6px 24px rgba(10, 108, 116, 0.5);
+        }
+
+        /* Cart Badge - Mobile (In Header) */
+        .cart-badge-mobile {
+          position: fixed;
+          top: 12px;
+          right: 60px; /* Space for burger menu */
+          background: linear-gradient(135deg, #0A6C74, #084F55);
+          color: white;
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          font-weight: 600;
+          text-decoration: none;
+          box-shadow: 0 2px 12px rgba(10, 108, 116, 0.3);
+          z-index: 10002; /* Above header */
+          transition: all 0.3s ease;
+          font-size: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+        }
+
+        .cart-badge-mobile:active {
+          transform: scale(0.95);
+        }
+
+        .cart-count-badge {
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          background: #ff4444;
+          color: white;
+          font-size: 11px;
+          font-weight: 700;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid white;
+        }
+
+        /* Responsive: Show/Hide Cart Variants */
+        .cart-desktop-only {
+          display: block;
+        }
+
+        .cart-mobile-only {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .cart-desktop-only {
+            display: none;
+          }
+
+          .cart-mobile-only {
+            display: flex;
+          }
+        }
+
+        /* Adjust mobile cart position on very small screens */
+        @media (max-width: 480px) {
+          .cart-badge-mobile {
+            right: 55px;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+          }
+
+          .cart-count-badge {
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+          }
         }
 
         /* Hero Section */

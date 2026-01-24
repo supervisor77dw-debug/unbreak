@@ -52,15 +52,21 @@
     z-index: 9999;
   }
 
-  .lang-switch {
-    z-index: 10001; /* Über allem anderen */
+  .lang-switch, .language-switch {
+    z-index: 10001;
+    position: relative;
+    pointer-events: auto !important;
+  }
+
+  /* Burger Menu: Above language switch */
+  .burger-menu {
+    z-index: 10001;
     position: relative;
   }
 
-  /* Shopping Cart Icon: Verhindern von Overlap */
-  .cart-icon {
-    z-index: 10001;
-    position: relative;
+  /* Mobile Cart Button: Ensure it's visible and doesn't overlap */
+  .cart-badge-mobile {
+    z-index: 10002 !important;
   }
 
   /* Fix: Flexbox Layout für Header Nav */
