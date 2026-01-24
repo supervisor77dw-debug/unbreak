@@ -129,22 +129,21 @@
 
 ### HTML-Struktur (header.js + Header.jsx)
 ```html
-<!-- NACHHER: Flache Struktur OHNE CTA -->
+<!-- NACHHER: Flache Struktur OHNE CTA, BURGER IN CONTROLS -->
 <header class="site-header">
   <div class="header-inner">
     <a class="brand" href="index.html">
       <img src="images/logo.png" alt="UNBREAK ONE" class="nav-logo">
     </a>
     
-    <button class="burger" id="burgerMenu" aria-controls="primary-nav">
-      <span></span><span></span><span></span>
-    </button>
-    
     <nav id="primary-nav" class="header-nav">
       <ul class="nav-links header-nav-list">...</ul>
     </nav>
     
     <div class="header-controls">
+      <button class="burger" id="burgerMenu" aria-controls="primary-nav">
+        <span></span><span></span><span></span>
+      </button>
       <div id="language-switch-mount"></div>
     </div>
   </div>
