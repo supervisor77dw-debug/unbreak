@@ -383,19 +383,16 @@
       "badge": "Customizable",
       "ctaButton": "Customize now",
       "priceUnavailable": "Price unavailable",
-      "customManufacturing": "Custom manufacturing",
-      "defaultDescription": "Design your custom product according to your preferences."
+      "customManufacturing": "Custom-made"
     },
     "configurableProducts": {
       "glassHolder": {
         "name": "Custom Glass Holder",
-        "description": "Design your individual glass holder – choose colors, materials and details to match your needs. Perfect for private use or professional environments.",
-        "button": "Customize now"
+        "description": "Your custom glass holder – perfectly tailored to usage, material, and design requirements."
       },
       "bottleHolder": {
         "name": "Custom Bottle Holder",
-        "description": "Configure your custom bottle holder – tailored to your use case and design preferences.",
-        "button": "Customize now"
+        "description": "Your custom bottle holder – optimally configured for stability, application, and design."
       }
     }
   },

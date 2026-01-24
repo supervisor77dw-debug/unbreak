@@ -383,21 +383,18 @@
     "configurableSection": {
       "title": "Individuell konfigurierbar",
       "badge": "Konfigurierbar",
-      "ctaButton": "Jetzt individuell gestalten",
+      "ctaButton": "Individuell gestalten",
       "priceUnavailable": "Preis nicht verfügbar",
-      "customManufacturing": "Individuelle Fertigung",
-      "defaultDescription": "Gestalte dein individuelles Produkt nach deinen Wünschen."
+      "customManufacturing": "Individuelle Fertigung"
     },
     "configurableProducts": {
       "glassHolder": {
         "name": "Individueller Glashalter",
-        "description": "Gestalte deinen individuellen Glashalter – Farben, Materialien und Details nach deinen Wünschen. Ideal für private Nutzung oder Gastronomie.",
-        "button": "Jetzt individuell gestalten"
+        "description": "Dein individueller Glashalter – perfekt abgestimmt auf Einsatzbereich, Material und Designanspruch."
       },
       "bottleHolder": {
         "name": "Individueller Flaschenhalter",
-        "description": "Konfiguriere deinen individuellen Flaschenhalter – perfekt abgestimmt auf Einsatzbereich und Designanspruch.",
-        "button": "Jetzt individuell gestalten"
+        "description": "Dein individueller Flaschenhalter – optimal konfiguriert für Stabilität, Anwendung und Design."
       }
     }
   },

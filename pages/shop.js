@@ -734,10 +734,13 @@ export default function Shop({ initialProducts, configurableProducts }) {
               {configurables.map((product, index) => {
                 const isGlass = product.sku === 'UNBREAK-GLAS-01';
                 const configuratorType = isGlass ? 'glass' : 'bottle';
+                const productKey = isGlass ? 'glassHolder' : 'bottleHolder';
+                const badgeText = t('shop.configurableSection.badge');
                 
                 return (
                   <div key={product.id} className="product-card">
-                    <div className="product-badge">{t('shop.configurableSection.badge')}</div>
+                    {/* Badge nur rendern wenn Text vorhanden */}
+                    {badgeText && <div className="product-badge">{badgeText}</div>}
                     
                     {/* Product Image - same logic as regular products */}
                     {(() => {
@@ -756,7 +759,7 @@ export default function Shop({ initialProducts, configurableProducts }) {
                             <ProductImage
                               key={`configurable-${product.id}-${shopPath}`}
                               src={cacheBustedUrl}
-                              alt={product.name}
+                              alt={t(`shop.configurableProducts.${productKey}.name`)}
                               crop={{ scale: 1.0, x: 0, y: 0 }}
                               variant="card"
                             />
@@ -773,12 +776,11 @@ export default function Shop({ initialProducts, configurableProducts }) {
                     })()}
 
                     <div className="product-content">
-                      <h3 className="product-title">{product.name}</h3>
+                      <h3 className="product-title">
+                        {t(`shop.configurableProducts.${productKey}.name`)}
+                      </h3>
                       <p className="product-description">
-                        {currentLang === 'de' 
-                          ? (product.short_description_de || product.description || t('shop.configurableSection.defaultDescription'))
-                          : (product.short_description_en || product.description_en || t('shop.configurableSection.defaultDescription'))
-                        }
+                        {t(`shop.configurableProducts.${productKey}.description`)}
                       </p>
 
                       <div className="product-price-section">
