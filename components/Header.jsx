@@ -117,21 +117,6 @@ export default function Header() {
             <img src="/images/logo.png" alt="UNBREAK ONE" className="nav-logo" />
           </a>
 
-          {/* Burger (Mobile only) */}
-          <button 
-            className={`burger ${isMenuOpen ? 'active' : ''}`}
-            id="burgerMenu" 
-            onClick={toggleMenu}
-            aria-controls="primary-nav"
-            aria-expanded={isMenuOpen}
-            aria-label="Menu"
-            type="button"
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-
           {/* Navigation (Desktop/Mobile toggle) */}
           <nav id="primary-nav" className="header-nav" aria-label="Primary">
             <ul className={`nav-links header-nav-list ${isMenuOpen ? 'active' : ''}`} id="navLinks">
@@ -146,8 +131,22 @@ export default function Header() {
           </ul>
           </nav>
 
-          {/* Controls (Language only, NO CTA!) */}
+          {/* Controls (Burger + Language) */}
           <div className="header-controls">
+            {/* Burger (Mobile only) */}
+            <button 
+              className={`burger ${isMenuOpen ? 'active' : ''}`}
+              id="burgerMenu" 
+              onClick={toggleMenu}
+              aria-controls="primary-nav"
+              aria-expanded={isMenuOpen}
+              aria-label="Menu"
+              type="button"
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
             {/* Mount-Point für Language-Switch (wird von language-switch.js injiziert) */}
             <div id="language-switch-mount"></div>
           </div>

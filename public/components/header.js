@@ -20,13 +20,6 @@ function getHeaderHTML() {
         <img src="images/logo.png" alt="UNBREAK ONE" class="nav-logo">
       </a>
 
-      <!-- Burger (Mobile only) -->
-      <button class="burger" id="burgerMenu" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Menu">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-
       <!-- Navigation (Desktop/Mobile toggle) -->
       <nav id="primary-nav" class="header-nav" aria-label="Primary">
         <ul class="nav-links header-nav-list" id="navLinks">
@@ -41,8 +34,14 @@ function getHeaderHTML() {
         </ul>
       </nav>
 
-      <!-- Controls (Language only, NO CTA!) -->
+      <!-- Controls (Burger + Language) -->
       <div class="header-controls">
+        <!-- Burger (Mobile only) -->
+        <button class="burger" id="burgerMenu" type="button" aria-controls="primary-nav" aria-expanded="false" aria-label="Menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
         <!-- Mount-Point für Language-Switch (wird von language-switch.js injiziert) -->
         <div id="language-switch-mount"></div>
       </div>
