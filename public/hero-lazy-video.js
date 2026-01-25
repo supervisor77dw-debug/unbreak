@@ -1,15 +1,12 @@
 /**
- * Hero Video Lazy Loader V3 - SENTINEL + USER INTERACTION
+ * Hero Video Lazy Loader V3.3 - ROBUST USER INTERACTION
  * 
  * STRATEGIE:
  * 1. Video existiert NICHT im initialen DOM
- * 2. Sentinel-Element direkt nach Hero Section
- * 3. Injection NUR wenn:
- *    a) User hat gescrollt/touched/bewegt Maus (echte Interaktion)
- *    b) Sentinel wird sichtbar (User scrollt nach unten)
- * 4. IntersectionObserver: rootMargin 0px, threshold 0.1
+ * 2. Download startet bei ERSTER User-Interaktion (scroll/touch/pointer/key)
+ * 3. Sentinel OPTIONAL für Playback-Steuerung
  * 
- * ZIEL: KEIN Video-Request vor dem ersten User-Scroll!
+ * ZIEL: Video lädt zuverlässig nach Interaktion, LCP bleibt Posterbild!
  */
 
 (function() {
@@ -20,56 +17,37 @@
   const IMAGE_CONTAINER_CLASS = 'hero-image-container';
   const SENTINEL_ID = 'hero-scroll-sentinel';
 
-  let userHasInteracted = false;
   let videoInjected = false;
+  let videoLoading = false;
 
   /**
-   * Detektiert echte User-Interaktion (nicht programmatisch)
+   * Injiziert Video-Element und startet Download
    */
-  function detectUserInteraction() {
-    const events = ['scroll', 'touchstart', 'mousemove', 'keydown'];
+  function injectAndLoadVideo() {
+    if (videoInjected || videoLoading) {
+      console.log('[Hero Video] Already injected/loading, skipping');
+      return;
+    }
     
-    const handler = () => {
-      userHasInteracted = true;
-      console.log('[Hero Video] ✓ User-Interaktion detektiert');
-      
-      // Event Listener entfernen nach erster Interaktion
-      events.forEach(event => {
-        window.removeEventListener(event, handler, { passive: true });
-      });
-    };
-
-    events.forEach(event => {
-      window.removeEventListener(event, handler, { passive: true });
-      window.addEventListener(event, handler, { passive: true, once: true });
-    });
-  }
-
-  /**
-   * Injiziert Video-Element dynamisch in den DOM
-   */
-  function injectAndPlayVideo() {
-    if (videoInjected) return;
-    videoInjected = true;
-
-    console.log('[Hero Video] 🎬 Video-Injection gestartet...');
+    videoLoading = true;
+    console.log('[Hero Video] 🎬 Injecting video element...');
 
     const videoContainer = document.getElementById(VIDEO_CONTAINER_ID);
     const imageContainer = document.querySelector(`.${IMAGE_CONTAINER_CLASS}`);
 
     if (!videoContainer) {
-      console.warn('[Hero Video] ⚠️ Container nicht gefunden');
+      console.warn('[Hero Video] ⚠️ Container not found');
       return;
     }
 
     // 1. Video-Element dynamisch erstellen
     const video = document.createElement('video');
     video.className = 'hero-video';
-    video.autoplay = true;
+    video.autoplay = false; // Nicht autoplay - warten auf Playback-Signal
     video.loop = true;
     video.muted = true;
     video.playsInline = true;
-    video.preload = 'none'; // WICHTIG: Kein Pre-Loading!
+    video.preload = 'metadata'; // Metadata laden für schnelleren Start
     
     // 2. Source-Element erstellen
     const source = document.createElement('source');
@@ -100,98 +78,136 @@
     videoContainer.appendChild(video);
     videoContainer.appendChild(overlay);
 
-    // 6. Fade-in nach Laden
+    console.log('[Hero Video] ✅ Video element injected');
+
+    // 6. Event Listeners für Debugging
+    video.addEventListener('loadstart', () => {
+      console.log('[Hero Video] 📡 loadstart - Download starting...');
+    }, { once: true });
+
+    video.addEventListener('loadedmetadata', () => {
+      console.log('[Hero Video] 📊 loadedmetadata - Duration:', video.duration, 's');
+    }, { once: true });
+
     video.addEventListener('loadeddata', () => {
-      console.log('[Hero Video] ✓ Video geladen, fade-in...');
+      console.log('[Hero Video] ✅ loadeddata - First frame ready');
+      videoInjected = true;
       
+      // Fade-in Video, Fade-out Bild
       videoContainer.style.display = 'block';
       videoContainer.style.transition = 'opacity 1s ease-in-out';
       
       setTimeout(() => {
         videoContainer.style.opacity = '1';
         
-        // Bild-Container nach Fade-in ausblenden
-        setTimeout(() => {
-          if (imageContainer) {
-            imageContainer.style.transition = 'opacity 0.5s ease-out';
-            imageContainer.style.opacity = '0';
-            
-            setTimeout(() => {
-              imageContainer.style.display = 'none';
-            }, 500);
-          }
-        }, 1000);
+        // Video abspielen
+        video.play().then(() => {
+          console.log('[Hero Video] ▶️ Playing');
+          
+          // Bild-Container nach Fade-in ausblenden
+          setTimeout(() => {
+            if (imageContainer) {
+              imageContainer.style.transition = 'opacity 0.5s ease-out';
+              imageContainer.style.opacity = '0';
+              
+              setTimeout(() => {
+                imageContainer.style.display = 'none';
+              }, 500);
+            }
+          }, 1000);
+        }).catch(err => {
+          console.warn('[Hero Video] ⚠️ Play failed:', err);
+        });
       }, 100);
     }, { once: true });
 
-    // 7. Error Handling
-    video.addEventListener('error', () => {
-      console.warn('[Hero Video] ⚠️ Fehler beim Laden - bleibe bei statischem Bild');
+    video.addEventListener('canplay', () => {
+      console.log('[Hero Video] ✅ canplay - Ready to play');
+    }, { once: true });
+
+    video.addEventListener('error', (e) => {
+      console.error('[Hero Video] ❌ Error loading video:', e);
       videoContainer.style.display = 'none';
     }, { once: true });
 
-    // 8. Video laden und abspielen
+    // 7. Video laden starten
+    console.log('[Hero Video] 🔄 Calling video.load()...');
     video.load();
   }
 
   /**
-   * Initialisiert Sentinel-basiertes Video Loading
+   * Detektiert erste User-Interaktion und triggert Video-Download
+   */
+  function initUserInteractionTrigger() {
+    const interactionEvents = ['scroll', 'touchstart', 'pointerdown', 'mousemove', 'keydown'];
+    
+    const handler = (eventType) => {
+      console.log(`[Hero Video] 🎯 User interaction detected: ${eventType}`);
+      
+      // Trigger Video-Download
+      injectAndLoadVideo();
+      
+      // Event Listener entfernen nach erster Interaktion
+      interactionEvents.forEach(event => {
+        window.removeEventListener(event, handlers[event], { passive: true });
+      });
+    };
+
+    // Separate Handler für jeden Event-Typ (für Debugging)
+    const handlers = {};
+    interactionEvents.forEach(event => {
+      handlers[event] = () => handler(event);
+      window.addEventListener(event, handlers[event], { passive: true, once: true });
+    });
+
+    console.log('[Hero Video] 👂 Listening for user interactions:', interactionEvents.join(', '));
+  }
+
+  /**
+   * Optional: Sentinel für zusätzliche Playback-Steuerung
    */
   function initSentinelObserver() {
     const sentinel = document.getElementById(SENTINEL_ID);
     
     if (!sentinel) {
-      console.warn('[Hero Video] ⚠️ Sentinel nicht gefunden');
+      console.log('[Hero Video] ℹ️ No sentinel found (optional)');
       return;
     }
 
     if (!('IntersectionObserver' in window)) {
-      console.warn('[Hero Video] ⚠️ IntersectionObserver nicht verfügbar');
+      console.warn('[Hero Video] ⚠️ IntersectionObserver not available');
       return;
     }
 
-    console.log('[Hero Video] 🔍 Sentinel-Observer initialisiert');
+    console.log('[Hero Video] 🔍 Sentinel observer initialized (optional)');
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
-        if (entry.isIntersecting && userHasInteracted) {
-          console.log('[Hero Video] 🎯 Sentinel sichtbar + User hat interagiert → Lade Video');
-          injectAndPlayVideo();
-          observer.disconnect();
-        } else if (entry.isIntersecting && !userHasInteracted) {
-          console.log('[Hero Video] ⏸️ Sentinel sichtbar, aber keine User-Interaktion → warte');
+        if (entry.isIntersecting) {
+          console.log('[Hero Video] 📍 Sentinel visible');
+          // Sentinel sichtbar - könnte für Playback-Steuerung genutzt werden
+          // Aktuell: Video wird bereits bei User-Interaktion geladen
         }
       });
     }, {
-      rootMargin: '0px',    // KEIN Vorladen
-      threshold: 0.1        // Trigger bei 10% Sichtbarkeit
+      rootMargin: '0px',
+      threshold: 0.1
     });
 
     observer.observe(sentinel);
-
-    // Zusätzlicher Check: Falls User später scrollt
-    const recheckInterval = setInterval(() => {
-      if (userHasInteracted && !videoInjected) {
-        console.log('[Hero Video] 🔄 Recheck: User hat interagiert → prüfe Sentinel');
-        // Observer wird Video laden wenn Sentinel sichtbar
-      }
-      
-      if (videoInjected) {
-        clearInterval(recheckInterval);
-      }
-    }, 500);
   }
 
   /**
    * Hauptinitialisierung
    */
   function init() {
-    console.log('[Hero Video] 🚀 V3 Lazy Loader gestartet');
+    console.log('[Hero Video] 🚀 V3.3 Lazy Loader started');
+    console.log('[Hero Video] Strategy: Download on first user interaction');
     
-    // 1. User-Interaktions-Detektion starten
-    detectUserInteraction();
+    // 1. User-Interaktions-Trigger (primär)
+    initUserInteractionTrigger();
     
-    // 2. Sentinel Observer starten
+    // 2. Sentinel Observer (optional)
     initSentinelObserver();
   }
 
