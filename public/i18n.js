@@ -14,27 +14,32 @@ class I18n {
 
   /**
    * Initialize i18n system
-   * Priority: URL param > localStorage > browser language > default (de)
+   * Priority: localStorage > URL param > browser language > default (de)
+   * FIX 5: localStorage has highest priority for consistent UX across Shop ↔ Configurator
    */
   async init() {
-    // Check URL param first (?lang=en)
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlLang = urlParams.get('lang');
+    // Check localStorage FIRST (Single Source of Truth)
+    const savedLang = localStorage.getItem('unbreakone_lang');
     
-    if (urlLang && ['de', 'en'].includes(urlLang)) {
-      this.currentLang = urlLang;
-      localStorage.setItem('unbreakone_lang', urlLang);
+    if (savedLang && ['de', 'en'].includes(savedLang)) {
+      // Use saved language - highest priority
+      this.currentLang = savedLang;
     } else {
-      // Check localStorage
-      const savedLang = localStorage.getItem('unbreakone_lang');
-      if (savedLang && ['de', 'en'].includes(savedLang)) {
-        this.currentLang = savedLang;
+      // No saved language - check URL param as fallback
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlLang = urlParams.get('lang');
+      
+      if (urlLang && ['de', 'en'].includes(urlLang)) {
+        this.currentLang = urlLang;
+        localStorage.setItem('unbreakone_lang', urlLang);
       } else {
-        // Check browser language as fallback
+        // Check browser language as final fallback
         const browserLang = navigator.language.split('-')[0];
         if (browserLang === 'en') {
           this.currentLang = 'en';
         }
+        // Save initial language to localStorage
+        localStorage.setItem('unbreakone_lang', this.currentLang);
       }
     }
 

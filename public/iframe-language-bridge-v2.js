@@ -59,12 +59,13 @@
 
   /**
    * Get current language from i18n system
+   * FIX 5: Use consistent localStorage key 'unbreakone_lang'
    */
   function getCurrentLanguage() {
     if (window.i18n && typeof window.i18n.getCurrentLanguage === 'function') {
       return window.i18n.getCurrentLanguage();
     }
-    return localStorage.getItem('preferredLanguage') || 'de';
+    return localStorage.getItem('unbreakone_lang') || 'de';
   }
 
   /**
