@@ -321,7 +321,11 @@
     // Initialize all controllers
     const lazyLoader = new VideoLazyLoader();
     const playController = new VideoPlayController();
-    const heroController = new HeroVideoController();
+    
+    // WICHTIG: HeroVideoController NICHT mehr starten!
+    // Hero-Video wird jetzt komplett durch hero-lazy-video.js gesteuert
+    // const heroController = new HeroVideoController(); // DEAKTIVIERT
+    
     const accessibility = new VideoAccessibility();
     const perfMonitor = new VideoPerformanceMonitor();
 
@@ -335,7 +339,7 @@
       console.log('[VIDEO] Performance Report:', perfMonitor.getReport());
     }, 5000);
 
-    console.log('[VIDEO] Controllers initialized successfully');
+    console.log('[VIDEO] Controllers initialized successfully (Hero excluded)');
   }
 
   // Start initialization
