@@ -29,7 +29,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('images/hero-cinematic.jpg');
+    /* background-image removed - using <picture> element instead */
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -272,9 +272,9 @@
     }
 
     /* === MOBILE VISIBILITY FIX === */
-    /* Force simple background on parent, effectively bypassing the animation container issues */
+    /* Background handled by <picture> element, not CSS */
     #hero {
-        background: url('images/hero-cinematic.jpg') no-repeat center center scroll !important;
+        /* background removed - using <picture> element instead */
         background-size: cover !important;
         min-height: 100vh !important;
         /* Standard vh for reliability */
