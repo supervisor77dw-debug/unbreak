@@ -6,20 +6,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Datenschutzerklärung – UNBREAK ONE</title>
     <meta name="robots" content="noindex, follow">
+    <meta name="description" content="Datenschutzerklärung für unbreak-one.com – Informationen zum Datenschutz und Ihrer Privatsphäre">
 
     <!-- Stylesheets -->
     <link rel="stylesheet" href="/styles.min.css">
     <link rel="stylesheet" href="/animations.min.css">
     <link rel="stylesheet" href="legal-styles.css">
     <link rel="stylesheet" href="/readability-optimization.min.css">
-    <link rel="stylesheet" href="/i18n.min.css">
-
-    <!-- i18n System -->
-    <script src="i18n.js"></script>
-    <script src="language-switch.js" defer></script>
     
     <!-- Shared Header Component -->
-    <script src="components/header.js" defer></script>
+    <script src="components/header.js?v=2.0.4" defer></script>
+    
+    <style>
+        .legal-lang-toggle {
+            text-align: right;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(10, 108, 116, 0.2);
+        }
+        .lang-link {
+            color: var(--color-petrol-deep);
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            transition: color 0.2s ease;
+        }
+        .lang-link.active {
+            color: var(--color-graphit);
+            text-decoration: underline;
+        }
+        .lang-link:hover {
+            color: var(--color-graphit);
+        }
+        .lang-separator {
+            color: var(--color-anthrazit);
+            margin: 0 0.5rem;
+        }
+        .legal-date {
+            color: var(--color-anthrazit);
+            font-style: italic;
+            margin-bottom: 2rem;
+        }
+    </style>
 </head>
 
 <body>
@@ -30,98 +58,131 @@
     <section class="legal-content">
         <div class="container">
             <div class="legal-container">
-                <h1 data-i18n="legal.privacy.title">Datenschutzerklärung</h1>
+                <!-- Language Toggle -->
+                <div class="legal-lang-toggle">
+                    <a href="datenschutz.html" class="lang-link active">DE</a>
+                    <span class="lang-separator">|</span>
+                    <a href="privacy.html" class="lang-link">EN</a>
+                </div>
 
-                <h2 data-i18n="legal.privacy.responsibleTitle">1. Verantwortlicher</h2>
-                <p data-i18n="legal.privacy.responsibleText">Verantwortlich für die Datenverarbeitung:</p>
+                <h1>Datenschutzerklärung</h1>
+                <p class="legal-date"><strong>Stand: 25.01.2026</strong></p>
+
+                <h1>Datenschutzerklärung</h1>
+                <p class="legal-date"><strong>Stand: 25.01.2026</strong></p>
+
+                <h2>1. Verantwortlicher</h2>
+                <p>Verantwortlich für die Datenverarbeitung auf dieser Website ist:</p>
                 <p>
-                    <strong data-i18n="legal.privacy.company">Ricks Gastro & Event GmbH</strong><br>
-                    <span data-i18n-html="legal.privacy.address">Grasweg 48<br>24118 Kiel</span>
+                    <strong>Ricks Gastro & Event GmbH</strong><br>
+                    Grasweg 48<br>
+                    24118 Kiel, Deutschland
+                </p>
+                <p><strong>Kontakt:</strong> <a href="mailto:info@unbreak-one.de">info@unbreak-one.de</a></p>
+
+                <h2>2. Hosting und technische Bereitstellung</h2>
+                <p>Diese Website wird technisch betrieben von:</p>
+                <p>
+                    <strong>crossmedia1 – Thomas Ferenz</strong><br>
+                    Kuhlacker 18<br>
+                    24145 Kiel, Deutschland<br>
+                    Tel.: 0431 536 81 18
+                </p>
+                <p>Sofern erforderlich, besteht mit dem Hostinganbieter ein Vertrag zur Auftragsverarbeitung gemäß Art. 28 DSGVO.</p>
+
+                <h2>3. Server-Logfiles</h2>
+                <p>Bei der rein informatorischen Nutzung der Website werden durch den Server automatisch folgende Daten verarbeitet (sog. Server-Logfiles):</p>
+                <ul>
+                    <li>Browsertyp und -version</li>
+                    <li>Betriebssystem</li>
+                    <li>Referrer-URL</li>
+                    <li>Hostname des zugreifenden Rechners</li>
+                    <li>Datum und Uhrzeit der Serveranfrage</li>
+                    <li>IP-Adresse</li>
+                </ul>
+                <p><strong>Zweck:</strong> Gewährleistung der technischen Stabilität, Sicherheit (z. B. Abwehr von Angriffen), Fehleranalyse.<br>
+                <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse).</p>
+
+                <h2>4. Kontaktaufnahme</h2>
+                <p>Wenn Sie uns per E-Mail, Telefon oder über ein Kontaktformular kontaktieren, verarbeiten wir Ihre Angaben (z. B. Name, E-Mail-Adresse, Inhalt der Anfrage) ausschließlich zur Bearbeitung Ihres Anliegens.</p>
+                <p><strong>Rechtsgrundlage:</strong></p>
+                <ul>
+                    <li>Art. 6 Abs. 1 lit. b DSGVO (vorvertragliche Maßnahmen/Vertrag) oder</li>
+                    <li>Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Kommunikation)</li>
+                </ul>
+                <p><strong>Speicherdauer:</strong> solange erforderlich zur Bearbeitung der Anfrage, ggf. darüber hinaus entsprechend gesetzlicher Aufbewahrungspflichten.</p>
+
+                <h2>5. Cookies und ähnliche Technologien</h2>
+                <p>Diese Website setzt technisch notwendige Cookies/Local-Storage ein, um grundlegende Funktionen bereitzustellen (z. B. Spracheinstellung, Warenkorb-/Session-Funktionen).<br>
+                Tracking- oder Marketing-Cookies werden nicht eingesetzt, sofern nicht ausdrücklich und transparent ergänzt.</p>
+                <p><strong>Rechtsgrundlage:</strong></p>
+                <ul>
+                    <li>§ 25 Abs. 2 TTDSG (technisch erforderlich) und</li>
+                    <li>Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse) bzw. Art. 6 Abs. 1 lit. b DSGVO (bei Warenkorb/Bestellung)</li>
+                </ul>
+
+                <h2>6. Online-Shop, Bestellungen und Vertragsabwicklung</h2>
+                <p>Wenn Sie über unbreak-one.com Produkte bestellen, verarbeiten wir folgende Daten:</p>
+                <ul>
+                    <li><strong>Stammdaten:</strong> Name, Rechnungs- und Lieferadresse</li>
+                    <li><strong>Kontaktdaten:</strong> E-Mail-Adresse, ggf. Telefonnummer</li>
+                    <li><strong>Bestelldaten:</strong> Artikel, Menge, Preis, Versandinformationen</li>
+                    <li><strong>Kommunikationsdaten:</strong> Rückfragen zur Bestellung</li>
+                </ul>
+                <p><strong>Zweck:</strong> Vertragsdurchführung, Lieferung, Rechnungsstellung, Kundenservice.<br>
+                <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).</p>
+                <p><strong>Speicherdauer:</strong> im Rahmen gesetzlicher Aufbewahrungsfristen (z. B. Handels-/Steuerrecht) und soweit zur Vertragsabwicklung erforderlich.</p>
+
+                <h2>7. Zahlungsabwicklung (Stripe, PayPal, Kreditkarten)</h2>
+                <p>Für die Zahlungsabwicklung nutzen wir <strong>Stripe</strong> (Stripe Payments Europe, Ltd. und verbundene Unternehmen). Über Stripe können Zahlungen per Kredit-/Debitkarte sowie – je nach Checkout-Konfiguration – auch PayPal verarbeitet werden.</p>
+                <p>Dabei werden je nach gewählter Zahlungsart insbesondere folgende Daten verarbeitet:</p>
+                <ul>
+                    <li><strong>Zahlungsdaten</strong> (z. B. Kartenart, Karteninhaber, Prüfdaten; Karten- und Kontodaten werden in der Regel direkt von Stripe verarbeitet)</li>
+                    <li><strong>Transaktionsdaten</strong> (Betrag, Währung, Zeit, Status)</li>
+                    <li><strong>Identifikations-/Sicherheitsdaten</strong> (z. B. Betrugsprävention, 3D Secure)</li>
+                    <li><strong>Kontaktdaten</strong> (z. B. E-Mail) und ggf. Rechnungs-/Lieferdaten zur Zahlungszuordnung</li>
+                </ul>
+                <p><strong>Zweck:</strong> Zahlungsdurchführung, Betrugsprävention, Risikobewertung, Abwicklung von Rückerstattungen.<br>
+                <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) und Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an sicherer Zahlungsabwicklung und Betrugsprävention).</p>
+                <p><strong>Datenübermittlung in Drittländer:</strong> Es kann je nach Zahlungsart und Anbieterstruktur zu Übermittlungen in Drittländer (z. B. USA) kommen. In solchen Fällen erfolgen Übermittlungen auf Grundlage geeigneter Garantien (z. B. EU-Standardvertragsklauseln) und/oder anderer rechtlicher Mechanismen, sofern anwendbar.</p>
+                <p><strong>Weitere Informationen:</strong> Datenschutzhinweise des Zahlungsdienstleisters (Stripe/PayPal) im Rahmen des Checkouts.</p>
+
+                <h2>7a. Schriftarten (lokales Hosting)</h2>
+                <p>Diese Website verwendet ausschließlich lokal gehostete Schriftarten. Es findet keine Übertragung personenbezogener Daten an externe Schriftarten-Anbieter (z. B. Google Fonts) statt. Alle Schriftdateien werden direkt von unserem Server ausgeliefert.</p>
+
+                <h2>8. Social Media</h2>
+                <p>Wir unterhalten Präsenzen auf Social Media:</p>
+                <ul>
+                    <li><strong>Facebook:</strong> <a href="https://www.facebook.com/RicksClubBowling" target="_blank" rel="noopener">https://www.facebook.com/RicksClubBowling</a></li>
+                    <li><strong>Instagram:</strong> <a href="https://www.instagram.com/ricks.club/" target="_blank" rel="noopener">https://www.instagram.com/ricks.club/</a></li>
+                </ul>
+                <p>Wenn Sie unsere Social-Media-Seiten besuchen, erfolgt die Datenverarbeitung nach den Datenschutzrichtlinien der jeweiligen Anbieter. Wir haben nur begrenzten Einfluss auf diese Verarbeitung.</p>
+
+                <h2>9. Ihre Rechte</h2>
+                <p>Sie haben – je nach Voraussetzungen – folgende Rechte:</p>
+                <ul>
+                    <li>Auskunft (Art. 15 DSGVO)</li>
+                    <li>Berichtigung (Art. 16 DSGVO)</li>
+                    <li>Löschung (Art. 17 DSGVO)</li>
+                    <li>Einschränkung der Verarbeitung (Art. 18 DSGVO)</li>
+                    <li>Widerspruch (Art. 21 DSGVO)</li>
+                    <li>Datenübertragbarkeit (Art. 20 DSGVO)</li>
+                    <li>Widerruf erteilter Einwilligungen (Art. 7 Abs. 3 DSGVO)</li>
+                </ul>
+                <p><strong>Kontakt für Betroffenenrechte:</strong> <a href="mailto:info@unbreak-one.de">info@unbreak-one.de</a></p>
+
+                <h2>10. Beschwerdestelle</h2>
+                <p>
+                    <strong>Unabhängiges Landeszentrum für Datenschutz Schleswig-Holstein (ULD)</strong><br>
+                    Holstenstraße 98<br>
+                    24103 Kiel
                 </p>
 
-                <h2 data-i18n="legal.privacy.hostingTitle">2. Hosting</h2>
-                <p data-i18n="legal.privacy.hostingText">Unsere Website wird technisch betrieben von:</p>
-                <p>
-                    <strong data-i18n="legal.privacy.hostingCompany">crossmedia1 – Thomas Ferenz</strong><br>
-                    <span data-i18n-html="legal.privacy.hostingAddress">Kuhlacker 18<br>24145 Kiel<br>Deutschland</span><br>
-                    <span data-i18n="legal.privacy.hostingPhone">Tel.: 0431 536 81 18</span>
-                </p>
-                <p data-i18n="legal.privacy.hostingContract">Mit dem Hostinganbieter besteht – sofern erforderlich – ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO.</p>
-
-                <h2 data-i18n="legal.privacy.logfilesTitle">3. Server-Logfiles</h2>
-                <p data-i18n="legal.privacy.logfilesText">Folgende Daten werden automatisch bei Zugriff auf die Website erhoben:</p>
-                <ul>
-                    <li data-i18n="legal.privacy.logfilesBrowser">Browsertyp und Version</li>
-                    <li data-i18n="legal.privacy.logfilesOS">Betriebssystem</li>
-                    <li data-i18n="legal.privacy.logfilesReferrer">Referrer-URL</li>
-                    <li data-i18n="legal.privacy.logfilesHostname">Hostname des zugreifenden Rechners</li>
-                    <li data-i18n="legal.privacy.logfilesTime">Uhrzeit der Serveranfrage</li>
-                    <li data-i18n="legal.privacy.logfilesIP">IP-Adresse (gekürzt oder anonymisiert)</li>
-                </ul>
-                <p data-i18n="legal.privacy.logfilesLegal">Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Betrieb & Sicherheit der Website).</p>
-
-                <h2 data-i18n="legal.privacy.contactTitle">4. Kontaktaufnahme</h2>
-                <p data-i18n="legal.privacy.contactText">Bei Kontaktaufnahme per Telefon, E-Mail oder Formular verarbeiten wir Ihre Angaben ausschließlich zur Bearbeitung der Anfrage.</p>
-                <p><strong data-i18n="legal.privacy.contactLegalTitle">Rechtsgrundlage:</strong></p>
-                <ul>
-                    <li data-i18n="legal.privacy.contactLegal1">Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung)</li>
-                    <li data-i18n="legal.privacy.contactLegal2">Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Kommunikation)</li>
-                </ul>
-
-                <h2 data-i18n="legal.privacy.cookiesTitle">5. Cookies</h2>
-                <p data-i18n-html="legal.privacy.cookiesText">Unsere Website verwendet ausschließlich technisch notwendige Cookies.<br>Es werden keine Tracking- oder Marketing-Cookies eingesetzt, sofern nicht später ergänzt.</p>
-
-                <h2 data-i18n="legal.privacy.reservationsTitle">6. Reservierungen & Buchungen</h2>
-                <p data-i18n="legal.privacy.reservationsText">Wenn Sie Bowlingbahnen, Events oder Gastronomieleistungen reservieren, verarbeiten wir hierfür:</p>
-                <ul>
-                    <li data-i18n="legal.privacy.reservationsData1">Name</li>
-                    <li data-i18n="legal.privacy.reservationsData2">Telefonnummer</li>
-                    <li data-i18n="legal.privacy.reservationsData3">E-Mail-Adresse</li>
-                    <li data-i18n="legal.privacy.reservationsData4">Buchungsdetails (Datum, Uhrzeit, Anzahl Personen etc.)</li>
-                </ul>
-                <p data-i18n="legal.privacy.reservationsLegal">Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertrag / vorvertragliche Maßnahmen).</p>
-
-                <h2 data-i18n="legal.privacy.dataUsageTitle">6a. Verwendung Ihrer Daten</h2>
-                <p data-i18n="legal.privacy.dataUsageText">Ihre personenbezogenen Daten werden ausschließlich zur Auftragsabwicklung und Kundenbetreuung verwendet und nicht an Dritte weitergegeben, sofern keine gesetzliche Verpflichtung oder eine gesonderte Einwilligung besteht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung). Ihre Daten werden für die Dauer der Geschäftsbeziehung sowie gemäß gesetzlicher Aufbewahrungsfristen gespeichert. Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung sowie ein Widerspruchsrecht.</p>
-
-                <h2 data-i18n="legal.privacy.paymentTitle">7. Zahlungsdienstleister</h2>
-                <p data-i18n="legal.privacy.paymentText">Bitte später ergänzen, falls PayPal, Stripe o. Ä. eingesetzt werden.</p>
-
-                <h2 data-i18n="legal.privacy.fontsTitle">7a. Schriftarten</h2>
-                <p data-i18n="legal.privacy.fontsText">Diese Website verwendet ausschließlich lokal gehostete Schriftarten. Es findet keine Übertragung personenbezogener Daten an externe Anbieter (z. B. Google Fonts) statt. Alle Schriftdateien werden direkt vom eigenen Server ausgeliefert.</p>
-
-                <h2 data-i18n="legal.privacy.socialMediaTitle">8. Social Media</h2>
-                <p data-i18n="legal.privacy.socialMediaText">Wir betreiben Social-Media-Präsenzen:</p>
-                <p>
-                    <span data-i18n="legal.privacy.socialMediaFacebook">Facebook:</span> <a href="https://www.facebook.com/RicksClubBowling" target="_blank" rel="noopener">https://www.facebook.com/RicksClubBowling</a><br>
-                    <span data-i18n="legal.privacy.socialMediaInstagram">Instagram:</span> <a href="https://www.instagram.com/ricks.club/" target="_blank" rel="noopener">https://www.instagram.com/ricks.club/</a>
-                </p>
-                <p data-i18n="legal.privacy.socialMediaPolicy">Die Datenverarbeitung erfolgt nach den Datenschutzrichtlinien der jeweiligen Anbieter.</p>
-
-                <h2 data-i18n="legal.privacy.rightsTitle">9. Rechte der Nutzer</h2>
-                <p data-i18n="legal.privacy.rightsText">Sie haben folgende Rechte:</p>
-                <ul>
-                    <li data-i18n="legal.privacy.right1">Auskunft (Art. 15 DSGVO)</li>
-                    <li data-i18n="legal.privacy.right2">Berichtigung (Art. 16 DSGVO)</li>
-                    <li data-i18n="legal.privacy.right3">Löschung (Art. 17 DSGVO)</li>
-                    <li data-i18n="legal.privacy.right4">Einschränkung (Art. 18 DSGVO)</li>
-                    <li data-i18n="legal.privacy.right5">Widerspruch (Art. 21 DSGVO)</li>
-                    <li data-i18n="legal.privacy.right6">Datenübertragbarkeit (Art. 20 DSGVO)</li>
-                    <li data-i18n="legal.privacy.right7">Widerruf erteilter Einwilligungen (Art. 7 Abs. 3 DSGVO)</li>
-                </ul>
-                <p><span data-i18n="legal.privacy.rightsContact">Kontakt für Betroffenenrechte:</span> <a href="mailto:info@unbreak-one.de">info@unbreak-one.de</a></p>
-
-                <h2 data-i18n="legal.privacy.complaintTitle">10. Beschwerdestelle</h2>
-                <p>
-                    <span data-i18n="legal.privacy.complaintAuthority">Unabhängiges Landeszentrum für Datenschutz Schleswig-Holstein (ULD)</span><br>
-                    <span data-i18n-html="legal.privacy.complaintAddress">Holstenstraße 98<br>24103 Kiel</span>
-                </p>
-
-                <h2 data-i18n="legal.privacy.securityTitle">11. Datensicherheit</h2>
-                <p data-i18n="legal.privacy.securityText">Wir setzen moderne technische und organisatorische Maßnahmen ein, um Ihre Daten zu schützen.</p>
+                <h2>11. Datensicherheit</h2>
+                <p>Wir setzen angemessene technische und organisatorische Maßnahmen ein, um Ihre Daten gegen Verlust, Manipulation oder unberechtigten Zugriff zu schützen.</p>
 
                 <div class="legal-back-btn-container">
-                    <a href="index.html" class="btn btn-primary btn-magnetic" data-i18n="legal.backToHome">Zurück zur Startseite</a>
+                    <a href="index.html" class="btn btn-primary btn-magnetic">Zurück zur Startseite</a>
                 </div>
             </div>
         </div>
