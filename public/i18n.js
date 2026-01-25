@@ -145,13 +145,23 @@ class I18n {
    */
   updateContent() {
     console.log('[i18n] updateContent() called, currentLang:', this.currentLang);
+    console.log('[i18n] Translations loaded:', !!this.translations[this.currentLang]);
+    
+    // Check if translations are loaded for current language
+    const hasTranslations = this.translations[this.currentLang] && 
+                           Object.keys(this.translations[this.currentLang]).length > 0;
+    
+    if (!hasTranslations) {
+      console.warn('[i18n] No translations loaded for', this.currentLang, '- keeping HTML fallback');
+      return; // Don't update if translations aren't loaded
+    }
     
     // Update text content
     document.querySelectorAll('[data-i18n]').forEach(element => {
       const key = element.getAttribute('data-i18n');
       const translation = this.t(key);
       
-      // Only update if translation is found (not the key itself)
+      // Update if we have a valid translation (not the key itself)
       if (translation && translation !== key) {
         element.textContent = translation;
       }
