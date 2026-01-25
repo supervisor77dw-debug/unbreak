@@ -1304,13 +1304,14 @@ section {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-image: url('images/Kontakt.jpg');
+  /* background-image: url('images/Kontakt.jpg'); REMOVED - lazy loaded via JS */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   overflow: hidden;
   padding: var(--spacing-xxl) 0;
   color: var(--color-white);
+  background-color: var(--color-dunkelgrau); /* Fallback while image loads */
 }
 
 /* Dark Overlay - Verbessert Textlesbarkeit */
