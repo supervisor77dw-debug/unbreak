@@ -149,7 +149,8 @@ class I18n {
       const key = element.getAttribute('data-i18n');
       const translation = this.t(key);
       
-      if (translation) {
+      // Only update if translation is found (not the key itself)
+      if (translation && translation !== key) {
         element.textContent = translation;
       }
     });
@@ -159,7 +160,8 @@ class I18n {
       const key = element.getAttribute('data-i18n-html');
       const translation = this.t(key);
       
-      if (translation) {
+      // Only update if translation is found (not the key itself)
+      if (translation && translation !== key) {
         element.innerHTML = translation;
       }
     });
@@ -169,7 +171,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-placeholder');
       const translation = this.t(key);
       
-      if (translation) {
+      if (translation && translation !== key) {
         element.placeholder = translation;
       }
     });
@@ -179,7 +181,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-aria');
       const translation = this.t(key);
       
-      if (translation) {
+      if (translation && translation !== key) {
         element.setAttribute('aria-label', translation);
       }
     });
@@ -189,7 +191,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-alt');
       const translation = this.t(key);
       
-      if (translation) {
+      if (translation && translation !== key) {
         element.alt = translation;
       }
     });
@@ -199,7 +201,7 @@ class I18n {
       const key = element.getAttribute('data-i18n-title');
       const translation = this.t(key);
       
-      if (translation) {
+      if (translation && translation !== key) {
         element.title = translation;
       }
     });
