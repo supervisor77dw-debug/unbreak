@@ -284,7 +284,7 @@ export default async function handler(req, res) {
     const checkoutSession = await stripeClient.checkout.sessions.create({
       mode: 'payment',
       // Payment methods: card, PayPal, SEPA, Klarna
-      payment_method_types: ['card'], // PayPal temporarily disabled (verification pending)
+      payment_method_types: ['card', 'paypal'],
       locale: 'de', // Default to German (create.js is legacy endpoint)
       
       // CUSTOMER CREATION - Use existing or create new
