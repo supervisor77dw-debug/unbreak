@@ -36,26 +36,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   
-  <!-- Critical CSS (Inline for LCP) -->
+  <!-- Critical CSS (Inline for faster FCP) -->
   <style>:root{--color-petrol-deep:#0A6C74;--color-graphit:#1A1A1A;--color-white:#FFFFFF;--font-heading:'Montserrat',system-ui,sans-serif;--font-body:'Inter',system-ui,sans-serif;--header-height:84px;--container-max-width:1200px}*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-body);font-size:16px;line-height:1.6;color:var(--color-graphit);background:var(--color-white);overflow-x:hidden}.container{width:100%;max-width:var(--container-max-width);margin:0 auto;padding:0 24px}header{position:fixed;top:0;width:100%;background:rgba(255,255,255,0.98);backdrop-filter:blur(10px);z-index:1000;box-shadow:0 2px 8px rgba(0,0,0,0.1);height:var(--header-height)}header .container{display:flex;align-items:center;justify-content:space-between;height:100%}.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(135deg,#0A6C74,#084F55)}.hero-background{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}.hero-background img{width:100%;height:100%;object-fit:cover}.hero-video-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,rgba(10,108,116,0.75),rgba(8,79,85,0.85));z-index:3}.hero .container{position:relative;z-index:10;text-align:center;color:var(--color-white)}.hero h1{font-family:var(--font-heading);font-size:clamp(2.5rem,6vw,4.5rem);font-weight:700;margin-bottom:16px;letter-spacing:-0.02em}.hero .subheadline{font-size:clamp(1.125rem,2.5vw,1.5rem);margin-bottom:32px;opacity:0.95}.badge-mig{position:absolute;top:24px;right:24px;width:clamp(60px,12vw,200px);height:auto;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.3));z-index:20}.btn{display:inline-block;padding:16px 32px;font-family:var(--font-heading);font-size:1rem;font-weight:600;text-decoration:none;border-radius:6px;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);cursor:pointer;border:none}.btn-primary{background:var(--color-petrol-deep);color:var(--color-white)}.btn-primary:hover{background:#084F55;transform:translateY(-2px);box-shadow:0 8px 24px rgba(10,108,116,0.3)}</style>
   
-  <!-- Deferred Non-Critical Stylesheets -->
-  <link rel="preload" as="style" href="/styles.min.css?v=2.0.4" onload="this.onload=null;this.rel='stylesheet'">
-  <link rel="preload" as="style" href="/animations.min.css?v=2.0.4" onload="this.onload=null;this.rel='stylesheet'">
-  <link rel="preload" as="style" href="/readability-optimization.min.css?v=2.0.4" onload="this.onload=null;this.rel='stylesheet'">
-  <link rel="preload" as="style" href="/i18n.min.css?v=2.0.4" onload="this.onload=null;this.rel='stylesheet'">
-  <link rel="preload" as="style" href="/premium.min.css?v=2.0.4" onload="this.onload=null;this.rel='stylesheet'">
-  <link rel="preload" as="style" href="/video-sections.min.css?v=2.0.4" onload="this.onload=null;this.rel='stylesheet'">
-  <link rel="preload" as="style" href="/video-modal.min.css?v=1.0.1" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript>
-    <link rel="stylesheet" href="/styles.min.css?v=2.0.4">
-    <link rel="stylesheet" href="/animations.min.css?v=2.0.4">
-    <link rel="stylesheet" href="/readability-optimization.min.css?v=2.0.4">
-    <link rel="stylesheet" href="/i18n.min.css?v=2.0.4">
-    <link rel="stylesheet" href="/premium.min.css?v=2.0.4">
-    <link rel="stylesheet" href="/video-sections.min.css?v=2.0.4">
-    <link rel="stylesheet" href="/video-modal.min.css?v=1.0.1">
-  </noscript>
+  <!-- Stylesheets (normal loading - preload failed) -->
+  <link rel="stylesheet" href="/styles.min.css?v=2.0.4">
+  <link rel="stylesheet" href="/animations.min.css?v=2.0.4">
+  <link rel="stylesheet" href="/readability-optimization.min.css?v=2.0.4">
+  <link rel="stylesheet" href="/i18n.min.css?v=2.0.4">
+  <link rel="stylesheet" href="/premium.min.css?v=2.0.4">
+  <link rel="stylesheet" href="/video-sections.min.css?v=2.0.4">
+  <link rel="stylesheet" href="/video-modal.min.css?v=1.0.1">
   
   <!-- Version & Cache Management (defer für non-blocking) -->
   <script src="/version.js?v=2.0.4" defer></script>
