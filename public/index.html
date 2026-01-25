@@ -29,7 +29,8 @@
   <!-- Favicon (placeholder for later) -->
   <!-- <link rel="icon" type="image/png" href="favicon.png"> -->
 
-  <!-- Preload LCP Image (Hero Poster) -->
+  <!-- Preload LCP Image (Hero Background - WebP für bessere Performance) -->
+  <link rel="preload" as="image" href="images/hero-cinematic.webp" fetchpriority="high" type="image/webp">
   <link rel="preload" as="image" href="images/hero-cinematic.jpg" fetchpriority="high">
   
   <!-- Preconnect for External Resources (wenn externe CDNs genutzt werden) -->
@@ -53,6 +54,9 @@
   
   <!-- Shared Header Component -->
   <script src="/components/header.js?v=2.0.4" defer></script>
+  
+  <!-- Hero Video Lazy Loader (LCP-Optimierung) -->
+  <script src="/hero-lazy-video.js?v=1.0.0" defer></script>
 </head>
 
 <body>
@@ -70,8 +74,20 @@
        HERO SECTION
        =================================== -->
   <section id="hero">
-    <!-- Video Background -->
-    <div class="hero-video-container">
+    <!-- Hero Background Image (LCP-Element) -->
+    <div class="hero-background" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;">
+      <picture>
+        <source srcset="images/hero-cinematic.webp" type="image/webp">
+        <img src="images/hero-cinematic.jpg" 
+             alt="UNBREAK ONE - Magnetische Halter für Gläser und Flaschen" 
+             style="width: 100%; height: 100%; object-fit: cover;"
+             width="1920" 
+             height="1080">
+      </picture>
+    </div>
+    
+    <!-- Video Background (Lazy Loaded nach Hero-Sichtbarkeit) -->
+    <div class="hero-video-container" style="z-index: 1;">
       <video 
         class="hero-video" 
         autoplay 
@@ -80,9 +96,9 @@
         playsinline
         preload="none"
         poster="images/hero-cinematic.jpg">
-        <!-- Hero Video -->
+        <!-- Hero Video - src wird durch hero-lazy-video.js gesetzt -->
         <source 
-          src="images/unbreak-one-hero.mp4" 
+          data-src="images/unbreak-one-hero.mp4" 
           type="video/mp4">
         <!-- Fallback für alte Browser -->
         Your browser does not support the video tag.
