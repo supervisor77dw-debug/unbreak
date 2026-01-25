@@ -144,6 +144,8 @@ class I18n {
    * Update all elements with data-i18n attribute
    */
   updateContent() {
+    console.log('[i18n] updateContent() called, currentLang:', this.currentLang);
+    
     // Update text content
     document.querySelectorAll('[data-i18n]').forEach(element => {
       const key = element.getAttribute('data-i18n');
@@ -253,12 +255,15 @@ class I18n {
    * Switch language
    */
   async setLanguage(lang) {
+    console.log('[i18n] setLanguage() called with:', lang, 'current:', this.currentLang);
+    
     if (!['de', 'en'].includes(lang)) {
       console.error(`Unsupported language: ${lang}`);
       return;
     }
     
     if (lang === this.currentLang) {
+      console.log('[i18n] Already in this language, skipping');
       return; // Already in this language
     }
     
@@ -266,11 +271,13 @@ class I18n {
     
     // Save to localStorage
     localStorage.setItem('unbreakone_lang', lang);
+    console.log('[i18n] Saved to localStorage:', lang);
     
     // Update HTML lang attribute
     document.documentElement.lang = lang;
     
     // Update all content
+    console.log('[i18n] Calling updateContent()...');
     this.updateContent();
     
     // Update meta tags
