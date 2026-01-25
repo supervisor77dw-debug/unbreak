@@ -29,6 +29,12 @@
   <!-- Favicon (placeholder for later) -->
   <!-- <link rel="icon" type="image/png" href="favicon.png"> -->
 
+  <!-- Preload LCP Image (Hero Poster) -->
+  <link rel="preload" as="image" href="images/hero-cinematic.jpg" fetchpriority="high">
+  
+  <!-- Preconnect for External Resources (wenn externe CDNs genutzt werden) -->
+  <!-- <link rel="preconnect" href="https://fonts.googleapis.com"> -->
+  
   <!-- Stylesheets -->
   <link rel="stylesheet" href="styles.css?v=2.0.3">
   <link rel="stylesheet" href="animations.css?v=2.0.3">
@@ -38,11 +44,11 @@
   <link rel="stylesheet" href="video-sections.css?v=2.0.4">
   <link rel="stylesheet" href="video-modal.css?v=1.0.0">
   
-  <!-- Version & Cache Management (MUST load first) -->
-  <script src="/version.js?v=2.0.4"></script>
+  <!-- Version & Cache Management (defer für non-blocking) -->
+  <script src="/version.js?v=2.0.4" defer></script>
   
-  <!-- i18n System (must load before other scripts) -->
-  <script src="/i18n.js?v=2.0.4"></script>
+  <!-- i18n System (defer - Fallback-Text im HTML vorhanden) -->
+  <script src="/i18n.js?v=2.0.4" defer></script>
   <script src="/language-switch.js?v=2.0.4" defer></script>
   
   <!-- Shared Header Component -->
@@ -72,7 +78,7 @@
         loop 
         muted 
         playsinline
-        preload="metadata"
+        preload="none"
         poster="images/hero-cinematic.jpg">
         <!-- Hero Video -->
         <source 
@@ -86,7 +92,10 @@
     </div>
 
     <div class="container" style="position: relative;">
-      <img src="images/badge-made-in-germany.png" class="badge-mig" alt="Made in Germany - Premium Quality" data-i18n-alt="hero.badgeAlt">
+      <picture>
+        <source srcset="images/badge-made-in-germany.webp" type="image/webp">
+        <img src="images/badge-made-in-germany.png" class="badge-mig" alt="Made in Germany - Premium Quality" data-i18n-alt="hero.badgeAlt" width="200" height="200">
+      </picture>
       <div class="hero-content">
         <h1 data-i18n="hero.title">UNBREAK ONE</h1>
         <p class="subheadline" data-i18n="hero.subtitle">Magnetische Halter für Gläser &
@@ -118,8 +127,20 @@
       <!-- Product Preview Row - Weinglashalter -->
       <div class="product-row" data-scroll-reveal="fade-up">
         <div class="product-image tilt-card float" data-scroll-reveal="scale" data-scroll-delay="1">
-          <img src="images/weinglashalter_szene_ship.jpg"
-            alt="UNBREAK ONE Weinglashalter mit Weinglas auf Schiff - Magnetischer Halter für Weingläser" data-i18n-alt="product.wineGlass.imageAlt">
+          <picture>
+            <source 
+              srcset="images/weinglashalter_szene_ship-320w.webp 320w,
+                      images/weinglashalter_szene_ship-640w.webp 640w,
+                      images/weinglashalter_szene_ship.webp 800w"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              type="image/webp">
+            <img src="images/weinglashalter_szene_ship.jpg"
+              alt="UNBREAK ONE Weinglashalter mit Weinglas auf Schiff - Magnetischer Halter für Weingläser" 
+              data-i18n-alt="product.wineGlass.imageAlt"
+              loading="lazy"
+              width="800"
+              height="600">
+          </picture>
         </div>
         
         <div class="product-text" data-scroll-reveal="fade-left" data-scroll-delay="2">
@@ -151,8 +172,20 @@
       <!-- Product Preview Row - Flaschenhalter (alternierend) -->
       <div class="product-row product-row-reverse" data-scroll-reveal="fade-up">
         <div class="product-image tilt-card float-slow" data-scroll-reveal="scale" data-scroll-delay="1">
-          <img src="images/flaschenhalter_szene_ship.jpg"
-            alt="UNBREAK ONE Flaschenhalter mit Flasche auf Schiff - Magnetischer Halter für Flaschen" data-i18n-alt="product.bottle.imageAlt">
+          <picture>
+            <source 
+              srcset="images/flaschenhalter_szene_ship-320w.webp 320w,
+                      images/flaschenhalter_szene_ship-640w.webp 640w,
+                      images/flaschenhalter_szene_ship.webp 800w"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              type="image/webp">
+            <img src="images/flaschenhalter_szene_ship.jpg"
+              alt="UNBREAK ONE Flaschenhalter mit Flasche auf Schiff - Magnetischer Halter für Flaschen" 
+              data-i18n-alt="product.bottle.imageAlt"
+              loading="lazy"
+              width="800"
+              height="600">
+          </picture>
         </div>
 
         <div class="product-text" data-scroll-reveal="fade-right" data-scroll-delay="2">
@@ -284,9 +317,21 @@
         <!-- Boot / Yacht -->
         <div class="bereich-card glass-enhanced card-3d" data-scroll-reveal="fade-up" data-scroll-delay="1">
           <div class="bereich-icon float">⚓</div>
-          <img src="images/hero-cinematic.jpg"
-            alt="UNBREAK ONE auf Boot und Yacht - Sichere Glashalterung auf dem Wasser" data-i18n-alt="useCases.boat.imageAlt"
-            style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;">
+          <picture>
+            <source 
+              srcset="images/hero-cinematic-320w.webp 320w,
+                      images/hero-cinematic-640w.webp 640w,
+                      images/hero-cinematic.webp 1024w"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
+              type="image/webp">
+            <img src="images/hero-cinematic.jpg"
+            alt="UNBREAK ONE auf Boot und Yacht - Sichere Glashalterung auf dem Wasser" 
+            data-i18n-alt="useCases.boat.imageAlt"
+            style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;"
+            loading="lazy"
+            width="1024"
+            height="576">
+          </picture>
           <h3 data-i18n="useCases.boat.title">Boot & Yacht</h3>
           <p data-i18n="useCases.boat.description">Sicherheit auch bei Wellengang. Perfekt für entspannte Stunden auf dem Wasser.</p>
         </div>
@@ -294,9 +339,21 @@
         <!-- Camper & Wohnmobil -->
         <div class="bereich-card glass-enhanced card-3d" data-scroll-reveal="fade-up" data-scroll-delay="2">
           <div class="bereich-icon float">🚐</div>
-          <img src="images/Camper_Hero.jpg?v=5"
-            alt="UNBREAK ONE im Camper und Wohnmobil - Magnetische Halter für unterwegs" data-i18n-alt="useCases.camper.imageAlt"
-            style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;">
+          <picture>
+            <source 
+              srcset="images/Camper_Hero-320w.webp 320w,
+                      images/Camper_Hero-640w.webp 640w,
+                      images/Camper_Hero.webp 1024w"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
+              type="image/webp">
+            <img src="images/Camper_Hero.jpg?v=5"
+              alt="UNBREAK ONE im Camper und Wohnmobil - Magnetische Halter für unterwegs" 
+              data-i18n-alt="useCases.camper.imageAlt"
+              style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;"
+              loading="lazy"
+              width="1024"
+              height="576">
+          </picture>
           <h3 data-i18n="useCases.camper.title">Camper & Wohnmobil</h3>
           <p data-i18n="useCases.camper.description">Kein Umkippen während der Fahrt. Genießen Sie Ihre Getränke auch unterwegs.</p>
         </div>
@@ -304,9 +361,21 @@
         <!-- Gastronomie -->
         <div class="bereich-card glass-enhanced card-3d" data-scroll-reveal="fade-up" data-scroll-delay="3">
           <div class="bereich-icon float">🍽️</div>
-          <img src="images/Bar_Hero.jpg?v=8"
-            alt="UNBREAK ONE in der Gastronomie - Professionelle Halterung für Restaurants" data-i18n-alt="useCases.gastro.imageAlt"
-            style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;">
+          <picture>
+            <source 
+              srcset="images/Bar_Hero-320w.webp 320w,
+                      images/Bar_Hero-640w.webp 640w,
+                      images/Bar_Hero.webp 1024w"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
+              type="image/webp">
+            <img src="images/Bar_Hero.jpg?v=8"
+              alt="UNBREAK ONE in der Gastronomie - Professionelle Halterung für Restaurants" 
+              data-i18n-alt="useCases.gastro.imageAlt"
+              style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;"
+              loading="lazy"
+              width="1024"
+              height="576">
+          </picture>
           <h3 data-i18n="useCases.gastro.title">Gastronomie</h3>
           <p data-i18n="useCases.gastro.description">Weniger Bruch, mehr Eleganz. Premium-Wirkung für Restaurants und Bars.</p>
         </div>
@@ -314,9 +383,21 @@
         <!-- Zuhause / Terrasse -->
         <div class="bereich-card glass-enhanced card-3d" data-scroll-reveal="fade-up" data-scroll-delay="4">
           <div class="bereich-icon float">🏡</div>
-          <img src="images/scene-home.jpg?v=9"
-            alt="UNBREAK ONE Zuhause und auf der Terrasse - Sichere Glashalter für jeden Anlass" data-i18n-alt="useCases.home.imageAlt"
-            style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;">
+          <picture>
+            <source 
+              srcset="images/scene-home-320w.webp 320w,
+                      images/scene-home-640w.webp 640w,
+                      images/scene-home.webp 1024w"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
+              type="image/webp">
+            <img src="images/scene-home.jpg?v=9"
+              alt="UNBREAK ONE Zuhause und auf der Terrasse - Sichere Glashalter für jeden Anlass" 
+              data-i18n-alt="useCases.home.imageAlt"
+              style="width: 100%; height: 220px; object-fit: cover; border-radius: 8px; display: block; margin-bottom: 15px;"
+              loading="lazy"
+              width="1024"
+              height="576">
+          </picture>
           <h3 data-i18n="useCases.home.title">Zuhause / Terrasse</h3>
           <p data-i18n="useCases.home.description">Eleganz & Funktion. Ideal für Balkone, Garten oder Wohnzimmer.</p>
         </div>
