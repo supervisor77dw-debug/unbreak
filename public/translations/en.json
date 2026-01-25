@@ -37,8 +37,7 @@
   "proof": {
     "sectionTitle": "Product in Action – Real Stress Test",
     "sectionSubtitle": "Stability under high load – Live tested under extreme conditions",
-    "video1Label": "Winter Edition – Live Test",
-    "video2Label": "Yacht Edition – Simulation on Water",
+    "videoLabel": "🎥 Real Product Test – Winter Edition",
     "pointsTitle": "What you'll see:",
     "point1": "✓ Extreme stability during movement",
     "point2": "✓ Secure hold even with vibrations",
@@ -50,9 +49,6 @@
   "product": {
     "sectionTitle": "The System Behind UNBREAK ONE",
     "sectionSubtitle": "Our magnetic holders combine innovative technology with elegant design. Whether wine glass, glass, or bottle – UNBREAK ONE provides secure hold, anywhere.",
-    "manualTitle": "📄 User Manual:",
-    "manualDE": "📥 Deutsch (PDF)",
-    "manualEN": "📥 English (PDF)",
     "teaser": {
       "title": "Wine Glass Holders & Bottle Holders",
       "description": "Designed for all common wine glasses, bottles, and beverages. Magnetic or with nano-gel – flexible use on any surface.",
@@ -110,7 +106,7 @@
   "gastroHero": {
     "title": "UNBREAK ONE Gastro Edition",
     "subtitle": "Professional holder for fine dining and bars",
-    "ctaPrimary": "Learn about Gastro Edition",
+    "ctaPrimary": "Learn More",
     "teaser": {
       "cta": "Discover Gastro Edition"
     },
@@ -247,65 +243,84 @@
     },
     "privacy": {
       "title": "Privacy Policy",
-      "responsibleTitle": "1. Data Controller",
-      "responsibleText": "Responsible for data processing:",
-      "company": "Ricks Gastro & Event GmbH",
-      "address": "Grasweg 48<br>24118 Kiel",
-      "hostingTitle": "2. Hosting",
-      "hostingText": "Our website is technically operated by:",
-      "hostingCompany": "crossmedia1 – Thomas Ferenz",
-      "hostingAddress": "Kuhlacker 18<br>24145 Kiel<br>Germany",
-      "hostingPhone": "Phone: +49 431 536 81 18",
-      "hostingContract": "A data processing agreement exists with the hosting provider according to Art. 28 GDPR, if required.",
-      "logfilesTitle": "3. Server Log Files",
-      "logfilesText": "The following data is automatically collected when accessing the website:",
-      "logfilesBrowser": "Browser type and version",
-      "logfilesOS": "Operating system",
-      "logfilesReferrer": "Referrer URL",
-      "logfilesHostname": "Hostname of accessing computer",
-      "logfilesTime": "Time of server request",
-      "logfilesIP": "IP address",
-      "logfilesLegal": "Legal basis is Art. 6 para. 1 lit. f GDPR (legitimate interest in the technical provision of the website).",
-      "contactTitle": "4. Contact",
-      "contactText": "When you contact us by phone, email, or form, we process your information exclusively to handle your inquiry.",
-      "contactLegalTitle": "Legal basis:",
-      "contactLegal1": "Art. 6 para. 1 lit. b GDPR (contract initiation)",
-      "contactLegal2": "Art. 6 para. 1 lit. f GDPR (legitimate interest in communication)",
-      "cookiesTitle": "5. Cookies",
-      "cookiesText": "Our website uses only technically necessary cookies.<br>No tracking or marketing cookies are used unless added later.",
-      "reservationsTitle": "6. Reservations & Bookings",
-      "reservationsText": "When you book bowling lanes, events, or catering services, we process:",
-      "reservationsData1": "Name",
-      "reservationsData2": "Phone number",
-      "reservationsData3": "Email address",
-      "reservationsData4": "Booking details (date, time, number of people, etc.)",
-      "reservationsLegal": "Legal basis: Art. 6 para. 1 lit. b GDPR (contract / pre-contractual measures).",
-      "dataUsageTitle": "6a. Use of Your Data",
-      "dataUsageText": "Your personal data will only be used for order processing and customer support and will not be passed on to third parties unless there is a legal obligation or separate consent. Legal basis is Art. 6 para. 1 lit. b GDPR (contract fulfillment). Your data will be stored for the duration of the business relationship and in accordance with statutory retention periods. You have the right to access, rectification, deletion, restriction of processing, and a right to object.",
-      "paymentTitle": "7. Payment Service Providers",
-      "paymentText": "To be added later if PayPal, Stripe, or similar are used.",
-      "fontsTitle": "7a. Fonts",
-      "fontsText": "This website uses exclusively locally hosted fonts. No personal data is transmitted to external providers (such as Google Fonts). All font files are served directly from our own servers.",
-      "socialMediaTitle": "8. Social Media",
-      "socialMediaText": "We maintain social media presences:",
-      "socialMediaFacebook": "Facebook:",
-      "socialMediaInstagram": "Instagram:",
-      "socialMediaPolicy": "Data processing is carried out according to the privacy policies of the respective providers.",
-      "rightsTitle": "9. User Rights",
-      "rightsText": "You have the following rights:",
-      "right1": "Access (Art. 15 GDPR)",
-      "right2": "Rectification (Art. 16 GDPR)",
-      "right3": "Deletion (Art. 17 GDPR)",
-      "right4": "Restriction (Art. 18 GDPR)",
-      "right5": "Objection (Art. 21 GDPR)",
-      "right6": "Data portability (Art. 20 GDPR)",
-      "right7": "Withdrawal of consent (Art. 7 para. 3 GDPR)",
-      "rightsContact": "Contact for data subject rights:",
-      "complaintTitle": "10. Complaint Authority",
-      "complaintAuthority": "Independent State Center for Data Protection Schleswig-Holstein (ULD)",
-      "complaintAddress": "Holstenstraße 98<br>24103 Kiel",
-      "securityTitle": "11. Data Security",
-      "securityText": "We use modern technical and organizational measures to protect your data."
+      "lastUpdated": "Last updated: 25 Jan 2026",
+      "section1Title": "1. Controller",
+      "section1Intro": "The controller responsible for data processing on this website is:",
+      "section1Company": "Ricks Gastro & Event GmbH",
+      "section1Address": "Grasweg 48<br>24118 Kiel, Germany",
+      "section1Contact": "Contact:",
+      "section1Email": "info@unbreak-one.de",
+      "section2Title": "2. Hosting and technical provision",
+      "section2Intro": "This website is technically operated by:",
+      "section2Company": "crossmedia1 – Thomas Ferenz",
+      "section2Address": "Kuhlacker 18<br>24145 Kiel, Germany",
+      "section2Phone": "Phone: +49 431 536 81 18",
+      "section2Contract": "Where required, a data processing agreement pursuant to Art. 28 GDPR is in place with the hosting provider.",
+      "section3Title": "3. Server log files",
+      "section3Intro": "When you access the website for informational purposes, the server automatically processes the following data (server log files):",
+      "section3Item1": "Browser type and version",
+      "section3Item2": "Operating system",
+      "section3Item3": "Referrer URL",
+      "section3Item4": "Hostname of the accessing device",
+      "section3Item5": "Date and time of the server request",
+      "section3Item6": "IP address",
+      "section3Purpose": "ensuring technical stability and security, error analysis, defense against attacks.",
+      "section3Legal": "Art. 6(1)(f) GDPR (legitimate interest).",
+      "section4Title": "4. Contact",
+      "section4Text": "If you contact us via email, phone, or a contact form, we process your information (e.g., name, email address, message content) solely to handle your request.",
+      "section4LegalTitle": "Legal basis:",
+      "section4Legal1": "Art. 6(1)(b) GDPR (pre-contractual measures/contract), or",
+      "section4Legal2": "Art. 6(1)(f) GDPR (legitimate interest in communication)",
+      "section4Storage": "as long as necessary to process the request and, where applicable, in accordance with statutory retention requirements.",
+      "section5Title": "5. Cookies and similar technologies",
+      "section5Text": "This website uses strictly necessary cookies/local storage to provide core functionality (e.g., language preference, cart/session functions).<br>No tracking or marketing cookies are used unless explicitly added with proper transparency.",
+      "section5LegalTitle": "Legal basis:",
+      "section5Legal1": "§ 25(2) TTDSG (strictly necessary) and",
+      "section5Legal2": "Art. 6(1)(f) GDPR (legitimate interest) or Art. 6(1)(b) GDPR (cart/order)",
+      "section6Title": "6. Online shop, orders and contract performance",
+      "section6Intro": "When you place an order on unbreak-one.com, we process:",
+      "section6Data1": "Identity data: name, billing and shipping address",
+      "section6Data2": "Contact data: email address, optionally phone number",
+      "section6Data3": "Order data: items, quantity, price, shipping details",
+      "section6Data4": "Communication data regarding the order",
+      "section6Purpose": "contract performance, delivery, invoicing, customer support.",
+      "section6Legal": "Art. 6(1)(b) GDPR.",
+      "section6Storage": "as required for contract handling and statutory retention periods (e.g., tax and commercial law).",
+      "section7Title": "7. Payments (Stripe, PayPal, cards)",
+      "section7Intro": "We use <strong>Stripe</strong> (Stripe Payments Europe, Ltd. and affiliated entities) to process payments. Via Stripe, payments by credit/debit card and—depending on the checkout configuration—PayPal may be available.",
+      "section7DataIntro": "Depending on the selected payment method, the following data may be processed:",
+      "section7Data1": "Payment data (e.g., card type, cardholder, verification data; card/account data is typically processed directly by Stripe)",
+      "section7Data2": "Transaction data (amount, currency, time, status)",
+      "section7Data3": "Security/verification data (fraud prevention, 3D Secure)",
+      "section7Data4": "Contact data (e.g., email) and, where necessary, billing/shipping data for reconciliation",
+      "section7Purpose": "payment processing, fraud prevention, risk checks, refunds.",
+      "section7Legal": "Art. 6(1)(b) GDPR and Art. 6(1)(f) GDPR.",
+      "section7Transfer": "depending on provider structure and payment method, data may be transferred to third countries (e.g., the U.S.). Where applicable, transfers are carried out based on appropriate safeguards (e.g., EU Standard Contractual Clauses) and/or other lawful mechanisms.",
+      "section7More": "More information is provided in the privacy notices of Stripe/PayPal during checkout.",
+      "section7aTitle": "7a. Fonts (local hosting)",
+      "section7aText": "This website uses only locally hosted fonts. No personal data is transmitted to external font providers (e.g., Google Fonts). All font files are delivered directly from our server.",
+      "section8Title": "8. Social media",
+      "section8Intro": "We maintain social media pages:",
+      "section8Facebook": "Facebook:",
+      "section8Instagram": "Instagram:",
+      "section8Text": "When you visit our social media pages, processing is governed by the privacy policies of the respective providers. We have limited influence over this processing.",
+      "section9Title": "9. Your rights",
+      "section9Intro": "Subject to legal requirements, you have the following rights:",
+      "section9Right1": "Access (Art. 15 GDPR)",
+      "section9Right2": "Rectification (Art. 16 GDPR)",
+      "section9Right3": "Erasure (Art. 17 GDPR)",
+      "section9Right4": "Restriction (Art. 18 GDPR)",
+      "section9Right5": "Objection (Art. 21 GDPR)",
+      "section9Right6": "Data portability (Art. 20 GDPR)",
+      "section9Right7": "Withdrawal of consent (Art. 7(3) GDPR)",
+      "section9Contact": "Contact:",
+      "section9Email": "info@unbreak-one.de",
+      "section10Title": "10. Supervisory authority",
+      "section10Authority": "Independent State Centre for Data Protection Schleswig-Holstein (ULD)",
+      "section10Address": "Holstenstraße 98<br>24103 Kiel, Germany",
+      "section11Title": "11. Data security",
+      "section11Text": "We implement appropriate technical and organizational measures to protect your data against loss, manipulation, or unauthorized access.",
+      "backBtn": "Back to Homepage"
     },
     "terms": {
       "title": "Terms and Conditions",
@@ -347,85 +362,5 @@
     "infoDeliveryText": "Your order will be processed and shipped within 3-5 days.",
     "infoCustomTitle": "Individual",
     "infoCustomText": "Each piece is made according to your wishes."
-  },
-  "shop": {
-    "teaser": {
-      "title": "Choose your UNBREAK ONE",
-      "subtitle": "From small household solutions to professional gastronomy bundles – we have the perfect set for you.",
-      "cta": "Go to Shop"
-    },
-    "hero": {
-      "title": "UNBREAK ONE Shop",
-      "subtitle": "Magnetic holders for glasses & bottles – Professional quality Made in Germany"
-    },
-    "products": {
-      "title": "Individual Products",
-      "empty": "No products available"
-    },
-    "bundles": {
-      "title": "Bundles & Packages",
-      "subtitle": "Save with our pre-packaged sets – perfect for gastronomy, office, or home",
-      "empty": "No bundles available"
-    },
-    "presets": {
-      "title": "Pre-configured Designs",
-      "subtitle": "Our most popular color and material combinations – available immediately",
-      "empty": "No presets available"
-    },
-    "badge": {
-      "bundle": "Bundle",
-      "preset": "Preset"
-    },
-    "button": {
-      "buy": "Buy Now"
-    },
-    "loading": "Loading products...",
-    "configurableSection": {
-      "title": "Customizable",
-      "badge": "Customizable",
-      "ctaButton": "Customize now",
-      "priceUnavailable": "Price unavailable",
-      "customManufacturing": "Custom-made"
-    },
-    "configurableProducts": {
-      "glassHolder": {
-        "name": "Custom Glass Holder",
-        "description": "Your custom glass holder – perfectly tailored to usage, material, and design requirements."
-      },
-      "bottleHolder": {
-        "name": "Custom Bottle Holder",
-        "description": "Your custom bottle holder – optimally configured for stability, application, and design."
-      }
-    }
-  },
-  "configurator": {
-    "parts": {
-      "base": "Base plate",
-      "arm": "Arm",
-      "module": "Rubber lip",
-      "pattern": "Pattern",
-      "finish": "Finish"
-    },
-    "colors": {
-      "mint": "Mint",
-      "green": "Green",
-      "purple": "Purple",
-      "ice_blue": "Ice Blue",
-      "dark_blue": "Dark Blue",
-      "red": "Red",
-      "black": "Black"
-    },
-    "products": {
-      "glass_holder": "Glass Holder (configured)",
-      "bottle_holder": "Bottle Holder (configured)"
-    }
-  },
-  "footer": {
-    "downloads": "📥 Downloads",
-    "manualDE": "User Manual (DE)",
-    "manualEN": "User Manual (EN)",
-    "impressum": "Imprint",
-    "privacy": "Privacy Policy",
-    "terms": "Terms"
   }
 }
