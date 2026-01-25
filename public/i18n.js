@@ -145,11 +145,14 @@ class I18n {
    */
   updateContent() {
     console.log('[i18n] updateContent() called, currentLang:', this.currentLang);
-    console.log('[i18n] Translations loaded:', !!this.translations[this.currentLang]);
+    console.log('[i18n] Translations object:', this.translations);
+    console.log('[i18n] Translations for', this.currentLang, ':', this.translations[this.currentLang]);
     
     // Check if translations are loaded for current language
-    const hasTranslations = this.translations[this.currentLang] && 
-                           Object.keys(this.translations[this.currentLang]).length > 0;
+    const langTranslations = this.translations[this.currentLang];
+    const hasTranslations = langTranslations && Object.keys(langTranslations).length > 0;
+    
+    console.log('[i18n] hasTranslations:', hasTranslations, 'keys:', hasTranslations ? Object.keys(langTranslations).length : 0);
     
     if (!hasTranslations) {
       console.warn('[i18n] No translations loaded for', this.currentLang, '- keeping HTML fallback');
