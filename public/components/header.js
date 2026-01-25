@@ -17,7 +17,7 @@ function getHeaderHTML() {
     <div class="header-inner">
       <!-- Brand (Logo) -->
       <a class="brand" href="index.html">
-        <img src="images/logo.png" alt="UNBREAK ONE" class="nav-logo">
+        <img src="images/logo.png" alt="UNBREAK ONE" class="nav-logo" width="150" height="50" loading="eager">
       </a>
 
       <!-- Navigation (Desktop/Mobile toggle) -->

@@ -827,6 +827,29 @@ section {
   height: 100%;
   z-index: 1;
   overflow: hidden;
+  /* Initial opacity 0, wird nach Video-Load eingeblendet */
+  opacity: 0;
+  transition: opacity 0.8s ease-in;
+}
+
+.hero-video-container.loaded {
+  opacity: 1;
+}
+
+/* Hero Background Image (LCP) */
+.hero-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.hero-background img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Video Element - Cover gesamten Bereich */
