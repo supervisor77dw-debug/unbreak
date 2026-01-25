@@ -284,6 +284,8 @@
       "dataUsageText": "Your personal data will only be used for order processing and customer support and will not be passed on to third parties unless there is a legal obligation or separate consent. Legal basis is Art. 6 para. 1 lit. b GDPR (contract fulfillment). Your data will be stored for the duration of the business relationship and in accordance with statutory retention periods. You have the right to access, rectification, deletion, restriction of processing, and a right to object.",
       "paymentTitle": "7. Payment Service Providers",
       "paymentText": "To be added later if PayPal, Stripe, or similar are used.",
+      "fontsTitle": "7a. Fonts",
+      "fontsText": "This website uses exclusively locally hosted fonts. No personal data is transmitted to external providers (such as Google Fonts). All font files are served directly from our own servers.",
       "socialMediaTitle": "8. Social Media",
       "socialMediaText": "We maintain social media presences:",
       "socialMediaFacebook": "Facebook:",

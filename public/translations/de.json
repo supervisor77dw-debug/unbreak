@@ -286,6 +286,8 @@
       "dataUsageText": "Ihre personenbezogenen Daten werden ausschließlich zur Auftragsabwicklung und Kundenbetreuung verwendet und nicht an Dritte weitergegeben, sofern keine gesetzliche Verpflichtung oder eine gesonderte Einwilligung besteht. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung). Ihre Daten werden für die Dauer der Geschäftsbeziehung sowie gemäß gesetzlicher Aufbewahrungsfristen gespeichert. Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung sowie ein Widerspruchsrecht.",
       "paymentTitle": "7. Zahlungsdienstleister",
       "paymentText": "Bitte später ergänzen, falls PayPal, Stripe o. Ä. eingesetzt werden.",
+      "fontsTitle": "7a. Schriftarten",
+      "fontsText": "Diese Website verwendet ausschließlich lokal gehostete Schriftarten. Es findet keine Übertragung personenbezogener Daten an externe Anbieter (z. B. Google Fonts) statt. Alle Schriftdateien werden direkt vom eigenen Server ausgeliefert.",
       "socialMediaTitle": "8. Social Media",
       "socialMediaText": "Wir betreiben Social-Media-Präsenzen:",
       "socialMediaFacebook": "Facebook:",
