@@ -100,74 +100,81 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ===================================
-    // RESPONSIVE VIDEO BACKGROUND LOADER
+    // HERO VIDEO LAZY LOADER (LCP-optimiert)
     // ===================================
-    const heroVideo = document.querySelector('.hero-video');
+    const heroVideo = document.querySelector('#hero-video');
+    const videoContainer = document.querySelector('.hero-video-container');
+    const imageContainer = document.querySelector('.hero-image-container');
     
-    if (heroVideo) {
-        // Funktion: Lade optimale Video-Version basierend auf Bildschirmbreite
-        function loadOptimalVideo() {
-            const screenWidth = window.innerWidth;
-            const videoSources = heroVideo.querySelectorAll('source');
+    if (heroVideo && videoContainer && imageContainer) {
+        let videoLoaded = false;
+        
+        // Funktion: Video lazy-loaden
+        function loadHeroVideo() {
+            if (videoLoaded) return;
+            videoLoaded = true;
             
-            // Desktop: 1920px Version | Mobile: 1280px Version
-            videoSources.forEach(source => {
-                const mediaQuery = source.getAttribute('media');
-                
-                if (mediaQuery) {
-                    // Desktop-Video nur bei großen Bildschirmen laden
-                    if (screenWidth >= 1024 && mediaQuery.includes('min-width: 1024px')) {
-                        source.removeAttribute('media');
-                    }
-                } else if (screenWidth < 1024) {
-                    // Mobile-Version aktiv, wenn kein media-Attribut
-                    // (Fallback ist bereits korrekt konfiguriert)
-                }
-            });
+            const videoSource = heroVideo.querySelector('source[data-src]');
+            if (!videoSource) return;
             
-            // Video neu laden nach Source-Änderung
+            const videoSrc = videoSource.getAttribute('data-src');
+            videoSource.src = videoSrc;
+            videoSource.removeAttribute('data-src');
+            
             heroVideo.load();
+            
+            // Nach erfolgreichem Laden: Video anzeigen, Bild ausblenden
+            heroVideo.addEventListener('loadeddata', () => {
+                videoContainer.style.display = 'block';
+                videoContainer.style.opacity = '0';
+                
+                // Fade-in Video
+                setTimeout(() => {
+                    videoContainer.style.transition = 'opacity 1s ease-in-out';
+                    videoContainer.style.opacity = '1';
+                    
+                    // Bild nach Fade-in entfernen
+                    setTimeout(() => {
+                        imageContainer.style.display = 'none';
+                    }, 1000);
+                }, 100);
+                
+                // Autoplay starten
+                heroVideo.play().catch(err => {
+                    console.log('[Hero Video] Autoplay verhindert:', err);
+                });
+            }, { once: true });
+            
+            // Error Handling
+            heroVideo.addEventListener('error', () => {
+                console.warn('[Hero Video] Fehler beim Laden - bleibe bei statischem Bild');
+                videoContainer.style.display = 'none';
+            }, { once: true });
         }
         
-        // Initiales Laden
-        loadOptimalVideo();
-        
-        // Bei Resize neu evaluieren (debounced für Performance)
-        let resizeTimer;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(() => {
-                loadOptimalVideo();
-            }, 250);
-        });
-        
-        // Video Error Handling - Fallback auf Gradient-Background
-        heroVideo.addEventListener('error', () => {
-            console.warn('Video konnte nicht geladen werden. Fallback auf Gradient-Background.');
-            const videoContainer = document.querySelector('.hero-video-container');
-            if (videoContainer) {
-                videoContainer.style.display = 'none';
-            }
-        });
-        
-        // Performance: Video pausieren wenn nicht sichtbar
-        const observerOptions = {
-            threshold: 0.1
-        };
-        
-        const videoObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    heroVideo.play().catch(err => {
-                        console.log('Autoplay verhindert:', err);
-                    });
-                } else {
-                    heroVideo.pause();
-                }
+        // Strategie 1: IntersectionObserver (bevorzugt)
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        loadHeroVideo();
+                        observer.disconnect();
+                    }
+                });
+            }, {
+                rootMargin: '200px' // Video etwas früher laden
             });
-        }, observerOptions);
-        
-        videoObserver.observe(heroVideo);
+            
+            observer.observe(heroVideo);
+        } else {
+            // Fallback: requestIdleCallback
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => loadHeroVideo(), { timeout: 2000 });
+            } else {
+                // Letzter Fallback: Delay
+                setTimeout(() => loadHeroVideo(), 1500);
+            }
+        }
     }
 
     // ===================================
