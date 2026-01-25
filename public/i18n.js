@@ -157,15 +157,26 @@ class I18n {
     }
     
     // Update text content
+    let updateCount = 0;
+    let skipCount = 0;
     document.querySelectorAll('[data-i18n]').forEach(element => {
       const key = element.getAttribute('data-i18n');
       const translation = this.t(key);
       
+      console.log(`[i18n] Key: "${key}" → Translation: "${translation}" (same as key: ${translation === key})`);
+      
       // Update if we have a valid translation (not the key itself)
       if (translation && translation !== key) {
         element.textContent = translation;
+        updateCount++;
+        console.log(`  ✓ Updated element`);
+      } else {
+        skipCount++;
+        console.log(`  ✗ Skipped (translation === key or empty)`);
       }
     });
+    
+    console.log(`[i18n] Update summary: ${updateCount} updated, ${skipCount} skipped`);
     
     // Update HTML content (for elements with rich text)
     document.querySelectorAll('[data-i18n-html]').forEach(element => {
