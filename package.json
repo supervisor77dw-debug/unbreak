@@ -8,7 +8,7 @@
     "dev:validate": "node scripts/validate-env.js && next dev",
     "validate-env": "node scripts/validate-env.js",
     "images:optimize": "node tools/optimize-images.js",
-    "prebuild": "node scripts/check-secrets-guard.mjs && npm run images:optimize && node scripts/generate-build-info.js",
+    "prebuild": "node scripts/check-secrets-guard.mjs && node scripts/inject-env-vercel.mjs && npm run images:optimize && node scripts/generate-build-info.js",
     "check:secrets": "node scripts/check-secrets-guard.mjs",
     "build": "next build",
     "start": "next start",
