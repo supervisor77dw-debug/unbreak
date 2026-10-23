@@ -10,7 +10,9 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '*.supabase.co',
+        // Own project only: a wildcard lets any third-party Supabase project
+        // feed files into the image optimizer (Next.js image RCE advisories).
+        hostname: 'qnzsdytdghfukrqpscsg.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
     ],
