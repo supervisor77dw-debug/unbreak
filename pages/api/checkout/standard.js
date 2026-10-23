@@ -6,6 +6,7 @@ import { resolvePriceCents, validatePricing } from '../../../lib/pricing/pricing
 import { getEnvFingerprint, formatFingerprintLog } from '../../../lib/utils/envFingerprint.js';
 import { generatePublicId } from '../../../lib/utils/orderNumber.js'; // NOTE: generateOrderNumber moved to webhook
 import { getStripeClient, getCheckoutMode, guardCheckoutSession } from '../../../lib/stripe-config.js';
+import { secretMatches, isProductionDeployment } from '../../../lib/security/secretCompare.js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -175,9 +176,11 @@ export default async function handler(req, res) {
     if (req.body.mode === 'test') {
       // Validate admin access for test mode
       const adminTestKey = req.headers['x-admin-test-key'];
-      const validAdminKey = process.env.ADMIN_API_KEY || process.env.ADMIN_TEST_KEY;
+      // Dedicated ADMIN_TEST_KEY only; on production additionally requires
+      // CHECKOUT_ADMIN_TEST_ENABLED=true (off by default).
+      const testModeAllowed = !isProductionDeployment() || process.env.CHECKOUT_ADMIN_TEST_ENABLED === 'true';
       
-      if (!adminTestKey || adminTestKey !== validAdminKey) {
+      if (!testModeAllowed || !secretMatches(adminTestKey, process.env.ADMIN_TEST_KEY)) {
         console.warn('⚠️ [Checkout] Attempted test mode without valid admin key');
         // Silently fall back to default mode (don't reveal admin test feature exists)
         stripeMode = getCheckoutMode();

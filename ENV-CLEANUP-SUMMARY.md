@@ -197,7 +197,7 @@ STRIPE_SECRET_KEY=sk_test_... ✅
 - TEST Keys lokal, LIVE Keys in Vercel (sobald gesetzt)
 
 ### ⚠️ Offen:
-- Admin-Passwort noch `changeMe123!` → nach Live-Go ändern
+- Admin-Passwort noch `<ADMIN_SEED_PASSWORD>` → nach Live-Go ändern
 - `NEXT_PUBLIC_ADMIN_API_KEY` exposed → aber durch Session Auth geschützt
 - Vercel Production Keys müssen noch verifiziert werden
 

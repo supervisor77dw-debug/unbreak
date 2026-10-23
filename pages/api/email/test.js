@@ -7,11 +7,12 @@
  */
 
 import { sendEmail } from '../../../lib/email/emailService';
+import { secretMatches } from '../../../lib/security/secretCompare';
 
 export default async function handler(req, res) {
   // Only allow in development or with secret
   const isDev = process.env.NODE_ENV === 'development';
-  const hasSecret = req.query.secret === process.env.EMAIL_TEST_SECRET;
+  const hasSecret = secretMatches(req.query.secret, process.env.EMAIL_TEST_SECRET);
 
   if (!isDev && !hasSecret) {
     return res.status(403).json({ error: 'Forbidden - test endpoint only available in development or with valid secret' });

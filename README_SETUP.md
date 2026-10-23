@@ -32,7 +32,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=dein_anon_key_hier
 SEED_ADMIN_EMAIL=admin@deine-domain.de
 
 # Optional: Bootstrap Secret (für API-Security)
-BOOTSTRAP_SECRET=dein-geheimes-token-hier
+BOOTSTRAP_SECRET=<generate-with: openssl rand -base64 32>
 ```
 
 ### 2. Dependencies installieren

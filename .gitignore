@@ -36,3 +36,12 @@ dist/
 
 .vercel
 .env*.local
+
+# Secrets never in Git (AW-20261023-GE-CLAUDE-WEBSITE-SECURITY-001)
+.env.*
+!.env.example
+!.env.local.example
+.migration-url.txt
+*.pem
+*.key
+*secret*.txt

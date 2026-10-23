@@ -36,7 +36,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51Siyji...
 #### B) Server-Only (API Routes, Scripts, Webhooks)
 ```bash
 SUPABASE_URL=https://qnzsdytdghfukrqpscsg.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_j9BVv-3n4lzRyXjFKgilBw_VPlqXwut
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_REDACTED
 STRIPE_SECRET_KEY=sk_test_51Siyji...
 STRIPE_WEBHOOK_SECRET=whsec_37IH7f5i...
 ```
@@ -47,7 +47,7 @@ STRIPE_WEBHOOK_SECRET=whsec_37IH7f5i...
 
 #### C) Auth & Database
 ```bash
-NEXTAUTH_SECRET=uE2cWwmLfCICyk3S1yak+0/wDfGdzspeCwhrwnZswKs=
+NEXTAUTH_SECRET=<generate-with: openssl rand -base64 32>
 NEXTAUTH_URL=https://unbreak-one.vercel.app
 DATABASE_URL=postgresql://postgres.qnzsdytdghfukrqpscsg:...@aws-1-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true
 DIRECT_URL=postgresql://postgres.qnzsdytdghfukrqpscsg:...@aws-1-eu-west-1.pooler.supabase.com:5432/postgres
@@ -61,7 +61,7 @@ DIRECT_URL=postgresql://postgres.qnzsdytdghfukrqpscsg:...@aws-1-eu-west-1.pooler
 ```bash
 # Von Supabase Dashboard → Settings → API
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_daOPzWvSvv7WFMGmoFkPkQ_9I26lzBS
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_j9BVv-3n4lzRyXjFKgilBw_VPlqXwut
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_REDACTED
 ```
 
 **Validierung:**

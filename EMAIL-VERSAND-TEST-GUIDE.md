@@ -64,10 +64,10 @@ Jeder Email-Versuch wird jetzt geloggt mit:
 
 ### Lokale Entwicklung (.env.local) ✅
 ```bash
-RESEND_API_KEY=re_4gT8QKmw_HjRrtBPJP3Ntqank5TXzmPyc
+RESEND_API_KEY=re_REDACTED
 EMAILS_ENABLED=true  # ← JETZT gesetzt!
 STRIPE_SECRET_KEY=sk_test_51SiyjiPZfPWUWCa1...
-STRIPE_WEBHOOK_SECRET=whsec_37IH7f5icrdCS20UU76avUTX8FV45odC
+STRIPE_WEBHOOK_SECRET=whsec_REDACTED
 ```
 
 ### Vercel Preview (staging branch) ⚠️
@@ -78,9 +78,9 @@ STRIPE_WEBHOOK_SECRET=whsec_37IH7f5icrdCS20UU76avUTX8FV45odC
 2. **Setze für "Preview":**
    ```
    EMAILS_ENABLED=true
-   RESEND_API_KEY=re_4gT8QKmw_HjRrtBPJP3Ntqank5TXzmPyc
+   RESEND_API_KEY=re_REDACTED
    STRIPE_SECRET_KEY=sk_test_51SiyjiPZfPWUWCa1...
-   STRIPE_WEBHOOK_SECRET=whsec_37IH7f5icrdCS20UU76avUTX8FV45odC
+   STRIPE_WEBHOOK_SECRET=whsec_REDACTED
    ```
 
 3. **Redeploy Preview:**

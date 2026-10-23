@@ -127,12 +127,12 @@ Ohne Login kann niemand Admin-Calls machen, auch mit Key.
 `.env.local` enthält das Admin-Passwort im Klartext:
 
 ```dotenv
-ADMIN_SEED_PASSWORD=changeMe123!
+ADMIN_SEED_PASSWORD=<ADMIN_SEED_PASSWORD>
 ```
 
 **Risiko:**  
 - Falls `.env.local` jemals geleakt wird (Dropbox-Sync, Git-Unfall), ist das Passwort bekannt
-- Passwort ist sehr schwach ("changeMe123!")
+- Passwort ist sehr schwach ("<ADMIN_SEED_PASSWORD>")
 
 **Empfehlung:**  
 1. **Sofort nach Launch:** Admin-Passwort ändern über `/admin/settings` oder Supabase Dashboard
@@ -140,7 +140,7 @@ ADMIN_SEED_PASSWORD=changeMe123!
 3. `ADMIN_SEED_PASSWORD` aus `.env.local` entfernen (wird nur beim ersten Setup gebraucht)
 
 **Status:**  
-- ⚠️ Passwort ist aktuell noch `changeMe123!`
+- ⚠️ Passwort ist aktuell noch `<ADMIN_SEED_PASSWORD>`
 - Admin-Account: `admin@unbreak-one.com`
 
 ---
@@ -313,7 +313,7 @@ API-Routes haben **keine** explizite CORS-Konfiguration.
 
 ### **DIREKT NACH LIVE-GO** (innerhalb 24h)
 
-- [ ] **P1:** Admin-Passwort ändern (von `changeMe123!` zu starkem Passwort)
+- [ ] **P1:** Admin-Passwort ändern (von `<ADMIN_SEED_PASSWORD>` zu starkem Passwort)
 - [ ] **P1:** `ADMIN_SEED_PASSWORD` aus `.env.local` entfernen
 
 ### **POST-LAUNCH** (nächste 7 Tage)

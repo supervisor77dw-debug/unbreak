@@ -16,7 +16,10 @@ const prisma = require('../lib/prisma.js').default;
 async function resetAdminPassword() {
   try {
     const adminEmail = process.env.ADMIN_SEED_EMAIL || 'admin@unbreak-one.com';
-    const newPassword = process.argv[2] || process.env.ADMIN_SEED_PASSWORD || 'changeMe123!';
+    const newPassword = process.argv[2] || process.env.ADMIN_SEED_PASSWORD;
+    if (!newPassword || newPassword.length < 16) {
+      throw new Error('ADMIN_SEED_PASSWORD (min. 16 chars) required - no default password');
+    }
 
     console.log('🔐 Resetting admin password...');
     console.log('📧 Email:', adminEmail);

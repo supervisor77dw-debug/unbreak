@@ -313,7 +313,7 @@ http://localhost:3000/admin
 
 # Login with seeded admin
 Email: admin@unbreak-one.com
-Password: admin123 (or your ADMIN_SEED_PASSWORD)
+Password: <ADMIN_SEED_PASSWORD> (or your ADMIN_SEED_PASSWORD)
 ```
 
 ### Test Data

@@ -36,11 +36,9 @@ export default function CustomerDetailPage() {
   const fetchCustomerDetails = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/customers/${id}`, {
-        headers: {
-          'x-admin-key': process.env.NEXT_PUBLIC_ADMIN_API_KEY || '',
-        },
-      });
+      // Auth via NextAuth session cookie (checked server-side). Never send
+      // server secrets from the browser (no NEXT_PUBLIC_* keys).
+      const res = await fetch(`/api/admin/customers/${id}`);
       
       if (res.ok) {
         const data = await res.json();
@@ -49,8 +47,8 @@ export default function CustomerDetailPage() {
         setTickets(data.tickets || []);
         setStats(data.stats);
       } else if (res.status === 401) {
-        console.error('❌ Admin API unauthorized - check NEXT_PUBLIC_ADMIN_API_KEY');
-        alert('Admin API unauthorized. Check environment configuration (x-admin-key).');
+        console.error('❌ Admin API unauthorized - session missing or expired');
+        alert('Admin API unauthorized. Please sign in again.');
       } else {
         console.error('Failed to fetch customer:', res.status);
         if (res.status === 404) {

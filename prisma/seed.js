@@ -8,7 +8,10 @@ async function main() {
   console.log('🌱 Seeding admin user...');
 
   const adminEmail = process.env.ADMIN_SEED_EMAIL || 'admin@unbreak-one.com';
-  const adminPassword = process.env.ADMIN_SEED_PASSWORD || 'admin123';
+  const adminPassword = process.env.ADMIN_SEED_PASSWORD;
+  if (!adminPassword || adminPassword.length < 16) {
+    throw new Error('ADMIN_SEED_PASSWORD (min. 16 chars) required - no default password');
+  }
 
   // Check if admin already exists
   const existingAdmin = await prisma.user.findUnique({

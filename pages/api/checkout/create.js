@@ -24,6 +24,7 @@ import { getStripeClient, getCheckoutMode } from '../../../lib/stripe';
 import { calculatePrice, calculateShipping, calculateTax } from '../../../lib/pricing';
 import { validateConfiguratorConfig } from '../../../lib/configValidation';
 import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
+import { secretMatches, isProductionDeployment } from '../../../lib/security/secretCompare';
 
 // PRODUCTION ONLY: All Stripe checkouts must redirect to production domain
 // This ensures webhooks, success/cancel URLs work correctly regardless of caller origin
@@ -247,9 +248,11 @@ export default async function handler(req, res) {
     
     if (req.body.mode === 'test') {
       const adminTestKey = req.headers['x-admin-test-key'];
-      const validAdminKey = process.env.ADMIN_API_KEY || process.env.ADMIN_TEST_KEY;
+      // Dedicated ADMIN_TEST_KEY only; on production additionally requires
+      // CHECKOUT_ADMIN_TEST_ENABLED=true (off by default).
+      const testModeAllowed = !isProductionDeployment() || process.env.CHECKOUT_ADMIN_TEST_ENABLED === 'true';
       
-      if (adminTestKey && adminTestKey === validAdminKey) {
+      if (testModeAllowed && secretMatches(adminTestKey, process.env.ADMIN_TEST_KEY)) {
         console.log('[CHECKOUT_CREATE] trace_id=' + trace_id + ' ADMIN TEST MODE activated');
         stripeMode = 'test';
       } else {

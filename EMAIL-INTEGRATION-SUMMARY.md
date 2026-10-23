@@ -91,7 +91,7 @@ RESEND_FROM=UNBREAK ONE <noreply@yourdomain.com>
 
 # Optional
 SHOP_OWNER_EMAIL=shop@yourdomain.com
-EMAIL_TEST_SECRET=your-random-secret-for-prod-testing
+EMAIL_TEST_SECRET=<generate-with: openssl rand -base64 32>
 ```
 
 ### Resend Setup Steps

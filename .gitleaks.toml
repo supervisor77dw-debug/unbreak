@@ -1,0 +1,39 @@
+# Gitleaks configuration (AW-20261023-GE-CLAUDE-WEBSITE-SECURITY-001)
+# Default rules plus project-specific ones. Supabase anon keys in public/*.html
+# are public by design; scripts/check-secrets-guard.mjs verifies their role.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "supabase-secret-key"
+description = "Supabase secret API key"
+regex = '''sb_secret_[A-Za-z0-9_-]{20,}'''
+keywords = ["sb_secret_"]
+
+[[rules]]
+id = "postgres-url-with-password"
+description = "Postgres connection string with password"
+regex = '''postgres(?:ql)?://[^:\s/]+:([^@\s\[\]<>]{6,})@'''
+secretGroup = 1
+keywords = ["postgres"]
+
+[[rules]]
+id = "env-assigned-secret"
+description = "Secret-like env assignment"
+regex = '''(?:NEXTAUTH_SECRET|ADMIN_API_KEY|ADMIN_TEST_KEY|BOOTSTRAP_SECRET|EMAIL_TEST_SECRET|RESEND_API_KEY|STRIPE_WEBHOOK_SECRET)\s*[=:]\s*["']?([A-Za-z0-9+/=_-]{20,})'''
+secretGroup = 1
+keywords = ["SECRET", "API_KEY", "TEST_KEY"]
+
+[allowlist]
+description = "Placeholders and public anon keys"
+regexTarget = "match"
+regexes = [
+  '''REDACTED''',
+  '''<generate-with''',
+  '''x{20,}''',
+]
+paths = [
+  '''public/(admin|login|account|ops)\.html''',
+  '''node_modules/''',
+]

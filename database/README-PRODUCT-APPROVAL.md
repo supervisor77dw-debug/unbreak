@@ -65,7 +65,7 @@ In Supabase Dashboard → Authentication → Users:
 
 **Admin User:**
 - Email: `admin@test.com`
-- Password: `Admin123!`
+- Password: `<ADMIN_SEED_PASSWORD>`
 
 ### Step 3: Set Admin Role
 

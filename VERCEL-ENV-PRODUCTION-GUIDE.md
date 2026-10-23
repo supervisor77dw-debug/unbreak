@@ -31,28 +31,28 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 # === SUPABASE DATABASE ===
 SUPABASE_URL=https://qnzsdytdghfukrqpscsg.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_j9BVv-3n4lzRyXjFKgilBw_VPlqXwut
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_REDACTED
 NEXT_PUBLIC_SUPABASE_URL=https://qnzsdytdghfukrqpscsg.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_X8GyhtannQqQdR0n4UjQIA_Qk2nLLmU
 
-DATABASE_URL=postgresql://postgres.qnzsdytdghfukrqpscsg:Haw$76aii_Urwyler@aws-1-eu-west-1.pooler.supabase.co:6543/postgres?pgbouncer=true
-DIRECT_URL=postgresql://postgres.qnzsdytdghfukrqpscsg:Haw$76aii_Urwyler@aws-1-eu-west-1.pooler.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres.qnzsdytdghfukrqpscsg:[PASSWORD]@aws-1-eu-west-1.pooler.supabase.co:6543/postgres?pgbouncer=true
+DIRECT_URL=postgresql://postgres.qnzsdytdghfukrqpscsg:[PASSWORD]@aws-1-eu-west-1.pooler.supabase.co:5432/postgres
 
 # === NEXTAUTH ===
-NEXTAUTH_SECRET=uE2cWwmLfCICyk3S1yak+0/wDfGdzspeCwhrwnZswKs=
+NEXTAUTH_SECRET=<generate-with: openssl rand -base64 32>
 NEXTAUTH_URL=https://www.unbreak-one.com
 
 # === RESEND EMAIL ===
-RESEND_API_KEY=re_4gT8QKmw_HjRrtBPJP3Ntqank5TXzmPyc
+RESEND_API_KEY=re_REDACTED
 EMAILS_ENABLED=true
 RESEND_FROM=UNBREAK ONE <noreply@unbreak-one.de>
 SHOP_OWNER_EMAIL=shop@unbreak-one.de
 
 # === ADMIN PANEL ===
-ADMIN_API_KEY=K0ZUzL5rWPxK7nmdudjVJ9mG9k9EHMXRcKUBkiAYCjw=
-NEXT_PUBLIC_ADMIN_API_KEY=K0ZUzL5rWPxK7nmdudjVJ9mG9k9EHMXRcKUBkiAYCjw=
+ADMIN_API_KEY=<generate-with: openssl rand -base64 32>
+NEXT_PUBLIC_ADMIN_API_KEY=<generate-with: openssl rand -base64 32>
 ADMIN_SEED_EMAIL=admin@unbreak-one.com
-ADMIN_SEED_PASSWORD=changeMe123!
+ADMIN_SEED_PASSWORD=<ADMIN_SEED_PASSWORD>
 
 # === FEATURE FLAGS ===
 NEXT_PUBLIC_DEBUG=false
@@ -244,7 +244,7 @@ https://vercel.com/supervisor77dw-debugs-projects/unbreak-one/deployments
 7. [ ] Test-Checkout mit 1 Cent durchführen
 
 **NACH LIVE-GO:**
-1. [ ] Admin-Passwort ändern (nicht mehr `changeMe123!`)
+1. [ ] Admin-Passwort ändern (nicht mehr `<ADMIN_SEED_PASSWORD>`)
 2. [ ] ADMIN_SEED_PASSWORD aus Vercel entfernen (nicht mehr nötig)
 3. [ ] Webhook Logs in Stripe prüfen (erfolgreich delivered?)
 

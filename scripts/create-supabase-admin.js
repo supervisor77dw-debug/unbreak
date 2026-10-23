@@ -22,12 +22,16 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 async function createAdmin() {
-  const email = 'admin@unbreak-one.com';
-  const password = 'changeMe123!';
+  const email = process.env.ADMIN_SEED_EMAIL;
+  const password = process.env.ADMIN_SEED_PASSWORD;
+
+  if (!email || !password || password.length < 16) {
+    console.error('❌ Set ADMIN_SEED_EMAIL and ADMIN_SEED_PASSWORD (min. 16 chars) in .env.local');
+    process.exit(1);
+  }
 
   console.log('🔐 Creating admin user in Supabase...');
   console.log('📧 Email:', email);
-  console.log('🔒 Password:', password);
 
   try {
     // Create user in Supabase Auth
@@ -72,7 +76,7 @@ async function createAdmin() {
 
     console.log('\n📋 LOGIN CREDENTIALS:');
     console.log('  Email:', email);
-    console.log('  Password:', password);
+    console.log('  Password: (from ADMIN_SEED_PASSWORD, not printed)');
     console.log('\n🔗 Login at: https://www.unbreak-one.com/admin/login');
     console.log('\n⚠️  WICHTIG: Ändere das Passwort nach dem ersten Login!');
 

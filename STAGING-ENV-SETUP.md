@@ -25,13 +25,13 @@
 STRIPE_MODE=test
 
 # Stripe Test Secret Key (Backend)
-STRIPE_SECRET_KEY=sk_test_XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+STRIPE_SECRET_KEY=sk_test_REDACTED
 
 # Stripe Test Publishable Key (Frontend)
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_XXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # Webhook Secret (Stripe Test Dashboard → Webhooks)
-STRIPE_WEBHOOK_SECRET=whsec_XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+STRIPE_WEBHOOK_SECRET=whsec_REDACTED
 ```
 
 **⚠️ WICHTIG:**
@@ -102,7 +102,7 @@ CHECKOUT_ENABLED=true
 
 # Admin Auth (NextAuth - falls verwendet)
 NEXTAUTH_URL=https://unbreak-78ts28s8h-supervisor77dw-debugs-projects.vercel.app
-NEXTAUTH_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXX
+NEXTAUTH_SECRET=<generate-with: openssl rand -base64 32>
 ```
 
 ---

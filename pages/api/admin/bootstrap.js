@@ -7,6 +7,7 @@
  */
 
 import { bootstrapDatabase, checkTablesExist, seedAdminUser } from '../../../lib/supabase-bootstrap';
+import { secretMatches, isProductionDeployment } from '../../../lib/security/secretCompare';
 
 export default async function handler(req, res) {
   // Only POST allowed
@@ -15,10 +16,15 @@ export default async function handler(req, res) {
   }
 
   // Check auth header for security
-  const authHeader = req.headers.authorization;
-  const expectedToken = process.env.BOOTSTRAP_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Disabled on production unless explicitly enabled; dedicated secret only
+  // (never fall back to the Supabase service role key).
+  if (isProductionDeployment() && process.env.BOOTSTRAP_ENABLED !== 'true') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
 
-  if (!authHeader || authHeader !== `Bearer ${expectedToken}`) {
+  if (!secretMatches(token, process.env.BOOTSTRAP_SECRET)) {
     return res.status(401).json({ error: 'Unauthorized - invalid token' });
   }
 

@@ -155,14 +155,14 @@ STRIPE_WEBHOOK_SECRET=whsec_...  # ← Muss zu Endpoint passen!
 
 # Database
 SUPABASE_URL=https://qnzsdytdghfukrqpscsg.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_j9BVv-3n4lzRyXjFKgilBw_VPlqXwut
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_REDACTED
 
 # Auth
-NEXTAUTH_SECRET=uE2cWwmLfCICyk3S1yak+0/wDfGdzspeCwhrwnZswKs=
+NEXTAUTH_SECRET=<generate-with: openssl rand -base64 32>
 NEXTAUTH_URL=https://www.unbreak-one.com
 
 # Email
-RESEND_API_KEY=re_4gT8QKmw_HjRrtBPJP3Ntqank5TXzmPyc
+RESEND_API_KEY=re_REDACTED
 EMAILS_ENABLED=true
 
 # ... etc (siehe VERCEL-ENV-PRODUCTION-GUIDE.md)

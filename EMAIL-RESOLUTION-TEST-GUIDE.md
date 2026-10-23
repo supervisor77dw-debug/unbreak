@@ -210,7 +210,7 @@ FALLBACK: Send admin notification to admin@unbreak-one.com
 **Local `.env.local`:**
 ```bash
 EMAILS_ENABLED=true
-RESEND_API_KEY=re_4gT8QKmw_HjRrtBPJP3Ntqank5TXzmPyc
+RESEND_API_KEY=re_REDACTED
 ```
 
 **Vercel Dashboard (Preview + Production):**
