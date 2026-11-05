@@ -4,7 +4,7 @@ import { buffer } from 'micro';
 import prisma from '../../../lib/prisma';
 import { calcConfiguredPrice } from '../../../lib/pricing/calcConfiguredPriceDB.js';
 import { countryToRegion } from '../../../lib/utils/shipping.js';
-import { sendOrderConfirmation } from '../../../lib/email/emailService';
+import { sendEmail, sendOrderConfirmation } from '../../../lib/email/emailService';
 import { stripe, getWebhookSecret, IS_TEST_MODE } from '../../../lib/stripe-config.js';
 import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
 import { generateOrderNumber } from '../../../lib/utils/orderNumber.js'; // CRITICAL: Order numbers assigned here!
@@ -2311,7 +2311,6 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, sourc
 </body>
 </html>`;
       
-      const { sendEmail } = require('../../../lib/email/emailService');
       const result = await sendEmail({
         type: 'order-confirmation',
         to: adminEmail,
