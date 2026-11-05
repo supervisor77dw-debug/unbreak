@@ -30,6 +30,10 @@ const PRODUCT_NAMES_I18N = {
     de: 'Flaschenhalter', 
     en: 'Bottle Holder' 
   },
+  'Nana_Gel': {
+    de: 'Flexigel®-Untersetzer',
+    en: 'Flexigel®-Untersetzer'
+  },
   'glass_configurator': {
     de: 'Glashalter Konfiguriert',
     en: 'Glass Holder Configured'
