@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { getStripeClient } from '../../../lib/stripe-config.js';
 import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
+import { maskEmail } from '../../../lib/utils/maskPii.js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -199,7 +200,7 @@ export default async function handler(req, res) {
     console.log(`📧 [FINALIZE] Email is sent via Stripe webhook (checkout.session.completed)`);
     console.log(`📧 [FINALIZE] Check webhook logs for: [EMAIL ATTEMPT] trace_id=...`);
     console.log(`📧 [FINALIZE] Session ID: ${session_id}`);
-    console.log(`📧 [FINALIZE] Customer: ${session.customer_details?.email || 'N/A'}`);
+    console.log(`📧 [FINALIZE] Customer: ${maskEmail(session.customer_details?.email)}`);
     console.log(`📧 [FINALIZE] Payment Status: ${session.payment_status}`);
     console.log(`📧 [FINALIZE] Order Status: paid (just updated)`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');

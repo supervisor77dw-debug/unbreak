@@ -7,10 +7,14 @@ import { countryToRegion } from '../../../lib/utils/shipping.js';
 import { sendEmail, sendOrderConfirmation } from '../../../lib/email/emailService';
 import { stripe, getWebhookSecret, IS_TEST_MODE } from '../../../lib/stripe-config.js';
 import { logDataSourceFingerprint } from '../../../lib/dataSourceFingerprint';
+import { assignOrderNumber, resolveOrderLanguage, splitOrderAmounts } from '../../../lib/orders/finalizeOrder.js';
+import { maskEmail } from '../../../lib/utils/maskPii.js';
 import { generateOrderNumber } from '../../../lib/utils/orderNumber.js'; // CRITICAL: Order numbers assigned here!
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+const EMAILS_COMPLETE = ['sent', 'already_sent'];
 
 // Disable default body parser - we need raw body for signature verification
 export const config = {
@@ -189,7 +193,7 @@ export default async function handler(req, res) {
     console.log('[EMAILS_ENABLED]', process.env.EMAILS_ENABLED);
     console.log('[RESEND_API_KEY]', process.env.RESEND_API_KEY ? 'SET' : 'MISSING');
     console.log('[SESSION ID]', event.data.object.id);
-    console.log('[CUSTOMER EMAIL]', event.data.object.customer_details?.email);
+    console.log('[CUSTOMER EMAIL]', maskEmail(event.data.object.customer_details?.email));
     console.log('[TRACE] WEBHOOK_IN', {
       trace_id,
       event_id: event.id,
@@ -206,11 +210,11 @@ export default async function handler(req, res) {
     try {
       const { data: existingOrder, error: dedupCheckError } = await supabase
         .from('simple_orders')
-        .select('id, order_number')
+        .select('id, order_number, email_status')
         .eq('stripe_event_id', event.id)
-        .single();
+        .maybeSingle();
       
-      if (!dedupCheckError && existingOrder) {
+      if (!dedupCheckError && EMAILS_COMPLETE.includes(existingOrder?.email_status)) {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log(`[EVENT_DUPLICATE] event_id=${event.id} event_type=${event.type} - Already processed`);
         console.log(`[EVENT_DUPLICATE] Existing order: ${existingOrder.order_number}`);
@@ -297,7 +301,7 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     event_id: stripeEventId,
     stripe_session_id: sessionId,
     stripe_customer_id: session.customer,
-    email: session.customer_details?.email || session.customer_email,
+    has_email: true,
     payment_status: session.payment_status,
     amount_total: session.amount_total,
     has_metadata: !!session.metadata
@@ -318,11 +322,11 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     try {
       const { data: existingOrder, error: dedupError } = await supabase
         .from('simple_orders')
-        .select('id, order_number, stripe_event_id')
+        .select('id, order_number, stripe_event_id, email_status')
         .eq('stripe_event_id', stripeEventId)
-        .single();
+        .maybeSingle();
       
-      if (!dedupError && existingOrder) {
+      if (!dedupError && EMAILS_COMPLETE.includes(existingOrder?.email_status)) {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log(`⏭️ [DEDUP] Event ${stripeEventId} already processed!`);
         console.log(`⏭️ [DEDUP] Order: ${existingOrder.order_number} (${existingOrder.id.substring(0,8)})`);
@@ -399,7 +403,7 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     
     console.log('✅ [STRIPE DATA] Session ready');
     console.log('✅ [STRIPE DATA] Line items:', lineItemsData.length);
-    console.log('✅ [STRIPE DATA] Customer:', fullSession.customer_details?.email);
+    console.log('✅ [STRIPE DATA] Customer:', maskEmail(fullSession.customer_details?.email));
     console.log('✅ [STRIPE DATA] Payment Intent:', fullSession.payment_intent);
     console.log('✅ [STRIPE DATA] Amount Total:', fullSession.amount_total, '¢');
     console.log('✅ [STRIPE DATA] Currency:', fullSession.currency);
@@ -415,9 +419,9 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
       throw new Error('No customer email in Stripe session');
     }
     
-    console.log('👤 [CUSTOMER] Email:', customerEmail);
-    console.log('👤 [CUSTOMER] Name:', customerName || '(none)');
-    console.log('👤 [CUSTOMER] Phone:', customerPhone || '(none)');
+    console.log('👤 [CUSTOMER] Email:', maskEmail(customerEmail));
+    console.log('👤 [CUSTOMER] Name present:', !!customerName);
+    console.log('👤 [CUSTOMER] Phone present:', !!customerPhone);
     
     // === EXTRACT ADDRESSES ===
     // Log session shape for debugging
@@ -436,8 +440,8 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     const shippingAddress = fullSession.shipping_details?.address ?? billingAddress ?? null;
     const shippingName = fullSession.shipping_details?.name || customerName || null;
     
-    console.log('🏠 [ADDRESS] Shipping:', shippingAddress ? `${shippingAddress.line1}, ${shippingAddress.city}` : 'MISSING');
-    console.log('📋 [ADDRESS] Billing:', billingAddress ? `${billingAddress.line1}, ${billingAddress.city}` : 'MISSING');
+    console.log('🏠 [ADDRESS] Shipping present:', !!shippingAddress);
+    console.log('📋 [ADDRESS] Billing present:', !!billingAddress);
     
     // === EXTRACT LINE ITEMS ===
     // lineItemsData is already fetched via listLineItems above
@@ -499,7 +503,9 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     // SEND EMAILS from simple_orders data (SINGLE SOURCE OF TRUTH)
     // Uses atomic claim mechanism to prevent duplicates
     // ═══════════════════════════════════════════════════════════════════
-    await sendOrderEmailsFromSimpleOrders(updatedOrder, trace_id, eventMode, 'webhook', stripeEventId);
+    const emailResult = await sendOrderEmailsFromSimpleOrders(
+      updatedOrder, trace_id, eventMode, 'webhook', stripeEventId, resolveOrderLanguage(fullSession)
+    );
     
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // MARK EVENT PROCESSED in simple_orders (for dedup on retry)
@@ -538,6 +544,11 @@ async function handleCheckoutSessionCompleted({ event, session, trace_id, eventM
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    // A 5xx makes Stripe retry; the claims keep emails that already went out from repeating
+    if (emailResult?.status === 'partial') {
+      throw new Error('Order emails incomplete - requesting Stripe retry');
+    }
+    
     console.log('✅ [WEBHOOK] handleCheckoutSessionCompleted SUCCESS');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
@@ -682,7 +693,7 @@ async function sendOrderEmailFromAdminOrders(orderId, trace_id, eventMode) {
     if (!adminEmail) {
       console.error('❌ [EMAIL] ADMIN_ORDER_EMAIL not set - skipping admin email');
     }
-    console.log(`[EMAIL_ROUTE] customer=${orderWithItems.email} admin=${adminEmail || 'NOT SET'}`);
+    console.log(`[EMAIL_ROUTE] customer=${maskEmail(orderWithItems.email)} admin=${maskEmail(adminEmail)}`);
     
     // 7. Format items for email
     const emailItems = orderWithItems.items.map(item => ({
@@ -863,7 +874,7 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
     console.log('📧 [EMAIL] SOURCE: DATABASE (DB-FIRST)');
     console.log(`📧 [EMAIL] Order ID: ${order.id}`);
     console.log(`📧 [EMAIL] Order Number: ${order.order_number}`);
-    console.log(`📧 [EMAIL] Customer: ${order.customer_email}`);
+    console.log(`📧 [EMAIL] Customer: ${maskEmail(order.customer_email)}`);
     
     // Email validation helper
     const isValidEmail = (email) => {
@@ -879,7 +890,7 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.error('❌ [EMAIL CRITICAL] No valid customer email in order!');
       console.error('❌ [EMAIL] Order ID:', order.id);
-      console.error('❌ [EMAIL] customer_email:', customerEmail);
+      console.error('❌ [EMAIL] customer_email:', maskEmail(customerEmail));
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return; // Don't send email
     }
@@ -909,7 +920,7 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('[EMAIL DATA] From DB Order:');
-    console.log('  Customer:', customerName, customerEmail, customerPhone);
+    console.log('  Customer:', maskEmail(customerEmail));
     console.log('  Billing:', billingAddress ? 'YES' : 'NO');
     console.log('  Shipping:', shippingAddress ? 'YES' : 'NO');
     console.log('  Payment Intent:', paymentIntentId);
@@ -987,7 +998,7 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`✅ [EMAIL SUCCESS] trace_id=${trace_id || 'none'} - Order confirmation sent!`);
       console.log(`✅ [EMAIL] Resend Email ID: ${emailResult.id}`);
-      console.log(`✅ [EMAIL] TO: ${customerEmail} (DB source)`);
+      console.log(`✅ [EMAIL] TO: ${maskEmail(customerEmail)} (DB source)`);
       console.log(`✅ [EMAIL] BCC: admin@unbreak-one.com, orders@unbreak-one.com`);
       console.log(`✅ [EMAIL] Order: ${orderNumber}`);
       console.log('[MAIL] send customer ok');
@@ -1016,7 +1027,7 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.log(`📋 [EMAIL PREVIEW] trace_id=${trace_id || 'none'} - EMAILS_ENABLED=false`);
       console.log('📋 [EMAIL] Email NOT sent (preview mode)');
-      console.log('📋 [EMAIL] Would send to:', customerEmail);
+      console.log('📋 [EMAIL] Would send to:', maskEmail(customerEmail));
       console.log('📋 [EMAIL] Would BCC to: admin@unbreak-one.com');
       console.log('📋 [EMAIL] To enable: Set EMAILS_ENABLED=true in Vercel ENV');
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -1024,7 +1035,7 @@ async function sendOrderConfirmationEmail(order, trace_id, eventMode) {
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       console.error(`❌ [EMAIL FAILED] trace_id=${trace_id || 'none'} - Email send failed!`);
       console.error(`❌ [EMAIL] Error: ${emailResult.error}`);
-      console.error(`❌ [EMAIL] TO: ${customerEmail}`);
+      console.error(`❌ [EMAIL] TO: ${maskEmail(customerEmail)}`);
       console.error(`❌ [EMAIL] Order: ${orderNumber}`);
       console.error(`❌ [EMAIL] EMAILS_ENABLED: ${process.env.EMAILS_ENABLED}`);
       console.error(`❌ [EMAIL] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? 'SET' : 'MISSING'}`);
@@ -1054,7 +1065,7 @@ async function syncStripeSessionToAdminOrders(session, extractedData) {
     console.log('💾 [SSOT WRITE] Starting direct write to admin_orders...');
     console.log('💾 [SSOT WRITE] Session ID:', session.id);
     console.log('💾 [SSOT WRITE] Payment Intent:', session.payment_intent);
-    console.log('💾 [SSOT WRITE] Customer:', extractedData.customerEmail);
+    console.log('💾 [SSOT WRITE] Customer:', maskEmail(extractedData.customerEmail));
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     const { customerEmail, customerName, customerPhone, shippingAddress, billingAddress, shippingName, items } = extractedData;
@@ -1194,7 +1205,7 @@ async function syncStripeSessionToAdminOrders(session, extractedData) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`[DB_WRITE_OK] admin_orders upserted: ${order.id.substring(0, 8)}`);
     console.log(`[DB_WRITE_OK] session_id=${session.id.substring(0, 20)} payment_intent=${session.payment_intent}`);
-    console.log(`[DB_WRITE_OK] email=${customerEmail} region=${shippingRegion}`);
+    console.log(`[DB_WRITE_OK] email=${maskEmail(customerEmail)} region=${shippingRegion}`);
     console.log(`[DB_WRITE_OK] amounts: subtotal=${subtotalNet}¢ shipping_gross=${amountShipping}¢ tax=${taxAmount}¢ total=${totalGross}¢`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
@@ -1375,7 +1386,7 @@ async function syncOrderToSupabase(session, supabaseOrder, orderSource) {
       }
     }
 
-    console.log('✅ [ADMIN_ORDERS] Customer email:', customerEmail);
+    console.log('✅ [ADMIN_ORDERS] Customer email:', maskEmail(customerEmail));
     console.log('✅ [ADMIN_ORDERS] Items:', items.length);
 
     // 2. Upsert customer in admin system
@@ -1469,8 +1480,8 @@ async function syncOrderToSupabase(session, supabaseOrder, orderSource) {
     const shippingName = session.shipping_details?.name ?? session.customer_details?.name ?? customerName;
     const billingName = session.customer_details?.name ?? session.shipping_details?.name ?? customerName;
     
-    console.log('🏠 [ADMIN_ORDERS] Shipping address:', shippingAddress ? `${shippingAddress.line1}, ${shippingAddress.city}` : 'MISSING');
-    console.log('📋 [ADMIN_ORDERS] Billing address:', billingAddress ? `${billingAddress.line1}, ${billingAddress.city}` : 'MISSING');
+    console.log('🏠 [ADMIN_ORDERS] Shipping address present:', !!shippingAddress);
+    console.log('📋 [ADMIN_ORDERS] Billing address present:', !!billingAddress);
     
     // Recalculate tax and total
     // Note: amountShipping is already GROSS (includes tax), so only tax the subtotal
@@ -1516,7 +1527,7 @@ async function syncOrderToSupabase(session, supabaseOrder, orderSource) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`[DB_WRITE_ORDER] order_id=${order.id.substring(0, 8)} session_id=${session.id.substring(0, 20)}`);
     console.log(`[DB_WRITE_ORDER] shipping_address_present=${!!shippingAddress} billing_address_present=${!!billingAddress}`);
-    console.log(`[DB_WRITE_ORDER] email=${customerEmail} region=${shippingRegion}`);
+    console.log(`[DB_WRITE_ORDER] email=${maskEmail(customerEmail)} region=${shippingRegion}`);
     console.log(`[DB_WRITE_ORDER] amounts: subtotal=${subtotalNet}¢ shipping_gross=${amountShipping}¢ tax=${taxAmount}¢ total=${totalGross}¢`);
     console.log(`[DB_WRITE_ORDER] shipping_source=DB_shipping_rates (GROSS=NET+TAX, NOT Stripe!)`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -1663,7 +1674,7 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
     console.log('[TRACE] CUSTOMER_SYNC_START', {
       trace_id,
       stripe_customer_id: session.customer,
-      email: session.customer_details?.email || session.customer_email
+      has_email: true,
     });
     
     console.log('👤 [CUSTOMER SYNC] Starting Stripe → Supabase sync...');
@@ -1731,7 +1742,7 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
     }
 
     console.log('👤 [CUSTOMER SYNC] Stripe Customer ID:', stripeCustomerId);
-    console.log('👤 [CUSTOMER SYNC] Email:', customerEmail);
+    console.log('👤 [CUSTOMER SYNC] Email:', maskEmail(customerEmail));
 
     // Upsert customer - Handle both stripe_customer_id and email conflicts
     // Try by stripe_customer_id first
@@ -1816,7 +1827,7 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
       console.log('[TRACE] CUSTOMER_UPSERT_SUCCESS', {
         trace_id,
         customer_id: customer.id,
-        email: customer.email
+        has_email: true,
       });
       console.log('✅ [CUSTOMER SYNC] Customer synced - ID:', customer.id);
     }
@@ -1871,7 +1882,7 @@ async function syncStripeCustomerToSupabase(session, order, trace_id) {
 async function handleCustomerCreated(customer) {
   try {
     console.log('👤 [CUSTOMER.CREATED] Stripe Customer ID:', customer.id);
-    console.log('👤 [CUSTOMER.CREATED] Email:', customer.email);
+    console.log('👤 [CUSTOMER.CREATED] Email:', maskEmail(customer.email));
 
     const { error } = await supabase
       .from('customers')
@@ -1968,28 +1979,8 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
     // CRITICAL: ATOMIC ORDER NUMBER ASSIGNMENT
     // Assign real UO- order_number if current is DRAFT- prefix (idempotent)
     // ═══════════════════════════════════════════════════════════════════════════
-    let orderNumber = existingOrder.order_number;
-    
-    // Check if order needs real order number (DRAFT- prefix or null)
-    const needsOrderNumber = !orderNumber || orderNumber.startsWith('DRAFT-');
-    
-    if (needsOrderNumber) {
-      // FIRST TIME: Assign real order number atomically
-      console.log('📝 [ORDER_NUMBER] Draft order detected (', orderNumber, '), generating real order number...');
-      
-      try {
-        orderNumber = await generateOrderNumber();
-        console.log('✅ [ORDER_NUMBER] Generated:', orderNumber);
-      } catch (orderNumErr) {
-        console.error('❌ [ORDER_NUMBER] Generation failed:', orderNumErr.message);
-        // Fallback: Use UUID-based number
-        orderNumber = `UO-${new Date().getFullYear()}-${existingOrder.id.substring(0, 8).toUpperCase()}`;
-        console.log('⚠️ [ORDER_NUMBER] Using fallback:', orderNumber);
-      }
-    } else {
-      // IDEMPOTENT: Already has real UO- order number (webhook replay)
-      console.log('✅ [ORDER_NUMBER] Already assigned (idempotent):', orderNumber);
-    }
+    const orderNumber = await assignOrderNumber(supabase, existingOrder, generateOrderNumber);
+    console.log('✅ [ORDER_NUMBER] Final:', orderNumber);
     
     // Extract payment_intent ID
     const paymentIntentId = typeof session.payment_intent === 'string' 
@@ -1997,9 +1988,7 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
       : session.payment_intent?.id || null;
     
     // Calculate totals from Stripe session
-    const totalAmountCents = session.amount_total || existingOrder.total_amount_cents;
-    const subtotalCents = session.amount_subtotal || totalAmountCents;
-    const shippingCents = session.shipping_cost?.amount_total || 0;
+    const { totalAmountCents, subtotalCents, shippingCents } = splitOrderAmounts(session, items, existingOrder);
     
     // Format items for database storage (convert from Stripe format)
     const formattedItems = items.map(item => ({
@@ -2016,9 +2005,8 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
     });
     
     // Update the order with ALL relevant data
-    // CRITICAL: order_number is set here (first time) or preserved (replay)
+    // order_number is deliberately not part of this update: assignOrderNumber owns it
     const updateData = {
-      order_number: orderNumber, // ← CRITICAL: Assigned here on payment success!
       status: 'paid',
       customer_email: customerEmail,
       customer_name: customerName || existingOrder.customer_name,
@@ -2039,7 +2027,7 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
     
     console.log('📝 [SSOT] Update data:', {
       status: updateData.status,
-      customer_email: updateData.customer_email,
+      has_email: true,
       has_shipping: !!updateData.shipping_address,
       items_count: updateData.items?.length || 0,
       total_amount_cents: updateData.total_amount_cents,
@@ -2061,7 +2049,7 @@ async function updateSimpleOrderFromStripe(sessionId, session, extractedData) {
     }
     
     console.log('✅ [SSOT] simple_orders updated successfully');
-    console.log('✅ [SSOT] Order:', updatedOrder.order_number, '| Status:', updatedOrder.status, '| Email:', updatedOrder.customer_email);
+    console.log('✅ [SSOT] Order:', updatedOrder.order_number, '| Status:', updatedOrder.status, '| Email:', maskEmail(updatedOrder.customer_email));
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     return updatedOrder;
@@ -2138,7 +2126,7 @@ async function releaseEmailClaim(orderId, emailType) {
  * CRITICAL: This is the ONLY function that sends order emails.
  * All other email paths have been removed.
  */
-async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, source = 'webhook', stripeEventId = null) {
+async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, source = 'webhook', stripeEventId = null, language = 'de') {
   const orderId = order.id;
   const orderIdShort = orderId.substring(0, 8);
   const claimId = `${source}_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
@@ -2152,7 +2140,7 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, sourc
     // 1. VALIDATION: Check required fields
     const customerEmail = order.customer_email;
     if (!customerEmail || !customerEmail.includes('@')) {
-      console.error(`❌ [EMAIL] No valid customer_email for order ${orderIdShort}: "${customerEmail}"`);
+      console.error(`❌ [EMAIL] No valid customer_email for order ${orderIdShort}: "${maskEmail(customerEmail)}"`);
       await updateEmailStatus(orderId, 'blocked_no_email', 'customer_email missing or invalid');
       return { customerSent: false, adminSent: false, reason: 'invalid_email' };
     }
@@ -2181,8 +2169,8 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, sourc
       console.error('❌ [EMAIL] EMAIL_FROM_ORDERS not set');
     }
     
-    console.log(`📧 [EMAIL] Customer: ${customerEmail}`);
-    console.log(`📧 [EMAIL] Admin: ${adminEmail}`);
+    console.log(`📧 [EMAIL] Customer: ${maskEmail(customerEmail)}`);
+    console.log(`📧 [EMAIL] Admin: ${maskEmail(adminEmail)}`);
     console.log(`📧 [EMAIL] From: ${emailFrom}`);
     console.log(`📧 [EMAIL] Order: ${orderNumber} | Total: ${totalAmount}¢`);
     console.log(`📧 [EMAIL] Items: ${items.length}`);
@@ -2217,7 +2205,9 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, sourc
             line_total_cents: item.line_total_cents || item.totalPrice || 0
           })),
           totalAmount: totalAmount,
-          language: 'de',
+          language,
+          testMode: eventMode === 'TEST',
+          skipInternalNotification: true, // the admin mail below is the one tracked notification
           shippingAddress: shippingAddress,
           billingAddress: billingAddress,
           amountSubtotal: order.subtotal_cents || totalAmount,
@@ -2267,6 +2257,11 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, sourc
           ? `🧪 TEST: Neue Bestellung ${orderNumber}`
           : `📦 Neue Bestellung ${orderNumber}`;
       
+      const productLines = items
+        .filter(item => !/^(versand|shipping)\b/i.test(item.name || ''))
+        .map(item => `${item.quantity || item.qty || 1} × ${item.name} – €${((item.line_total_cents || 0) / 100).toFixed(2)}`)
+        .join('<br>');
+
       const adminHtml = `
 <!DOCTYPE html>
 <html>
@@ -2297,6 +2292,13 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, sourc
     </div>
     ` : ''}
     
+    <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+      <strong>🛒 Positionen:</strong><br>
+      ${productLines}
+      <br>Zwischensumme: €${((order.subtotal_cents || 0) / 100).toFixed(2)}<br>
+      Versand: €${((order.shipping_cents || 0) / 100).toFixed(2)}
+    </div>
+
     <p style="margin-top: 30px;">
       <a href="https://unbreak-one.com/admin/orders/${orderId}" style="background: #2F6F55; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
         → Im Admin öffnen
@@ -2332,7 +2334,7 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, sourc
         await releaseEmailClaim(orderId, 'admin');
         console.log(`❌ [EMAIL_ADMIN] FAILED - claim released for retry`);
       } else {
-        console.log(`✅ [EMAIL_ADMIN] SENT | to=${adminEmail} | resend_id=${adminResult.id || 'none'}`);
+        console.log(`✅ [EMAIL_ADMIN] SENT | to=${maskEmail(adminEmail)} | resend_id=${adminResult.id || 'none'}`);
       }
       
       } catch (emailError) {
@@ -2350,22 +2352,21 @@ async function sendOrderEmailsFromSimpleOrders(order, trace_id, eventMode, sourc
       updated_at: new Date().toISOString()
     };
     
-    // Determine overall status
-    const customerOk = customerResult.sent || customerResult.skipped;
-    const adminOk = adminResult.sent || adminResult.skipped;
+    const { data: sentState } = await supabase
+      .from('simple_orders')
+      .select('customer_email_sent_at, admin_email_sent_at')
+      .eq('id', orderId)
+      .single();
     
-    if (customerResult.sent && adminResult.sent) {
+    if (sentState?.customer_email_sent_at && sentState?.admin_email_sent_at) {
       updateData.email_status = 'sent';
-    } else if (customerResult.skipped && adminResult.skipped) {
-      updateData.email_status = 'already_sent';
-    } else if (customerOk && adminOk) {
-      updateData.email_status = 'sent'; // Mix of sent and already sent = OK
+      updateData.email_last_error = null;
     } else {
       updateData.email_status = 'partial';
       const errors = [];
-      if (!customerOk) errors.push(`Customer: ${customerResult.error || 'Failed'}`);
-      if (!adminOk) errors.push(`Admin: ${adminResult.error || 'Failed'}`);
-      updateData.email_last_error = errors.join('; ').substring(0, 500);
+      if (customerResult.error) errors.push(`Customer: ${customerResult.error}`);
+      if (adminResult.error) errors.push(`Admin: ${adminResult.error}`);
+      updateData.email_last_error = (errors.join('; ') || 'Email claim released').substring(0, 500);
     }
     
     await supabase

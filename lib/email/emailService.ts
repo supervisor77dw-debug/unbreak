@@ -20,6 +20,7 @@
  */
 
 import { Resend } from 'resend';
+import { maskEmail } from '../utils/maskPii';
 
 // Email types for categorization and logging
 export type EmailType = 
@@ -179,10 +180,10 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
   try {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`📧 [EMAIL SEND] Type: ${type}`);
-    console.log(`📧 [EMAIL SEND] To: ${Array.isArray(to) ? to.join(', ') : to}`);
+    console.log(`📧 [EMAIL SEND] To: ${maskEmail(to)}`);
     console.log(`📧 [EMAIL SEND] From: ${finalFrom}`);
     if (bcc) {
-      console.log(`📧 [EMAIL SEND] BCC: ${Array.isArray(bcc) ? bcc.join(', ') : bcc}`);
+      console.log(`📧 [EMAIL SEND] BCC: ${maskEmail(bcc)}`);
     }
     console.log(`📧 [EMAIL SEND] Subject: ${subject}`);
     console.log(`📧 [EMAIL SEND] Meta:`, meta);
@@ -206,9 +207,9 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📤 [RESEND CALL] ABOUT TO CALL resend.emails.send()');
-    console.log('[RESEND CALL] To:', recipients);
+    console.log('[RESEND CALL] To:', maskEmail(recipients));
     console.log('[RESEND CALL] From:', finalFrom);
-    console.log('[RESEND CALL] BCC:', bccRecipients);
+    console.log('[RESEND CALL] BCC:', bccRecipients ? maskEmail(bccRecipients) : 'none');
     console.log('[RESEND CALL] Subject:', subject);
     console.log('[RESEND CALL] ReplyTo:', finalReplyTo || 'none');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -285,9 +286,9 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResult> {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log(`✅ [EMAIL SEND] Success!`);
     console.log(`✅ [RESEND ID] ${result.data?.id}`);
-    console.log(`✅ [EMAIL SENT TO] ${Array.isArray(to) ? to.join(', ') : to}`);
+    console.log(`✅ [EMAIL SENT TO] ${maskEmail(to)}`);
     if (bccRecipients && bccRecipients.length > 0) {
-      console.log(`✅ [EMAIL BCC TO] ${bccRecipients.join(', ')}`);
+      console.log(`✅ [EMAIL BCC TO] ${maskEmail(bccRecipients)}`);
       console.log(`ℹ️  [BCC INFO] BCC recipients will receive the SAME email`);
       console.log(`ℹ️  [BCC INFO] This is ONE request, not ${1 + bccRecipients.length} separate requests`);
     }
@@ -332,6 +333,8 @@ export async function sendOrderConfirmation(params: {
   shippingCost?: number; // ← NEW: Shipping cost
   orderDate?: Date; // ← NEW: Order timestamp
   bcc?: string | string[];
+  testMode?: boolean;
+  skipInternalNotification?: boolean;
 }) {
   const {
     orderId,
@@ -348,6 +351,8 @@ export async function sendOrderConfirmation(params: {
     paymentStatus, // ← NEW
     amountSubtotal, // ← NEW
     shippingCost, // ← NEW
+    testMode = false,
+    skipInternalNotification = false,
     orderDate, // ← NEW
     bcc
   } = params;
@@ -357,9 +362,9 @@ export async function sendOrderConfirmation(params: {
   console.log('[EMAIL DATA] Received params:', {
     orderId,
     orderNumber,
-    customerName: customerName || '(fehlt)',
-    customerEmail,
-    customerPhone: customerPhone || '(fehlt)',
+    hasCustomerName: !!customerName,
+    customerEmail: maskEmail(customerEmail),
+    hasCustomerPhone: !!customerPhone,
     hasShippingAddress: !!shippingAddress,
     hasBillingAddress: !!billingAddress,
     paymentIntentId: paymentIntentId || '(fehlt)',
@@ -538,12 +543,12 @@ export async function sendOrderConfirmation(params: {
   // EXACT TEXTS AS PROVIDED - DO NOT MODIFY
   // Add [TEST] prefix when using Stripe Test keys
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
-  const isTestMode = publishableKey.startsWith('pk_test_');
+  const isTestMode = testMode || publishableKey.startsWith('pk_test_');
   const testPrefix = isTestMode ? '[TEST] ' : '';
   
   const subject = isGerman
-    ? `${testPrefix}UNBREAK-ONE – Neue Bestellung – ${orderNumber || orderId.substring(0, 8)}`
-    : `${testPrefix}UNBREAK-ONE – New Order – ${orderNumber || orderId.substring(0, 8)}`;
+    ? `${testPrefix}Ihre Bestellbestätigung – UNBREAK ONE – ${orderNumber || orderId.substring(0, 8)}`
+    : `${testPrefix}Your order confirmation – UNBREAK ONE – ${orderNumber || orderId.substring(0, 8)}`;
 
   const greeting = customerName 
     ? `Hallo ${customerName},`
@@ -905,6 +910,10 @@ ${localizedProductItems.map(item => `                <div style="padding: 12px 0
       language,
     },
   });
+
+  if (skipInternalNotification) {
+    return customerResult;
+  }
 
   // Send internal order notification to orders@unbreak-one.com
   try {
