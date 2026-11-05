@@ -190,7 +190,7 @@ export default async function handler(req, res) {
         try {
           const thumbRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/products/generate-thumbnail`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-internal-auth': process.env.NEXTAUTH_SECRET },
             body: JSON.stringify({
               productId: product.id,
               imagePath: uploadedPath,

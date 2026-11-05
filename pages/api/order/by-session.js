@@ -72,12 +72,10 @@ export default async function handler(req, res) {
       status_fulfillment: order.fulfillment_status?.toUpperCase() || 'NEW',
       total_amount_cents: order.total_amount_cents,
       customer_email: order.customer_email,
-      customer_name: order.customer_name,
       currency: order.currency || 'EUR',
       email_sent: !!order.customer_email_sent_at,
       email_status: order.email_status,
       created_at: order.created_at,
-      shipping_address: order.shipping_address,
       // Legacy compat for existing success page
       order: {
         id: order.id,
@@ -85,13 +83,11 @@ export default async function handler(req, res) {
         statusPayment: order.status?.toUpperCase() || 'PENDING',
         statusFulfillment: order.fulfillment_status?.toUpperCase() || 'NEW',
         email: order.customer_email,
-        customerName: order.customer_name,
         totalGross: order.total_amount_cents,
         currency: order.currency || 'EUR',
         emailSent: !!order.customer_email_sent_at,
         emailStatus: order.email_status,
-        createdAt: order.created_at,
-        shippingAddress: order.shipping_address
+        createdAt: order.created_at
       }
     });
 

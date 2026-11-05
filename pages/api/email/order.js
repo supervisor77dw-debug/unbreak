@@ -7,11 +7,16 @@
  */
 
 import { sendOrderConfirmation } from '../../../lib/email/emailService';
+import { requireAuth } from '../../../lib/auth-helpers';
 
 // In-memory store for idempotency (prevents duplicate emails)
 const sentEmails = new Set();
 
 export default async function handler(req, res) {
+  const user = await requireAuth(req, res);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (user.role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
+
   // === DIAGNOSTIC LOGGING ===
   console.log('📧 [EMAIL API] Method:', req.method);
   console.log('📧 [EMAIL API] Using central emailService with kill-switch');

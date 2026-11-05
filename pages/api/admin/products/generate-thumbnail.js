@@ -13,6 +13,8 @@ import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
 import crypto from 'crypto';
 import { computeCropRectOriginalPx } from '../../../../lib/crop-utils';
+import { requireAuth } from '../../../../lib/auth-helpers';
+import { secretMatches } from '../../../../lib/security/secretCompare.js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -35,6 +37,13 @@ function generateCropHash(productId, imagePath, crop) {
 }
 
 export default async function handler(req, res) {
+  // Product save and image upload call this route server-side with the internal header
+  if (!secretMatches(req.headers['x-internal-auth'], process.env.NEXTAUTH_SECRET)) {
+    const user = await requireAuth(req, res);
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (user.role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

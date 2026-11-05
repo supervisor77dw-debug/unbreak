@@ -2,8 +2,13 @@
 // Direct DB query to check what's actually stored
 
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '../../lib/auth-helpers';
 
 export default async function handler(req, res) {
+  const user = await requireAuth(req, res);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (user.role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY

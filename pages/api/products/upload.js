@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { uploadProductImage, listProductImages } from '../../../lib/storage-config';
+import { requireAuth } from '../../../lib/auth-helpers';
 
 // Disable body parser for file uploads
 export const config = {
@@ -15,6 +16,10 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
 
 export default async function handler(req, res) {
+  const user = await requireAuth(req, res);
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (user.role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' });
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
